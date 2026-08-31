@@ -12,6 +12,8 @@ A self-hosted orchestration hub for AI agents: a governed job board with
 human approval gates, an immutable audit trail, and **Drumline** — one shared
 memory every agent reads and writes. Runs entirely on your machine; no cloud
 account required.
+Push alerts (ntfy) stay off until you set `NTFY_TOPIC`. Local-Only does not
+talk to ntfy.sh by default.
 
 ---
 
@@ -179,6 +181,9 @@ vocabulary, and SSO setup: [docs/ENTERPRISE.md](docs/ENTERPRISE.md).
   `/healthz` by default; set `MCO_METRICS_TOKEN` to require a bearer token when
   the gateway is network-exposed.
 - **`/healthz`** — unauthenticated liveness/readiness for load balancers.
+  Right after Uvicorn prints running, `/healthz` and `/console` can 500 for
+  ~10s (asyncio backend import). Retry until 200; do not treat the first 500
+  as death.
 - **`MCO_LOG_JSON=true`** — one JSON object per log line for Loki / Datadog /
   CloudWatch ingestion.
 
