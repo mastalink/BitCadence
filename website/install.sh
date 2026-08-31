@@ -21,12 +21,19 @@ REPO="https://github.com/mastalink/Batoncadence"
 # If we're being piped (curl | bash), bash reads THIS script from stdin — so a
 # later `exec </dev/tty` (needed for interactive prompts) hijacks bash's command
 # stream and drops the user into a shell instead of installing. Re-exec from a
-# real file with the terminal as stdin so `curl | bash` and `bash <(curl ...)`
-# behave identically.
-if [ ! -t 0 ]; then
+# real file. Attach /dev/tty when it opens so `curl | bash` is interactive.
+# When it does not (CI, a pipe with no controlling terminal), skip the redirect:
+# unconditional `exec ... </dev/tty` died at ~2s with `/dev/tty: No such device
+# or address`. _BC_INSTALL_REEXEC stops a no-tty re-exec from looping.
+if [ ! -t 0 ] && [ -z "${_BC_INSTALL_REEXEC:-}" ]; then
     _self="$(mktemp)"
     curl -fsSL "https://batoncadence.com/install.sh" > "$_self"
-    exec bash "$_self" </dev/tty
+    export _BC_INSTALL_REEXEC=1
+    if (exec </dev/tty) 2>/dev/null; then
+        exec bash "$_self" "$@" </dev/tty
+    else
+        exec bash "$_self" "$@"
+    fi
 fi
 
 echo ""
@@ -34,7 +41,7 @@ echo -e "${CYN}  BatonCadence installer${NC}"
 echo -e "${CYN}  =======================${NC}"
 echo ""
 
-# ── 1. Locate an existing install ──────────────────────────────────────────
+# ── 1. Locate an existing install ─────────────────────────────────────────
 find_existing() {
     # Explicit override wins
     if [ -n "${BATONCADENCE_INSTALL_DIR:-}" ] && [ -d "$BATONCADENCE_INSTALL_DIR/.git" ]; then
@@ -91,7 +98,7 @@ if [ -n "$EXISTING" ]; then
     exec bash "$EXISTING/scripts/install.sh" "$@"
 fi
 
-# ── 2. Fresh install ────────────────────────────────────────────────────────
+# ── 2. Fresh install ────────────────────────────────────────────
 DEST="${BATONCADENCE_INSTALL_DIR:-$HOME/BatonCadence}"
 
 if [ -d "$DEST" ] && [ "$(ls -A "$DEST" 2>/dev/null)" ]; then
