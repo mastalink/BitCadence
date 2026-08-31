@@ -199,8 +199,11 @@ else
                     echo ""
                 fi
                 if [ "$NO_PROMPT" -eq 1 ]; then
-                    git -C "$ROOT" pull --ff-only origin main
-                    ok "Updated to latest version"
+                    if git -C "$ROOT" pull --ff-only origin main; then
+                        ok "Updated to latest version"
+                    else
+                        warn "Could not fast-forward onto origin/main; installing this checkout"
+                    fi
                 else
                     read -rp "  Pull updates now? [Y/n] " upd
                     upd="${upd:-Y}"

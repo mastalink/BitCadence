@@ -66,3 +66,10 @@ def test_website_bootstrap_skips_tty_when_missing():
     assert 'exec bash "$_self" </dev/tty' not in text
     assert "(exec </dev/tty) 2>/dev/null" in text
     assert 'exec bash "$_self" "$@"' in text
+
+def test_no_prompt_git_pull_does_not_abort_install():
+    """CI PR checkout is detached HEAD; git pull exits 128. --no-prompt must continue."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    assert 'if git -C "$ROOT" pull --ff-only origin main; then' in text
+    assert "Could not fast-forward onto origin/main" in text
+
