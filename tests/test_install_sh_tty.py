@@ -38,7 +38,6 @@ def _run_prefix(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
     probe.write_text(_prefix_through_tty_guard(), encoding="utf-8")
     return subprocess.run(
         ["bash", str(probe), *args],
-        stdin=subprocess.PIPE,
         input="",
         capture_output=True,
         text=True,
