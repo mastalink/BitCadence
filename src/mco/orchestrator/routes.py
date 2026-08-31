@@ -135,9 +135,20 @@ def decorate_presence(row: dict, threshold: int) -> dict:
 
     - last_seen_seconds: age of the last heartbeat (None if never seen)
     - effective_status: the stored status, demoted to 'offline' when an
-      'online' agent has been silent past the threshold. The stored status
-      is never rewritten - liveness is derived at read time, so there is
-      no background sweeper to run or to fail.
+      'online' agent has been silent past the threshold.
+
+    The **response** `status` is overwritten with the derived value too, so a
+    consumer that reads `status` cannot get a stale 'online'. This is the whole
+    fix for "the board says online but the agent died days ago": the stored
+    status flips to 'online' on the last heartbeat and never flips back on its
+    own, so any surface reading the raw field (the MCP `mco_agents` tool other
+    agents call, the console, ad-hoc API clients) reported a corpse as live.
+    `effective_status` had the truth, but nothing forced consumers onto it.
+
+    `row` is a per-read dict copy, so this changes only the response, never the
+    stored row - the design's "derive liveness at read time, no background
+    sweeper" property is preserved. Demotion only ever turns a stale 'online'
+    into 'offline'; 'disabled' and never-seen states pass through untouched.
     """
     from datetime import datetime, timezone
 
@@ -156,6 +167,8 @@ def decorate_presence(row: dict, threshold: int) -> dict:
         effective = "offline"
     row["last_seen_seconds"] = secs
     row["effective_status"] = effective
+    # Collapse the footgun: the response's status IS the derived truth.
+    row["status"] = effective
     return row
 
 
