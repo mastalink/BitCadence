@@ -38,3 +38,42 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build image
         run: docker build -t mcorchestr8:ci .
+
+  install-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install via advertised script
+        run: bash scripts/install.sh --no-prompt
+      - name: Start gateway and wait (first /healthz 500 is warmup)
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          mco start
+          # Uvicorn can print "running" while /healthz and /console still 500
+          # for ~10s (asyncio backend import). Retry; do not treat first 500 as death.
+          wait_ok() {
+            local url="$1"
+            local i code
+            for i in $(seq 1 30); do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' "$url" || echo 000)
+              if [ "$code" = "200" ]; then
+                echo "$url -> 200"
+                return 0
+              fi
+              echo "$url -> $code (waiting)"
+              sleep 1
+            done
+            echo "$url never reached 200"
+            return 1
+          }
+          wait_ok http://127.0.0.1:18789/healthz
+          wait_ok http://127.0.0.1:18789/console
+      - name: doctor
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          mco doctor
