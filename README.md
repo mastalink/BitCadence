@@ -6,7 +6,7 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](docs/INSTALL.md)
-[![Changelog](https://img.shields.io/badge/changelog-0.2.0-blue.svg)](CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/changelog-0.3.0-blue.svg)](CHANGELOG.md)
 
 A self-hosted orchestration hub for AI agents: a governed job board with
 human approval gates, an immutable audit trail, and **Drumline** — one shared
@@ -49,11 +49,9 @@ powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -NoPrompt
 
 Full walkthrough and troubleshooting: [docs/INSTALL.md](docs/INSTALL.md)
 
-### pip / Docker
+### From source / Docker
 
 ```bash
-pip install batoncadence   # from PyPI (released versions)
-# or from source:
 git clone https://github.com/mastalink/Batoncadence
 pip install -e Batoncadence
 mco setup --guided    # configure in 60 seconds
