@@ -610,7 +610,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
       <div class="ptabs">
         <button class="ptab-btn active" id="tab-mac" onclick="switchTab('mac')"><span class="platform-icon">&#xf8ff;</span> macOS / Linux</button>
         <button class="ptab-btn" id="tab-win" onclick="switchTab('win')">&#9000; Windows</button>
-        <button class="ptab-btn" id="tab-pip" onclick="switchTab('pip')">&#x1F4E6; pip / Docker</button>
+        <button class="ptab-btn" id="tab-pip" onclick="switchTab('pip')">&#x1F4E6; Source / Docker</button>
       </div>
       <div class="ptab-panel active" id="panel-mac" style="background:#201f19;border:1px solid #36342b;border-bottom-left-radius:12px;border-bottom-right-radius:12px">
         <p style="font-family:var(--mono);font-size:.78rem;color:#a8a494;margin-bottom:14px">One command installs everything and walks you through setup:</p>
@@ -752,13 +752,13 @@ function tick(){
 }
 tick();
 
-/* ── scroll reveal ──────────────────────────────────────────────────────── */
+/* ── scroll reveal ──────────────────────────────────────── */
 const io = new IntersectionObserver(es=>{
   es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target);} });
 },{threshold:.12});
 document.querySelectorAll(".sr").forEach(el=>io.observe(el));
 
-/* ── platform tabs ──────────────────────────────────────────────────────── */
+/* ── platform tabs ──────────────────────────────────────── */
 function switchTab(name) {
   ["mac","win","pip"].forEach(n => {
     document.getElementById("tab-"+n).classList.toggle("active", n===name);
@@ -771,7 +771,7 @@ function switchTab(name) {
     cmd.textContent = 'iwr -useb https://batoncadence.com/install.ps1 | iex';
     box.style.display = "";
   } else if(name === "pip") {
-    cmd.textContent = 'pip install batoncadence';
+    cmd.textContent = 'git clone https://github.com/mastalink/Batoncadence && pip install -e Batoncadence';
     box.style.display = "";
   } else {
     cmd.textContent = 'curl -sSf https://batoncadence.com/install.sh | bash';
@@ -779,7 +779,7 @@ function switchTab(name) {
   }
 }
 
-/* ── copy one-liner ─────────────────────────────────────────────────────── */
+/* ── copy one-liner ───────────────────────────────────────── */
 function copyOneLiner() {
   const txt = document.getElementById("one-liner-cmd").textContent;
   navigator.clipboard.writeText(txt).catch(() => {

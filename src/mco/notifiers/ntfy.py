@@ -8,7 +8,7 @@ via webhooks.
 Usage in BatonCadence:
 - Set in .env or config:
   NTFY_SERVER=https://ntfy.sh
-  NTFY_TOPIC=mco-events   # or mco-codex, mco-grok, etc. for per-agent topics
+  NTFY_TOPIC=mco-events   # required to enable; blank = off (Local-Only default)
   NTFY_LEVELS=INFO,WARNING,ERROR   # comma separated
 
 - Then from anywhere in the code:
@@ -34,9 +34,11 @@ from mco.config import get_config
 def get_ntfy_config() -> dict:
     """Read ntfy settings from BatonCadence config."""
     config = get_config()
+    # Blank NTFY_TOPIC means off. Do not default to "mco-events"; that
+    # silently enabled public ntfy.sh on Local-Only installs.
     return {
-        "server": config.get("NTFY_SERVER", "https://ntfy.sh").rstrip("/"),
-        "topic": config.get("NTFY_TOPIC", "mco-events"),
+        "server": (config.get("NTFY_SERVER") or "https://ntfy.sh").rstrip("/"),
+        "topic": (config.get("NTFY_TOPIC") or "").strip(),
         "token": config.get("NTFY_TOKEN"),
         "levels": [x.strip().upper() for x in config.get("NTFY_LEVELS", "INFO,WARNING,ERROR,CRITICAL").split(",")],
     }
@@ -56,6 +58,8 @@ def notify(
     Returns True on success, False on failure (errors are logged but do not crash the orchestrator).
     """
     cfg = get_ntfy_config()
+    if not cfg["topic"]:
+        return False
     server = server or cfg["server"]
     topic = topic or cfg["topic"]
 

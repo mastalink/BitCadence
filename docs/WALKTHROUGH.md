@@ -65,7 +65,7 @@ mco setup            # if you've never set MCO_LOCAL_TOKEN: run this once,
 mco start
 ```
 
-> ℹ️ **Local-Only operator auth — handled automatically.** The operator
+> ℹ **Local-Only operator auth — handled automatically.** The operator
 > commands (`send` / `approve` / `audit` / `workflow` / `sync`) run as the
 > local operator that the gateway seeds from `MCO_LOCAL_TOKEN`. If you haven't
 > set a separate `MCO_AGENT_TOKEN`, the CLI falls back to `MCO_LOCAL_TOKEN`
@@ -254,9 +254,21 @@ nothing enterprise leaks into the free edition.
 
 ## Step 7 — Observability  *(TC-I1)*
 
+Right after the gateway starts, `/healthz` and `/console` can 500 for ~10s
+(asyncio backend import). Retry; the first 500 is warmup, not death.
+
 ```powershell
-(Invoke-WebRequest http://127.0.0.1:18789/healthz).StatusCode      # 200
-(Invoke-WebRequest http://127.0.0.1:18789/metrics).Content         # text metrics
+# Retry until 200 (do not treat the first 500 as a failed install).
+$ok = $false
+foreach ($i in 1..30) {
+  try {
+    $code = (Invoke-WebRequest http://127.0.0.1:18789/healthz -UseBasicParsing).StatusCode
+    if ($code -eq 200) { $ok = $true; break }
+  } catch { }
+  Start-Sleep -Seconds 1
+}
+$ok   # True
+(Invoke-WebRequest http://127.0.0.1:18789/metrics -UseBasicParsing).Content
 ```
 
 ✅ **[ ]** `/healthz` → 200. `/metrics` → Prometheus text reflecting your live

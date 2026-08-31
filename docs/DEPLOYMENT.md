@@ -9,16 +9,22 @@ Azure (Container Apps/AKS), Fly.io, or bare Docker.
 ```bash
 docker build -t mcorchestr8 .
 docker run -p 18789:18789 \
-  -e SUPABASE_URL=... -e SUPABASE_KEY=... \
+  -e SUPABASE_URL=... -e SUPABASE_KEY=...
   mcorchestr8
-curl http://localhost:18789/healthz   # {"status":"ok","database":true,"paused":false}
+# Uvicorn can print running while /healthz still 500 for ~10s.
+# Retry until 200; do not treat the first 500 as death.
+for i in $(seq 1 30); do
+  curl -sf http://localhost:18789/healthz && break
+  sleep 1
+done
 ```
 
 Or `docker-compose up` for gateway + a codex worker (see `docker-compose.yml`).
 CI builds and tests every push (`.github/workflows/ci.yml`, Python 3.11/3.12 + image build).
 
 - **Liveness/readiness:** `GET /healthz` (unauthenticated, no secrets) - wire it
-  to your LB/orchestrator health checks; Docker `HEALTHCHECK` is preconfigured.
+  to your LB/orchestrator health checks with retries; a first 500 right after
+  Uvicorn starts is warmup, not a dead process. Docker `HEALTHCHECK` is preconfigured.
 - **Secrets:** for one host, mount the AES-256-GCM local secret-store volume.
   For Saved Instances or multiple replicas, set
   `MCO_SECRET_VAULT_BACKEND=database` and inject `MCO_VAULT_MASTER_KEY` from
