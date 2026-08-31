@@ -26,10 +26,62 @@ step() { echo -e "${CYN}->  ${NC}$*"; }
 warn() { echo -e "${YLW}[!] ${NC}$*"; }
 fail() { echo -e "${RED}[X] ${NC}$*"; exit 1; }
 
+# ---- flags ------------------------------------------------------------------
+NO_PROMPT=0
+INSTALL_ROLE=""
+GATEWAY_URL=""
+AGENT_TOKEN=""
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --no-prompt|-y)
+            NO_PROMPT=1
+            shift
+            ;;
+        --role)
+            [ "${2:-}" ] || fail "--role requires server or client."
+            INSTALL_ROLE="$2"
+            shift 2
+            ;;
+        --role=*)
+            INSTALL_ROLE="${1#*=}"
+            shift
+            ;;
+        --gateway)
+            [ "${2:-}" ] || fail "--gateway requires a URL."
+            GATEWAY_URL="$2"
+            shift 2
+            ;;
+        --gateway=*)
+            GATEWAY_URL="${1#*=}"
+            shift
+            ;;
+        --token)
+            [ "${2:-}" ] || fail "--token requires a token."
+            AGENT_TOKEN="$2"
+            shift 2
+            ;;
+        --token=*)
+            AGENT_TOKEN="${1#*=}"
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
 # ---- stdin fix: restore terminal when piped through curl --------------------
-if [ ! -t 0 ]; then
-    exec </dev/tty
+# Interactive + openable tty: attach so prompts work after curl|bash.
+# Skip when --no-prompt, or when the device is missing (CI / a pipe with no
+# controlling terminal). Unconditional `exec </dev/tty` died at ~2s with
+# `/dev/tty: No such device or address` and never parsed flags.
+if [ "$NO_PROMPT" -eq 0 ] && [ ! -t 0 ]; then
+    if (exec </dev/tty) 2>/dev/null; then
+        exec </dev/tty
+    fi
 fi
+
 
 # ---- helpers ----------------------------------------------------------------
 set_env_value() {
@@ -93,51 +145,6 @@ verify_client_gateway() {
         *) fail "Gateway verification failed with HTTP $status from $agents_url." ;;
     esac
 }
-
-# ---- flags ------------------------------------------------------------------
-NO_PROMPT=0
-INSTALL_ROLE=""
-GATEWAY_URL=""
-AGENT_TOKEN=""
-
-while [ "$#" -gt 0 ]; do
-    case "$1" in
-        --no-prompt|-y)
-            NO_PROMPT=1
-            shift
-            ;;
-        --role)
-            [ "${2:-}" ] || fail "--role requires server or client."
-            INSTALL_ROLE="$2"
-            shift 2
-            ;;
-        --role=*)
-            INSTALL_ROLE="${1#*=}"
-            shift
-            ;;
-        --gateway)
-            [ "${2:-}" ] || fail "--gateway requires a URL."
-            GATEWAY_URL="$2"
-            shift 2
-            ;;
-        --gateway=*)
-            GATEWAY_URL="${1#*=}"
-            shift
-            ;;
-        --token)
-            [ "${2:-}" ] || fail "--token requires a token."
-            AGENT_TOKEN="$2"
-            shift 2
-            ;;
-        --token=*)
-            AGENT_TOKEN="${1#*=}"
-            shift
-            ;;
-        *)
-            shift
-            ;;
-    esac
-done
 
 case "$INSTALL_ROLE" in
     ""|server|client) ;;
