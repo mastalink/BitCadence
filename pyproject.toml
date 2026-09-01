@@ -1,7 +1,7 @@
 [project]
-name = "batoncadence"
+name = "bitcadence"
 version = "0.3.0"
-description = "BatonCadence: a governed job board for AI agents - approval gates, immutable audit, and Drumline shared memory. Every agent. One baton."
+description = "BitCadence: a governed job board for AI agents - approval gates, immutable audit, and Drumline shared memory. Every agent. One beat."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -47,10 +47,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://batoncadence.com"
-Repository = "https://github.com/mastalink/Batoncadence"
-Documentation = "https://github.com/mastalink/Batoncadence/tree/main/docs"
-Changelog = "https://github.com/mastalink/Batoncadence/blob/main/CHANGELOG.md"
+Homepage = "https://bitcadence.ai"
+Repository = "https://github.com/mastalink/Bitcadence"
+Documentation = "https://github.com/mastalink/Bitcadence/tree/main/docs"
+Changelog = "https://github.com/mastalink/Bitcadence/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [

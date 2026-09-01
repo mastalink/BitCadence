@@ -1,4 +1,4 @@
-BatonCadence Enterprise Edition License (v0.1 DRAFT)
+BitCadence Enterprise Edition License (v0.1 DRAFT)
 
 ============================================================================
 DRAFT — NOT YET LEGAL ADVICE. Review with a qualified attorney before relying
@@ -9,7 +9,7 @@ open-core boundary, not a substitute for counsel.
 Copyright (c) 2026 Joe Arroyo. All rights reserved.
 
 1. RELATIONSHIP TO THE OPEN-SOURCE CORE
-   The BatonCadence "Core" — every file NOT marked as Enterprise — is licensed
+   The BitCadence "Core" — every file NOT marked as Enterprise — is licensed
    to you under the MIT License (see LICENSE). That grant is unaffected by this
    document. This Enterprise Edition License governs only the "Enterprise
    Components": the enterprise connectors (e.g. ServiceNow, Dynatrace,

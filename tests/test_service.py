@@ -3,6 +3,8 @@
 import sys
 import xml.dom.minidom as minidom
 
+import pytest
+
 import mco.service as service
 
 TASK_SCHEDULER_NS = "http://schemas.microsoft.com/windows/2004/02/mit/task"
@@ -64,18 +66,18 @@ def test_wake_argv_runs_the_waker_with_selector_values():
 
 def test_waker_name_is_derived_from_kind_role_and_instance():
     spec = service._waker_spec("opencode", "opencode run", instance="opencode-beast")
-    assert spec.name == "BatonCadence-wake-opencode-opencode-beast"
+    assert spec.name == "BitCadence-wake-opencode-opencode-beast"
     assert spec.name != service.SERVICE_NAME
-    assert spec.unit_name == "batoncadence-wake-opencode-opencode-beast.service"
-    assert spec.launchd_label == "com.batoncadence.wake-opencode-opencode-beast"
+    assert spec.unit_name == "bitcadence-wake-opencode-opencode-beast.service"
+    assert spec.launchd_label == "com.bitcadence.wake-opencode-opencode-beast"
 
 
 def test_poll_name_is_derived_from_kind_role_and_instance():
     spec = service._poll_spec("opencode", "C:/worker/run.cmd", instance="opencode-beast")
-    assert spec.name == "BatonCadence-poll-opencode-opencode-beast"
+    assert spec.name == "BitCadence-poll-opencode-opencode-beast"
     assert spec.name != service.SERVICE_NAME
-    assert spec.unit_name == "batoncadence-poll-opencode-opencode-beast.service"
-    assert spec.launchd_label == "com.batoncadence.poll-opencode-opencode-beast"
+    assert spec.unit_name == "bitcadence-poll-opencode-opencode-beast.service"
+    assert spec.launchd_label == "com.bitcadence.poll-opencode-opencode-beast"
 
 
 def test_backend_name_is_platform_appropriate():
@@ -128,7 +130,7 @@ def test_windows_poll_task_xml_has_repetition_interval_without_waker_restart():
 
 def test_windows_install_uses_schtasks_xml_without_real_install(monkeypatch, tmp_path):
     calls = []
-    xml_path = tmp_path / "BatonCadence-gateway.xml"
+    xml_path = tmp_path / "BitCadence-gateway.xml"
     monkeypatch.setattr(service, "_windows_task_xml_path", lambda: xml_path)
 
     def fake_run(cmd, **kwargs):
@@ -148,7 +150,7 @@ def test_windows_install_uses_schtasks_xml_without_real_install(monkeypatch, tmp
 
 def test_windows_waker_install_uses_role_service_name_and_restart_xml(monkeypatch, tmp_path):
     calls = []
-    xml_path = tmp_path / "BatonCadence-wake-opencode-opencode-beast.xml"
+    xml_path = tmp_path / "BitCadence-wake-opencode-opencode-beast.xml"
     monkeypatch.setattr(service, "_windows_task_xml_path", lambda name=service.SERVICE_NAME: tmp_path / f"{name}.xml")
 
     def fake_run(cmd, **kwargs):
@@ -171,17 +173,17 @@ def test_windows_waker_install_uses_role_service_name_and_restart_xml(monkeypatc
         "schtasks",
         "/Create",
         "/TN",
-        "BatonCadence-wake-opencode-opencode-beast",
+        "BitCadence-wake-opencode-opencode-beast",
         "/XML",
         str(xml_path),
         "/F",
     ]
-    assert calls[1] == ["schtasks", "/Run", "/TN", "BatonCadence-wake-opencode-opencode-beast"]
+    assert calls[1] == ["schtasks", "/Run", "/TN", "BitCadence-wake-opencode-opencode-beast"]
 
 
 def test_windows_status_parses_running_and_last_exit():
     parsed = service._parse_windows_status(
-        "TaskName: BatonCadence-gateway\n"
+        "TaskName: BitCadence-gateway\n"
         "Status: Running\n"
         "Last Run Result: 0x0\n"
     )
@@ -203,8 +205,8 @@ def test_systemd_waker_unit_restarts_always_and_logs_to_waker_log():
     assert "wake --role opencode --exec" in unit
     assert "Restart=always" in unit
     assert "RestartSec=5" in unit
-    assert "StandardOutput=append:%h/.mco/logs/batoncadence-wake-opencode-opencode-beast.log" in unit
-    assert "StandardError=append:%h/.mco/logs/batoncadence-wake-opencode-opencode-beast.log" in unit
+    assert "StandardOutput=append:%h/.mco/logs/bitcadence-wake-opencode-opencode-beast.log" in unit
+    assert "StandardError=append:%h/.mco/logs/bitcadence-wake-opencode-opencode-beast.log" in unit
 
 
 def test_systemd_poll_unit_and_timer_run_worker_on_fixed_interval():
@@ -218,9 +220,9 @@ def test_systemd_poll_unit_and_timer_run_worker_on_fixed_interval():
     assert "Type=oneshot" in unit
     assert "ExecStart=worker-run --once" in unit
     assert "Restart=always" not in unit
-    assert "StandardOutput=append:%h/.mco/logs/batoncadence-poll-opencode-opencode-beast.log" in unit
+    assert "StandardOutput=append:%h/.mco/logs/bitcadence-poll-opencode-opencode-beast.log" in unit
     assert "OnUnitActiveSec=1800" in timer
-    assert "Unit=batoncadence-poll-opencode-opencode-beast.service" in timer
+    assert "Unit=bitcadence-poll-opencode-opencode-beast.service" in timer
     assert "WantedBy=timers.target" in timer
 
 
@@ -254,7 +256,7 @@ def test_systemd_waker_install_writes_distinct_unit_without_real_install(monkeyp
     ok_flag, _ = service._linux_install_service(spec)
 
     assert ok_flag
-    unit_path = tmp_path / "batoncadence-wake-opencode-opencode-beast.service"
+    unit_path = tmp_path / "bitcadence-wake-opencode-opencode-beast.service"
     assert unit_path.read_text(encoding="utf-8") == service._service_systemd_unit_text(spec)
     assert ["systemctl", "--user", "enable", "--now", spec.unit_name] in calls
 
@@ -272,11 +274,11 @@ def test_systemd_poll_install_writes_service_and_timer_without_real_install(monk
     ok_flag, _ = service._linux_install_poll_service(spec)
 
     assert ok_flag
-    service_path = tmp_path / "batoncadence-poll-opencode-opencode-beast.service"
-    timer_path = tmp_path / "batoncadence-poll-opencode-opencode-beast.timer"
+    service_path = tmp_path / "bitcadence-poll-opencode-opencode-beast.service"
+    timer_path = tmp_path / "bitcadence-poll-opencode-opencode-beast.timer"
     assert service_path.read_text(encoding="utf-8") == service._service_systemd_unit_text(spec)
     assert timer_path.read_text(encoding="utf-8") == service._service_systemd_timer_text(spec)
-    assert ["systemctl", "--user", "enable", "--now", "batoncadence-poll-opencode-opencode-beast.timer"] in calls
+    assert ["systemctl", "--user", "enable", "--now", "bitcadence-poll-opencode-opencode-beast.timer"] in calls
 
 
 def test_launchd_plist_is_valid_xml_and_logs_to_gateway_log():
@@ -291,10 +293,10 @@ def test_launchd_plist_is_valid_xml_and_logs_to_gateway_log():
 def test_launchd_waker_plist_has_keepalive_and_distinct_label():
     xml = service._waker_launchd_plist_xml("opencode", "opencode run", instance="opencode-beast")
     minidom.parseString(xml)
-    assert "com.batoncadence.wake-opencode-opencode-beast" in xml
+    assert "com.bitcadence.wake-opencode-opencode-beast" in xml
     assert "<key>KeepAlive</key>" in xml
     assert "<true/>" in xml
-    assert ".mco/logs/batoncadence-wake-opencode-opencode-beast.log" in xml.replace("\\", "/")
+    assert ".mco/logs/bitcadence-wake-opencode-opencode-beast.log" in xml.replace("\\", "/")
 
 
 def test_launchd_poll_plist_has_startinterval_and_distinct_label():
@@ -305,11 +307,11 @@ def test_launchd_poll_plist_has_startinterval_and_distinct_label():
         poll_interval=1800,
     )
     minidom.parseString(xml)
-    assert "com.batoncadence.poll-opencode-opencode-beast" in xml
+    assert "com.bitcadence.poll-opencode-opencode-beast" in xml
     assert "<key>StartInterval</key>" in xml
     assert "<integer>1800</integer>" in xml
     assert "<key>KeepAlive</key>" not in xml
-    assert ".mco/logs/batoncadence-poll-opencode-opencode-beast.log" in xml.replace("\\", "/")
+    assert ".mco/logs/bitcadence-poll-opencode-opencode-beast.log" in xml.replace("\\", "/")
 
 
 def test_install_dispatch_matches_platform(monkeypatch):
@@ -349,24 +351,26 @@ def test_poll_argv_unchanged_off_windows(monkeypatch):
     assert argv == ["/usr/local/bin/worker.sh", "--once"]
 
 
-def test_legacy_gateway_task_name_is_resolved(monkeypatch):
-    """Older installs registered the gateway as 'BatonCadenceGateway'.
+@pytest.mark.parametrize("legacy", ["BatonCadenceGateway", "BatonCadence-gateway"])
+def test_legacy_gateway_task_name_is_resolved(monkeypatch, legacy):
+    """Older installs registered the gateway under a previous brand.
 
-    On those machines every service command addressed a task that did not
-    exist, reporting "cannot find the file specified" while a healthy gateway
-    ran under the old name.
+    'BatonCadenceGateway' predates the dashed naming; 'BatonCadence-gateway'
+    predates the BitCadence rename. On those machines every service command
+    addressed a task that did not exist, reporting "cannot find the file
+    specified" while a healthy gateway ran under the old name.
     """
     monkeypatch.setattr(service.os, "name", "nt")
-    monkeypatch.setattr(service, "list_status", lambda: [{"name": "BatonCadenceGateway"}])
-    assert service.installed_gateway_task_name() == "BatonCadenceGateway"
-    assert service._resolve_target(None).name == "BatonCadenceGateway"
-    assert service._resolve_target("gateway").name == "BatonCadenceGateway"
+    monkeypatch.setattr(service, "list_status", lambda: [{"name": legacy}])
+    assert service.installed_gateway_task_name() == legacy
+    assert service._resolve_target(None).name == legacy
+    assert service._resolve_target("gateway").name == legacy
 
 
 def test_current_gateway_name_wins_when_both_exist(monkeypatch):
     monkeypatch.setattr(service.os, "name", "nt")
     monkeypatch.setattr(service, "list_status",
-                        lambda: [{"name": "BatonCadenceGateway"}, {"name": service.SERVICE_NAME}])
+                        lambda: [{"name": "BatonCadence-gateway"}, {"name": service.SERVICE_NAME}])
     assert service.installed_gateway_task_name() == service.SERVICE_NAME
 
 
@@ -392,7 +396,7 @@ def test_scheduler_spec_restarts_on_failure():
 
 
 def test_scheduler_service_name_round_trips_through_resolution():
-    # `mco service status/restart/uninstall BatonCadence-scheduler` must find it
+    # `mco service status/restart/uninstall BitCadence-scheduler` must find it
     # rather than falling through to the waker-name guess.
     resolved = service._target_from_name(service.SCHEDULER_SERVICE_NAME)
     assert resolved.kind == "scheduler"
@@ -401,9 +405,9 @@ def test_scheduler_service_name_round_trips_through_resolution():
 
 def test_scheduler_has_its_own_log_and_labels_per_platform():
     spec = service._scheduler_spec()
-    assert spec.log_path.name == "batoncadence-scheduler.log"
-    assert spec.launchd_label == "com.batoncadence.scheduler"
-    assert spec.unit_name == "batoncadence-scheduler.service"
+    assert spec.log_path.name == "bitcadence-scheduler.log"
+    assert spec.launchd_label == "com.bitcadence.scheduler"
+    assert spec.unit_name == "bitcadence-scheduler.service"
 
 
 def test_windows_scheduler_task_xml_has_valid_restart_settings():
@@ -417,7 +421,7 @@ def test_windows_scheduler_task_xml_has_valid_restart_settings():
 def test_launchd_scheduler_plist_is_valid_xml():
     plist = service._service_launchd_plist_xml(service._scheduler_spec())
     minidom.parseString(plist.encode("utf-8"))
-    assert "com.batoncadence.scheduler" in plist
+    assert "com.bitcadence.scheduler" in plist
 
 
 def test_systemd_scheduler_unit_renders_execstart():

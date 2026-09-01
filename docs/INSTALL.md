@@ -1,14 +1,14 @@
-# Installing BatonCadence — Dad's Guide
+# Installing BitCadence — Dad's Guide
 
 This guide assumes zero technical background. Follow it top to bottom, and you
-will be looking at the BatonCadence console in your browser.
+will be looking at the BitCadence console in your browser.
 
 ---
 
 ## What you need
 
 - A Windows 10 or 11 computer
-- The BatonCadence folder anywhere on your computer (e.g. `C:\BatonCadence`)
+- The BitCadence folder anywhere on your computer (e.g. `C:\BitCadence`)
 - An internet connection during installation only
 
 You do **not** need a cloud account, API keys, or Python pre-installed.
@@ -17,7 +17,7 @@ You do **not** need a cloud account, API keys, or Python pre-installed.
 
 ## Step 1 — Install (one double-click)
 
-1. Open the BatonCadence folder.
+1. Open the BitCadence folder.
 2. Double-click **`install.bat`**.
 
 A window opens and runs through six steps automatically:
@@ -25,13 +25,13 @@ A window opens and runs through six steps automatically:
 ```
 [OK] Python 3.x found
 [OK] Virtual environment created
-[OK] BatonCadence installed
+[OK] BitCadence installed
 [OK] Created Local-Only configuration (.env) with access token
 [OK] CLI self-check passed
-[OK] Shortcut 'BatonCadence' added to the Desktop
+[OK] Shortcut 'BitCadence' added to the Desktop
 ```
 
-When it asks *"Would you like to start BatonCadence now?"* press **Enter**.
+When it asks *"Would you like to start BitCadence now?"* press **Enter**.
 
 > If Python is not found it will offer to install it automatically — press
 > Enter again and wait about two minutes.
@@ -40,13 +40,13 @@ When it asks *"Would you like to start BatonCadence now?"* press **Enter**.
 
 ## Step 2 — Start (every time after that)
 
-Double-click the **BatonCadence** icon on your Desktop.
+Double-click the **BitCadence** icon on your Desktop.
 
 A black server window appears and shows something like this:
 
 ```
 ============================================================
-  Starting BatonCadence...
+  Starting BitCadence...
 ============================================================
 
   Your access token (already copied to clipboard):
@@ -56,8 +56,8 @@ A black server window appears and shows something like this:
   In 5 seconds your browser will open the console.
   Paste the token into the "Agent token" box and click Connect.
 
-  Keep this window open while BatonCadence is running.
-  Close it to stop BatonCadence.
+  Keep this window open while BitCadence is running.
+  Close it to stop BitCadence.
 ============================================================
 ```
 
@@ -92,14 +92,14 @@ jobs, the audit history, and the shared agent memory (Drumline) all work
 without any cloud account.
 
 > **Token forgotten?** Look at the black server window — it always shows the
-> token at startup. Or open `.env` in the BatonCadence folder in Notepad and
+> token at startup. Or open `.env` in the BitCadence folder in Notepad and
 > look for the line that starts with `MCO_LOCAL_TOKEN=`.
 
 ---
 
 ## Day-to-day use
 
-- **Start:** double-click the **BatonCadence** icon on the Desktop.
+- **Start:** double-click the **BitCadence** icon on the Desktop.
 - **Stop:** close the black server window.
 - If you double-click while it is already running, it just reopens the
   console (it won't start a second copy).
@@ -110,11 +110,11 @@ without any cloud account.
 
 | Item | Where | Purpose |
 |---|---|---|
-| `.venv\` | BatonCadence folder | Private Python environment |
-| `.env` | BatonCadence folder | Configuration + access token |
-| `BatonCadence.lnk` | Desktop | Shortcut that starts everything |
+| `.venv\` | BitCadence folder | Private Python environment |
+| `.env` | BitCadence folder | Configuration + access token |
+| `BitCadence.lnk` | Desktop | Shortcut that starts everything |
 
-To uninstall: delete the BatonCadence folder and the Desktop shortcut.
+To uninstall: delete the BitCadence folder and the Desktop shortcut.
 Nothing else is changed on the computer (except Python itself, if it was
 installed automatically).
 
@@ -156,7 +156,7 @@ Then use `http://127.0.0.1:18790` as the Gateway URL in the console.
 
 **Where is my token?**
 
-Open the `.env` file in the BatonCadence folder in Notepad.
+Open the `.env` file in the BitCadence folder in Notepad.
 Find the line that starts with `MCO_LOCAL_TOKEN=` — everything after the
 `=` is your token.
 

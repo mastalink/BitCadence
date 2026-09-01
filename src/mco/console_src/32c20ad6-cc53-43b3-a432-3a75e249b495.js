@@ -1,4 +1,4 @@
-// Baton — shared UI primitives (badges, cards, tables, drawer, toasts).
+// BitCadence — shared UI primitives (badges, cards, tables, drawer, toasts).
 const { useState, useEffect, useRef, useMemo } = React;
 
 // ----- Copy tone: expert jargon vs plain language -----
@@ -31,7 +31,7 @@ function StatusBadge({ status, tone = "expert", pulse }) {
     }}>
       <span style={{
         width: 7, height: 7, borderRadius: 999, background: `var(--st-${kind}-dot)`,
-        animation: (pulse || status === "in_progress" || status === "leased") ? "baton-pulse 1.6s ease-in-out infinite" : "none",
+        animation: (pulse || status === "in_progress" || status === "leased") ? "cadence-pulse 1.6s ease-in-out infinite" : "none",
       }}></span>
       {label}
     </span>
@@ -150,7 +150,7 @@ function Drawer({ open, onClose, children, width = 480 }) {
         position: "absolute", top: 10, right: 10, bottom: 10, width, maxWidth: "calc(100vw - 40px)",
         background: "var(--surface)", borderRadius: "var(--radius-l)", border: "1px solid var(--border)",
         boxShadow: "var(--shadow-l)", display: "flex", flexDirection: "column", overflow: "hidden",
-        animation: "baton-drawer-in .18s ease-out",
+        animation: "cadence-drawer-in .18s ease-out",
       }}>{children}</div>
     </div>
   );
@@ -160,7 +160,7 @@ function Drawer({ open, onClose, children, width = 480 }) {
 function ToastHost() {
   const [toasts, setToasts] = useState([]);
   useEffect(() => {
-    return window.BatonStore.onToast((t) => {
+    return window.BitCadenceStore.onToast((t) => {
       setToasts((prev) => [...prev.slice(-3), t]);
       setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== t.id)), 4200);
     });
@@ -175,7 +175,7 @@ function ToastHost() {
         <div key={t.id} style={{
           background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-m)",
           boxShadow: "var(--shadow-m)", padding: "10px 14px", display: "flex", gap: 10, alignItems: "flex-start",
-          animation: "baton-toast-in .2s ease-out",
+          animation: "cadence-toast-in .2s ease-out",
         }}>
           <span style={{ width: 8, height: 8, borderRadius: 99, marginTop: 5, flex: "none", background: (KIND[t.kind] || KIND.info).dot }}></span>
           <div style={{ minWidth: 0 }}>
@@ -210,7 +210,7 @@ function eventKind(ev) {
 }
 
 function AuditTrail({ jobId, tone, advanced }) {
-  const evts = window.BatonStore.getEvents(jobId);
+  const evts = window.BitCadenceStore.getEvents(jobId);
   if (!evts.length) return <EmptyState icon="≡" title="No events yet" body="Every change to this job will be recorded here." />;
   return (
     <div style={{ position: "relative", paddingLeft: 18 }}>

@@ -72,7 +72,7 @@ Switch to **Design workflow** to author the same schema accepted by
 4. Validate, then **Export YAML**. The download contains workflow data, not
    canvas positions.
 
-Import accepts the workflow subset BatonCadence owns: `name`, `steps`, and the
+Import accepts the workflow subset BitCadence owns: `name`, `steps`, and the
 documented step fields. It supports inline or indented `depends_on` lists and
 literal-block instructions. Unsupported fields fail visibly instead of being
 silently discarded.

@@ -4,7 +4,7 @@ Cron can start a process. It cannot tell you six weeks later *who authorized the
 thing that ran at 3am*, stop after the tenth iteration because a human said so,
 or pause a run behind an approval gate.
 
-BatonCadence's scheduler creates **jobs on the governed board**, so recurring
+BitCadence's scheduler creates **jobs on the governed board**, so recurring
 work inherits everything a hand-submitted job gets: approval gates, retry
 budgets, role/instance isolation, and an audit trail that records which schedule
 created it.
@@ -219,8 +219,8 @@ mco schedule tick
 **As a boot-persistent service** — the one you actually want in production:
 ```bash
 mco service install-scheduler --interval 30
-mco service status BatonCadence-scheduler
-mco service logs   BatonCadence-scheduler
+mco service status BitCadence-scheduler
+mco service logs   BitCadence-scheduler
 ```
 
 This installs through the same machinery as the gateway and wakers, so it works

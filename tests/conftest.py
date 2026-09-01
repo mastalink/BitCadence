@@ -1,4 +1,4 @@
-"""Shared fixtures and fakes for BatonCadence tests.
+"""Shared fixtures and fakes for BitCadence tests.
 
 Provides reusable FakeDB and FakeConfig implementations that all test files
 can import. This eliminates duplication across test files and ensures

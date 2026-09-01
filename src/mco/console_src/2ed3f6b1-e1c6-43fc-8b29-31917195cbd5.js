@@ -1,9 +1,9 @@
-// Baton — Agent Fleet + Settings screens.
+// BitCadence — Agent Fleet + Settings screens.
 const { useState: useStateO, useEffect: useEffectO } = React;
 
 // ----- Register agent panel -----
 function RegisterAgentPanel({ tone, advanced, onDone, onCancel }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const [instanceId, setInstanceId] = useStateO("");
   const [role, setRole] = useStateO("");
   const [org, setOrg] = useStateO("");
@@ -90,7 +90,7 @@ function RegisterAgentPanel({ tone, advanced, onDone, onCancel }) {
 
 // ----- Per-agent row admin actions (live only) -----
 function AgentRowActions({ agent, tone, orgs }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const [busy, setBusy] = useStateO(false);
   const [reset, setReset] = useStateO(null); // { token } | { error }
   const [err, setErr] = useStateO(null);
@@ -187,7 +187,7 @@ function AgentRowActions({ agent, tone, orgs }) {
 }
 
 function AgentFleet({ agents, jobs, tone, advanced }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const live = (store.mode ? store.mode() : "demo") === "live";
   const [showRegister, setShowRegister] = useStateO(false);
   const [orgs, setOrgs] = useStateO(null); // { orgs, in_use, host_operator } | null
@@ -243,7 +243,7 @@ function AgentFleet({ agents, jobs, tone, advanced }) {
                     <span style={{
                       width: 8, height: 8, borderRadius: 99, flex: "none",
                       background: a.status === "online" ? "var(--st-done-dot)" : "var(--st-rejected-dot)",
-                      animation: a.status === "online" ? "baton-pulse 2.2s ease-in-out infinite" : "none",
+                      animation: a.status === "online" ? "cadence-pulse 2.2s ease-in-out infinite" : "none",
                     }}></span>
                     <Mono style={{ fontWeight: 600, color: "var(--text)", fontSize: 13 }}>{a.instance_id}</Mono>
                     <span style={{ flex: 1 }}></span>
@@ -304,7 +304,7 @@ const CONNECTORS = [
 ];
 
 function ConnectorsCard({ tone }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const live = (store.mode ? store.mode() : "demo") === "live";
   const [meta, setMeta] = useStateO(null);   // key -> setting metadata (incl. set/unset)
   const [form, setForm] = useStateO({});       // editable field values
@@ -474,7 +474,7 @@ function ConnectorsCard({ tone }) {
 const ORG_NAME_RE = /^[A-Za-z0-9._:-]{1,64}$/;
 
 function TenancyCard({ tone, advanced }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const live = (store.mode ? store.mode() : "demo") === "live";
   const [orgs, setOrgs] = useStateO(null);   // { orgs, in_use, host_operator } | null
   const [loadErr, setLoadErr] = useStateO(null);
@@ -588,7 +588,7 @@ function TenancyCard({ tone, advanced }) {
 }
 
 function Settings({ tone, advanced, setAdvanced }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const conn = store.config ? store.config() : { url: "http://127.0.0.1:18789", token: "" };
   const mode = store.mode ? store.mode() : "demo";
   const [ntfy, setNtfy] = useStateO(true);
@@ -607,7 +607,7 @@ function Settings({ tone, advanced, setAdvanced }) {
           <span style={{
             width: 9, height: 9, borderRadius: 99, flex: "none",
             background: mode === "live" ? "var(--st-done-dot)" : mode === "connecting" ? "var(--st-waiting-dot)" : "var(--st-approval-dot)",
-            animation: mode !== "demo" ? "baton-pulse 1.6s infinite" : "none",
+            animation: mode !== "demo" ? "cadence-pulse 1.6s infinite" : "none",
           }}></span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, fontSize: 13.5 }}>

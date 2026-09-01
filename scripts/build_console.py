@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build (and extract) the BatonCadence console bundle.
+"""Build (and extract) the BitCadence console bundle.
 
 The console at /console ships as a single self-contained HTML file
 (``src/mco/static/console.html``): a gzip+base64 manifest of assets plus a

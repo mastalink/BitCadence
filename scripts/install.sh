@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# BatonCadence Setup Script (macOS / Linux)
+# BitCadence Setup Script (macOS / Linux)
 # ============================================================================
 # One-shot install — mirrors scripts/install.ps1:
 #   0. Check for updates (git fetch)
@@ -153,7 +153,7 @@ ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT"
 
 echo ""
-echo -e "${CYN}  BatonCadence Setup${NC}"
+echo -e "${CYN}  BitCadence Setup${NC}"
 echo -e "${CYN}  ==================${NC}"
 echo ""
 
@@ -167,7 +167,7 @@ if ! command -v git &>/dev/null; then
 else
     if ! git -C "$ROOT" rev-parse --git-dir &>/dev/null 2>&1; then
         echo "     This folder is not a git repo (probably a ZIP download)."
-        echo "     To get updates: https://github.com/mastalink/Batoncadence"
+        echo "     To get updates: https://github.com/mastalink/Bitcadence"
     else
         git -C "$ROOT" fetch --quiet origin 2>/dev/null || {
             echo "     Could not reach GitHub (offline?) - skipping update check."
@@ -276,9 +276,9 @@ fi
 PY="$VENV/bin/python"
 
 # ----------------------------------------------------------------------------
-# 3. Install BatonCadence
+# 3. Install BitCadence
 # ----------------------------------------------------------------------------
-step "Installing BatonCadence and its dependencies..."
+step "Installing BitCadence and its dependencies..."
 
 # Air-gapped install: an offline/wheels folder (created by
 # scripts/make-offline-bundle.sh on a connected machine) means we install
@@ -293,7 +293,7 @@ else
     "$PY" -m pip install --upgrade pip --quiet
     "$PY" -m pip install -e "$ROOT" --quiet || fail "Installation failed. Check your internet connection and retry."
 fi
-ok "BatonCadence installed"
+ok "BitCadence installed"
 
 # ----------------------------------------------------------------------------
 # 4. Server or client role
@@ -368,7 +368,7 @@ fi
 if [ "$INSTALL_ROLE" = "server" ] && [ ! -f "$ENV_PATH" ]; then
     LOCAL_TOKEN="mco_tok_$("$PY" -c 'import secrets; print(secrets.token_hex(24))')"
     cat > "$ENV_PATH" <<EOF
-# BatonCadence configuration (created by install.sh)
+# BitCadence configuration (created by install.sh)
 # Local-Only profile: everything runs on this computer, no database
 # or cloud account needed. Run 'mco setup' later to change anything.
 MCO_PROFILE=Local-Only
@@ -389,7 +389,7 @@ elif [ "$INSTALL_ROLE" = "server" ]; then
 else
     if [ ! -f "$ENV_PATH" ]; then
         cat > "$ENV_PATH" <<EOF
-# BatonCadence configuration (created by install.sh)
+# BitCadence configuration (created by install.sh)
 MCO_PROFILE=Client
 OPERATOR_NAME=$(whoami)
 MCO_NODE_ROLE=client
@@ -441,7 +441,7 @@ if [ -n "$SHELL_CONFIG" ]; then
         if ! grep -q '\.local/bin' "$SHELL_CONFIG" 2>/dev/null; then
             {
                 echo ""
-                echo "# BatonCadence -- ensure ~/.local/bin is on PATH"
+                echo "# BitCadence -- ensure ~/.local/bin is on PATH"
                 echo 'export PATH="$HOME/.local/bin:$PATH"'
             } >> "$SHELL_CONFIG"
             ok "Added ~/.local/bin to PATH in $SHELL_CONFIG"
@@ -528,7 +528,7 @@ if [ "$MODE_CHOICE" = "2" ]; then
     echo "    3. Click Connect."
     echo ""
     echo -e "${GRN}============================================================${NC}"
-    echo -e "${GRN}  Starting BatonCadence...${NC}"
+    echo -e "${GRN}  Starting BitCadence...${NC}"
     echo -e "${GRN}============================================================${NC}"
     echo ""
 

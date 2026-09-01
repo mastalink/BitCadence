@@ -91,10 +91,10 @@ mode = "off"
     )
     calls = []
     installed = {
-        "BatonCadence-poll-opencode-opencode-beast",
-        "BatonCadence-wake-codex-beast",
-        "BatonCadence-poll-codex-disabled",
-        "BatonCadence-wake-old-old",
+        "BitCadence-poll-opencode-opencode-beast",
+        "BitCadence-wake-codex-beast",
+        "BitCadence-poll-codex-disabled",
+        "BitCadence-wake-old-old",
     }
 
     monkeypatch.setattr(
@@ -126,12 +126,12 @@ mode = "off"
 
     summaries = fleet.apply_fleet(config)
 
-    assert ("uninstall", "BatonCadence-poll-opencode-opencode-beast") in calls
+    assert ("uninstall", "BitCadence-poll-opencode-opencode-beast") in calls
     assert ("waker", "opencode", "opencode-run.cmd", "opencode-beast", 7.0) in calls
-    assert ("uninstall", "BatonCadence-wake-codex-beast") in calls
+    assert ("uninstall", "BitCadence-wake-codex-beast") in calls
     assert ("poll", "codex", "codex-run.cmd", "codex-beast", 900.0) in calls
-    assert ("uninstall", "BatonCadence-poll-codex-disabled") in calls
-    assert ("uninstall", "BatonCadence-wake-old-old") in calls
+    assert ("uninstall", "BitCadence-poll-codex-disabled") in calls
+    assert ("uninstall", "BitCadence-wake-old-old") in calls
     assert any("opencode-beast: waker OK" in line for line in summaries)
     assert any("codex-beast: poll OK" in line for line in summaries)
 
@@ -160,7 +160,7 @@ poll_interval = 900
         "role": "codex",
         "instance": "codex-beast",
         "mode": "poll",
-        "service": "BatonCadence-poll-codex-codex-beast",
+        "service": "BitCadence-poll-codex-codex-beast",
         "installed": True,
         "running": True,
         "last_exit": "0",

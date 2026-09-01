@@ -1,12 +1,12 @@
 """
-BatonCadence Agent SDK - write a worker in fifteen lines.
+BitCadence Agent SDK - write a worker in fifteen lines.
 
 The public, stable surface for third-party agent authors. Everything else in
 this codebase may move; this module follows semver.
 
-    from mco.sdk import BatonAgent
+    from mco.sdk import BitCadenceAgent
 
-    agent = BatonAgent(role="summarizer", instance_id="sum-1",
+    agent = BitCadenceAgent(role="summarizer", instance_id="sum-1",
                        token="mco_tok_...", gateway="http://127.0.0.1:18789")
 
     @agent.handler
@@ -46,7 +46,7 @@ logger = logging.getLogger("mco.sdk")
 HandlerResult = Union[str, Tuple[str, dict]]
 
 
-class BatonAgent:
+class BitCadenceAgent:
     """A polling worker bound to one role/instance identity."""
 
     def __init__(
@@ -162,7 +162,7 @@ class BatonAgent:
 
     def run(self) -> None:
         """Poll forever (Ctrl+C to stop). One process, one identity."""
-        logger.info(f"BatonAgent '{self.instance_id}' ({self.role}) polling "
+        logger.info(f"BitCadenceAgent '{self.instance_id}' ({self.role}) polling "
                     f"{self.client.base_url} every {self.poll_interval}s")
         while True:
             try:
@@ -173,3 +173,9 @@ class BatonAgent:
             except Exception as e:
                 logger.warning(f"Poll cycle failed (will retry): {e}")
             time.sleep(self.poll_interval)
+
+
+# Back-compat: the class was `BatonAgent` before the BitCadence rename. Worker
+# scripts live outside this repo (pilot installs, agent VMs), so importing the
+# old name keeps working rather than breaking a fleet on upgrade.
+BatonAgent = BitCadenceAgent

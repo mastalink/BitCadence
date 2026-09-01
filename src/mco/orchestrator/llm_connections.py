@@ -2,7 +2,7 @@
 Named connections to LLM providers, managed from the Control Panel
 ("Settings -> Model Connections").
 
-BatonCadence orchestrates AGENTS (Claude Code, Codex, Gemini CLI, custom
+BitCadence orchestrates AGENTS (Claude Code, Codex, Gemini CLI, custom
 workers) - it does not itself call an LLM to do the work of a job. A "model
 connection" here is deliberately narrow: a named, testable credential an
 operator can hand to a custom worker/executor (or use to sanity-check that a

@@ -1,4 +1,4 @@
-// Baton — mock data store + live simulation engine.
+// BitCadence — mock data store + live simulation engine.
 // Shapes mirror the real MCOrchestr8 schema (agent_jobs, agent_registry,
 // agent_job_events) so screens can later be pointed at the real REST API:
 //   GET /api/jobs, GET /api/agents, GET /api/jobs/{id}/events,
@@ -307,5 +307,5 @@
   store.startSim = () => { if (!timer) timer = setInterval(tick, 2600); };
   store.stopSim = () => { clearInterval(timer); timer = null; };
 
-  window.BatonStore = store;
+  window.BitCadenceStore = store;
 })();

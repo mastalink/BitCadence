@@ -1,5 +1,5 @@
 """
-BatonCadence Encrypted Secret Store
+BitCadence Encrypted Secret Store
 ==================================
 AES-256-GCM encryption for sensitive configuration values.
 

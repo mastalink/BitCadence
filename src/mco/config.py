@@ -1,5 +1,5 @@
 """
-BatonCadence Configuration Management
+BitCadence Configuration Management
 ====================================
 Handles environment profile selections and loading/writing settings
 from local .env files and the encrypted SecretStore.

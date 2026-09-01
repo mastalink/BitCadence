@@ -13,7 +13,7 @@ Three concepts, deliberately layered:
   (`max_iterations` and/or `until`); an unbounded self-repeating agent task is
   how fleets burn budget and drift, so the parser refuses to build one.
 
-Why this lives in BatonCadence instead of cron/Task Scheduler: every launch goes
+Why this lives in BitCadence instead of cron/Task Scheduler: every launch goes
 through the job board, which means a scheduled run inherits the same governance
 as a hand-submitted one - approval gates, retry budgets, role/instance isolation,
 and an audit trail that records *which schedule* created the job. `cron` can
@@ -466,7 +466,7 @@ _SCHEDULE_FIELDS = {
 
 def sample_config() -> str:
     """A commented starter file, written by `mco schedule init`."""
-    return """# BatonCadence schedules - what work gets created, and when.
+    return """# BitCadence schedules - what work gets created, and when.
 # (Its sibling ~/.mco/fleet.toml governs which workers run.)
 #
 # Every launch below goes through the job board, so it inherits approval gates,

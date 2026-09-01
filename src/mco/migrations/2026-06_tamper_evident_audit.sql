@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════
--- BatonCadence Tamper-Evident Audit Migration (June 2026)
+-- BitCadence Tamper-Evident Audit Migration (June 2026)
 -- Hash-chains the append-only agent_job_events audit trail: each row stores
 -- the previous row's hash, its own content hash, and an optional HMAC
 -- signature. Combined with the existing append-only trigger, this makes the

@@ -1,7 +1,7 @@
 """
 Edition model - one codebase, three deployment postures.
 
-BatonCadence is open core in a single repository: every edition runs the same
+BitCadence is open core in a single repository: every edition runs the same
 code, and the edition only determines which surfaces are active. Drumline
 (shared context) is deliberately first-class in EVERY edition - collective
 memory is the product, not an upsell.

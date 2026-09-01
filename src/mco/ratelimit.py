@@ -1,5 +1,5 @@
 """
-Lightweight per-token (fallback per-IP) rate limiting for the BatonCadence gateway.
+Lightweight per-token (fallback per-IP) rate limiting for the BitCadence gateway.
 
 Implemented as a stdlib-only in-memory token bucket. No external dependencies.
 

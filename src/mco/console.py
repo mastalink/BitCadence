@@ -1,4 +1,4 @@
-"""BatonCadence Console -- full control-plane GUI served at /console.
+"""BitCadence Console -- full control-plane GUI served at /console.
 
 A single self-contained HTML file (no build step, no node_modules) shipped as
 package data. It talks to the exact same REST API as the minimal /dashboard,

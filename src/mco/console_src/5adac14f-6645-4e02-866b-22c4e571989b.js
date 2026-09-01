@@ -1,4 +1,4 @@
-// Baton — Job Board screen + Job detail drawer + New Job composer.
+// BitCadence — Job Board screen + Job detail drawer + New Job composer.
 const { useState: useStateJ, useMemo: useMemoJ, useEffect: useEffectJ } = React;
 
 const JOB_FILTERS = [
@@ -136,13 +136,13 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
             </div>
             {!rejecting ? (
               <div style={{ display: "flex", gap: 8 }}>
-                <Btn kind="ok" small onClick={() => window.BatonStore.approve(j.id, "joe-laptop")}>✓ Approve &amp; run</Btn>
+                <Btn kind="ok" small onClick={() => window.BitCadenceStore.approve(j.id, "joe-laptop")}>✓ Approve &amp; run</Btn>
                 <Btn kind="danger" small onClick={() => setRejecting(true)}>Reject…</Btn>
               </div>
             ) : (
               <div style={{ display: "flex", gap: 8 }}>
                 <input autoFocus value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why? (recorded in the audit trail)" style={{ flex: 1, border: "1px solid var(--border-strong)", borderRadius: 6, padding: "5px 10px", fontSize: 12.5 }} />
-                <Btn kind="danger" small onClick={() => { window.BatonStore.reject(j.id, "joe-laptop", reason); setRejecting(false); }}>Reject</Btn>
+                <Btn kind="danger" small onClick={() => { window.BitCadenceStore.reject(j.id, "joe-laptop", reason); setRejecting(false); }}>Reject</Btn>
                 <Btn kind="ghost" small onClick={() => setRejecting(false)}>Cancel</Btn>
               </div>
             )}
@@ -153,7 +153,7 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
           <div style={{ background: "var(--st-failed-bg)", border: "1px solid var(--st-failed-dot)", borderRadius: "var(--radius-m)", padding: 14, marginBottom: 16 }}>
             <div style={{ fontWeight: 600, color: "var(--st-failed-fg)", marginBottom: 4 }}>{tone === "plain" ? "This job hit a problem." : "Execution failed."}</div>
             <div style={{ fontSize: 12.5, color: "var(--st-failed-fg)", marginBottom: 10 }}>{j.error_message}</div>
-            <Btn small onClick={() => window.BatonStore.retryNow(j.id)}>↻ Try again</Btn>
+            <Btn small onClick={() => window.BitCadenceStore.retryNow(j.id)}>↻ Try again</Btn>
           </div>
         ) : null}
 
@@ -256,7 +256,7 @@ function NewJobForm({ tone, advanced, onClose }) {
       <div style={{ padding: "14px 22px", borderTop: "1px solid var(--border)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <Btn onClick={onClose}>Cancel</Btn>
         <Btn kind="primary" disabled={!title.trim()} onClick={() => {
-          window.BatonStore.createJob({ title: title.trim(), description: desc.trim(), target_agent_role: role, requires_approval: gate, max_retries: retries || 0, escalate_to_role: escalate.trim() || null });
+          window.BitCadenceStore.createJob({ title: title.trim(), description: desc.trim(), target_agent_role: role, requires_approval: gate, max_retries: retries || 0, escalate_to_role: escalate.trim() || null });
           onClose();
         }}>Create job</Btn>
       </div>
@@ -324,7 +324,7 @@ function computeFeedStats(events, jobs) {
 }
 
 function ActivityFeedScreen({ jobs, tone, advanced, onOpen }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const live = (store.mode ? store.mode() : "demo") === "live";
   const [events, setEvents] = useStateJ(null); // null = not loaded yet
   const [err, setErr] = useStateJ(null);

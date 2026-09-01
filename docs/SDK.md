@@ -7,9 +7,9 @@ Internals may move between releases; this module follows semver.
 
 ```python
 # summarizer.py
-from mco.sdk import BatonAgent
+from mco.sdk import BitCadenceAgent
 
-agent = BatonAgent(
+agent = BitCadenceAgent(
     role="summarizer",                  # the dropbox this worker serves
     instance_id="summarizer-1",         # unique per process
     token="mco_tok_...",                # from: mco register --name summarizer-1 --role summarizer
@@ -40,7 +40,7 @@ agent.send("summarizer", "Summarize the incident", "Summarize INC0042 for the ex
 | **Context in** | Your handler's `prompt` is prefixed with the workflow thread (every predecessor handoff in this run, oldest first) plus the best general Drumline recall. Your agent starts where the last one - any vendor - stopped. |
 | **Context out** | Return `(text, handoff)` and the next agent receives your `{summary, decisions, files, gotchas, follow_ups}` verbatim, weighted above mined context. |
 | **Failures** | Raise. The job is marked failed with your message, and the board's retry budget / escalation / audit trail take over. Don't swallow errors. |
-| **Identity** | One `BatonAgent` = one role + instance + token. Scope the token to least privilege: `mco register --scope jobs:read --scope jobs:write --scope context:read --scope context:write`. |
+| **Identity** | One `BitCadenceAgent` = one role + instance + token. Scope the token to least privilege: `mco register --scope jobs:read --scope jobs:write --scope context:read --scope context:write`. |
 
 ## Structured handoff (do this)
 
@@ -69,6 +69,6 @@ agent.recall(query="staging database", limit=3)
 
 ## Testing your worker
 
-`BatonAgent(client=...)` accepts any object with the `GatewayClient` method
+`BitCadenceAgent(client=...)` accepts any object with the `GatewayClient` method
 shapes - inject a fake and drive `agent.process_job(job)` / `agent.run_once()`
 directly. See `tests/test_sdk.py` for a complete fake.

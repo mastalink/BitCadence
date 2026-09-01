@@ -66,7 +66,7 @@ class SecretRef:
     @property
     def aad(self) -> bytes:
         return json.dumps(
-            ["batoncadence:v1", self.org_id, self.scope, self.name],
+            ["bitcadence:v1", self.org_id, self.scope, self.name],
             ensure_ascii=False,
             separators=(",", ":"),
         ).encode("utf-8")
@@ -78,7 +78,7 @@ class SecretRef:
             ensure_ascii=False,
             separators=(",", ":"),
         )
-        return str(uuid.uuid5(uuid.NAMESPACE_URL, f"batoncadence:secret:{material}"))
+        return str(uuid.uuid5(uuid.NAMESPACE_URL, f"bitcadence:secret:{material}"))
 
 
 class SecretVault(ABC):

@@ -1,4 +1,4 @@
-"""Main script entrypoint for running BatonCadence directly via python."""
+"""Main script entrypoint for running BitCadence directly via python."""
 
 from mco.cli import main
 

@@ -1,12 +1,12 @@
 # Release pipeline: push a tag like v0.2.0 and this
 #   1. runs the test suite
 #   2. builds sdist + wheel and attaches them to a GitHub Release
-#   3. pushes the Docker image to GHCR (ghcr.io/<owner>/batoncadence)
+#   3. pushes the Docker image to GHCR (ghcr.io/<owner>/bitcadence)
 #   4. publishes to PyPI via trusted publishing
 #
 # One-time setup for step 4 (until then that job is allowed to fail):
-#   PyPI -> Manage project 'batoncadence' -> Publishing -> add GitHub
-#   publisher: repo mastalink/Batoncadence, workflow release.yml,
+#   PyPI -> Manage project 'bitcadence' -> Publishing -> add GitHub
+#   publisher: repo mastalink/Bitcadence, workflow release.yml,
 #   environment pypi. No API tokens to store.
 name: Release
 
@@ -57,7 +57,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/batoncadence
+          IMAGE=ghcr.io/${{ github.repository_owner }}/bitcadence
           IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
           VERSION=${GITHUB_REF_NAME#v}
           docker build -t "$IMAGE:$VERSION" -t "$IMAGE:latest" .

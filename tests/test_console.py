@@ -1,4 +1,4 @@
-"""Tests for the BatonCadence Console route and loader."""
+"""Tests for the BitCadence Console route and loader."""
 
 from fastapi.testclient import TestClient
 
@@ -28,7 +28,7 @@ def test_gateway_client_prefers_explicit_agent_token(monkeypatch):
 def test_get_console_html_reads_package_data():
     html = get_console_html()
     assert "<!DOCTYPE html>" in html or "<!doctype html>" in html.lower()
-    assert "BatonCadence" in html
+    assert "BitCadence" in html
 
 
 def test_console_route_serves_page():
@@ -36,7 +36,7 @@ def test_console_route_serves_page():
     resp = http.get("/console")
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/html")
-    assert "BatonCadence" in resp.text
+    assert "BitCadence" in resp.text
 
 
 def test_console_route_requires_no_auth_like_dashboard():

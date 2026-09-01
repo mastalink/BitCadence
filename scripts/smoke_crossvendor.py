@@ -1,5 +1,5 @@
 """
-Cross-vendor live smoke test: Dynatrace -> BatonCadence -> ServiceNow.
+Cross-vendor live smoke test: Dynatrace -> BitCadence -> ServiceNow.
 
 Proves the marketed claim end-to-end against REAL platform instances:
 
@@ -271,7 +271,7 @@ def investigate(job: dict, context_blocks: list) -> str:
 
 
 def main() -> None:
-    print(f"\n{BOLD}BatonCadence cross-vendor smoke test{END}")
+    print(f"\n{BOLD}BitCadence cross-vendor smoke test{END}")
     print(f"{DIM}Dynatrace -> governed agent + Drumline -> ServiceNow -> audit{END}")
 
     # ── Preflight ────────────────────────────────────────────────────────────
@@ -368,7 +368,7 @@ def main() -> None:
     j2 = create_gated_job(
         operator, f"Open ServiceNow incident for {problem_ref}", "servicenow",
         "create_incident",
-        {"short_description": f"[BatonCadence] {j1.get('title', 'Dynatrace problem')}",
+        {"short_description": f"[BitCadence] {j1.get('title', 'Dynatrace problem')}",
          "description": f"Source: Dynatrace {problem_ref}\n\n{root_cause}", "urgency": "2"},
         description="Cross-vendor: file the Davis detection + agent root cause as an ITSM record.")
     approve(operator, j2)
@@ -402,7 +402,7 @@ def main() -> None:
         j4 = create_gated_job(
             operator, f"Close Dynatrace problem {problem_ref}", "dynatrace", "add_comment",
             {"problem_id": problem_ref,
-             "comment": f"Resolved as ServiceNow {number} by BatonCadence agent. {root_cause}"})
+             "comment": f"Resolved as ServiceNow {number} by BitCadence agent. {root_cause}"})
         approve(operator, j4)
         lease_and_run(dt_worker, j4, "smoke-dt-worker", "dynatrace")
         ok(f"commented on live Dynatrace problem {problem_ref}")
@@ -440,7 +440,7 @@ def main() -> None:
             j6 = create_gated_job(
                 operator, "Recurrence: file ticket BORN WITH its known fix", "servicenow",
                 "create_incident",
-                {"short_description": "[BatonCadence] checkout-service error rate (known error)",
+                {"short_description": "[BitCadence] checkout-service error rate (known error)",
                  "description": f"Recurrence of {number}.\n\n{known_fix}\n\n"
                                 f"Context that found it: Drumline recall + similar-incident search.",
                  "urgency": "3"})

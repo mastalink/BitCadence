@@ -4,6 +4,20 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 
 ## [Unreleased]
 
+### Changed
+- **Renamed: BatonCadence is now BitCadence** (`bitcadence.ai`). The tagline is
+  now *"Every agent. One beat."* — the drumline metaphor stays, the relay-race
+  pun goes. The Python distribution is `bitcadence`; **the CLI is still `mco`**,
+  every `MCO_*` environment variable is unchanged, and config still lives in
+  `~/.mco/`, so existing installs keep working without edits.
+- **Services register under the new brand** — `BitCadence-gateway`,
+  `bitcadence-gateway.service`, `com.bitcadence.gateway`. Machines installed
+  under the old names are still discovered, addressed, and uninstallable:
+  `mco service status|restart|logs|uninstall` resolve `BatonCadence-*` units,
+  tasks, and plists alongside the new ones. **To move a machine onto the new
+  names, run `mco service uninstall` then `mco service install`** — an
+  in-place upgrade leaves the old-named service running (and working).
+
 ### Fixed
 - **Security (dropbox isolation):** `POST /api/jobs/lease` now enforces the
   same addressee rule as the inbox and the completion endpoint - an agent may

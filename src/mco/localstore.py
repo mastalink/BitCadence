@@ -1,5 +1,5 @@
 """
-LocalStore - BatonCadence's embedded, zero-dependency persistence engine.
+LocalStore - BitCadence's embedded, zero-dependency persistence engine.
 
 This is what makes the Local-Only profile a *real* edition instead of a demo:
 jobs, the agent registry, the immutable audit trail, and the Drumline shared

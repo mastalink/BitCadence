@@ -1,4 +1,4 @@
-// Baton — Visual workflow builder + live DAG viewer. No YAML required;
+// BitCadence — Visual workflow builder + live DAG viewer. No YAML required;
 // YAML preview available in Advanced mode (matches the mco workflow DSL).
 const { useState: useStateW, useRef: useRefW, useLayoutEffect, useMemo: useMemoW, useEffect: useEffectW } = React;
 
@@ -268,7 +268,7 @@ function WorkflowBuilder({ jobs, tone, advanced, onOpen }) {
             {steps.length ? (
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <Btn kind="primary" disabled={!valid} onClick={() => {
-                  window.BatonStore.submitWorkflow(name || "untitled-flow", steps.map((s) => ({
+                  window.BitCadenceStore.submitWorkflow(name || "untitled-flow", steps.map((s) => ({
                     tmpId: s.id, role: s.role, title: s.title, instructions: s.instructions,
                     depends_on: s.deps, requires_approval: s.gate, max_retries: s.retries, escalate_to_role: s.escalate || null,
                   })));
