@@ -218,6 +218,26 @@
       try { await api("/api/jobs/" + jobId + "/retry", { method: "POST" }); await poll(); toast("ok", "Re-queued", "Job sent back to the board."); }
       catch (e) { toast("err", "Retry failed", e.message + " (retry needs an approver-role token)"); }
     },
+    async cancelJob(jobId, reason) {
+      if (!isLive()) return demo.cancelJob ? demo.cancelJob(jobId, reason) : null;
+      try {
+        await api("/api/jobs/" + jobId + "/cancel", { method: "POST", body: JSON.stringify({ reason: reason || "" }) });
+        await poll();
+        toast("ok", "Cancelled", "The job was called off.");
+      }
+      catch (e) { toast("err", "Cancel failed", e.message + " (cancel needs an approver-role token)"); }
+    },
+    async reassignJob(jobId, toRole, toInstance) {
+      if (!isLive()) return demo.reassignJob ? demo.reassignJob(jobId, toRole, toInstance) : null;
+      try {
+        const body = { to_role: toRole };
+        if (toInstance) body.to_instance = toInstance;
+        await api("/api/jobs/" + jobId + "/reassign", { method: "POST", body: JSON.stringify(body) });
+        await poll();
+        toast("ok", "Reassigned", "Now waiting on " + (toInstance || toRole) + ".");
+      }
+      catch (e) { toast("err", "Reassign failed", e.message + " (reassign needs an approver-role token)"); }
+    },
     async createJob(payload) {
       if (!isLive()) return demo.createJob(payload);
       try {
