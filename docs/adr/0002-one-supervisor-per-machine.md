@@ -2,7 +2,14 @@
 status: accepted
 ---
 
-# One supervisor per machine, one pane of glass
+# One supervisor per user session, one pane of glass
+
+> **Read Revision 2 first.** Revision 1 (immediately below) was reviewed and
+> rejected; nine findings are recorded at the end of this document. Revision 2
+> supersedes the sections it names, including this title: the supervisor is
+> per-user, not per-machine, because every service facility we can install
+> without elevation is session-scoped. The filename is kept for the links
+> already handed to implementers.
 
 **Supersedes:** the per-worker service model in `fleet.apply_fleet()`.
 **Implementation status:** specified, not yet built.
@@ -351,6 +358,250 @@ fully usable without it, and nothing may depend on it running.
 
 ---
 
+---
+
+# Revision 2 — corrections after review
+
+Revision 1 was reviewed and **rejected**: nine findings, recorded verbatim under
+*Review findings* below. Three were errors in the spec rather than gaps in it,
+and the most consequential — the fleet schema — would have made every parallel
+implementation diverge. This revision supersedes the sections it names. Where
+revision 1 and this section disagree, **this section wins**.
+
+## R1. Scope: per-user, not per-machine (supersedes §2, §3, and the title's claim)
+
+Revision 1 promised "one supervisor per machine" while specifying facilities that
+cannot deliver it. `InteractiveToken` scheduled tasks, `systemd --user` units,
+and launchd **LaunchAgents** are all session-scoped: none runs before login, all
+can end at logout, and on a multi-user host each user would race to bind the same
+control port.
+
+Machine scope would require a Windows service, a LaunchDaemon, and a system
+systemd unit — all of which need elevation. That conflicts directly with the
+standing one-click, no-admin install requirement, and elevation is already a
+known pain point in `fleet apply`.
+
+**Decision: the supervisor is per-user, and the promise is renamed to match.**
+One supervisor per logged-in user, per machine. Workers do not run before login
+unless the operator explicitly enables the platform facility for it
+(`loginctl enable-linger`, or a Windows task with stored credentials).
+
+This is a smaller claim than revision 1 made, and it is the true one. State it in
+the installer output so nobody discovers it at 3am.
+
+Consequences:
+
+- Control endpoint and lock names are **namespaced by user**, not global.
+- The installer says plainly that workers start at login.
+- Pre-login operation is a documented opt-in, not the default.
+
+## R2. Single-owner enforcement (supersedes §6; resolves the Critical finding)
+
+"One supervisor" must be enforced, not assumed. Two checkouts, two sessions, or a
+manually launched daemon alongside the service all overlap today. This is not
+theoretical: during this ADR's own rollout an agent and an operator shared one
+working directory and a commit landed on the wrong branch.
+
+**Required, before the control API binds or any child spawns:**
+
+1. **Supervisor singleton.** Windows: a named mutex with an explicit ACL scoped to
+   the user. POSIX: an advisory `flock` on `~/.mco/agentd.lock` held for the
+   process lifetime. Acquire first; exit with a clear message naming the holding
+   pid if it is already taken.
+2. **Per-worker execution lock**, keyed by canonical worker identity
+   (`role` + `instance`), so an outgoing and an incoming supervisor cannot
+   overlap during handoff.
+
+The atomic job lease prevents two processes leasing the *same* row. It does not
+prevent two copies of one worker leasing *different* rows, doubling concurrency,
+heartbeats, and local side effects. **The lease is not a substitute for a lock.**
+
+**Migration ordering, corrected.** Revision 1 said uninstall-then-install; the job
+instructions said install-first. Both are wrong. `_win_uninstall()` runs only
+`schtasks /Delete` — never `/End` — so a long-lived waker keeps running after its
+registration disappears. Correct order:
+
+1. Acquire the supervisor lock, or coordinate with a running daemon.
+2. For each legacy service: **stop it, then verify the process has exited.**
+3. Install and start the daemon.
+4. Verify worker adoption.
+5. On failure, roll back or report a recoverable stopped state — never leave the
+   machine both unsupervised and unmigrated.
+
+Acceptance test: hold a legacy Windows task's process open after deletion and
+prove no second copy starts.
+
+## R3. Crash-loop rule, corrected (supersedes §4.2)
+
+The 61-second hole is real. Revision 1 let a healthy-uptime reset clear the same
+history the crash-loop guard reads, so a worker exiting every 61 seconds would
+restart forever.
+
+**Two independent pieces of state:**
+
+| State | Purpose | Reset by 60s healthy uptime? |
+|---|---|---|
+| `backoff_exponent` | delay = `min(60, 2 ** exponent)` | **yes** |
+| `failure_timestamps` | deque; entries older than 300s pruned | **no** |
+
+The fifth surviving timestamp transitions to `crashlooped`. **Persist the latch
+and the timestamps** — with enough process/boot identity to interpret them —
+across daemon restarts and upgrades, or restarting the daemon silently clears the
+guard. A reboot clearing the latch must be an explicit decision, not an accident
+of volatile state.
+
+## R4. Fleet schema — use the one that exists (supersedes §4.5)
+
+**This was the worst error in revision 1.** It specified `enabled = false` and
+`args`. Neither exists. `fleet.parse_fleet_data()` **rejects unknown fields**, so
+every implementation building on revision 1 would have written config the CLI
+refuses to parse.
+
+The actual schema, which is authoritative:
+
+```toml
+[workers.opencode-beast]
+role = "opencode"            # required
+instance = "opencode-beast"  # optional, defaults to the table key
+mode = "waker"               # required: "waker" | "poll" | "off"
+exec = "C:/.../run.cmd"      # required unless mode = "off"; a SHELL STRING
+min_interval = 10            # seconds, default 10
+poll_interval = 1800         # seconds, default 1800
+```
+
+`ALLOWED_FIELDS = {role, instance, mode, exec, min_interval, poll_interval}`.
+`VALID_MODES = {waker, poll, off}`. **Disabled is `mode = "off"`, not `enabled`.**
+`exec` is a shell string parsed with `shlex.split`, not an argv array.
+
+**How each mode becomes a daemon child:**
+
+| mode | daemon behaviour |
+|---|---|
+| `waker` | one long-lived child (`mco wake ...`), restarted per R3 on any exit |
+| `poll` | run `exec` every `poll_interval`; a clean exit is **success, not a fault** |
+| `off` | no child; shown in the console as disabled |
+
+Note that the daemon now owns poll *scheduling*, which the OS scheduler used to
+do. Revision 1 omitted this entirely.
+
+**The scheduler** (`BitCadence-scheduler`) has no schema representation. Until one
+exists it stays its own service; folding it in is deferred, not assumed.
+
+Any schema change is a versioned migration in a follow-up ADR. Do not extend the
+schema opportunistically — the CLI, daemon, console, and migration command must
+round-trip the same file without semantic drift.
+
+## R5. Config reconciliation must be transactional (supersedes §4.5)
+
+`fleet.set_worker_value()` uses `Path.write_text()` on the live file, which
+truncates before the new content lands. A 5s `mtime` poll can observe exactly
+that.
+
+- **Writers** (console, CLI, daemon) write a temp file in the same directory,
+  `flush` + `fsync`, then atomically replace the target.
+- **Readers** detect change by **content hash**, not `mtime` alone — timestamp
+  granularity can coalesce two writes inside one tick.
+- Reconciliation is: read whole candidate, parse, validate, diff, then commit it
+  as the new last-known-good generation. **On any parse or validation error, keep
+  the running generation, surface the error, and retry when the file is stable.**
+  Never reconcile a partial or invalid candidate.
+- `PUT /v1/config` carries an expected generation (ETag). A stale generation is a
+  `409`, not a silent overwrite.
+
+## R6. Orphan reaping must prove identity (supersedes §5.2)
+
+Command-name matching is not safe. A recycled pid running a legitimately
+identical command would be killed — someone else's worker, or a freshly started
+one of ours.
+
+**The rule is "do not kill unless identity is proven."** Record, and re-verify
+immediately before signalling: uid, process start time, canonical executable
+path, full argv, and a random per-supervisor nonce passed to the child in its
+environment. If any check fails or cannot be read, **leave the process alone and
+report it.** A surviving orphan is a bad day. Killing a stranger's process is a
+catastrophe.
+
+macOS still cannot *prevent* orphans — no `PR_SET_PDEATHSIG`, no Job Objects.
+That remains true and is not fixable here.
+
+## R7. Control-plane privilege (supersedes §4.4)
+
+Reusing `MCO_LOCAL_TOKEN` makes one token mean both "administer the gateway" and
+"spawn arbitrary local processes." Those are different powers, and the second is
+strictly larger.
+
+- The daemon gets its **own** secret at `~/.mco/agentd.token`, permissioned to the
+  owning user (`0600`; on Windows, an ACL to the user SID).
+- Bind explicitly to `127.0.0.1`, never `0.0.0.0`.
+- Loopback is not an authorization boundary — any local process can reach it, so
+  the token is what carries the weight.
+- `/v1/logs` is a **separate capability** from control: worker output may contain
+  secrets, and read access must not come free with the ability to restart.
+- Tests must prove a gateway token cannot mutate daemon config, and a daemon
+  token cannot administer the gateway.
+
+## R8. Desired state, overrides, and upgrades (new; §4 was silent)
+
+- **Desired state is persisted and distinct from observed state.** A manual stop
+  is a durable override that survives reconciliation and daemon restart until
+  explicitly cleared. Revision 1 would have let an unrelated config edit restart a
+  worker the operator had deliberately stopped.
+- The `crashlooped` latch survives daemon restart (see R3).
+- **Upgrade protocol:** stop spawning, drain or terminate children against a
+  deadline, hand the ownership lock over, install atomically, negotiate
+  API/config schema version, health-check, then resume or roll back.
+- Version skew between gateway, daemon, console, and tray is expected during
+  upgrade and must be negotiated, not assumed away.
+
+## R9. Why the gateway stays separate — the honest argument (supersedes §3)
+
+Revision 1 claimed that folding the gateway under the daemon would make every
+worker restart an API outage. **That does not follow** — a supervisor can own the
+gateway and the workers as independent children.
+
+The real reason is failure-domain and release-cadence isolation: the daemon will
+be upgraded far more often than the gateway, and every daemon upgrade or crash
+would otherwise take the API down with it, including for remote clients that have
+nothing to do with this machine's workers.
+
+That is a genuine requirement, so the two-service split stands — but it is now
+stated as a requirement to be **tested** (the gateway survives a daemon crash and
+a rolling daemon upgrade), not asserted as self-evident. If that requirement is
+ever dropped, one supervisor owning an independently supervised gateway child is
+a coherent design and serves "one thing to own" better.
+
+## R10. Shutdown and log contracts (new; §4.6 was under-specified)
+
+Define and test: process-group ownership, terminate and kill deadlines,
+descendant handling when a child forks, **concurrent draining of stdout and
+stderr** (a full pipe on one stream deadlocks the worker while it still looks
+healthy), bounded buffering with backpressure, and behaviour when the disk fills.
+Workers must not log secrets, and that expectation belongs in the SDK docs, not
+only here.
+
+## Findings disposition
+
+| Finding | Disposition |
+|---|---|
+| Critical — no single-owner fence | Fixed in **R2**, plus the scope decision in R1 |
+| High — 61-second crash-loop hole | Fixed in **R3** |
+| High — partial config write | Fixed in **R5** |
+| High — ADR ignores the real fleet schema | Fixed in **R4** |
+| High — command-name orphan reaping | Fixed in **R6** |
+| High — loopback plus gateway token | Fixed in **R7** |
+| High — services give no machine lifetime | Fixed in **R1** — scope renamed, not papered over |
+| High — desired state, overrides, upgrades | Fixed in **R8** |
+| Medium — §3's gateway argument | Fixed in **R9** — conclusion kept, reasoning replaced |
+| Medium — shutdown and log contracts | Fixed in **R10** |
+
+## Implementation status after this revision
+
+- PR #47 (supervisor core, Windows) and PR #46 (tray) were built against revision
+  1 and **must be reworked** against R3, R4, and R7 before merge.
+- Jobs 2/5, 4/5, and 5/5 were cancelled before being leased, and are reposted
+  against this revision.
+
+---
 ## Review findings
 
 **Verdict: do not implement this ADR as written.** The fixed-size service
