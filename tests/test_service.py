@@ -378,6 +378,54 @@ def test_gateway_name_defaults_when_nothing_installed(monkeypatch):
     monkeypatch.setattr(service.os, "name", "nt")
     monkeypatch.setattr(service, "list_status", lambda: [])
     assert service.installed_gateway_task_name() == service.SERVICE_NAME
+
+
+def _posix_home(monkeypatch, tmp_path, *unit_names):
+    """A fake $HOME with systemd unit files for `unit_names` and nothing else."""
+    units = tmp_path / ".config" / "systemd" / "user"
+    units.mkdir(parents=True)
+    for unit in unit_names:
+        (units / unit).write_text("", encoding="utf-8")
+    monkeypatch.setattr(service.os, "name", "posix")
+    monkeypatch.setattr(service.sys, "platform", "linux")
+    monkeypatch.setattr(service.Path, "home", staticmethod(lambda: tmp_path))
+
+
+def test_posix_gateway_resolves_legacy_unit(monkeypatch, tmp_path):
+    """Off Windows the legacy unit must still be addressable.
+
+    Before, `installed_gateway_task_name` returned the current name
+    unconditionally off Windows, so `mco service restart|uninstall` on a
+    pre-rename Linux install addressed a unit that does not exist.
+    """
+    _posix_home(monkeypatch, tmp_path, "batoncadence-gateway.service")
+    assert service.installed_gateway_task_name() == "BatonCadence-gateway"
+    assert service._resolve_target(None).unit_name == "batoncadence-gateway.service"
+
+
+def test_posix_gateway_prefers_current_unit(monkeypatch, tmp_path):
+    _posix_home(
+        monkeypatch, tmp_path,
+        "batoncadence-gateway.service", "bitcadence-gateway.service",
+    )
+    assert service.installed_gateway_task_name() == service.SERVICE_NAME
+
+
+def test_posix_gateway_lookup_spawns_no_processes(monkeypatch, tmp_path):
+    """Resolution runs on every `mco service ...`; it must stay a stat.
+
+    Going through list_status() here spawned `systemctl is-active` plus
+    `systemctl show` per installed unit (or `launchctl print` on macOS) before
+    every service command.
+    """
+    _posix_home(monkeypatch, tmp_path, "bitcadence-gateway.service")
+
+    def _boom(*a, **k):
+        raise AssertionError("resolution must not shell out")
+
+    monkeypatch.setattr(service, "_run", _boom)
+    monkeypatch.setattr(service, "list_status", _boom)
+    assert service.installed_gateway_task_name() == service.SERVICE_NAME
 # ── scheduler service (schedules and loops) ───────────────────────────────────
 
 def test_scheduler_argv_runs_the_schedule_daemon():

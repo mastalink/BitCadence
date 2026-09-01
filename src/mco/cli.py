@@ -51,7 +51,10 @@ console = Console()
 def get_version() -> str:
     """Installed distribution version (single source of truth: pyproject)."""
     from importlib.metadata import version as _dist_version
-    for dist in ("bitcadence", "mco"):  # 'mco' = pre-0.2 editable installs
+    # Every name this project has shipped under: 'batoncadence' = pre-rename
+    # installs, 'mco' = pre-0.2 editable installs. An install that predates a
+    # rename still carries the old dist metadata until it is reinstalled.
+    for dist in ("bitcadence", "batoncadence", "mco"):
         try:
             return _dist_version(dist)
         except Exception:

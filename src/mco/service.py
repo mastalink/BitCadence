@@ -901,14 +901,33 @@ def installed_gateway_task_name() -> str:
     Prefers the current name, falls back to a legacy one if that is what is
     really installed. Without this, service commands on an older install
     address a task that does not exist.
+
+    Off Windows this stats the unit file / plist directly rather than going
+    through list_status(): that helper spawns a process per installed service
+    (`systemctl is-active` plus `systemctl show`, or `launchctl print`), and
+    this runs on every `mco service ...` and `mco restart`.
     """
-    installed = {str(r.get("name", "")) for r in list_status()}
-    if SERVICE_NAME in installed:
+    if os.name == "nt":
+        installed = {str(r.get("name", "")) for r in list_status()}
+        if SERVICE_NAME in installed:
+            return SERVICE_NAME
+        for legacy in LEGACY_GATEWAY_NAMES:
+            if legacy in installed:
+                return legacy
         return SERVICE_NAME
-    for legacy in LEGACY_GATEWAY_NAMES:
-        if legacy in installed:
-            return legacy
+
+    for name in (SERVICE_NAME, *LEGACY_GATEWAY_NAMES):
+        if _gateway_artifact_exists(name):
+            return name
     return SERVICE_NAME
+
+
+def _gateway_artifact_exists(name: str) -> bool:
+    """True when the gateway is registered under `name` on this POSIX host."""
+    spec = replace(_gateway_spec("127.0.0.1", 18789), name=name)
+    if sys.platform == "darwin":
+        return _launchd_plist_path(spec.launchd_label).exists()
+    return _systemd_unit_path(spec.unit_name).exists()
 
 
 def _resolve_target(selector: str | None) -> ServiceSpec:
