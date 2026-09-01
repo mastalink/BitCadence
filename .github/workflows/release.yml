@@ -71,6 +71,6 @@ jobs:
     # Allowed to fail until the PyPI trusted publisher is configured (see header).
     continue-on-error: true
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with: { name: dist, path: dist/ }
       - uses: pypa/gh-action-pypi-publish@release/v1
