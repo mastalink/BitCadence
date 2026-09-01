@@ -108,9 +108,25 @@ def _poll_service_name(role: str, instance: str | None = None) -> str:
     return "-".join(parts)
 
 
+def _service_python() -> str:
+    """The interpreter a background service should run under.
+
+    On Windows, `python.exe` is a console application: Task Scheduler allocates
+    a console for it and the window flashes across whatever the operator is
+    doing - every trigger, forever. `pythonw.exe` is the same interpreter built
+    as a GUI subsystem binary, so no console is ever allocated. Fall back to
+    `sys.executable` if it is missing (some embedded/portable installs ship
+    only python.exe).
+    """
+    if os.name != "nt":
+        return sys.executable
+    candidate = Path(sys.executable).with_name("pythonw.exe")
+    return str(candidate) if candidate.exists() else sys.executable
+
+
 def _serve_argv(host: str, port: int) -> list[str]:
     """Argv that runs the gateway in the foreground."""
-    return [sys.executable, "-m", "mco.cli", "serve", "--host", host, "--port", str(port)]
+    return [_service_python(), "-m", "mco.cli", "serve", "--host", host, "--port", str(port)]
 
 
 def _wake_argv(role: str, exec_command: str, instance: str | None = None, min_interval: float = 10.0) -> list[str]:
@@ -124,7 +140,7 @@ def _wake_argv(role: str, exec_command: str, instance: str | None = None, min_in
     of two-place update that strands fleets.
     """
     argv = [
-        sys.executable,
+        _service_python(),
         "-m",
         "mco.cli",
         "wake",
@@ -168,7 +184,7 @@ def _is_console_script(path: str) -> bool:
 def _scheduler_argv(interval: float = 30.0) -> list[str]:
     """Argv that runs the schedule/loop scheduler in the foreground."""
     return [
-        sys.executable, "-m", "mco.cli", "schedule", "run",
+        _service_python(), "-m", "mco.cli", "schedule", "run",
         "--interval", _format_interval(interval),
     ]
 

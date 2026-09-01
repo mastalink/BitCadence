@@ -50,13 +50,13 @@ def _task_scheduler_duration_seconds(duration):
 
 def test_serve_argv_runs_the_gateway():
     argv = service._serve_argv("0.0.0.0", 9000)
-    assert argv[0] == sys.executable
+    assert argv[0] == service._service_python()
     assert argv[-5:] == ["serve", "--host", "0.0.0.0", "--port", "9000"]
 
 
 def test_wake_argv_runs_the_waker_with_selector_values():
     argv = service._wake_argv("opencode", "opencode run", instance="opencode-beast", min_interval=2.5)
-    assert argv[0] == sys.executable
+    assert argv[0] == service._service_python()
     assert argv[1:4] == ["-m", "mco.cli", "wake"]
     assert "--role" in argv and "opencode" in argv
     assert "--exec" in argv and "opencode run" in argv
@@ -90,7 +90,7 @@ def test_windows_task_xml_has_boot_and_logon_triggers():
     minidom.parseString(xml.encode("utf-16"))
     assert "<BootTrigger>" in xml
     assert "<LogonTrigger>" in xml
-    assert "<Command>" in xml and sys.executable in xml
+    assert "<Command>" in xml and service._service_python() in xml
     assert "-m mco.cli serve --host 127.0.0.1 --port 18789" in xml
 
 
@@ -430,7 +430,7 @@ def test_posix_gateway_lookup_spawns_no_processes(monkeypatch, tmp_path):
 
 def test_scheduler_argv_runs_the_schedule_daemon():
     argv = service._scheduler_argv(45.0)
-    assert argv[0] == sys.executable
+    assert argv[0] == service._service_python()
     assert argv[1:] == ["-m", "mco.cli", "schedule", "run", "--interval", "45"]
 
 
@@ -475,3 +475,47 @@ def test_launchd_scheduler_plist_is_valid_xml():
 def test_systemd_scheduler_unit_renders_execstart():
     unit = service._service_systemd_unit_text(service._scheduler_spec())
     assert "schedule" in unit and "run" in unit
+
+
+# ── no console windows on Windows ────────────────────────────────────────────
+
+def test_service_python_is_windowless_on_windows(monkeypatch, tmp_path):
+    """python.exe is a console app: Task Scheduler flashes a window on every
+    trigger, forever. pythonw.exe is the same interpreter with no console."""
+    fake = tmp_path / "python.exe"
+    fake.write_text("", encoding="utf-8")
+    (tmp_path / "pythonw.exe").write_text("", encoding="utf-8")
+    monkeypatch.setattr(service.os, "name", "nt")
+    monkeypatch.setattr(service.sys, "executable", str(fake))
+    assert service._service_python().endswith("pythonw.exe")
+
+
+def test_service_python_falls_back_when_pythonw_absent(monkeypatch, tmp_path):
+    """Embedded/portable installs may ship only python.exe - never point a
+    service at an interpreter that is not there."""
+    fake = tmp_path / "python.exe"
+    fake.write_text("", encoding="utf-8")
+    monkeypatch.setattr(service.os, "name", "nt")
+    monkeypatch.setattr(service.sys, "executable", str(fake))
+    assert service._service_python() == str(fake)
+
+
+def test_service_python_untouched_off_windows(monkeypatch):
+    monkeypatch.setattr(service.os, "name", "posix")
+    assert service._service_python() == sys.executable
+
+
+def test_every_owned_entrypoint_is_windowless(monkeypatch, tmp_path):
+    """The gateway, waker and scheduler are all ours - none may allocate a
+    console. Regression guard for the 'flashing terminals' report."""
+    fake = tmp_path / "python.exe"
+    fake.write_text("", encoding="utf-8")
+    (tmp_path / "pythonw.exe").write_text("", encoding="utf-8")
+    monkeypatch.setattr(service.os, "name", "nt")
+    monkeypatch.setattr(service.sys, "executable", str(fake))
+    for argv in (
+        service._serve_argv("127.0.0.1", 18789),
+        service._wake_argv("codex", "worker.cmd", instance="w1"),
+        service._scheduler_argv(30.0),
+    ):
+        assert argv[0].endswith("pythonw.exe"), argv
