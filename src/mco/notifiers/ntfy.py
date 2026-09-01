@@ -1,11 +1,11 @@
 """
-BatonCadence NTFY Notifier Addon
+BitCadence NTFY Notifier Addon
 ================================
 
 Simple addon to push important MCO events and logs to ntfy.sh (or self-hosted ntfy server)
 via webhooks.
 
-Usage in BatonCadence:
+Usage in BitCadence:
 - Set in .env or config:
   NTFY_SERVER=https://ntfy.sh
   NTFY_TOPIC=mco-events   # required to enable; blank = off (Local-Only default)
@@ -32,7 +32,7 @@ from mco.config import get_config
 
 
 def get_ntfy_config() -> dict:
-    """Read ntfy settings from BatonCadence config."""
+    """Read ntfy settings from BitCadence config."""
     config = get_config()
     # Blank NTFY_TOPIC means off. Do not default to "mco-events"; that
     # silently enabled public ntfy.sh on Local-Only installs.
@@ -66,7 +66,7 @@ def notify(
     url = f"{server}/{topic}"
 
     headers = {
-        "Title": title or "BatonCadence",
+        "Title": title or "BitCadence",
         "Priority": str(priority),
     }
     if tags:
@@ -90,7 +90,7 @@ def notify(
 def notify_job_created(job_id: str, title: str, to_role: str):
     notify(
         f"New MCO job for {to_role}: {title}",
-        title="BatonCadence Job Created",
+        title="BitCadence Job Created",
         priority=3,
         tags=["mco", "job", to_role.lower()],
         topic=f"mco-{to_role.lower()}" if to_role else None,
@@ -100,7 +100,7 @@ def notify_job_created(job_id: str, title: str, to_role: str):
 def notify_job_leased(job_id: str, agent_id: str, to_role: str):
     notify(
         f"🏃 Job {job_id} leased by {agent_id} ({to_role})",
-        title="BatonCadence Job Leased",
+        title="BitCadence Job Leased",
         priority=2,
         tags=["mco", "job", "leased", to_role.lower()],
         topic=f"mco-{to_role.lower()}" if to_role else None,
@@ -111,7 +111,7 @@ def notify_job_completed(job_id: str, status: str, to_role: str):
     emoji = "✅" if status.lower() in ("success", "done", "completed") else "❌"
     notify(
         f"{emoji} Job {job_id} for {to_role} -> {status}",
-        title="BatonCadence Job Completed",
+        title="BitCadence Job Completed",
         priority=2 if status.lower() in ("success", "done", "completed") else 4,
         tags=["mco", "job", status.lower(), to_role.lower()],
         topic=f"mco-{to_role.lower()}" if to_role else None,
@@ -121,7 +121,7 @@ def notify_job_completed(job_id: str, status: str, to_role: str):
 def notify_job_failed(job_id: str, error: str, to_role: str):
     notify(
         f"❌ Job {job_id} for {to_role} FAILED: {error}",
-        title="BatonCadence Job FAILED",
+        title="BitCadence Job FAILED",
         priority=5,
         tags=["mco", "job", "failed", to_role.lower()],
         topic=f"mco-{to_role.lower()}" if to_role else None,
@@ -132,7 +132,7 @@ def notify_job_needs_approval(job_id: str, title: str, to_role: str):
     """Human-in-the-loop gate: a job is paused waiting for an approval decision."""
     notify(
         f"Job {job_id} for {to_role} awaits approval: {title}",
-        title="BatonCadence Approval Required",
+        title="BitCadence Approval Required",
         priority=4,
         tags=["mco", "job", "approval", to_role.lower()],
         topic=f"mco-{to_role.lower()}" if to_role else None,
@@ -143,7 +143,7 @@ def notify_job_escalated(job_id: str, title: str, escalate_to_role: str, error: 
     """A job exhausted retries and was escalated to another role."""
     notify(
         f"Job {job_id} escalated to {escalate_to_role}: {title}\nLast error: {error}",
-        title="BatonCadence Job ESCALATED",
+        title="BitCadence Job ESCALATED",
         priority=5,
         tags=["mco", "job", "escalated", escalate_to_role.lower()],
         topic=f"mco-{escalate_to_role.lower()}" if escalate_to_role else None,
@@ -164,7 +164,7 @@ def notify_force_pull(role: str, reason: str = "Manual trigger"):
 def notify_agent_online(role: str, instance_id: str):
     notify(
         f"Agent online: {role} ({instance_id})",
-        title="BatonCadence Agent Online",
+        title="BitCadence Agent Online",
         priority=2,
         tags=["mco", "agent", "online", role.lower()],
     )
@@ -173,7 +173,7 @@ def notify_agent_online(role: str, instance_id: str):
 def notify_agent_offline(role: str, instance_id: str):
     notify(
         f"Agent offline: {role} ({instance_id})",
-        title="BatonCadence Agent Offline",
+        title="BitCadence Agent Offline",
         priority=3,
         tags=["mco", "agent", "offline", role.lower()],
     )
@@ -192,7 +192,7 @@ def notify_gateway_startup(stats: dict):
     
     notify(
         "\n".join(msg_lines),
-        title="BatonCadence Gateway Started",
+        title="BitCadence Gateway Started",
         priority=2,
         tags=["gateway", "startup", "mco"],
     )

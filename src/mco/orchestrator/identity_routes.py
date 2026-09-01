@@ -141,6 +141,10 @@ def _mapping_payload(provider_id: str, org_id: str, external_group: str, role: s
             status_code=400,
             detail=f"Unknown role '{normalized_role}'. Valid: {', '.join(BUILTIN_ROLE_SCOPES)}",
         )
+    # FROZEN WIRE CONSTANT - do not rebrand. This namespace fixes the
+    # deterministic id of a role mapping; changing it makes every stored
+    # mapping recompute to a new id, so saves duplicate instead of update and
+    # an SSO user can log in without the role their group is meant to grant.
     mapping_id = str(uuid.uuid5(
         uuid.NAMESPACE_URL,
         f"batoncadence:role-mapping:{provider_id}:{group.casefold()}",
@@ -351,7 +355,7 @@ def _mapped_access(db: Any, provider: dict, claims: dict) -> tuple[str, list[str
         if str(row.get("external_group") or "").casefold() in groups
     ]
     if not matched:
-        raise HTTPException(status_code=403, detail="No BatonCadence role mapping matched this identity")
+        raise HTTPException(status_code=403, detail="No BitCadence role mapping matched this identity")
     roles = {row["role"] for row in matched}
     role = next((candidate for candidate in ROLE_PRIORITY if candidate in roles), "viewer")
     scopes = set()
@@ -401,6 +405,11 @@ def _provision_user(db: Any, provider: dict, claims: dict, role: str, scopes: li
         }).execute()
 
     org_id = provider.get("org_id") or "default"
+    # FROZEN WIRE CONSTANT - do not rebrand. This namespace fixes the
+    # deterministic primary key of a membership. Changing it makes the upsert
+    # below insert a duplicate row per (org_id, user_id) instead of updating,
+    # and the active-check above reads only the first row - so a deactivated
+    # member could be re-admitted through a still-active duplicate.
     membership_id = str(uuid.uuid5(
         uuid.NAMESPACE_URL,
         f"batoncadence:membership:{org_id}:{user_id}",

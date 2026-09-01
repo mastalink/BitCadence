@@ -1,7 +1,7 @@
 """
 Enterprise connector framework.
 
-Connectors bridge BatonCadence to the agent surfaces of enterprise platforms
+Connectors bridge BitCadence to the agent surfaces of enterprise platforms
 (ServiceNow, Dynatrace, ...). Each connector plays two roles:
 
 1. **Ingestion** - `pull_events()` normalizes platform objects (incidents,

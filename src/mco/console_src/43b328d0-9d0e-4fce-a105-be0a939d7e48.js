@@ -1,4 +1,4 @@
-// Baton — Overview (mission control) + Approvals inbox.
+// BitCadence — Overview (mission control) + Approvals inbox.
 const { useState: useStateH, useMemo: useMemoH, useEffect: useEffectH } = React;
 
 // ----- Overview -----
@@ -80,7 +80,7 @@ function WorkflowStrip({ jobs, tone, onOpen }) {
 }
 
 function ActivityFeed({ jobs, tone, onOpen }) {
-  const evts = window.BatonStore.getAllEvents(9);
+  const evts = window.BitCadenceStore.getAllEvents(9);
   const titleOf = (jobId) => { const j = jobs.find((x) => x.id === jobId); return j ? j.title : shortId(jobId); };
   return (
     <Card pad={false}>
@@ -120,7 +120,7 @@ function DemoLaunchPanel({ tone, onNav }) {
   async function runDemo() {
     setBusy(true);
     try {
-      const res = await window.BatonStore.seedDemoPipeline();
+      const res = await window.BitCadenceStore.seedDemoPipeline();
       if (res) {
         setLastRun(res.run || "created");
         onNav("overview");
@@ -190,7 +190,7 @@ function Overview({ jobs, agents, tone, advanced, onNav, onOpen }) {
                       <div style={{ fontWeight: 600, fontSize: 13.5 }}>{j.title}</div>
                       <div style={{ fontSize: 12, color: "var(--text-3)" }}>from {j.source_agent_id} · {timeAgo(j.created_at)}</div>
                     </div>
-                    <Btn kind="ok" small onClick={() => window.BatonStore.approve(j.id, "joe-laptop")}>✓ Approve</Btn>
+                    <Btn kind="ok" small onClick={() => window.BitCadenceStore.approve(j.id, "joe-laptop")}>✓ Approve</Btn>
                     <Btn small onClick={() => onOpen(j.id)}>Review</Btn>
                   </div>
                 </Card>
@@ -260,9 +260,9 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
                 {advanced ? <span>ID: <Mono>{shortId(selected.id)}</Mono></span> : null}
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                <Btn kind="primary" onClick={() => window.BatonStore.approve(selected.id, "joe-laptop")}>✓ Approve &amp; run</Btn>
+                <Btn kind="primary" onClick={() => window.BitCadenceStore.approve(selected.id, "joe-laptop")}>✓ Approve &amp; run</Btn>
                 <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tone === "plain" ? "Reason for saying no…" : "Rejection reason (audited)…"} style={{ flex: 1, minWidth: 160, border: "1px solid var(--border-strong)", borderRadius: 8, padding: "8px 12px", fontSize: 13 }} />
-                <Btn kind="danger" onClick={() => window.BatonStore.reject(selected.id, "joe-laptop", reason)}>Reject</Btn>
+                <Btn kind="danger" onClick={() => window.BitCadenceStore.reject(selected.id, "joe-laptop", reason)}>Reject</Btn>
                 <Btn kind="ghost" onClick={() => onOpen(selected.id)}>Full details →</Btn>
               </div>
             </Card>
@@ -297,7 +297,7 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
 }
 
 function Governance({ jobs, tone, advanced, onOpen }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const live = (store.mode ? store.mode() : "demo") === "live";
   const [events, setEvents] = useStateH([]);
   const [err, setErr] = useStateH(null);
@@ -330,7 +330,7 @@ function Governance({ jobs, tone, advanced, onOpen }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "batoncadence-evidence-pack.json";
+      a.download = "bitcadence-evidence-pack.json";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) { setErr(e.message); }
@@ -462,7 +462,7 @@ function KindChip({ kind }) {
 }
 
 function DrumlineMemory({ tone, advanced }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const live = (store.mode ? store.mode() : "demo") === "live";
   const [query, setQuery] = useStateH("");
   const [tags, setTags] = useStateH("");

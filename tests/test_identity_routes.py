@@ -74,7 +74,7 @@ def create_provider(ctx, mappings=None):
         "issuer": "https://acme.okta.com/oauth2/default",
         "client_id": "client-123",
         "client_secret": "oidc-client-secret",
-        "group_mappings": mappings or {"Baton-Admins": "admin"},
+        "group_mappings": mappings or {"BitCadence-Admins": "admin"},
     })
     assert response.status_code == 200, response.text
     return response.json()["provider"]
@@ -215,7 +215,7 @@ def test_callback_provisions_mapped_user_and_revocable_session(ctx, monkeypatch)
 
 
 def test_unmapped_group_is_denied_without_creating_session(ctx, monkeypatch):
-    provider = create_provider(ctx, {"Baton-Admins": "admin"})
+    provider = create_provider(ctx, {"BitCadence-Admins": "admin"})
     monkeypatch.setattr(
         identity_mod,
         "_oidc_client",

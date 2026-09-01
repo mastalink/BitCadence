@@ -10,7 +10,7 @@ panel with full CLI parity:
   delete - the `mco register` surface, point-and-click.
 - Model Connections: add/edit/delete/test named connections to LLM providers
   (Anthropic, OpenAI, Gemini, or a custom OpenAI-compatible endpoint) for
-  custom workers that need one. Not a chat gateway - BatonCadence orchestrates
+  custom workers that need one. Not a chat gateway - BitCadence orchestrates
   agents, it doesn't call a model on their behalf. API keys are write-only,
   mirroring every other secret in the Control Panel.
 - Workflows: paste YAML, submit a governed DAG (`mco workflow` parity).
@@ -28,7 +28,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>BatonCadence Control Plane</title>
+<title>BitCadence Control Plane</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -107,7 +107,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
 <div id="lock">
   <div class="card">
     <div class="logo">&#129345;</div>
-    <h1>BatonCadence Control Plane</h1>
+    <h1>BitCadence Control Plane</h1>
     <p class="muted">Paste an agent bearer token to unlock.<br>Approver/admin tokens see everything; scoped tokens see what they may.</p>
     <input id="lock-token" type="password" placeholder="mco_tok_..." onkeydown="if(event.key==='Enter')unlock()">
     <button class="primary" style="width:100%" onclick="unlock()">Unlock</button>
@@ -117,7 +117,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
 
 <div id="shell">
   <aside>
-    <div class="brand">&#129345; BatonCadence</div>
+    <div class="brand">&#129345; BitCadence</div>
     <button id="nav-ops" class="active" onclick="nav('ops')">Operations</button>
     <button id="nav-agents" onclick="nav('agents')">Agents &amp; Tokens</button>
     <button id="nav-models" onclick="nav('models')">Model Connections</button>
@@ -161,7 +161,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
     <section id="view-models" class="view">
       <div class="topbar"><h1>Model Connections</h1>
         <button class="primary" onclick="openAddModel()">+ Add connection</button></div>
-      <p class="muted" style="font-size:.83rem">Named, testable connections to LLM providers, for custom workers/executors that need one. BatonCadence orchestrates agents (Claude, Codex, Gemini, ...) rather than calling a model directly - this is credential management, not a chat gateway. <b>Test</b> makes one real call to the provider to prove the key works. Keys are never shown again after saving.</p>
+      <p class="muted" style="font-size:.83rem">Named, testable connections to LLM providers, for custom workers/executors that need one. BitCadence orchestrates agents (Claude, Codex, Gemini, ...) rather than calling a model directly - this is credential management, not a chat gateway. <b>Test</b> makes one real call to the provider to prove the key works. Keys are never shown again after saving.</p>
       <table><thead><tr><th>Name</th><th>Provider</th><th>Model</th><th>Key</th><th>Actions</th></tr></thead>
       <tbody id="models"><tr><td colspan="5" class="muted">-</td></tr></tbody></table>
       <p id="models-msg" class="err"></p>

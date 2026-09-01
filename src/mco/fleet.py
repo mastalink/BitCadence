@@ -261,8 +261,8 @@ def _installed_worker_service_names() -> set[str]:
     return {
         name
         for name in names
-        if service._slug(name).startswith("batoncadence-wake-")
-        or service._slug(name).startswith("batoncadence-poll-")
+        if service._slug(name).startswith("bitcadence-wake-")
+        or service._slug(name).startswith("bitcadence-poll-")
     }
 
 

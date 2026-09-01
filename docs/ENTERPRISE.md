@@ -1,20 +1,20 @@
 # Enterprise Guide: Editions, RBAC & SSO
 
-BatonCadence is open core in a single MIT-licensed codebase. Every edition
+BitCadence is open core in a single MIT-licensed codebase. Every edition
 runs the same code; the edition decides which surfaces are active. Drumline
 (shared context) is first-class in **every** edition — collective memory is
 the product, not an upsell.
 
 ## Enterprise identity foundation
 
-BatonCadence distinguishes human identity from agent credentials:
+BitCadence distinguishes human identity from agent credentials:
 
 - Humans will sign in through OIDC (Okta, Microsoft Entra ID, Auth0, Ping,
   Keycloak), SAML, or a trusted authentication proxy. LDAP directories should
   normally feed one of those identity providers; direct LDAPS is reserved for
   fully self-hosted deployments.
 - External groups grant nothing by themselves. An Organization must map each
-  allowed group to BatonCadence roles and scopes.
+  allowed group to BitCadence roles and scopes.
 - SCIM 2.0 is the durable provisioning contract for users, groups, and
   immediate deactivation.
 - Browser Sessions, native Device Credentials, and agent tokens remain
@@ -38,7 +38,7 @@ MCO_SESSION_SECRET=<random-signing-secret-from-your-deployment-secret-manager>
 MCO_SESSION_COOKIE_SECURE=true
 ```
 
-An existing BatonCadence administrator creates an Identity Provider through
+An existing BitCadence administrator creates an Identity Provider through
 `POST /api/identity-providers` with its HTTPS issuer, client id, client secret,
 and an explicit `group_mappings` object. The client secret goes straight into
 the vault and is never returned. Example shape:
@@ -50,7 +50,7 @@ the vault and is never returned. Example shape:
   "client_id": "configured-in-okta",
   "client_secret": "write-only",
   "group_mappings": {
-    "Baton-Admins": "admin",
+    "BitCadence-Admins": "admin",
     "Change-Approvers": "approver",
     "Audit-Readers": "auditor"
   }
@@ -90,7 +90,7 @@ MCO_VAULT_KEY_VERSION=1
 
 The database stores only AES-256-GCM ciphertext. Keep
 `MCO_VAULT_MASTER_KEY` in the deployment secret manager, never in the
-database, repository, browser, or BatonCadence settings screen. A later KMS
+database, repository, browser, or BitCadence settings screen. A later KMS
 Adapter can supply the same vault Seam without changing Model Connection
 callers.
 
@@ -180,7 +180,7 @@ alter table agent_registry add column if not exists scopes jsonb;
 
 ## Trusted-header SSO delegation
 
-BatonCadence does not implement SAML or OIDC. Instead it **delegates identity
+BitCadence does not implement SAML or OIDC. Instead it **delegates identity
 to the SSO reverse proxy you already run** — Cloudflare Access, oauth2-proxy,
 Authelia, Pomerium, Tailscale Serve — which handles your IdP, MFA, and SCIM,
 and asserts the authenticated user via headers. ~200 lines of code instead of
@@ -215,7 +215,7 @@ Examples per proxy:
 2. **The proxy must strip/overwrite inbound identity headers.** Every proxy
    above does this by default — verify yours does.
 3. **Set `MCO_TRUSTED_HEADER_SECRET`.** The proxy must add the header
-   `X-MCO-Proxy-Secret: <value>` to upstream requests. BatonCadence compares
+   `X-MCO-Proxy-Secret: <value>` to upstream requests. BitCadence compares
    it in constant time and silently ignores identity headers when it is
    missing or wrong — proving the request actually traversed the proxy even
    if requirement 1 is ever misconfigured.

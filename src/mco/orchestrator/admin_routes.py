@@ -635,7 +635,7 @@ async def export_evidence_pack(payload: dict = None,
         "audit_events": filtered,
     }
     cover_pdf = _make_cover_pdf([
-        "BatonCadence Compliance Evidence Pack",
+        "BitCadence Compliance Evidence Pack",
         f"Exported at: {exported_at}",
         f"Requested by: {caller.get('instance_id')} ({caller.get('role')})",
         f"Org: {caller_org}",

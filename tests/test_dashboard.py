@@ -16,7 +16,7 @@ def test_dashboard_route_serves_html():
     resp = http.get("/dashboard")
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/html")
-    assert "BatonCadence" in resp.text
+    assert "BitCadence" in resp.text
 
 
 def test_dashboard_html_matches_the_python_string():

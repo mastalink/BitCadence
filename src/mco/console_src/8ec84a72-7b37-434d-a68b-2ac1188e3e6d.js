@@ -1,4 +1,4 @@
-// Baton — app shell: sidebar nav, topbar, routing, tweaks.
+// BitCadence — app shell: sidebar nav, topbar, routing, tweaks.
 const { useState: useStateA, useEffect: useEffectA } = React;
 
 const NAV = [
@@ -22,7 +22,7 @@ function NavIcon({ d }) {
 }
 
 const BRANDS = {
-  BatonCadence: { tag: "batoncadence.com", mark: "sticks" },
+  BitCadence: { tag: "bitcadence.ai", mark: "sticks" },
   Cadence: { tag: "Agent Orchestration", mark: "sticks" },
   DrumTight: { tag: "Tight-Ship Ops", mark: "drum" },
   Echelon: { tag: "Decentralized Command", mark: "chevrons" },
@@ -72,18 +72,18 @@ const PAGE_TITLES = {
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [page, setPage] = useStateA(localStorage.getItem("baton_page") || "overview");
-  const [advanced, setAdvanced] = useStateA(localStorage.getItem("baton_adv") === "1");
+  const [page, setPage] = useStateA(localStorage.getItem("bitcadence_page") || localStorage.getItem("baton_page") || "overview");
+  const [advanced, setAdvanced] = useStateA((localStorage.getItem("bitcadence_adv") ?? localStorage.getItem("baton_adv")) === "1");
   const [openJob, setOpenJob] = useStateA(null);
   const [composing, setComposing] = useStateA(false);
   const [, force] = useStateA(0);
 
-  useEffectA(() => window.BatonStore.subscribe(() => force((x) => x + 1)), []);
-  useEffectA(() => { localStorage.setItem("baton_page", page); }, [page]);
-  useEffectA(() => { localStorage.setItem("baton_adv", advanced ? "1" : "0"); }, [advanced]);
+  useEffectA(() => window.BitCadenceStore.subscribe(() => force((x) => x + 1)), []);
+  useEffectA(() => { localStorage.setItem("bitcadence_page", page); }, [page]);
+  useEffectA(() => { localStorage.setItem("bitcadence_adv", advanced ? "1" : "0"); }, [advanced]);
   useEffectA(() => {
-    if (t.simulate) window.BatonStore.startSim(); else window.BatonStore.stopSim();
-    return () => window.BatonStore.stopSim();
+    if (t.simulate) window.BitCadenceStore.startSim(); else window.BitCadenceStore.stopSim();
+    return () => window.BitCadenceStore.stopSim();
   }, [t.simulate]);
   useEffectA(() => {
     const r = document.documentElement.style;
@@ -97,8 +97,8 @@ function App() {
   // Refresh "time ago" labels even when nothing changes
   useEffectA(() => { const i = setInterval(() => force((x) => x + 1), 10000); return () => clearInterval(i); }, []);
 
-  const jobs = window.BatonStore.getJobs();
-  const agents = window.BatonStore.getAgents();
+  const jobs = window.BitCadenceStore.getJobs();
+  const agents = window.BitCadenceStore.getAgents();
   const tone = t.tone;
   const gates = jobs.filter((j) => j.status === "needs_approval").length;
 
@@ -122,9 +122,9 @@ function App() {
         display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 16px 14px" }}>
-          <BrandMark brand="BatonCadence" />
+          <BrandMark brand="BitCadence" />
           <div>
-            <div style={{ fontWeight: 700, fontSize: 14.5, letterSpacing: "-0.01em" }}>Baton<span style={{ color: "var(--accent-text)" }}>Cadence</span></div>
+            <div style={{ fontWeight: 700, fontSize: 14.5, letterSpacing: "-0.01em" }}>Bit<span style={{ color: "var(--accent-text)" }}>Cadence</span></div>
             <div style={{ fontSize: 10.5, color: "var(--text-3)", letterSpacing: "0.06em", textTransform: "uppercase" }}>Agent Orchestration</div>
           </div>
         </div>
@@ -152,11 +152,11 @@ function App() {
         <div style={{ flex: 1 }}></div>
         <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)", fontSize: 12, color: "var(--text-3)", display: "flex", alignItems: "center", gap: 8 }}>
           {(() => {
-            const mode = window.BatonStore.mode ? window.BatonStore.mode() : "demo";
-            const host = (window.BatonStore.config ? (window.BatonStore.config().url || "") : "").replace(/^https?:\/\//, "");
+            const mode = window.BitCadenceStore.mode ? window.BitCadenceStore.mode() : "demo";
+            const host = (window.BitCadenceStore.config ? (window.BitCadenceStore.config().url || "") : "").replace(/^https?:\/\//, "");
             return (
               <React.Fragment>
-                <span style={{ width: 7, height: 7, borderRadius: 99, flex: "none", background: mode === "live" ? "var(--st-done-dot)" : "var(--st-approval-dot)", animation: "baton-pulse 2.2s infinite" }}></span>
+                <span style={{ width: 7, height: 7, borderRadius: 99, flex: "none", background: mode === "live" ? "var(--st-done-dot)" : "var(--st-approval-dot)", animation: "cadence-pulse 2.2s infinite" }}></span>
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {mode === "live" ? "Live \u00B7 " + host : mode === "connecting" ? "Connecting\u2026" : "Demo \u00B7 simulated data"}
                 </span>

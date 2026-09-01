@@ -1,5 +1,5 @@
 """
-OS service integration for BatonCadence gateway and waker processes.
+OS service integration for BitCadence gateway and waker processes.
 
 The service managers run the same foreground commands as an operator would.
 This module keeps artifact rendering separate from install actions so tests can
@@ -20,19 +20,35 @@ from pathlib import Path
 from typing import Iterable
 from xml.sax.saxutils import escape
 
-SERVICE_NAME = "BatonCadence-gateway"
+SERVICE_NAME = "BitCadence-gateway"
 
-# Installs from before the name was standardised registered the gateway task as
-# "BatonCadenceGateway". Those machines still exist, and on them every
+# Installs from before a rename registered the gateway under an older brand:
+# "BatonCadenceGateway" (pre-standardisation), then "BatonCadence-gateway"
+# (pre-BitCadence). Those machines still exist, and on them every
 # `mco restart` / `service restart|status|logs|uninstall` silently addressed a
 # task that does not exist - reporting "cannot find the file specified" while a
-# perfectly healthy gateway ran under the old name. Resolve the legacy name too.
-LEGACY_GATEWAY_NAMES = ("BatonCadenceGateway",)
-SCHEDULER_SERVICE_NAME = "BatonCadence-scheduler"
-SYSTEMD_UNIT_NAME = "batoncadence-gateway.service"
-LAUNCHD_LABEL = "com.batoncadence.gateway"
+# perfectly healthy gateway ran under the old name. Resolve legacy names too.
+LEGACY_GATEWAY_NAMES = ("BatonCadence-gateway", "BatonCadenceGateway")
+
+# Every brand a service may be registered under, current first. Discovery must
+# see all of them so an install predating the rename stays listable, stoppable,
+# and uninstallable instead of becoming an orphan the CLI cannot address.
+BRAND_PREFIXES = ("BitCadence", "BatonCadence")
+_BRAND_SLUGS = tuple(p.lower() for p in BRAND_PREFIXES)
+
+SCHEDULER_SERVICE_NAME = "BitCadence-scheduler"
+SYSTEMD_UNIT_NAME = "bitcadence-gateway.service"
+LAUNCHD_LABEL = "com.bitcadence.gateway"
 WINDOWS_RESTART_INTERVAL = "PT1M"
 WINDOWS_RESTART_COUNT = 3
+
+
+def _debrand(slug: str) -> str | None:
+    """The suffix after a brand slug, or None when `slug` carries no brand."""
+    for brand in _BRAND_SLUGS:
+        if slug.startswith(f"{brand}-"):
+            return slug[len(brand) + 1:]
+    return None
 
 
 @dataclass(frozen=True)
@@ -52,7 +68,11 @@ class ServiceSpec:
 
     @property
     def launchd_label(self) -> str:
-        return f"com.batoncadence.{_service_token(self.name).removeprefix('batoncadence-')}"
+        token = _service_token(self.name)
+        # A spec carrying a legacy name keeps its legacy label, so restart and
+        # uninstall address the plist that is actually on disk.
+        brand = next((b for b in _BRAND_SLUGS if token.startswith(f"{b}-")), _BRAND_SLUGS[0])
+        return f"com.{brand}.{_debrand(token) or token}"
 
     @property
     def log_path(self) -> Path:
@@ -75,14 +95,14 @@ def _service_token(name: str) -> str:
 
 
 def _waker_service_name(role: str, instance: str | None = None) -> str:
-    parts = ["BatonCadence", "wake", _slug(role)]
+    parts = ["BitCadence", "wake", _slug(role)]
     if instance:
         parts.append(_slug(instance))
     return "-".join(parts)
 
 
 def _poll_service_name(role: str, instance: str | None = None) -> str:
-    parts = ["BatonCadence", "poll", _slug(role)]
+    parts = ["BitCadence", "poll", _slug(role)]
     if instance:
         parts.append(_slug(instance))
     return "-".join(parts)
@@ -162,7 +182,7 @@ def _gateway_spec(host: str, port: int) -> ServiceSpec:
         name=SERVICE_NAME,
         kind="gateway",
         argv=_serve_argv(host, port),
-        description="BatonCadence gateway",
+        description="BitCadence gateway",
         restart_on_failure=False,
     )
 
@@ -179,7 +199,7 @@ def _waker_spec(
         role=role,
         instance=instance,
         argv=_wake_argv(role, exec_command, instance=instance, min_interval=min_interval),
-        description=f"BatonCadence waker for {role}{('/' + instance) if instance else ''}",
+        description=f"BitCadence waker for {role}{('/' + instance) if instance else ''}",
         restart_on_failure=True,
     )
 
@@ -192,7 +212,7 @@ def _scheduler_spec(interval: float = 30.0) -> ServiceSpec:
         name=SCHEDULER_SERVICE_NAME,
         kind="scheduler",
         argv=_scheduler_argv(interval),
-        description="BatonCadence scheduler (schedules and loops)",
+        description="BitCadence scheduler (schedules and loops)",
         restart_on_failure=True,
     )
 
@@ -209,7 +229,7 @@ def _poll_spec(
         role=role,
         instance=instance,
         argv=_poll_argv(exec_command),
-        description=f"BatonCadence polling worker for {role}{('/' + instance) if instance else ''}",
+        description=f"BitCadence polling worker for {role}{('/' + instance) if instance else ''}",
         restart_on_failure=False,
         poll_interval=poll_interval,
     )
@@ -573,7 +593,9 @@ def _extract_windows_task_name(block: str) -> str | None:
         if line.lower().startswith("taskname:"):
             name = line.split(":", 1)[1].strip().lstrip("\\")
             base_name = name.rsplit("\\", 1)[-1]
-            if base_name.startswith("BatonCadence-"):
+            # "BatonCadenceGateway" (no separator) predates the dashed naming,
+            # so match on the bare brand slug rather than a "brand-" prefix.
+            if _slug(base_name).startswith(_BRAND_SLUGS):
                 return base_name
     return None
 
@@ -674,15 +696,21 @@ def _linux_status(unit_name: str = SYSTEMD_UNIT_NAME, name: str = SERVICE_NAME) 
 
 
 def _linux_list_status() -> list[dict[str, object]]:
-    units = sorted(_systemd_unit_path().parent.glob("batoncadence*.service"))
+    root = _systemd_unit_path().parent
+    units = sorted(
+        {path for brand in _BRAND_SLUGS for path in root.glob(f"{brand}*.service")}
+    )
     return [_linux_status(path.name, name=_name_from_unit(path.name)) for path in units]
 
 
 def _name_from_unit(unit_name: str) -> str:
     stem = unit_name.removesuffix(".service")
-    if stem == "batoncadence-gateway":
-        return SERVICE_NAME
-    return "BatonCadence-" + stem.removeprefix("batoncadence-")
+    for brand, display in zip(_BRAND_SLUGS, BRAND_PREFIXES):
+        if stem == f"{brand}-gateway":
+            return SERVICE_NAME if brand == _BRAND_SLUGS[0] else f"{display}-gateway"
+        if stem.startswith(f"{brand}-"):
+            return f"{display}-" + stem[len(brand) + 1:]
+    return stem
 
 
 def _linux_restart(unit_name: str = SYSTEMD_UNIT_NAME) -> tuple[bool, str]:
@@ -740,14 +768,20 @@ def _mac_status(label: str = LAUNCHD_LABEL, name: str = SERVICE_NAME) -> dict[st
 
 
 def _mac_list_status() -> list[dict[str, object]]:
-    plists = sorted(_launchd_plist_path().parent.glob("com.batoncadence*.plist"))
+    root = _launchd_plist_path().parent
+    plists = sorted(
+        {path for brand in _BRAND_SLUGS for path in root.glob(f"com.{brand}*.plist")}
+    )
     return [_mac_status(path.stem, name=_name_from_launchd_label(path.stem)) for path in plists]
 
 
 def _name_from_launchd_label(label: str) -> str:
     if label == LAUNCHD_LABEL:
         return SERVICE_NAME
-    return "BatonCadence-" + label.removeprefix("com.batoncadence.")
+    for brand, display in zip(_BRAND_SLUGS, BRAND_PREFIXES):
+        if label.startswith(f"com.{brand}."):
+            return f"{display}-" + label[len(brand) + 5:]
+    return label
 
 
 def _extract_launchd_last_exit(output: str) -> str:
@@ -867,16 +901,33 @@ def installed_gateway_task_name() -> str:
     Prefers the current name, falls back to a legacy one if that is what is
     really installed. Without this, service commands on an older install
     address a task that does not exist.
+
+    Off Windows this stats the unit file / plist directly rather than going
+    through list_status(): that helper spawns a process per installed service
+    (`systemctl is-active` plus `systemctl show`, or `launchctl print`), and
+    this runs on every `mco service ...` and `mco restart`.
     """
-    if os.name != "nt":
+    if os.name == "nt":
+        installed = {str(r.get("name", "")) for r in list_status()}
+        if SERVICE_NAME in installed:
+            return SERVICE_NAME
+        for legacy in LEGACY_GATEWAY_NAMES:
+            if legacy in installed:
+                return legacy
         return SERVICE_NAME
-    installed = {str(r.get("name", "")) for r in list_status()}
-    if SERVICE_NAME in installed:
-        return SERVICE_NAME
-    for legacy in LEGACY_GATEWAY_NAMES:
-        if legacy in installed:
-            return legacy
+
+    for name in (SERVICE_NAME, *LEGACY_GATEWAY_NAMES):
+        if _gateway_artifact_exists(name):
+            return name
     return SERVICE_NAME
+
+
+def _gateway_artifact_exists(name: str) -> bool:
+    """True when the gateway is registered under `name` on this POSIX host."""
+    spec = replace(_gateway_spec("127.0.0.1", 18789), name=name)
+    if sys.platform == "darwin":
+        return _launchd_plist_path(spec.launchd_label).exists()
+    return _systemd_unit_path(spec.unit_name).exists()
 
 
 def _resolve_target(selector: str | None) -> ServiceSpec:
@@ -889,7 +940,7 @@ def _resolve_target(selector: str | None) -> ServiceSpec:
         name = str(record.get("name", ""))
         if _selector_matches_name(selector, name):
             return _target_from_name(name)
-    if selector.startswith("BatonCadence-"):
+    if _debrand(_slug(selector)) is not None:
         return _target_from_name(selector)
     return _target_from_name(_waker_service_name(selector))
 
@@ -898,16 +949,19 @@ def _selector_matches_name(selector: str, name: str) -> bool:
     if selector == name:
         return True
     slug_selector = _slug(selector)
-    slug_name = _slug(name)
-    return slug_name == f"batoncadence-wake-{slug_selector}" or slug_name.startswith(f"batoncadence-wake-{slug_selector}-")
+    suffix = _debrand(_slug(name))
+    if suffix is None:
+        return False
+    return suffix == f"wake-{slug_selector}" or suffix.startswith(f"wake-{slug_selector}-")
 
 
 def _target_from_name(name: str) -> ServiceSpec:
-    if name == SERVICE_NAME or _slug(name) == "batoncadence-gateway":
+    suffix = _debrand(_slug(name))
+    if name == SERVICE_NAME or suffix == "gateway":
         return _gateway_spec("127.0.0.1", 18789)
-    if name == SCHEDULER_SERVICE_NAME or _slug(name) == "batoncadence-scheduler":
+    if name == SCHEDULER_SERVICE_NAME or suffix == "scheduler":
         return _scheduler_spec()
-    kind = "poll" if _slug(name).startswith("batoncadence-poll-") else "wake"
+    kind = "poll" if (suffix or "").startswith("poll-") else "wake"
     return ServiceSpec(
         name=name,
         kind=kind,

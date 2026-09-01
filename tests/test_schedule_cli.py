@@ -9,7 +9,7 @@ from mco.scheduler import ScheduleState
 
 runner = CliRunner()
 
-CONFIG_WITH_COMMENTS = """# BatonCadence schedules - top comment
+CONFIG_WITH_COMMENTS = """# BitCadence schedules - top comment
 launchers:
   audit:
     role: reviewer          # inline comment
@@ -76,7 +76,7 @@ def test_toggling_preserves_every_comment(tmp_path, monkeypatch):
     runner.invoke(cli.app, ["schedule", "disable", "nightly"])
     after = path.read_text(encoding="utf-8")
     assert _comment_count(after) == before
-    assert "# BatonCadence schedules - top comment" in after
+    assert "# BitCadence schedules - top comment" in after
     assert "# inline comment" in after
     assert "# Loops are schedules that stop." in after
 

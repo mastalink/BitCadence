@@ -1,4 +1,4 @@
-# BatonCadence — Founder's Personal Walkthrough
+# BitCadence — Founder's Personal Walkthrough
 
 A hands-on, copy-paste pass where **you** drive the whole system end to end and
 watch every feature work. ~30–40 min. Windows / PowerShell. Each step is
@@ -10,7 +10,7 @@ commands.
 
 > Convention: every command assumes the project venv is active. In each window:
 > ```powershell
-> cd C:\ai\baton\Batoncadence
+> cd C:\ai\baton\BitCadence
 > .\.venv\Scripts\Activate.ps1      # prompt should now show (.venv)
 > ```
 
@@ -152,9 +152,9 @@ completes without needing codex/claude installed.
 
 ```python
 import os
-from mco.sdk import BatonAgent
+from mco.sdk import BitCadenceAgent
 
-agent = BatonAgent(
+agent = BitCadenceAgent(
     role="codex",
     instance_id="demo-codex",
     token=os.environ["DEMO_WORKER_TOKEN"],
@@ -331,7 +331,7 @@ mco service uninstall
 
 ## Step 11 — Live site + demo video  *(TC-L1)*
 
-Open **https://batoncadence.com/**.
+Open **https://bitcadence.ai/**.
 
 ✅ **[ ]** Page loads; the "See it run" demo video plays (not a broken link).
 ✅ **[ ]** Shrink the browser to phone width — the video keeps its side margin

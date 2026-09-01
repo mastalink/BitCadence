@@ -3,7 +3,7 @@ Gateway authentication & authorization.
 
 Four layers, evaluated in order:
 
-1. **Trusted-header identity (enterprise)** - when BatonCadence sits behind an
+1. **Trusted-header identity (enterprise)** - when BitCadence sits behind an
    SSO reverse proxy (Cloudflare Access, oauth2-proxy, Authelia, ...), the
    proxy authenticates the human and asserts identity via headers. We don't
    run SAML/OIDC inside this compatibility path; it delegates to infrastructure

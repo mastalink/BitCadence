@@ -1,5 +1,5 @@
 """
-BatonCadence Typer CLI & Setup Wizard
+BitCadence Typer CLI & Setup Wizard
 ===================================
 Provides user onboarding, credentials encryption, FastAPI serving,
 and background daemon listener.
@@ -44,14 +44,17 @@ from mco.orchestrator.listener import AgentListener
 from mco.notifiers.ntfy import notify, notify_agent_online, notify_agent_offline, get_ntfy_config, notify_gateway_startup
 
 # Initialize typer app and console
-app = typer.Typer(help="BatonCadence: Multi-Client Agent Orchestrator.")
+app = typer.Typer(help="BitCadence: Multi-Client Agent Orchestrator.")
 console = Console()
 
 
 def get_version() -> str:
     """Installed distribution version (single source of truth: pyproject)."""
     from importlib.metadata import version as _dist_version
-    for dist in ("batoncadence", "mco"):  # 'mco' = pre-0.2 editable installs
+    # Every name this project has shipped under: 'batoncadence' = pre-rename
+    # installs, 'mco' = pre-0.2 editable installs. An install that predates a
+    # rename still carries the old dist metadata until it is reinstalled.
+    for dist in ("bitcadence", "batoncadence", "mco"):
         try:
             return _dist_version(dist)
         except Exception:
@@ -61,7 +64,7 @@ def get_version() -> str:
 
 def _version_callback(value: bool):
     if value:
-        console.print(f"BatonCadence {get_version()}")
+        console.print(f"BitCadence {get_version()}")
         raise typer.Exit()
 
 
@@ -71,7 +74,7 @@ def _main(
         False, "--version", "-V", callback=_version_callback, is_eager=True,
         help="Show the version and exit."),
 ):
-    """BatonCadence: Multi-Client Agent Orchestrator."""
+    """BitCadence: Multi-Client Agent Orchestrator."""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Onboarding Setup Wizard
@@ -81,7 +84,7 @@ def setup_wizard(
     guided: bool = typer.Option(False, "--guided", help="Run the full guided walkthrough."),
     menu: bool = typer.Option(False, "--menu", help="Jump straight to the settings menu."),
 ):
-    """Configure BatonCadence - a guided walkthrough or a jump-anywhere settings menu."""
+    """Configure BitCadence - a guided walkthrough or a jump-anywhere settings menu."""
     from mco.setup_wizard import run_setup
     run_setup(guided=guided, menu=menu)
 
@@ -168,7 +171,7 @@ async def server_broadcast_callback(event: str, job: dict) -> None:
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application server."""
     app_server = FastAPI(
-        title="BatonCadence Gateway Server",
+        title="BitCadence Gateway Server",
         description="FastAPI WebSocket and REST Hub for Agent Job Coordination."
     )
 
@@ -257,7 +260,7 @@ def create_app() -> FastAPI:
     async def dashboard() -> str:
         return DASHBOARD_HTML
 
-    # BatonCadence Console (full control-plane GUI; auth via API bearer token)
+    # BitCadence Console (full control-plane GUI; auth via API bearer token)
     from mco.console import get_console_html
 
     @app_server.get("/console", response_class=HTMLResponse, include_in_schema=False)
@@ -509,7 +512,7 @@ def serve(
     host: str = typer.Option("127.0.0.1", help="The host to bind to."),
     port: int = typer.Option(18789, help="The port to bind to.")
 ):
-    """Start the BatonCadence FastAPI WebSocket/REST API Server."""
+    """Start the BitCadence FastAPI WebSocket/REST API Server."""
     from mco.logging_setup import configure_logging
     configure_logging()
 
@@ -518,7 +521,7 @@ def serve(
     _assert_safe_bind(host, config)
 
     console.print(Panel.fit(
-        f"[bold green]Starting BatonCadence Server[/bold green]\n"
+        f"[bold green]Starting BitCadence Server[/bold green]\n"
         f"Host: http://{host}:{port}\n"
         f"Console: http://{host}:{port}/console\n"
         f"WebSocket: ws://{host}:{port}/ws/broadcast",
@@ -592,7 +595,7 @@ def serve(
                     }
                     notify(
                         json.dumps(snapshot, indent=2),
-                        title="BatonCadence Process Snapshot",
+                        title="BitCadence Process Snapshot",
                         priority=1,
                         tags=["mco", "process-snapshot", "leak-detection"],
                     )
@@ -708,7 +711,7 @@ def start(
         raise typer.Exit(code=1)
 
     console.print(Panel.fit(
-        f"[bold green]BatonCadence is running[/bold green]\n"
+        f"[bold green]BitCadence is running[/bold green]\n"
         f"Console:   http://{host}:{port}/console\n"
         f"Dashboard: http://{host}:{port}/dashboard\n"
         f"Log:       {log_path}\n\n"
@@ -731,7 +734,7 @@ def restart(
     start(host=host, port=port)
 
 
-service_app = typer.Typer(help="Run BatonCadence processes as boot-persistent OS services.")
+service_app = typer.Typer(help="Run BitCadence processes as boot-persistent OS services.")
 app.add_typer(service_app, name="service")
 
 fleet_app = typer.Typer(help="Apply declarative per-worker service run modes.")
@@ -790,7 +793,7 @@ def schedule_list():
 
     states = launcher_mod.load_state()
     now = datetime.now(timezone.utc)
-    table = Table(title="BatonCadence Schedules")
+    table = Table(title="BitCadence Schedules")
     for column in ("Name", "Kind", "Trigger", "Launches", "Next run", "Runs", "Bound"):
         table.add_column(column)
 
@@ -933,7 +936,7 @@ def schedule_tick(
 ):
     """Run one scheduler pass (what `mco schedule run` does on a timer).
 
-    Use this to drive BatonCadence from an existing cron/Task Scheduler entry
+    Use this to drive BitCadence from an existing cron/Task Scheduler entry
     instead of running the daemon.
     """
     from mco import launcher as launcher_mod
@@ -997,7 +1000,7 @@ def open_gui(
     dashboard: bool = typer.Option(False, "--dashboard", help="Open the minimal dashboard instead of the full console."),
     print_only: bool = typer.Option(False, "--print", help="Print the URL instead of opening a browser."),
 ):
-    """Open the BatonCadence console in your browser.
+    """Open the BitCadence console in your browser.
 
     Until now the CLI only printed the URL and left you to copy it - this is
     the one-step version.
@@ -1108,7 +1111,7 @@ def fleet_status():
     if not rows:
         console.print("[yellow]Fleet config has no workers.[/yellow]")
         return
-    table = Table(title="BatonCadence Fleet")
+    table = Table(title="BitCadence Fleet")
     for column in ("Worker", "Role", "Instance", "Mode", "Installed", "Running", "Service"):
         table.add_column(column)
     for row in rows:
@@ -1158,7 +1161,7 @@ def service_install_scheduler(
     ok, message = service.install_scheduler(interval=interval)
     if ok:
         console.print(f"[green][OK][/green] {message}")
-        console.print("[dim]Check it with:[/dim] mco service status BatonCadence-scheduler")
+        console.print("[dim]Check it with:[/dim] mco service status BitCadence-scheduler")
     else:
         console.print(f"[red][X] {message}[/red]")
         raise typer.Exit(code=1)
@@ -1223,12 +1226,12 @@ def service_uninstall(
 def service_status(
     selector: Optional[str] = typer.Argument(None, help="Optional service name or waker role to inspect."),
 ):
-    """Show installed BatonCadence services, or one selected service."""
+    """Show installed BitCadence services, or one selected service."""
     from mco import service
     if selector is None:
         states = service.status(None)
         if not states:
-            console.print(f"[yellow]No BatonCadence services found via {service.backend_name()}.[/yellow]")
+            console.print(f"[yellow]No BitCadence services found via {service.backend_name()}.[/yellow]")
             raise typer.Exit(code=0)
         for state in states:
             _print_service_status(service.backend_name(), state)
@@ -1243,7 +1246,7 @@ def _print_service_status(backend: str, state: dict[str, object]):
     color = "green" if installed and running else "yellow" if installed else "red"
     console.print(Panel.fit(
         f"[bold]{backend}[/bold]\n"
-        f"Name:      {state.get('name', 'BatonCadence-gateway')}\n"
+        f"Name:      {state.get('name', 'BitCadence-gateway')}\n"
         f"Installed: [{color}]{'yes' if installed else 'no'}[/{color}]\n"
         f"Running:   [{color}]{'yes' if running else 'no'}[/{color}]\n"
         f"Last exit: {state.get('last_exit', 'unknown')}",
@@ -1290,7 +1293,7 @@ def stop(
     port: int = typer.Option(18789, help="Port the gateway is running on."),
     force: bool = typer.Option(False, "--force", "-f", help="Send SIGKILL immediately instead of graceful SIGTERM."),
 ):
-    """Stop a running BatonCadence gateway (by port)."""
+    """Stop a running BitCadence gateway (by port)."""
     import signal
     import time
 
@@ -1309,7 +1312,7 @@ def stop(
                 pass
 
     if not targets:
-        console.print(f"[yellow]No BatonCadence process found listening on port {port}.[/yellow]")
+        console.print(f"[yellow]No BitCadence process found listening on port {port}.[/yellow]")
         raise typer.Exit(code=0)
 
     for proc in targets:
@@ -1357,7 +1360,7 @@ def listen(
 ):
     """Spawn the background daemon client that polls and executes Job Board tasks."""
     console.print(Panel.fit(
-        f"[bold blue]Spawning BatonCadence Background Daemon[/bold blue]\n"
+        f"[bold blue]Spawning BitCadence Background Daemon[/bold blue]\n"
         f"Role: [green]{role}[/green]\n"
         f"Instance ID: [green]{instance}[/green]",
         border_style="blue"
@@ -1408,11 +1411,11 @@ def status(
         help="Show all resolved configuration keys, including unrelated process environment.",
     ),
 ):
-    """Print BatonCadence health check and diagnostics."""
+    """Print BitCadence health check and diagnostics."""
     config = get_config()
     store = get_secret_store()
 
-    console.print("[bold cyan]=== BatonCadence Status Diagnostics ===[/bold cyan]\n")
+    console.print("[bold cyan]=== BitCadence Status Diagnostics ===[/bold cyan]\n")
 
     # 1. Store state
     store_init = store.is_initialized()
@@ -1457,7 +1460,7 @@ def upgrade(
     from mco import migrations_runner as mig
 
     all_migs = [n for n, _ in mig.discover()]
-    console.print(f"[bold cyan]=== BatonCadence Upgrade ===[/bold cyan]")
+    console.print(f"[bold cyan]=== BitCadence Upgrade ===[/bold cyan]")
     console.print(f"Migrations found: {len(all_migs)}\n")
 
     kind = mig.backend_kind()
@@ -1532,7 +1535,7 @@ def doctor(
         if remedy:
             console.print(f"     [dim]{remedy}[/dim]")
 
-    console.print("[bold cyan]=== BatonCadence Doctor ===[/bold cyan]\n")
+    console.print("[bold cyan]=== BitCadence Doctor ===[/bold cyan]\n")
 
     # 1. Python
     v = sys.version_info
@@ -1735,7 +1738,7 @@ def show_edition():
 
     summary = edition_summary()
     console.print(
-        f"\n[bold cyan]BatonCadence edition:[/bold cyan] [bold white]{summary['edition']}[/bold white] "
+        f"\n[bold cyan]BitCadence edition:[/bold cyan] [bold white]{summary['edition']}[/bold white] "
         f"[dim]({summary['source']}; set MCO_EDITION to pin)[/dim]\n"
     )
     table = Table(show_header=True, header_style="bold cyan")
@@ -1751,7 +1754,7 @@ def show_edition():
 @app.command("agents")
 def list_agents():
     """List all registered agents and their current online presence status."""
-    console.print("[bold cyan]=== BatonCadence Registered Agents ===[/bold cyan]\n")
+    console.print("[bold cyan]=== BitCadence Registered Agents ===[/bold cyan]\n")
     
     from mco.orchestrator.routes import get_db_client
     db_client = get_db_client()

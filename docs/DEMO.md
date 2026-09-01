@@ -11,7 +11,7 @@ run it as you read. Windows shown; macOS/Linux equivalents in parentheses.
 **The line:** *"Install is one double-click. No cloud account, no database,
 no API key."*
 
-1. Double-click `install.bat` (or `curl -sSf https://batoncadence.com/install.sh | bash`).
+1. Double-click `install.bat` (or `curl -sSf https://bitcadence.ai/install.sh | bash`).
 2. Watch it: finds/installs Python, builds the venv, generates your access
    token, puts `mco` on the PATH, drops a Desktop shortcut.
 3. Choose **[2] Connect now**. Your browser opens the console; the token is

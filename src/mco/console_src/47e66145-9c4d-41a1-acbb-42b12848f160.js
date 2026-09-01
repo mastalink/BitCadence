@@ -1,4 +1,4 @@
-// BatonCadence — live gateway adapter.
+// BitCadence — live gateway adapter.
 // Wraps the demo store (data.js) in a facade. When connected, all reads/writes
 // go to the real MCOrchestr8 REST API:
 //   GET  /api/jobs            GET /api/agents       GET /api/jobs/{id}/events
@@ -12,11 +12,16 @@
 // 30s safety net when the socket is up, 4s otherwise. Poll() synthesizes
 // toasts + an activity feed from status diffs either way.
 (function () {
-  const demo = window.BatonStore; // set by data.js (must load first)
+  const demo = window.BitCadenceStore; // set by data.js (must load first)
   const listeners = new Set();
   const toastFns = new Set();
   let cfg = null;
-  try { cfg = JSON.parse(localStorage.getItem("baton_conn") || "null"); } catch (e) { cfg = null; }
+  try {
+    // "baton_conn" is the pre-BitCadence key: read it once so an existing
+    // console keeps its saved gateway instead of dropping back to demo.
+    const saved = localStorage.getItem("bitcadence_conn") || localStorage.getItem("baton_conn");
+    cfg = JSON.parse(saved || "null");
+  } catch (e) { cfg = null; }
   let connState = "demo"; // demo | connecting | live
   let lastError = null;
   let pollTimer = null;
@@ -155,7 +160,7 @@
       connState = "connecting"; lastError = null; emit();
       try {
         await api("/api/agents"); // auth + reachability check
-        localStorage.setItem("baton_conn", JSON.stringify(cfg));
+        localStorage.setItem("bitcadence_conn", JSON.stringify(cfg));
         demo.stopSim();
         connState = "live";
         jobs = []; agents = []; eventsCache = {}; prevStatus = {}; liveActivity = [];
@@ -176,6 +181,7 @@
       stopWs();
       stopPolling();
       connState = "demo"; lastError = null;
+      localStorage.removeItem("bitcadence_conn");
       localStorage.removeItem("baton_conn");
       toast("info", "Demo mode", "Showing simulated data again.");
       emit();
@@ -351,7 +357,7 @@
     onToast(fn) { toastFns.add(fn); return () => toastFns.delete(fn); },
   };
 
-  window.BatonStore = facade;
+  window.BitCadenceStore = facade;
 
   // Auto-reconnect if a saved connection exists
   if (cfg && cfg.url && cfg.token) {

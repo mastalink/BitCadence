@@ -65,6 +65,12 @@ class SecretRef:
 
     @property
     def aad(self) -> bytes:
+        # FROZEN WIRE CONSTANT - do not rebrand. This string is the AES-GCM
+        # Additional Authenticated Data: it is authenticated together with the
+        # ciphertext, so changing a single byte makes every secret written by
+        # an earlier version fail to decrypt (InvalidTag) with no way back.
+        # The ":v1" is the version handle to use if this ever must change -
+        # bump it deliberately alongside a re-encryption migration.
         return json.dumps(
             ["batoncadence:v1", self.org_id, self.scope, self.name],
             ensure_ascii=False,
@@ -78,6 +84,9 @@ class SecretRef:
             ensure_ascii=False,
             separators=(",", ":"),
         )
+        # FROZEN WIRE CONSTANT - do not rebrand. This namespace determines the
+        # deterministic id a secret is stored under (see local_key above);
+        # changing it repoints every lookup at a key that was never written.
         return str(uuid.uuid5(uuid.NAMESPACE_URL, f"batoncadence:secret:{material}"))
 
 

@@ -1,8 +1,8 @@
 # ============================================================================
-# BatonCadence - offline (air-gapped) bundle builder (Windows)
+# BitCadence - offline (air-gapped) bundle builder (Windows)
 # ============================================================================
 # Run this on a CONNECTED machine with the same OS family and Python minor
-# version as the target. It produces dist\batoncadence-offline.zip containing
+# version as the target. It produces dist\bitcadence-offline.zip containing
 # the full repo plus every wheel needed to install with zero network access.
 #
 # On the air-gapped target:
@@ -17,7 +17,7 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 
 Write-Host ""
-Write-Host "  BatonCadence offline bundle builder" -ForegroundColor Cyan
+Write-Host "  BitCadence offline bundle builder" -ForegroundColor Cyan
 Write-Host "  ====================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -46,7 +46,7 @@ git -C $root archive --format=zip -o $archive HEAD
 Expand-Archive -Path $archive -DestinationPath $stage -Force
 Remove-Item $archive
 
-$zip = Join-Path $root "dist\batoncadence-offline.zip"
+$zip = Join-Path $root "dist\bitcadence-offline.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 Write-Host "->  Compressing bundle..." -ForegroundColor Cyan
 Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip

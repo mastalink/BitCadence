@@ -1,6 +1,6 @@
 # Wiring the 3 GUIs to the MCO dropbox (MCP)
 
-Each coding GUI talks to the BatonCadence dropbox through the **`mco mcp`** stdio
+Each coding GUI talks to the BitCadence dropbox through the **`mco mcp`** stdio
 server, authenticating as a registered agent. No `mco listen` daemon required —
 each app uses its own scheduler to check its inbox.
 
@@ -27,7 +27,7 @@ each app uses its own scheduler to check its inbox.
 Replace `mco_tok_REPLACE_WITH_*` with each agent's real token first.
 
 - **Claude Code** — copy `claude/.mcp.json` into your project root as `.mcp.json`
-  (or run `claude mcp add mco -- C:\AI\BatonCadence\.venv\Scripts\mco.exe mcp`
+  (or run `claude mcp add mco -- C:\AI\BitCadence\.venv\Scripts\mco.exe mcp`
   and set the env vars). Role `claude`, instance `coding-beast-claude`.
 - **Codex** — append `codex/config.toml` to `~/.codex/config.toml`.
   Role `codex`, instance `coding-beast-codex`.

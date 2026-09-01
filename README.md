@@ -1,8 +1,8 @@
-# BatonCadence
+# BitCadence
 
-**Every agent. One baton.**
+**Every agent. One beat.**
 
-[![CI](https://github.com/mastalink/Batoncadence/actions/workflows/ci.yml/badge.svg)](https://github.com/mastalink/Batoncadence/actions/workflows/ci.yml)
+[![CI](https://github.com/mastalink/BitCadence/actions/workflows/ci.yml/badge.svg)](https://github.com/mastalink/BitCadence/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](docs/INSTALL.md)
@@ -22,10 +22,10 @@ talk to ntfy.sh by default.
 ### macOS / Linux — one command
 
 ```bash
-curl -sSf https://batoncadence.com/install.sh | bash
+curl -sSf https://bitcadence.ai/install.sh | bash
 ```
 
-Clones the repo to `~/BatonCadence`, finds/installs Python, creates the venv,
+Clones the repo to `~/BitCadence`, finds/installs Python, creates the venv,
 generates your access token, adds `mco` to your PATH, then asks: demo mode
 or connect now. Takes about two minutes.
 
@@ -38,12 +38,12 @@ bash scripts/install.sh
 
 Download the ZIP from GitHub, extract it anywhere, then double-click
 **`install.bat`**. It finds (or installs) Python, builds the venv, generates
-your access token, and drops a **BatonCadence** shortcut on the Desktop.
+your access token, and drops a **BitCadence** shortcut on the Desktop.
 Your browser opens the console automatically.
 
 ```powershell
 # PowerShell one-liner (no ZIP download needed):
-iwr -useb https://batoncadence.com/install.ps1 | iex
+iwr -useb https://bitcadence.ai/install.ps1 | iex
 
 # Or headless / CI:
 powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -NoPrompt
@@ -54,8 +54,8 @@ Full walkthrough and troubleshooting: [docs/INSTALL.md](docs/INSTALL.md)
 ### From source / Docker
 
 ```bash
-git clone https://github.com/mastalink/Batoncadence
-pip install -e Batoncadence
+git clone https://github.com/mastalink/BitCadence
+pip install -e BitCadence
 mco setup --guided    # configure in 60 seconds
 mco start             # console at http://127.0.0.1:18789/console
 ```
@@ -69,7 +69,7 @@ docker compose up     # see docs/DEPLOYMENT.md
 
 ## What it does
 
-BatonCadence sits between your agents and the work they do. It gives you:
+BitCadence sits between your agents and the work they do. It gives you:
 
 | | |
 |---|---|
@@ -150,7 +150,7 @@ Full spec: [docs/DRUMLINE.md](docs/DRUMLINE.md)
 | Docker + any-cloud deploy | — | ✓ | ✓ |
 | ServiceNow & Dynatrace connectors | — | — | ✓ |
 | SSO via your reverse proxy (trusted headers) | — | — | ✓ |
-| Pilot program | — | — | [email us](mailto:pilots@batoncadence.com) |
+| Pilot program | — | — | [email us](mailto:pilots@bitcadence.ai) |
 
 One codebase, no separate builds: `mco edition` shows the active edition
 (inferred from your config, or pinned with `MCO_EDITION`). Details, scope
@@ -191,7 +191,7 @@ vocabulary, and SSO setup: [docs/ENTERPRISE.md](docs/ENTERPRISE.md).
 
 ## Security
 
-BatonCadence binds to **`127.0.0.1` by default** — only your machine can reach
+BitCadence binds to **`127.0.0.1` by default** — only your machine can reach
 it. Before exposing it on a network:
 
 - **Set a token.** `mco setup` generates `MCO_LOCAL_TOKEN`; every request and
@@ -207,7 +207,7 @@ it. Before exposing it on a network:
   `mco setup --menu → Security`. Plaintext is only ever a deliberate, visible
   opt-out. Either way, keep secrets out of git.
 
-Found a vulnerability? Email **security@batoncadence.com** rather than opening a
+Found a vulnerability? Email **security@bitcadence.ai** rather than opening a
 public issue.
 
 ---

@@ -166,9 +166,9 @@ class TestInstanceIdValidation:
 
 class TestOrgAllowlist:
     def test_unknown_org_is_rejected_not_minted(self):
-        """The Baton-worker accident: a typo'd org must never create a tenant."""
+        """The BitCadence-worker accident: a typo'd org must never create a tenant."""
         resp = _ctx().http.post("/api/agents", json={
-            "instance_id": "oops", "role": "codex", "org": "Baton-worker"})
+            "instance_id": "oops", "role": "codex", "org": "BitCadence-worker"})
         assert resp.status_code == 400
         assert "not configured" in resp.json()["detail"]
         assert "Settings" in resp.json()["detail"]

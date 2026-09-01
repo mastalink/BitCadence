@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security vulnerability (report privately)
-    url: https://github.com/mastalink/Batoncadence/blob/main/SECURITY.md
+    url: https://github.com/mastalink/BitCadence/blob/main/SECURITY.md
     about: Please report security issues privately per SECURITY.md — not as a public issue.
   - name: Pilots, enterprise & licensing
-    url: https://batoncadence.com
+    url: https://bitcadence.ai
     about: Talk to us about paid pilots, the enterprise edition, or licensing.

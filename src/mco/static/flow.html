@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BatonCadence — Flow Control</title>
+<title>BitCadence — Flow Control</title>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --panel-2: #1e222b; --line: #2a2f3a;
@@ -147,7 +147,7 @@
 <body>
 
 <header>
-  <div class="brand">Baton<span>Cadence</span> · Flow Control</div>
+  <div class="brand">Bit<span>Cadence</span> · Flow Control</div>
   <nav class="mode-switch" aria-label="Flow Control mode">
     <button id="mode-live" class="active" aria-pressed="true">Live board</button>
     <button id="mode-design" aria-pressed="false">Design workflow</button>
@@ -292,7 +292,7 @@ const $ = id => document.getElementById(id);
 
 function token() {
   let t = localStorage.getItem("mco_token");
-  if (!t) { t = prompt("Paste your BatonCadence access token\n(Settings → Connection in the console)"); if (t) localStorage.setItem("mco_token", t.trim()); }
+  if (!t) { t = prompt("Paste your BitCadence access token\n(Settings → Connection in the console)"); if (t) localStorage.setItem("mco_token", t.trim()); }
   return t;
 }
 
@@ -929,7 +929,7 @@ function openYamlDialog(kind) {
   $("yaml-title").textContent = exporting ? "Export workflow YAML" : "Import workflow YAML";
   $("yaml-hint").textContent = exporting
     ? "This is a file operation only. It does not submit or run the workflow."
-    : "Paste a BatonCadence workflow. Import replaces the current canvas only; it never creates jobs.";
+    : "Paste a BitCadence workflow. Import replaces the current canvas only; it never creates jobs.";
   $("yaml-text").value = exporting ? workflowToYaml(draft) : "";
   $("yaml-text").readOnly = exporting;
   $("yaml-copy").hidden = !exporting;
@@ -976,13 +976,13 @@ $("design-stage").addEventListener("dragleave", event => {
 $("design-stage").addEventListener("drop", event => {
   event.preventDefault();
   $("design-stage").classList.remove("drag-over");
-  if (event.dataTransfer?.getData("application/x-baton-step") === "new") {
+  if (event.dataTransfer?.getData("application/x-bitcadence-step") === "new") {
     const point = stagePoint(event);
     addDraftStep(point.x - DESIGN_W / 2, point.y - 24);
   }
 });
 $("step-stencil").addEventListener("dragstart", event => {
-  event.dataTransfer.setData("application/x-baton-step", "new");
+  event.dataTransfer.setData("application/x-bitcadence-step", "new");
   event.dataTransfer.effectAllowed = "copy";
 });
 $("step-stencil").addEventListener("keydown", event => {

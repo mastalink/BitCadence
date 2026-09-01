@@ -218,7 +218,7 @@ def _repo_root() -> Path:
 
 def _package_version() -> str:
     try:
-        return importlib_metadata.version("batoncadence")
+        return importlib_metadata.version("bitcadence")
     except importlib_metadata.PackageNotFoundError:
         pass
 
@@ -251,7 +251,7 @@ async def get_version():
 def get_db_client(force_new: bool = False):
     """Return the cached data-plane client (created on first use).
 
-    Supabase when credentials are configured; otherwise BatonCadence's
+    Supabase when credentials are configured; otherwise BitCadence's
     embedded LocalStore (SQLite) so the Local-Only profile gets real
     persistence - jobs, audit trail, agent registry, and Drumline shared
     context all work with zero cloud dependencies. Set MCO_DISABLE_LOCAL_DB

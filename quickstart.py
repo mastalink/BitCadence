@@ -1,5 +1,5 @@
 """
-BatonCadence Programmatic Quickstart
+BitCadence Programmatic Quickstart
 ===================================
 A simple demonstration of loading settings, auto-unlocking the AES-256-GCM
 secret store, and interacting with configuration profiles programmatically.
@@ -16,7 +16,7 @@ console = Console()
 
 def run_quickstart():
     console.print(Panel.fit(
-        "[bold green]BatonCadence Programmatic Quickstart Demonstration[/bold green]\n"
+        "[bold green]BitCadence Programmatic Quickstart Demonstration[/bold green]\n"
         "Bootstrapping the system settings and verifying credentials container...",
         border_style="green"
     ))

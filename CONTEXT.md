@@ -1,6 +1,6 @@
-# BatonCadence Domain Language
+# BitCadence Domain Language
 
-BatonCadence coordinates governed work across people and agents. This glossary fixes the language used for portable instances, enterprise identity, and secret custody.
+BitCadence coordinates governed work across people and agents. This glossary fixes the language used for portable instances, enterprise identity, and secret custody.
 
 ## Language
 
@@ -9,7 +9,7 @@ The tenant that owns memberships, saved instances, identity providers, model con
 _Avoid_: Tenant, account
 
 **Saved Instance**:
-A named BatonCadence environment belonging to exactly one Organization and reachable by its members from multiple devices.
+A named BitCadence environment belonging to exactly one Organization and reachable by its members from multiple devices.
 _Avoid_: Server profile, connection bookmark
 
 **Membership**:
@@ -21,7 +21,7 @@ An Organization-configured source of human identity such as Okta, Entra ID, a SA
 _Avoid_: Login backend, directory
 
 **Role Mapping**:
-An explicit Organization rule translating an Identity Provider group or entitlement into BatonCadence roles and scopes.
+An explicit Organization rule translating an Identity Provider group or entitlement into BitCadence roles and scopes.
 _Avoid_: Automatic role claim
 
 **Session**:
@@ -42,8 +42,8 @@ _Avoid_: Encrypted key, credential field
 
 ## Flagged ambiguities
 
-- **Role** identifies a BatonCadence authorization role. External IdP groups never become Roles until an explicit Role Mapping translates them.
-- **API key** means a third-party provider credential. BatonCadence Device Credentials and Sessions must not be called API keys.
+- **Role** identifies a BitCadence authorization role. External IdP groups never become Roles until an explicit Role Mapping translates them.
+- **API key** means a third-party provider credential. BitCadence Device Credentials and Sessions must not be called API keys.
 
 ## Example dialogue
 
