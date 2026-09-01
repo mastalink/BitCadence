@@ -11,7 +11,7 @@
 # ============================================================================
 $ErrorActionPreference = "Stop"
 
-$REPO = "https://github.com/mastalink/Bitcadence"
+$REPO = "https://github.com/mastalink/BitCadence"
 
 Write-Host ""
 Write-Host "  BitCadence installer" -ForegroundColor Cyan
@@ -51,7 +51,7 @@ function Find-ExistingInstall {
         "$HOME\BitCadence",
         "$HOME\bitcadence",
         "C:\BitCadence",
-        "C:\AI\baton\Bitcadence"
+        "C:\AI\baton\BitCadence"
     )) {
         if ((Test-Path (Join-Path $loc ".git")) -and (Test-Path (Join-Path $loc "pyproject.toml"))) {
             return $loc

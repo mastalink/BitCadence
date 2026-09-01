@@ -167,7 +167,7 @@ if ! command -v git &>/dev/null; then
 else
     if ! git -C "$ROOT" rev-parse --git-dir &>/dev/null 2>&1; then
         echo "     This folder is not a git repo (probably a ZIP download)."
-        echo "     To get updates: https://github.com/mastalink/Bitcadence"
+        echo "     To get updates: https://github.com/mastalink/BitCadence"
     else
         git -C "$ROOT" fetch --quiet origin 2>/dev/null || {
             echo "     Could not reach GitHub (offline?) - skipping update check."

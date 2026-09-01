@@ -10,7 +10,7 @@ commands.
 
 > Convention: every command assumes the project venv is active. In each window:
 > ```powershell
-> cd C:\ai\baton\Bitcadence
+> cd C:\ai\baton\BitCadence
 > .\.venv\Scripts\Activate.ps1      # prompt should now show (.venv)
 > ```
 

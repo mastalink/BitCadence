@@ -6,7 +6,7 @@
 #
 # One-time setup for step 4 (until then that job is allowed to fail):
 #   PyPI -> Manage project 'bitcadence' -> Publishing -> add GitHub
-#   publisher: repo mastalink/Bitcadence, workflow release.yml,
+#   publisher: repo mastalink/BitCadence, workflow release.yml,
 #   environment pypi. No API tokens to store.
 name: Release
 

@@ -43,14 +43,14 @@ $gitCmd = Get-Command git -ErrorAction SilentlyContinue
 if (-not $gitCmd) {
     Write-Host "     git not found - skipping update check." -ForegroundColor DarkGray
     Write-Host "     To get updates, download the latest ZIP from:" -ForegroundColor DarkGray
-    Write-Host "     https://github.com/mastalink/Bitcadence" -ForegroundColor DarkGray
+    Write-Host "     https://github.com/mastalink/BitCadence" -ForegroundColor DarkGray
 } else {
     # Is this folder a git repo?
     $gitDir = git -C $root rev-parse --git-dir 2>$null
     if (-not $gitDir) {
         Write-Host "     This folder is not a git repo (probably a ZIP download)." -ForegroundColor DarkGray
         Write-Host "     To get updates, download the latest ZIP from:" -ForegroundColor DarkGray
-        Write-Host "     https://github.com/mastalink/Bitcadence" -ForegroundColor DarkGray
+        Write-Host "     https://github.com/mastalink/BitCadence" -ForegroundColor DarkGray
     } else {
         # Fetch quietly so we can compare local vs remote
         git -C $root fetch --quiet origin 2>$null

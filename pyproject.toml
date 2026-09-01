@@ -48,9 +48,9 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://bitcadence.ai"
-Repository = "https://github.com/mastalink/Bitcadence"
-Documentation = "https://github.com/mastalink/Bitcadence/tree/main/docs"
-Changelog = "https://github.com/mastalink/Bitcadence/blob/main/CHANGELOG.md"
+Repository = "https://github.com/mastalink/BitCadence"
+Documentation = "https://github.com/mastalink/BitCadence/tree/main/docs"
+Changelog = "https://github.com/mastalink/BitCadence/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
