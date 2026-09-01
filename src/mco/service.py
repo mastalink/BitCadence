@@ -120,8 +120,13 @@ def _service_python() -> str:
     """
     if os.name != "nt":
         return sys.executable
-    candidate = Path(sys.executable).with_name("pythonw.exe")
-    return str(candidate) if candidate.exists() else sys.executable
+    # os.path rather than pathlib, deliberately: tests force os.name to "nt"
+    # to exercise this branch on Linux CI, and pathlib.Path() consults os.name
+    # at construction - it would try to build a WindowsPath on a POSIX host and
+    # raise NotImplementedError. String joins carry no such platform coupling,
+    # so the Windows branch stays testable everywhere.
+    candidate = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+    return candidate if os.path.exists(candidate) else sys.executable
 
 
 def _serve_argv(host: str, port: int) -> list[str]:
