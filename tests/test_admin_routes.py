@@ -410,6 +410,44 @@ class TestPresence:
         assert out["last_seen_seconds"] is None
         assert decorate_presence({"status": "offline"}, 300)["effective_status"] == "offline"
 
+    def test_response_status_is_the_derived_truth_not_the_stale_value(self):
+        """The "board says online but the agent died days ago" bug.
+
+        A consumer reading `status` (the MCP mco_agents tool, the console, an
+        ad-hoc client) must NOT get a stale 'online'. The response `status` is
+        collapsed onto the derived value.
+        """
+        row = decorate_presence(
+            {"status": "online", "last_seen_at": "2026-01-01T00:00:00Z"}, threshold=300
+        )
+        assert row["status"] == "offline"          # the field consumers read
+        assert row["effective_status"] == "offline"
+
+    def test_fresh_agent_reads_online_on_both_fields(self):
+        from datetime import datetime, timezone
+        row = decorate_presence(
+            {"status": "online", "last_seen_at": datetime.now(timezone.utc).isoformat()},
+            threshold=300,
+        )
+        assert row["status"] == "online"
+
+    def test_disabled_state_is_not_clobbered(self):
+        # Only stale 'online' is demoted; 'disabled' must survive.
+        row = decorate_presence(
+            {"status": "disabled", "last_seen_at": "2026-01-01T00:00:00Z"}, threshold=300
+        )
+        assert row["status"] == "disabled"
+        assert row["effective_status"] == "disabled"
+
+    def test_stored_row_is_not_mutated_only_the_response_copy(self):
+        # The endpoint hands decorate_presence a per-read dict copy; the fix
+        # must not depend on that being the store, and must not flip the DB.
+        original = {"status": "online", "last_seen_at": "2026-01-01T00:00:00Z"}
+        copy = dict(original)
+        decorate_presence(copy, threshold=300)
+        assert original["status"] == "online"      # untouched
+        assert copy["status"] == "offline"         # derived on the copy
+
     def test_polling_is_the_heartbeat(self):
         """GET /api/jobs/pending stamps last_seen_at and flips the poller online."""
         _ctx().db.add_agent("w1", "codex", "tok-w1", status="offline")
@@ -425,7 +463,10 @@ class TestPresence:
         resp = _ctx().http.get("/api/agents")
         assert resp.status_code == 200
         agent = resp.json()[0]
-        assert agent["status"] == "online"              # stored value untouched
+        # The response status IS the derived truth now: a client reading the
+        # plain `status` field can no longer be told a dead agent is online.
+        # (The DB row is unchanged; only this read-time response reflects it.)
+        assert agent["status"] == "offline"
         assert agent["effective_status"] == "offline"   # derived: silent too long
         assert agent["last_seen_seconds"] > 300
 
