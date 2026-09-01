@@ -2,21 +2,36 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
 import secrets
 from typing import Callable, cast
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 import uvicorn
 
-from mco.config import get_config
-
 from .config import FleetConfigManager, FleetWatcher
 from .logs import LogAggregator
 from .supervisor import Supervisor
+from .tokens import AgentdTokenStore, current_user_sid
 
 
 CONTROL_HOST = "127.0.0.1"
-CONTROL_PORT = 18790
+CONTROL_PORT_BASE = 18790
+
+
+def user_scoped_control_port(identity: str | None = None) -> int:
+    """Return a stable per-user loopback port to avoid cross-session collisions."""
+    if identity is None:
+        if os.name == "nt":
+            identity = current_user_sid()
+        else:
+            identity = f"uid:{os.getuid()}"
+    digest = hashlib.sha256(identity.encode("utf-8")).digest()
+    return CONTROL_PORT_BASE + int.from_bytes(digest[:2], "big") % 1000
+
+
+CONTROL_PORT = user_scoped_control_port()
 
 
 def create_control_app(
@@ -26,24 +41,31 @@ def create_control_app(
     logs: LogAggregator,
     *,
     token_provider: Callable[[], str] | None = None,
+    log_token_provider: Callable[[], str] | None = None,
+    token_store: AgentdTokenStore | None = None,
     gateway_reachable: Callable[[], bool] | None = None,
 ) -> FastAPI:
     """Create the v1 transport; all behavior stays in injected collaborators."""
-    token_provider = token_provider or (
-        lambda: str(get_config().get("MCO_LOCAL_TOKEN") or "").strip()
-    )
+    token_store = token_store or AgentdTokenStore()
+    token_provider = token_provider or token_store.control_token
+    log_token_provider = log_token_provider or token_store.logs_token
     gateway_reachable = gateway_reachable or (lambda: False)
 
-    def require_token(authorization: str | None = Header(default=None)) -> None:
-        expected = token_provider()
-        if not expected:
-            return
+    def _require(expected: str, authorization: str | None) -> None:
         scheme, _, supplied = (authorization or "").partition(" ")
         if scheme.casefold() != "bearer" or not secrets.compare_digest(supplied, expected):
             raise HTTPException(status_code=401, detail="invalid bearer token")
 
+    def require_control_token(authorization: str | None = Header(default=None)) -> None:
+        _require(token_provider(), authorization)
+
+    def require_log_token(authorization: str | None = Header(default=None)) -> None:
+        _require(log_token_provider(), authorization)
+
     app = FastAPI(title="BitCadence agentd control API", version="1")
-    protected = [Depends(require_token)]
+    app.state.agentd_supervisor = supervisor
+    protected = [Depends(require_control_token)]
+    log_protected = [Depends(require_log_token)]
 
     @app.get("/v1/status", dependencies=protected)
     def get_status() -> dict[str, object]:
@@ -107,7 +129,7 @@ def create_control_app(
             raise HTTPException(status_code=422, detail=watcher.last_error)
         return manager.snapshot()
 
-    @app.get("/v1/logs", dependencies=protected)
+    @app.get("/v1/logs", dependencies=log_protected)
     def get_logs(
         worker: str | None = Query(default=None),
         tail: int = Query(default=100, ge=0, le=10_000),
@@ -119,4 +141,7 @@ def create_control_app(
 
 def serve_control_app(app: FastAPI, *, host: str = CONTROL_HOST, port: int = CONTROL_PORT) -> None:
     """Serve the control transport on the ADR-defined loopback endpoint."""
+    if host != CONTROL_HOST:
+        raise ValueError(f"agentd must bind to {CONTROL_HOST}, not {host}")
+    app.state.agentd_supervisor.startup()
     uvicorn.run(app, host=host, port=port)

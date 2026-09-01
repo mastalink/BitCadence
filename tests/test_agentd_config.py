@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 import pytest
 
@@ -30,7 +31,7 @@ def test_validate_and_atomic_replace_reuses_fleet_parser(tmp_path: Path) -> None
     parsed = manager.write(VALID)
     assert parsed["codex-beast"].role == "codex"
     assert path.read_text(encoding="utf-8") == VALID
-    assert not (tmp_path / ".fleet.toml.tmp").exists()
+    assert not list(tmp_path.glob(".fleet.toml.*.tmp"))
 
 
 def test_invalid_config_does_not_replace_existing_file(tmp_path: Path) -> None:
@@ -42,7 +43,19 @@ def test_invalid_config_does_not_replace_existing_file(tmp_path: Path) -> None:
     assert path.read_text(encoding="utf-8") == VALID
 
 
-def test_watcher_reconciles_only_on_mtime_change(tmp_path: Path) -> None:
+@pytest.mark.parametrize("fictional_field", ["enabled", "args"])
+def test_daemon_rejects_fields_outside_the_real_fleet_schema(
+    tmp_path: Path, fictional_field: str
+) -> None:
+    manager = FleetConfigManager(tmp_path / "fleet.toml")
+    content = VALID + f"{fictional_field} = true\n"
+    with pytest.raises(FleetConfigError, match="unsupported field"):
+        manager.validate(content)
+
+
+def test_watcher_reconciles_on_content_change_even_when_mtime_is_unchanged(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "fleet.toml"
     path.write_text(VALID, encoding="utf-8")
     supervisor = RecordingSupervisor()
@@ -56,7 +69,9 @@ def test_watcher_reconciles_only_on_mtime_change(tmp_path: Path) -> None:
     assert not watcher.poll()
     assert len(supervisor.reconciled) == 1
 
+    original_mtime = path.stat().st_mtime_ns
     path.write_text(VALID.replace('role = "codex"', 'role = "claude"'), encoding="utf-8")
+    os.utime(path, ns=(original_mtime, original_mtime))
     now[0] = 10
     assert watcher.poll()
     assert supervisor.reconciled[-1]["codex-beast"].role == "claude"

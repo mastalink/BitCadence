@@ -3,11 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from mco.agentd.platform.windows import (
     CREATE_NEW_PROCESS_GROUP,
     CREATE_NO_WINDOW,
     CREATE_SUSPENDED,
+    SupervisorAlreadyRunning,
     WindowsAdapter,
+    WindowsSupervisorLock,
 )
 
 
@@ -98,3 +102,42 @@ def test_reap_orphans_requires_command_name_match(tmp_path: Path, monkeypatch) -
     assert processes[11].killed
     assert not processes[12].killed
     assert pidfile.read_text(encoding="utf-8") == ""
+
+
+def test_singleton_mutex_is_user_namespaced_and_records_holding_pid(
+    tmp_path: Path, monkeypatch
+) -> None:
+    created = []
+    closed = []
+    monkeypatch.setattr(
+        "mco.agentd.platform.windows._create_user_mutex",
+        lambda name, sid: (created.append((name, sid)) or 77, False),
+    )
+    monkeypatch.setattr(
+        "mco.agentd.platform.windows._close_handle", closed.append
+    )
+    lock = WindowsSupervisorLock(
+        tmp_path / "agentd.lock", sid_provider=lambda: "S-1-5-21-123", pid=4321
+    )
+
+    lock.acquire()
+    assert created == [("Global\\BitCadence-agentd-S-1-5-21-123", "S-1-5-21-123")]
+    assert (tmp_path / "agentd.lock").read_text(encoding="ascii") == "4321"
+    lock.release()
+    assert closed == [77]
+    assert not (tmp_path / "agentd.lock").exists()
+
+
+def test_singleton_conflict_names_the_holding_pid(tmp_path: Path, monkeypatch) -> None:
+    metadata = tmp_path / "agentd.lock"
+    metadata.write_text("9876", encoding="ascii")
+    monkeypatch.setattr(
+        "mco.agentd.platform.windows._create_user_mutex", lambda name, sid: (88, True)
+    )
+    monkeypatch.setattr("mco.agentd.platform.windows._close_handle", lambda handle: None)
+    lock = WindowsSupervisorLock(
+        metadata, sid_provider=lambda: "S-1-5-21-123", pid=4321
+    )
+
+    with pytest.raises(SupervisorAlreadyRunning, match="holding pid 9876"):
+        lock.acquire()

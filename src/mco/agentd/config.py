@@ -1,9 +1,12 @@
-"""Fleet configuration validation, atomic writes, and mtime reconciliation."""
+"""Fleet configuration validation, atomic writes, and generation reconciliation."""
 
 from __future__ import annotations
 
 from dataclasses import asdict
+import hashlib
+import os
 from pathlib import Path
+import tempfile
 import time
 from typing import Callable
 
@@ -31,10 +34,24 @@ class FleetConfigManager:
     def write(self, content: str) -> dict[str, WorkerConfig]:
         parsed = self.validate(content)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self.path.with_name(f".{self.path.name}.tmp")
-        temporary.write_text(content, encoding="utf-8")
-        temporary.replace(self.path)
+        fd, temporary_name = tempfile.mkstemp(
+            dir=self.path.parent, prefix=f".{self.path.name}.", suffix=".tmp"
+        )
+        temporary = Path(temporary_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, self.path)
+        finally:
+            temporary.unlink(missing_ok=True)
         return parsed
+
+    def content_generation(self) -> str | None:
+        if not self.path.exists():
+            return None
+        return hashlib.sha256(self.path.read_bytes()).hexdigest()
 
     def snapshot(self) -> dict[str, object]:
         content = self.path.read_text(encoding="utf-8") if self.path.exists() else ""
@@ -56,7 +73,7 @@ class FleetWatcher:
         self.clock = clock
         self.interval = interval
         self.next_check = 0.0
-        self.last_mtime_ns: int | None = None
+        self.last_generation: str | None = None
         self._has_checked = False
         self.last_error: str | None = None
 
@@ -65,8 +82,8 @@ class FleetWatcher:
         if not force and now < self.next_check:
             return False
         self.next_check = now + self.interval
-        mtime = self.manager.path.stat().st_mtime_ns if self.manager.path.exists() else None
-        if not force and self._has_checked and mtime == self.last_mtime_ns:
+        generation = self.manager.content_generation()
+        if not force and self._has_checked and generation == self.last_generation:
             return False
         try:
             configs = self.manager.load() if self.manager.path.exists() else {}
@@ -74,7 +91,7 @@ class FleetWatcher:
         except Exception as exc:
             self.last_error = str(exc)
             return False
-        self.last_mtime_ns = mtime
+        self.last_generation = generation
         self._has_checked = True
         self.last_error = None
         return True
@@ -82,7 +99,7 @@ class FleetWatcher:
     def replace(self, content: str) -> dict[str, WorkerConfig]:
         parsed = self.manager.write(content)
         self.supervisor.reconcile(parsed)
-        self.last_mtime_ns = self.manager.path.stat().st_mtime_ns
+        self.last_generation = self.manager.content_generation()
         self._has_checked = True
         self.last_error = None
         return parsed

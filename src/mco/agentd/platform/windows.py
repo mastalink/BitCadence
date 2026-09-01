@@ -1,4 +1,4 @@
-"""Windows process and service integration for ``bitcadenced``."""
+"""Windows process and per-user singleton integration for ``bitcadenced``."""
 
 from __future__ import annotations
 
@@ -16,12 +16,116 @@ import psutil
 from mco import service
 from mco.service import ServiceSpec
 
+from ..tokens import current_user_sid
+
 
 CREATE_SUSPENDED = 0x00000004
 CREATE_NEW_PROCESS_GROUP = 0x00000200
 CREATE_NO_WINDOW = 0x08000000
 JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
 JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
+ERROR_ALREADY_EXISTS = 183
+SDDL_REVISION_1 = 1
+
+
+class SupervisorAlreadyRunning(RuntimeError):
+    pass
+
+
+class _SECURITY_ATTRIBUTES(ctypes.Structure):
+    _fields_ = [
+        ("nLength", wintypes.DWORD),
+        ("lpSecurityDescriptor", wintypes.LPVOID),
+        ("bInheritHandle", wintypes.BOOL),
+    ]
+
+
+def _create_user_mutex(name: str, sid: str) -> tuple[int, bool]:
+    """Create a named mutex whose DACL grants access only to the owning SID."""
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    security_descriptor = wintypes.LPVOID()
+    convert = advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW
+    convert.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.LPVOID),
+        wintypes.LPVOID,
+    ]
+    convert.restype = wintypes.BOOL
+    sddl = f"D:P(A;;GA;;;{sid})"
+    if not convert(sddl, SDDL_REVISION_1, ctypes.byref(security_descriptor), None):
+        raise ctypes.WinError(ctypes.get_last_error())
+    attributes = _SECURITY_ATTRIBUTES(
+        ctypes.sizeof(_SECURITY_ATTRIBUTES), security_descriptor, False
+    )
+    kernel32.CreateMutexW.argtypes = [
+        ctypes.POINTER(_SECURITY_ATTRIBUTES),
+        wintypes.BOOL,
+        wintypes.LPCWSTR,
+    ]
+    kernel32.CreateMutexW.restype = wintypes.HANDLE
+    try:
+        ctypes.set_last_error(0)
+        handle = kernel32.CreateMutexW(ctypes.byref(attributes), True, name)
+        error = ctypes.get_last_error()
+        if not handle:
+            raise ctypes.WinError(error)
+        return int(handle), error == ERROR_ALREADY_EXISTS
+    finally:
+        kernel32.LocalFree(security_descriptor)
+
+
+def _close_handle(handle: int) -> None:
+    ctypes.WinDLL("kernel32", use_last_error=True).CloseHandle(wintypes.HANDLE(handle))
+
+
+class WindowsSupervisorLock:
+    """Per-user, cross-session singleton backed by a Windows named mutex."""
+
+    def __init__(
+        self,
+        metadata_path: Path | None = None,
+        *,
+        sid_provider: Callable[[], str] = current_user_sid,
+        pid: int | None = None,
+    ) -> None:
+        self.metadata_path = metadata_path or Path.home() / ".mco" / "agentd.lock"
+        self.sid = sid_provider()
+        self.pid = pid or os.getpid()
+        self.name = f"Global\\BitCadence-agentd-{self.sid}"
+        self._handle: int | None = None
+
+    def acquire(self) -> None:
+        if self._handle is not None:
+            return
+        handle, existed = _create_user_mutex(self.name, self.sid)
+        if existed:
+            _close_handle(handle)
+            holder = self._holding_pid()
+            raise SupervisorAlreadyRunning(
+                f"BitCadence agentd is already running for this user; holding pid {holder}"
+            )
+        self._handle = handle
+        self.metadata_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.metadata_path.with_suffix(".lock.tmp")
+        temporary.write_text(str(self.pid), encoding="ascii")
+        os.replace(temporary, self.metadata_path)
+
+    def _holding_pid(self) -> str:
+        try:
+            value = self.metadata_path.read_text(encoding="ascii").strip()
+            return str(int(value))
+        except (FileNotFoundError, OSError, ValueError):
+            return "unknown"
+
+    def release(self) -> None:
+        if self._handle is None:
+            return
+        _close_handle(self._handle)
+        self._handle = None
+        if self._holding_pid() == str(self.pid):
+            self.metadata_path.unlink(missing_ok=True)
 
 
 class _IO_COUNTERS(ctypes.Structure):
@@ -98,10 +202,21 @@ class WindowsAdapter:
         self,
         pidfile: Path | None = None,
         popen_factory: Callable[..., subprocess.Popen[Any]] = subprocess.Popen,
+        supervisor_lock: WindowsSupervisorLock | None = None,
     ) -> None:
         self.pidfile = pidfile or Path.home() / ".mco" / "agentd.pids"
         self._popen_factory = popen_factory
         self._job_handle: int | None = None
+        self._supervisor_lock = supervisor_lock
+
+    def acquire_supervisor_lock(self) -> None:
+        if self._supervisor_lock is None:
+            self._supervisor_lock = WindowsSupervisorLock()
+        self._supervisor_lock.acquire()
+
+    def release_supervisor_lock(self) -> None:
+        if self._supervisor_lock is not None:
+            self._supervisor_lock.release()
 
     def bind_to_parent_lifetime(self) -> None:
         if self._job_handle is not None:

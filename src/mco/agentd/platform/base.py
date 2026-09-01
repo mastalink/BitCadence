@@ -1,4 +1,4 @@
-"""Platform contract for the machine daemon.
+"""Platform contract for the per-user daemon.
 
 Keep this module deliberately boring: platform implementations and the
 supervisor meet here, and neither side should need to know the other's details.
@@ -25,6 +25,12 @@ class ProcessHandle(Protocol):
 
 
 class PlatformAdapter(Protocol):
+    def acquire_supervisor_lock(self) -> None:
+        """Fence this user's supervisor before binding or spawning."""
+
+    def release_supervisor_lock(self) -> None:
+        """Release the process-lifetime supervisor fence."""
+
     def spawn(
         self,
         argv: list[str],
