@@ -391,3 +391,452 @@ that belong in WS1's scope, not in a later workstream:
 
 The demo's honesty board (`DEMO-epcot.md` section 6) is the live tracker for when these
 turn green.
+
+---
+
+## 90-day sizing - codex
+
+This sizing is from the implementation on `main` at `c0b1026`, not from the workstream
+headings alone. “Day” means one focused engineer-day with the repository and test
+environment available. It excludes waiting for hardware delivery, app-store/provider
+review, and unattended soak time. The estimates include design, migrations, tests,
+documentation, and one deployment drill; they do not include the later WS5-WS7 product
+work that depends on these foundations.
+
+The first planning correction is arithmetic: all four complete workstreams are not a
+90-day one-person commitment. The credible first-90-day cut is WS1, WS2, the Appliance
+slice of WS3, and the cost/account slice of WS4. Database tenancy, per-tenant vault keys,
+and machine enrollment are a subsequent security program, not small tails on a cost
+ledger.
+
+### WS1 - fenced leases and idempotent completion
+
+**What already exists and should be reused**
+
+- `LocalStore._lease_task()` is an atomic `pending -> leased` compare-and-set under the
+  embedded store lock. `_RpcCall.execute()` already gives LocalStore the same RPC-shaped
+  seam as PostgREST.
+- The documented Postgres `lease_task(p_agent_instance_id, p_task_id)` function performs
+  the equivalent conditional `UPDATE` using database time. It is currently in
+  `docs/SETUP.md`, not a versioned `src/mco/migrations` migration; WS1 must fix that
+  deployment gap rather than assuming the function exists everywhere.
+- `routes.lease_job()` supplies the authenticated instance, checks org and dropbox
+  addressing, calls the RPC, and records/broadcasts the lease. `handlers.handle_job_lease()`
+  is the equivalent handler seam.
+- `routes.get_lease_ttl_seconds()` and `routes.reclaim_stale_leases()` provide the current
+  policy/configuration hook and recovery call site, even though the implementation is an
+  unsafe read-then-update scan.
+- `routes.update_job_status()` and `handlers.handle_job_update()` are the central REST
+  mutation path for progress, completion, failure, retry, dependent unlock, audit, and
+  Drumline distillation.
+- `GatewayClient.lease()`, `complete()`, and `fail()`, `BitCadenceAgent.process_job()`, and
+  `AgentListener._process_single_job()` are the worker-facing paths that must carry and
+  renew the lease credential.
+- `audit.record_event()` and the existing append-only LocalStore/Postgres event surfaces
+  are useful output contracts, but are not yet transactionally coupled to job mutation.
+
+**Where the fence belongs**
+
+Put the authoritative current fence on the `agent_jobs` row: `lease_id` (random,
+unguessable), `lease_epoch` (monotonic for that job within one database history),
+`lease_expires_at` (database clock), and the existing owner. Do **not** put the current
+owner only in a separate lease table: every acquire, renew, expire, cancel, and terminal
+transition would then need a cross-table transaction merely to decide who owns the job.
+That is harder to express through PostgREST and easier to get partially right in
+LocalStore.
+
+An append-only `job_attempts`/domain-event row is still desirable for history, usage,
+and reconciliation, but it is evidence *about* the current fence, not the authority for
+it. Both representations are acceptable only if the job row is the single source of
+truth and the attempt/event append is committed in the same transaction. `lease_id` is
+required even with an epoch: restoring an old snapshot can reuse an integer epoch, while
+a newly random lease ID prevents the pre-restore worker from matching the new attempt.
+
+Change the Postgres `lease_task` RPC from a boolean into an atomic credential-returning
+operation. Its practical contract should be equivalent to:
+
+```text
+lease_task(p_agent_instance_id, p_task_id, p_ttl_seconds)
+  UPDATE agent_jobs
+     SET status = 'leased',
+         leased_by_instance_id = p_agent_instance_id,
+         lease_id = fresh_random_uuid(),
+         lease_epoch = lease_epoch + 1,
+         lease_expires_at = database_now() + ttl,
+         started_at = coalesce(started_at, database_now())
+   WHERE id = p_task_id
+     AND status = 'pending'
+     AND leased_by_instance_id IS NULL
+  RETURNING id, lease_id, lease_epoch, lease_expires_at
+```
+
+The RPC should clamp `p_ttl_seconds` to a server policy rather than trust an arbitrary
+worker duration. A losing caller returns no row, not a row with `success=false`. The
+returned lease ID and epoch are opaque credentials the client must echo on every mutation.
+Add sibling atomic operations for `renew_lease`, `expire_lease`, and
+`update_leased_job`; each conditions on job ID, current state, owner, lease ID, epoch,
+and expiry as appropriate. Reaping must be one database statement using database time,
+not a Python scan followed by an ID-only update.
+
+The current WebSocket `job_update` path in `cli.create_app()` is not a second database
+mutation path: it merely rebroadcasts a caller-supplied status. It must either be removed
+as a worker write surface or load and validate the same lease credential before emitting
+an authoritative-looking event. REST remains the persistence path today.
+
+**Concrete work**
+
+1. Freeze the legal state machine and lease/partition policy, including cancel, kill
+   switch, retry, expiry, unknown external-side-effect outcome, and restore semantics.
+2. Add a versioned schema migration and backfill/default policy for the lease fields;
+   move the canonical Postgres lease RPC out of setup prose and into migrations.
+3. Implement the four atomic operations for both LocalStore and Postgres/PostgREST, with
+   mutation plus minimal domain-event/outbox append in one transaction.
+4. Change REST contracts, `GatewayClient`, `BitCadenceAgent`, and `AgentListener` to retain
+   the returned lease credential, renew long work, retry terminal delivery boundedly,
+   and interpret stale writes as `409 Conflict` rather than a generic failure.
+5. Fence every worker-controlled mutation, not just `completed`: `in_progress`, progress,
+   failure, and terminal output. Make retry, cancel, kill-switch halt, and expiry win by
+   the same state-machine CAS.
+6. Define `(job_id, lease_id)` as the attempt idempotency key and add an outbox/unknown
+   outcome policy for connectors whose external API does not accept an idempotency key.
+7. Add deterministic LocalStore tests and real-Postgres concurrency tests, including
+   retry after response loss and restoration of an older snapshot.
+
+**Estimate: 16-24 days.** Protocol/state machine and migration: 3-4; two-backend atomic
+operations and audit coupling: 5-7; client/listener renewal and terminal-delivery changes:
+3-5; adversarial tests and compatibility/rollout: 5-8. The estimate is most likely wrong
+at the transaction boundary: LocalStore stores JSON rows in SQLite while Postgres is
+reached through PostgREST, and existing audit/retry/dependency actions are separate
+writes. External APIs without native idempotency can add another workstream rather than
+another method.
+
+**Acceptance test rewrite**
+
+The current sentence is directionally right but underspecified and cannot pass honestly
+while the audit append is best-effort. Use this instead:
+
+> Against both LocalStore and Postgres, worker A leases a job and receives `(lease_id A,
+> epoch N, expiry T)`. Advance the authoritative database clock past T; race two reapers
+> and prove exactly one expiry transition, one attempt increment, and one committed
+> `lease_expired` event. Worker B then receives a different lease ID and epoch N+1.
+> Replay A's `in_progress`, `failed`, and `completed` writes through the public REST
+> contract and the supported WebSocket write contract, if retained: each returns a
+> stable stale-lease conflict, leaves B's row and output unchanged, and atomically records
+> one rejection event with expected/current fence metadata. B renews and completes once;
+> retrying the same completion after a dropped response is idempotent. Also race cancel
+> against completion, reject renewal after expiry, and restore a pre-lease snapshot to
+> prove the old random lease ID cannot write after restore.
+
+### WS2 - honest readiness, timed recovery, and external dead-man
+
+**What already exists and should be reused**
+
+- `cli.create_app()` is the right place to expose `/healthz` and `/readyz`; the current
+  `/healthz` payload already reports backend and pause state but only checks whether a
+  client object was constructed.
+- `routes.get_db_client()` memoizes the configured Supabase client or returns LocalStore.
+  It is wiring, not a connectivity probe.
+- `routes.touch_agent_presence()`, `decorate_presence()`, and
+  `get_offline_after_seconds()` already define worker heartbeat/freshness semantics.
+- `launcher.run_forever()` and `launcher.tick()` are the existing timer loop and scheduler
+  work seams. `service._scheduler_spec()` and `service.install_scheduler()` already make
+  that loop boot-persistent on Windows, macOS, and systemd.
+- `routes.reclaim_stale_leases()` is the recovery operation to replace internally once
+  WS1 makes it safe. The timer should call the new database-atomic reaper, not preserve
+  this read-then-update implementation.
+- The ntfy notifier and connector health functions are reusable delivery/diagnostic
+  surfaces, but the external dead-man must not depend on this gateway or notifier being
+  alive at alert time.
+
+**What `/readyz` must actually query**
+
+Keep `/healthz` as event-loop liveness: if FastAPI can answer, it returns 200 and does not
+pretend to prove the database. `/readyz` must execute a bounded query against the
+authoritative store, validate the expected schema/protocol version and required RPCs,
+and report whether job intake/leasing is enabled. For Postgres, a `SELECT 1` proves only
+a socket; query a small `mco_runtime_health`/schema-version RPC that also exercises the
+schema and write transaction used by leases. For LocalStore, add an equivalent `ping()`
+that begins and rolls back a bounded write transaction.
+
+Scheduler health cannot be inferred from the gateway process or its filesystem state.
+`launcher.run_forever()` must heartbeat a durable scheduler-instance/leadership row on
+each tick, including last success, last error, config digest, and lease expiry. `/readyz`
+queries that row when this deployment requires scheduling. Worker health should be a
+capability result from fresh `agent_registry.last_seen_at` values (for example, “at least
+one `codex` worker”), not an undifferentiated worker count. Dead-man heartbeat delivery
+and phone notification should be separately reported as operational/degraded health;
+making all control-plane HTTP disappear from a load balancer merely because workers are
+offline would remove the interface needed to cancel or repair work.
+
+The timer-driven reaper may live in every gateway process after WS1. With an atomic
+database CAS, concurrent reapers are harmless; gateway co-location also means no leases
+are being accepted on a host whose reaper loop died with the event loop. Run it as a
+FastAPI lifespan task with bounded calls, jitter, cancellation on shutdown, last-success
+telemetry, and an exception loop that cannot kill the app. A separate process is an
+operational scaling/isolation option, not a correctness requirement. Scheduler
+leadership is separate: multiple schedulers can create duplicate schedules unless they
+hold a database lease.
+
+**Concrete work**
+
+1. Specify liveness, control-plane readiness, job-execution capability, scheduler health,
+   and notification health as distinct fields with stable status-code semantics.
+2. Add the store health/schema probe, scheduler lease/heartbeat, and capability-aware
+   worker freshness query.
+3. Add the gateway lifespan reaper loop on top of WS1's atomic expiry operation, with
+   metrics for last success, duration, failures, and oldest expired lease.
+4. Configure an external monitor with durable last-seen/deadline state, authenticated
+   heartbeats or meaningful pulls, duplicate suppression, recovery messages, and a
+   notification provider independent of the home site.
+5. Add fault-injection tests plus a scheduled physical power-loss drill.
+
+**Estimate: 7-11 days after WS1.** Probe and health contract: 2-3; scheduler heartbeat
+and leadership signal: 1-2; reaper lifecycle/telemetry: 1-2; external monitor,
+notification, and drills: 3-4. The largest uncertainty is not FastAPI; it is proving the
+cloud timer/state/phone delivery path and deciding which worker capabilities are truly
+required for each edition.
+
+**Acceptance test rewrite**
+
+> With the gateway alive, make the database unreachable and prove `/healthz` remains a
+> fast 200 liveness response while `/readyz` returns 503 within its timeout and names the
+> failed store probe. Stop the scheduler and the last required-capability worker and prove
+> their durable heartbeats age into explicit degraded components without making the
+> repair/control endpoints unreachable. Lease an already-expired fixture while no worker
+> polls and prove the timer reaper transitions it once. Finally, with the external monitor
+> showing a fresh authenticated heartbeat, cut power/network to the entire coordinator
+> site; after two missed 60-second deadlines, a cloud-side timer sends one phone alert
+> through an independent provider within 180 seconds, then one recovery notification
+> after the site returns. Preserve monitor logs/timestamps as the test artifact.
+
+### WS3 - coordinator appliance and Team profile
+
+**What already exists and should be reused**
+
+- `routes.get_db_client()` already selects embedded LocalStore or Supabase/PostgREST;
+  `LocalStore` persists the appliance ledger in `~/.mco/local.db`.
+- `migrations_runner` discovers versioned migrations and tracks their application. That
+  is the right basis for repeatable Pi and Team upgrades, once the base schema and lease
+  RPC are also versioned rather than living only in `docs/SETUP.md`.
+- `service._gateway_spec()`, `_scheduler_spec()`, `_service_systemd_unit_text()`,
+  `_linux_install_service()`, `_linux_status()`, and `_linux_restart()` already implement
+  `systemd --user` installation and operation. `service.install()` and
+  `install_scheduler()` choose Linux without a Windows-specific command path.
+- `launcher.save_state()` provides atomic scheduler-state file replacement; the same
+  discipline should be used for snapshot manifests and promotion state.
+- `mco doctor`, `/api/version`, the console, agent presence, and per-instance token files
+  are useful migration/drill checks.
+
+**ARM Linux breakpoints found in the current code/configuration**
+
+- The gateway itself is mostly platform-neutral Python and already has a Linux service
+  branch. The immediate migration blocker is state outside the code: the live
+  `~/.mco/fleet.toml` uses `C:/Users/.../*.cmd` executables. Those worker entries cannot
+  move to ARM; the Pi fleet config must run only coordinator services or use native Linux
+  commands.
+- A secret store created on Windows commonly auto-unlocks from Windows Credential
+  Manager. `SecretStore.auto_unlock()` has no Linux keychain provider; the Pi must receive
+  `MCO_MASTER_PASSWORD` through a protected service environment or have credentials
+  deliberately re-enrolled. Copying `secrets.enc` alone produces a locked gateway.
+- The setup examples are Windows-first (`C:/.../.venv/Scripts/mco.exe` and `.cmd` worker
+  wrappers). They need an ARM/Linux appliance runbook and executable-path validation.
+- `LocalStore` is SQLite-backed, but no consistent online backup API exists. Copying
+  `local.db` while its WAL/transaction state is active is not an acceptable snapshot;
+  implement SQLite backup/`VACUUM INTO`, manifest/checksum, encryption, retention, and a
+  restore-incarnation fence.
+- `systemd --user` only starts at boot without a login when lingering is enabled. The
+  generated install message mentions this, but setup does not enforce or test it. The
+  unit must also receive the secret/config environment, restart on gateway failure, and
+  tolerate network/Tailscale/DNS becoming ready after the process starts.
+- The merged agentd core contains the platform-neutral `Supervisor` contract and a
+  Windows adapter only. That does not block a coordinator-only Pi, but a Linux worker
+  appliance needs a POSIX adapter before agentd can supervise local workers there.
+- The Python dependencies are declared OS-independent and Windows-only `tzdata` is
+  correctly marker-gated. They still need a clean `linux/arm64` install smoke test so a
+  future binary dependency cannot silently invalidate that claim.
+
+**Concrete work**
+
+1. Define and measure Appliance RPO/RTO, then write an idempotent Pi bootstrap that
+   installs Python/package, systemd user services, linger, protected environment,
+   Tailscale/firewall, log rotation, and version/migration checks.
+2. Add WAL-consistent encrypted backup plus off-site/sibling transfer, signed manifest or
+   external high-water mark, retention, restore-incarnation rotation, and a restore CLI.
+3. Re-enroll secrets and operator/worker tokens on the Pi; do not copy a
+   Windows-Credential-Manager-dependent store and call it migrated.
+4. Run cold-boot, power-loss, disk-full, clock-skew, network-return, upgrade/rollback, and
+   blank-Pi restore drills; capture measured RPO/RTO.
+5. For Team, package Postgres migrations, make gateways stateless, add database-held
+   scheduler leadership, and prove two replaceable gateways. Enterprise database
+   replication is explicitly outside this estimate unless a managed service supplies it.
+
+**Estimate: 9-14 days for the Appliance profile; 7-11 additional days for the Team
+profile, or 16-25 days total.** The Appliance estimate reuses the existing Linux service
+code but includes backup/restore and failure drills. The Team increment assumes WS1 and
+an available managed Postgres. The likely misses are physical: UPS signaling, USB/storage
+behavior under sudden power loss, Tailscale/DNS recovery, secret re-enrollment, and the
+actual database migration/export path. Enterprise replication/DR can add weeks and must
+not be hidden inside “state in Postgres.”
+
+**Acceptance test rewrite**
+
+The current test is not testable as written. A restored snapshot cannot prove that its
+missing suffix is no larger than the snapshot interval; a valid shorter chain looks
+valid. “Destroy” is also an unsafe and irreproducible verb. Use this instead:
+
+> Record the accepted Appliance RPO and RTO. Commit a known job/event checkpoint and
+> publish its event high-water mark or signed chain head outside Pi #1. Produce a
+> WAL-consistent encrypted snapshot with manifest and timestamp, then power off and
+> remove Pi #1. Starting from a blank Pi #2/SSD and only the documented recovery bundle,
+> restore secrets/configuration/database, rotate the store incarnation, boot gateway and
+> scheduler without an interactive login, and reconnect one worker. Measure time from
+> declared incident to accepted job. Verify every retained event and manifest, compare
+> the restored high-water mark with the external checkpoint, and report the exact lost
+> interval; pass only when measured RTO and loss are within the written bounds. Replay a
+> pre-failure lease and prove the restored incarnation rejects it.
+
+For Team, add a separate test: kill the active gateway and scheduler, prove another
+gateway continues serving the same Postgres ledger, and prove exactly one scheduler
+leader emits each due run.
+
+### WS4 - usage/cost, accounts, tenancy, and machine identity
+
+**What already exists and should be reused**
+
+- `orchestrator.executors.ROLE_COMMANDS`, `make_cli_executor()`, and `run_argv()` are the
+  common local CLI launch seam. Today they capture only final stdout/stderr, so structured
+  usage is discarded even when a vendor emits it.
+- `AgentListener._execute_task()` is the worker-wrapper boundary for registered
+  executors; `BitCadenceAgent.process_job()` is the SDK boundary. Both know job and
+  attempt context and can meter a run before sending completion.
+- `GatewayClient.lease()/complete()/fail()` are the protocol boundary where a worker can
+  receive a reservation and settle usage. `handlers.handle_job_update()` is the current
+  authoritative ingestion path, but it cannot discover tokens that the worker never
+  sends.
+- Scheduler launchers, bounded loops, `max_retries`, the kill switch, `/metrics`,
+  `agent_registry`, `org_id`, the encrypted secret store, LLM connections, and edition
+  gates are useful policy/configuration surfaces. None currently reserves or settles
+  money.
+
+**Where accounting hooks in**
+
+Use all three layers with different authority:
+
+1. The **gateway/lease handler** owns budget policy. It estimates and reserves against a
+   tenant/user/workflow/job/account/model budget before returning a lease. An executor
+   must never be the authority for whether money may be spent.
+2. The **worker wrapper or typed executor** parses provider-native structured events and
+   periodically reports cumulative usage against the lease. It is the only layer that
+   sees the CLI's real token events. The current text-only `run_argv()` must grow a typed
+   result/event interface rather than teaching `handle_job_update()` to scrape prose.
+3. The **SDK/client contract** transports normalized usage samples and terminal
+   settlement with lease/idempotency credentials. The gateway validates monotonic totals,
+   stores raw vendor evidence plus normalized units, prices by versioned price book, and
+   atomically releases/charges the reservation.
+
+Provider facts as of the locally installed CLIs on 2026-09-03 (`codex 0.144.1`, Claude
+Code `2.1.221`, Gemini CLI `0.41.2`, OpenCode `1.17.13`):
+
+- Codex supports `codex exec --json`; its `turn.completed.usage` event exposes input,
+  cached input, cache-write input, output, and reasoning-output tokens. It does not
+  provide an authoritative billed dollar amount or provider-returned model identity in
+  that event, so BitCadence must record the requested/resolved model separately and price
+  conservatively. See the official [Codex event types](https://github.com/openai/codex/blob/main/sdk/typescript/src/events.ts).
+- Claude Code supports `-p --output-format json`/`stream-json`; the result includes usage
+  metadata and the Agent SDK result contract provides `total_cost_usd`. Preserve the raw
+  usage fields too; a vendor total is evidence, not a substitute for an auditable price
+  book. See the official [Claude Code CLI reference](https://docs.anthropic.com/en/docs/claude-code/cli-usage).
+- Gemini CLI supports `--output-format json` and `stream-json`; the result contains
+  aggregate/per-model token statistics and its telemetry exposes token-usage metrics.
+  Dollar cost depends on authentication/billing mode and is not a uniform CLI guarantee.
+  See the official [Gemini headless reference](https://geminicli.com/docs/cli/headless/).
+- OpenCode supports `opencode run --format json`; `step-finish` carries token categories
+  and a cost field. Treat it as metering evidence with a reconciliation fallback because
+  the raw event stream has had ordering/completeness bugs and some subscription-backed
+  providers legitimately report zero cost. See the official [OpenCode CLI reference](https://dev.opencode.ai/docs/cli/)
+  and [usage schema](https://github.com/anomalyco/opencode/blob/dev/packages/schema/src/v1/session.ts).
+- The `antigravity` role is currently just an alias to `gemini -p` in
+  `ROLE_COMMANDS`; it has no distinct accounting adapter. Grok/reviewer/chief are supplied
+  by external wrappers in the live fleet and have no typed usage contract in this repo.
+  Mark their usage `unmetered/unknown` and deny hard-dollar-budget jobs until an adapter
+  proves a source; never silently write zero.
+
+**Concrete work**
+
+1. Define normalized usage, immutable raw evidence, versioned price book, reservation,
+   adjustment, settlement, refund/expiry, and unknown-usage schemas. Key every entry by
+   org, budget owner, account, model, job, lease/attempt, and vendor event ID.
+2. Add transactional budget reservation to the lease RPC/LocalStore operation and an
+   emergency breaker checked independently on every new reservation and usage sample.
+3. Replace text-only executor results with typed adapters for Codex, Claude, Gemini, and
+   OpenCode; add fixtures from pinned CLI versions, monotonic streaming samples, terminal
+   settlement, and missing/malformed-usage behavior.
+4. Model accounts/cooldowns/quotas as schedulable capacity without storing account secrets
+   in the ledger; build operator-visible reconciliation for provider dashboard/invoice
+   totals.
+5. First-90-day security slice: bind every budget/account row to `org_id` and deny unknown
+   ownership. Full WS4 later: Postgres RLS tested with non-service tenant credentials,
+   per-tenant vault keys and rotation, machine enrollment, short-lived credentials,
+   revocation, and authenticated transport.
+
+**Estimate: 15-22 days for usage ledger, reserve/meter/settle, breaker, and four CLI
+adapters; 18-28 additional days for database-enforced tenancy, per-tenant keys, and
+machine identity, or 33-50 days for full WS4.** The cost slice is most likely wrong where
+subscription CLIs do not map token counts to marginal dollars, a CLI omits its terminal
+usage event, or “stop at $5” requires interrupting a process between provider calls. The
+security slice is most likely wrong around legacy data migration, key rotation rollback,
+certificate enrollment/revocation, and testing against real Postgres roles rather than
+the service credential.
+
+**Acceptance test rewrite**
+
+The current `$5` sentence is not deterministic without a price book and reservation
+rule, and a post-run token report cannot retroactively prevent the call that crossed the
+limit. Use this instead:
+
+> With a pinned synthetic provider, price-book version, and deterministic usage stream,
+> give a loop a $5.00 hard ceiling. Before each attempt the gateway atomically reserves
+> its worst-case cost; it refuses the first reservation that could exceed $5.00, even
+> with two workers racing. Stream monotonically increasing usage, settle each attempt
+> exactly once after a simulated lost response/retry, and prove `reserved + settled <=
+> $5.00` (or a separately declared one-call overshoot bound for providers that cannot be
+> interrupted). The ledger names job, lease, workflow, tenant, budget owner, account,
+> provider, requested and observed model, raw tokens, price-book version, calculated
+> cost, vendor-reported cost if any, and breaker reason. Unknown/malformed usage fails
+> closed for hard-budget work rather than recording zero. A second account with budget
+> remains routable when the first is exhausted.
+
+Then run the security acceptance separately:
+
+> Connect directly to Postgres as tenant A and prove RLS rejects select/insert/update of
+> tenant B job, usage, account, audit, and context rows; the same probes as B succeed only
+> for B. Rotate tenant A's vault key while reads/writes continue, enroll a new machine
+> with a short-lived scoped credential, revoke it, and prove both a fresh connection and
+> an already-connected worker lose write authority within the documented bound.
+
+### Net schedule and PR #47
+
+| Work | Engineer-days | First-90-day treatment |
+|---|---:|---|
+| WS1 | 16-24 | Commit; release blocker |
+| WS2 | 7-11 after WS1 | Commit; dead-man and drills include wall-clock wait |
+| WS3 Appliance | 9-14 | Commit after the WS1 protocol is stable |
+| WS3 Team increment | 7-11 | Stretch; do not include Enterprise replication |
+| WS4 cost/account slice | 15-22 | Commit only if WS3 Team is deferred or staffing increases |
+| WS4 tenancy/keys/machine identity | 18-28 additional | Move after the first 90 days |
+
+That is **47-71 focused engineer-days** for WS1 + WS2 + Appliance + the WS4 cost slice,
+before contingency and soak time. It fits 90 calendar days only near full-time and with
+scope discipline. At the previously stated 7-10 focused hours per week it is roughly
+eight to seventeen months, depending on what a “focused day” actually contains. The
+first 30 days should end with the WS1 protocol and most of its
+two-backend implementation, not a production Pi cutover.
+
+PR #47 no longer needs rework: it was merged to `main` as `c0b1026` on 2026-09-03 after
+the ADR 0002 revision-2 corrections. Its scope remains right. `Supervisor` is a local
+process supervisor and should not become the distributed job-lease authority. The plan
+creates follow-on work instead: add POSIX/macOS adapters, update the worker SDK/wrappers
+it launches to retain/renew/settle WS1 lease credentials, and make graceful agentd stop
+give the wrapper a bounded chance to report/abandon its lease before forced termination.
+Keep job fencing in the gateway/store protocol and process ownership fencing in agentd;
+conflating them would weaken both.
