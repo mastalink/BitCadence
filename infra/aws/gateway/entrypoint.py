@@ -27,6 +27,7 @@ import sys
 import threading
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import boto3
 import httpx
@@ -68,11 +69,43 @@ def wait_for(url: str, ok=(200, 401, 404), attempts: int = 60) -> None:
     raise SystemExit(f"gave up waiting for {url}")
 
 
+def apply_postgres_bootstrap(database_url: str) -> list[str]:
+    """Create the small base schema that the additive migrations build on.
+
+    The project migrations intentionally evolve an existing BitCadence schema;
+    a bare RDS database has no ``agent_registry`` or ``agent_jobs`` tables yet.
+    Keep that first-install concern in the AWS image instead of teaching the
+    shared migration runner about one deployment profile.
+    """
+    import psycopg
+
+    overlay_dir = Path(
+        os.environ.get(
+            "MCO_POSTGRES_BOOTSTRAP_DIR",
+            Path(__file__).with_name("migrations-overlay"),
+        )
+    )
+    files = sorted(overlay_dir.glob("*.sql"))
+    if not files:
+        raise RuntimeError(f"no PostgreSQL bootstrap SQL found in {overlay_dir}")
+
+    applied = []
+    with psycopg.connect(database_url) as conn:
+        for path in files:
+            with conn.transaction():
+                conn.execute(path.read_text(encoding="utf-8"))
+            applied.append(path.name)
+    return applied
+
+
 def prepare_postgres() -> None:
     os.environ["SUPABASE_KEY"] = mint_postgrest_jwt()
     logger.info({"event": "postgrest.jwt_minted"})
 
     wait_for(f"{os.environ['SUPABASE_URL']}/rest/v1/", ok=(200, 401, 404, 503))
+
+    bootstrap = apply_postgres_bootstrap(os.environ["DATABASE_URL"])
+    logger.info({"event": "postgres.bootstrap_applied", "files": bootstrap})
 
     from mco.migrations_runner import apply_postgres
 

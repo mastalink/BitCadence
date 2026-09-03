@@ -221,7 +221,20 @@ def p7_gate() -> str | None:
 
     # No worker may lease a gated job.
     lease = api("POST", "/api/jobs/lease", token=worker_token(ROLES[0]), json={"task_id": jid, "agent_instance_id": f"{ROLES[0]}-cloud-1"})
-    run.mark(P, "a2_lease_refused", "PASS" if lease.status_code >= 400 else "FAIL", lease.status_code)
+    try:
+        lease_body = lease.json()
+    except Exception:
+        lease_body = None
+    # The gateway deliberately returns the lease RPC result as HTTP 200. A
+    # valid worker identity and {success:false} prove the approval fence. A
+    # 401/403 must never make this assertion green.
+    lease_refused = (
+        lease.status_code == 200
+        and isinstance(lease_body, dict)
+        and lease_body.get("success") is False
+    )
+    run.mark(P, "a2_lease_refused", "PASS" if lease_refused else "FAIL",
+             {"status": lease.status_code, "body": lease_body})
 
     ok = api("POST", f"/api/jobs/{jid}/approve")
     run.mark(P, "b_operator_approves", "PASS" if ok.status_code == 200 else "FAIL", ok.status_code)
@@ -537,10 +550,24 @@ def p6_runaway() -> None:
 
 # ── Evidence + status page ───────────────────────────────────────────────────
 
-def file_evidence() -> dict:
-    summary = run.summary()
+def file_evidence(gate_job: str | None = None) -> dict:
     ep = api("POST", "/api/governance/evidence-pack", json={})
-    run.artifacts["evidence-pack.json"] = ep.json() if ep.status_code == 200 else {"error": ep.status_code, "body": ep.text[:500]}
+    ep_body = ep.json() if ep.status_code == 200 else {"error": ep.status_code, "body": ep.text[:500]}
+    run.artifacts["evidence-pack.json"] = ep_body
+    if gate_job:
+        audit = {}
+        for artifact in ep_body.get("files", []) if isinstance(ep_body, dict) else []:
+            if artifact.get("filename") == "audit-trail.json" and artifact.get("text"):
+                try:
+                    audit = json.loads(artifact["text"])
+                except (TypeError, ValueError):
+                    audit = {}
+                break
+        decisions = audit.get("decision_history", []) if isinstance(audit, dict) else []
+        found = [d for d in decisions if d.get("job_id") == gate_job]
+        run.mark("P7", "d_evidence_pack_has_decision", "PASS" if found else "FAIL",
+                 {"status": ep.status_code, "matching_decisions": len(found)})
+    summary = run.summary()
     if BACKEND == "postgres" and DATABASE_URL:
         from mco.orchestrator.audit import verify_chain
         db = _DB(DATABASE_URL)
@@ -616,7 +643,7 @@ def main() -> int:
     except Exception:
         run.mark("P5", "harness", "ERROR", traceback.format_exc()[-1500:])
 
-    manifest = file_evidence()
+    manifest = file_evidence(gate_job)
     publish_status(manifest)
     if SNS_TOPIC:
         s = manifest["summary"]
