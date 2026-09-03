@@ -225,6 +225,47 @@ Four green, two red, one mixed. **Ship it red.** A prospect who sees P3 red and 
 - That the kill switch interrupts running work. It does not. P1(c) is red on purpose until it does.
 - That two gateways can run at once. One task, by design, until WS1's fenced reaper exists.
 
+## 8b. Harness calibration — fixed after the fleet critique
+
+reviewer-beast's verdict was that the harness was an uncalibrated instrument
+narrating a good design. Two of its findings were bugs in the conductor itself
+and are now fixed; the rest are tracked as open work against the demo.
+
+**Fixed — the false green.** `seed_workers()` wrote real worker tokens to
+Secrets Manager and rolled the worker services, but ECS had already injected
+this conductor's environment, so the process kept Terraform's placeholder
+tokens for the whole run. P3's stale-write replay then received a **401** and
+scored `rejected -> PASS` for *authentication* rather than for *fencing* -
+reporting the demo's single most important assertion as green while no fence
+existed. P7's negative lease test passed the same way on run one. Worker tokens
+are now read from Secrets Manager at use time, refreshed at startup and again
+after seeding.
+
+**Fixed — P4's timing was not a sound bound.** A flat 240-second sleep sits
+inside the real budget: three 30 s Route53 checks (~90 s) must fail before the
+health status flips, then three 60 s alarm periods (~180 s) must breach, plus
+publication latency. On an unfavourable phase a working dead-man scored FAIL.
+The pavilion now polls to a deadline computed from both stages and records the
+actual detection time.
+
+**Open — P5 does not yet perform the advertised tamper**, and the evidence
+mirror's lag is a control hole rather than a disclaimer. Until both are
+addressed, P5's green is provisional.
+
+**Open — the settings audit gap is broader than P1 states.** `put_settings()`
+never calls `record_event()` for *any* setting, so approver roles, gated roles,
+trusted-header auth, connector credentials and tenant configuration all change
+without a durable audit row. The fix is a first-class system/configuration
+audit stream carrying actor, old value (secrets redacted), new value,
+correlation ID and outcome - not merely a per-job kill event.
+
+**Open — the regulatory language still overclaims in places.** Section 4 is
+being re-read against that finding.
+
+Until P5 and the token/lag items close, **the honest headline is not
+"four green" but "four green, two red, one mixed, and one instrument still
+being calibrated."**
+
 ## 9. First-apply risks
 
 Listed in `infra/aws/README.md`. The one that matters most: the PostgREST seam. If it fights you, `store_backend = "local"` and move on — every pavilion except P5 runs identically.

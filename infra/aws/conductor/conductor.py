@@ -128,8 +128,35 @@ def post_job(title: str, role: str, prompt: str, **extra) -> dict:
     return j
 
 
+# Worker tokens must come from Secrets Manager at USE time, never from this
+# process's environment. seed_workers() rewrites the secret and rolls the
+# worker services, but ECS injected this conductor's env before that happened -
+# so the env holds Terraform's placeholders for the whole run. Reading the env
+# made P3's stale-write replay fail with 401 and score "rejected -> PASS" for
+# AUTHENTICATION instead of for fencing, reporting the demo's most important
+# assertion as green while the fence did not exist. Same for P7's negative
+# lease test. Found by reviewer-beast.
+_WORKER_TOKENS: dict[str, str] = {}
+
+
+def refresh_worker_tokens() -> None:
+    """Load current worker tokens from Secrets Manager into the local cache."""
+    if not SECRET_ARN:
+        _WORKER_TOKENS.update({r: E.get(f"WORKER_TOKEN_{r.upper()}", "") for r in ROLES})
+        return
+    try:
+        secret = json.loads(sm.get_secret_value(SecretId=SECRET_ARN)["SecretString"])
+        for r in ROLES:
+            v = secret.get(f"WORKER_TOKEN_{r.upper()}")
+            if v:
+                _WORKER_TOKENS[r] = v
+        logger.info({"event": "tokens.refreshed", "roles": sorted(_WORKER_TOKENS)})
+    except Exception as e:
+        logger.warning({"event": "tokens.refresh_failed", "error": f"{type(e).__name__}: {e}"})
+
+
 def worker_token(role: str) -> str:
-    return E.get(f"WORKER_TOKEN_{role.upper()}", "")
+    return _WORKER_TOKENS.get(role) or E.get(f"WORKER_TOKEN_{role.upper()}", "")
 
 
 def gateway_up() -> bool:
@@ -176,6 +203,7 @@ def seed_workers() -> None:
         sm.put_secret_value(SecretId=SECRET_ARN, SecretString=json.dumps(secret))
         for role in ROLES:
             ecs.update_service(cluster=CLUSTER, service=f"worker-{role}", forceNewDeployment=True)
+        refresh_worker_tokens()
         logger.info({"event": "seed.rolled_workers"})
         # Give the ring a moment to come back before the pavilions open.
         wait_until(lambda: len([a for a in api("GET", "/api/agents").json() if a.get("effective_status") == "online"]) >= 1, 300, 10, "workers online")
@@ -375,15 +403,28 @@ def p4_hub_dark() -> None:
     t1 = datetime.now(timezone.utc)
     alarm_name = None
     try:
-        time.sleep(240)
-        alarms = cw_use1.describe_alarms(AlarmNamePrefix="", StateValue="ALARM")["MetricAlarms"]
-        hit = [a for a in alarms if a["AlarmName"].endswith("-site-dark")]
+        # Two stages, not one sleep: three 30 s Route53 checks (~90 s) must fail
+        # before HealthCheckStatus turns unhealthy, THEN three 60 s alarm periods
+        # (~180 s) must breach, plus publication and evaluation latency. A flat
+        # 240 s lands inside that window on an unfavourable phase and scores a
+        # working dead-man as FAIL. Poll to a computed deadline and keep the real
+        # transition time. Found by reviewer-beast.
+        deadline = time.time() + 90 + 180 + 120
+        hit = []
+        while time.time() < deadline:
+            alarms = cw_use1.describe_alarms(StateValue="ALARM")["MetricAlarms"]
+            hit = [a for a in alarms if a["AlarmName"].endswith("-site-dark")]
+            if hit:
+                break
+            time.sleep(15)
         alarm_name = hit[0]["AlarmName"] if hit else None
-        run.mark(P, "c_deadman_alarms_when_dark", "PASS" if hit else "FAIL", {"alarms_in_ALARM": [a["AlarmName"] for a in alarms]})
+        run.mark(P, "c_deadman_alarms_when_dark", "PASS" if hit else "FAIL",
+                 {"alarm": alarm_name, "detected_after_s": round(time.time() - t1.timestamp(), 1),
+                  "budget_s": 390})
     finally:
         ecs.update_service(cluster=CLUSTER, service="gateway", desiredCount=1)
     wait_until(gateway_up, 300, 5, "healthz after restore")
-    ok = wait_until(lambda: any(a["AlarmName"].endswith("-site-dark") for a in cw_use1.describe_alarms(StateValue="OK")["MetricAlarms"]), 300, 15, "alarm ok")
+    ok = wait_until(lambda: any(a["AlarmName"].endswith("-site-dark") for a in cw_use1.describe_alarms(StateValue="OK")["MetricAlarms"]), 420, 15, "alarm ok")
     run.mark(P, "d_deadman_returns_ok", "PASS" if ok else "FAIL", alarm_name)
     hist = cw_use1.describe_alarm_history(AlarmName=alarm_name, StartDate=t1 - timedelta(minutes=1), EndDate=datetime.now(timezone.utc))["AlarmHistoryItems"] if alarm_name else []
     run.artifacts["recovery-timeline.json"] = {"gateway_down_at": t1.isoformat(), "alarm_history": hist}
@@ -556,6 +597,7 @@ def main() -> int:
         vault("run.json", {"run_id": RUN_ID, "fatal": "gateway never became healthy"})
         return 2
 
+    refresh_worker_tokens()  # a later run seeds nothing; env is still placeholders
     seed_workers()
     gate_job = None
     for name, fn in (("P7", lambda: p7_gate()), ("P1", p1_stop_button), ("P2", p2_worker_killed),
