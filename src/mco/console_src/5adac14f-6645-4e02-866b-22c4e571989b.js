@@ -109,7 +109,16 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
   const j = jobs.find((x) => x.id === jobId);
   const [reason, setReason] = useStateJ("");
   const [rejecting, setRejecting] = useStateJ(false);
+  const [cancelling, setCancelling] = useStateJ(false);
+  const [cancelReason, setCancelReason] = useStateJ("");
+  const [reassigning, setReassigning] = useStateJ(false);
+  const [toRole, setToRole] = useStateJ("");
   if (!j) return null;
+  // Cancel and reassign apply to anything the board has not finished with.
+  // Terminal jobs are history and must not offer actions that would 409.
+  const TERMINAL = ["completed", "failed", "rejected", "cancelled"];
+  const live = TERMINAL.indexOf(j.status) < 0;
+  const roles = Array.from(new Set((window.BitCadenceStore.getAgents() || []).map((a) => a.role))).sort();
   const deps = (j.depends_on || []).map((d) => jobs.find((x) => x.id === d)).filter(Boolean);
   const dependents = jobs.filter((x) => (x.depends_on || []).includes(j.id));
 
@@ -154,6 +163,48 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
             <div style={{ fontWeight: 600, color: "var(--st-failed-fg)", marginBottom: 4 }}>{tone === "plain" ? "This job hit a problem." : "Execution failed."}</div>
             <div style={{ fontSize: 12.5, color: "var(--st-failed-fg)", marginBottom: 10 }}>{j.error_message}</div>
             <Btn small onClick={() => window.BitCadenceStore.retryNow(j.id)}>↻ Try again</Btn>
+          </div>
+        ) : null}
+
+        {live ? (
+          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-m)", padding: 14, marginBottom: 16 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>
+              {tone === "plain" ? "Change this job" : "Job control"}
+            </div>
+
+            {!cancelling && !reassigning ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Btn small onClick={() => setReassigning(true)}>&#8644; Reassign&#8230;</Btn>
+                <Btn kind="danger" small onClick={() => setCancelling(true)}>&#10005; Call it off&#8230;</Btn>
+              </div>
+            ) : null}
+
+            {reassigning ? (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <select value={toRole} onChange={(e) => setToRole(e.target.value)}
+                        style={{ border: "1px solid var(--border-strong)", borderRadius: 6, padding: "5px 10px", fontSize: 12.5 }}>
+                  <option value="">Send to role&#8230;</option>
+                  {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <Btn kind="primary" small disabled={!toRole}
+                     onClick={() => { window.BitCadenceStore.reassignJob(j.id, toRole); setReassigning(false); setToRole(""); }}>Reassign</Btn>
+                <Btn kind="ghost" small onClick={() => { setReassigning(false); setToRole(""); }}>Back</Btn>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+                  {tone === "plain" ? "currently waiting on " : "target_agent_role: "}<Mono>{j.target_agent_role}</Mono>
+                </span>
+              </div>
+            ) : null}
+
+            {cancelling ? (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <input autoFocus value={cancelReason} onChange={(e) => setCancelReason(e.target.value)}
+                       placeholder="Why? (recorded in the audit trail)"
+                       style={{ flex: 1, minWidth: 200, border: "1px solid var(--border-strong)", borderRadius: 6, padding: "5px 10px", fontSize: 12.5 }} />
+                <Btn kind="danger" small
+                     onClick={() => { window.BitCadenceStore.cancelJob(j.id, cancelReason); setCancelling(false); setCancelReason(""); }}>Call it off</Btn>
+                <Btn kind="ghost" small onClick={() => { setCancelling(false); setCancelReason(""); }}>Back</Btn>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
