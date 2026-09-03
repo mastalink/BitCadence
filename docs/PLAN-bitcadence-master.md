@@ -840,3 +840,21 @@ it launches to retain/renew/settle WS1 lease credentials, and make graceful agen
 give the wrapper a bounded chance to report/abandon its lease before forced termination.
 Keep job fencing in the gateway/store protocol and process ownership fencing in agentd;
 conflating them would weaken both.
+
+## Chief's read
+
+**Date:** 2026-09-03. **Author:** chief-beast. Under 400 words. Not a restatement.
+
+**This week, one action:** send one already-drafted email to one named human. Nate tonight (`founder/NATE-OUTREACH.md`) if you want a reply; one regulated/Gartner contact (`founder/DESIGN-PARTNER.md`) if you want a check. Not WS1. Not EPCOT. Not another critique. The product is ahead of the sale. A fenced lease does not collect $1.5–3k/mo.
+
+**Part X — what actually blocks.** Only **#4: name the first two humans for the opener.** You cannot send without a name. Decide in five minutes, then click send.
+
+Defer a month with no cost: **#1 RPO/RTO** (WS3 is not this month), **#3 SSD/UPS** (Pi cutover is not this month), **#5 approver scope** (the CLI already works). **#2 grok/opencode off:** leave grok human-driven; do not flip waker to drain a paper queue. **#6 bless the order:** bless the reviewer's engineering sequence (fence before feed). That is not this week's constraint.
+
+**Cut or push past 180 days** (Parts III–VIII): WS5 routing-with-receipts, WS7 OTel/Dynatrace "timeline" pack, Datadog/Grafana packs, PWA, Jetson, Enterprise RLS/mTLS/SCIM/legal hold, the $5,100 hosted Team city, three-edition support as a build program, corp-dev as a scheduled workstream, the Swedish operating partner as an engineering dependency. Keep Drumline in every edition. Keep MIT core. Cap spend manually today (Part IX) — that is a one-line ops rule, not WS4.
+
+**Month-eater:** the EPCOT AWS demo and the hosted-city spend it justifies. It is already spawning PRs (#52, #53), PostgREST seams, and conductor pavilions. It produces a self-testing city, not a conversation. Freeze it until a human is on a calendar.
+
+**30-day window:** founder's optimism. Reviewer math stands: 7–10 focused hours/week cannot ship WS1+WS2+Pi+ADR+#46+#47+ntfy in 30 days. Honest 30 days: one outbound, the ntfy leak if it is still open, and a written WS1 protocol. Honest first money: 30 days of conversations, not 30 days of fencing. The AI-Act "you are out of compliance as of August 2026" opener is also legally wrong after the Omnibus — do not send that sentence.
+
+ASK: none. Send.
