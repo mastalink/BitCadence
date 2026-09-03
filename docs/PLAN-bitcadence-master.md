@@ -363,3 +363,31 @@ WS6 says state change plus event will become atomic later, while WS1's acceptanc
 **Days 91–180:** Team Postgres, cost ledger/breaker, account capacity, database-enforced tenancy, and a hosted demo. Start design-partner discovery now, but do not make a legally categorical AI-Act accusation.
 
 **After the semantic/event model is stable:** build the Dynatrace pack against a real tenant, with installable artifacts and DQL proof. Do not put its acceptance date in the same window as the foundational ledger redesign.
+
+---
+
+## Findings from building the EPCOT demo (2026-09-03)
+
+Building `docs/DEMO-epcot.md` and `infra/aws/` against the real code surfaced two gaps
+that belong in WS1's scope, not in a later workstream:
+
+1. **The kill switch is not audited.** `put_settings()` persists `MCO_KILL_SWITCH` via
+   `config.set()` and never calls `record_event()`. The single most consequential human
+   decision the product supports - halt everything - leaves no ledger row. WS1 must add a
+   system-level audit event for every settings change (actor, key, old, new), and the
+   kill switch must additionally emit one per leased job it halts.
+2. **The kill switch does not halt in-flight work, and workers cannot be told to stop.**
+   `kill_switch_active()` guards intake and leasing only; the worker loop has no
+   interruption point that the gateway can reach. The fix is the same fencing machinery
+   as WS1: on activation, transition every `leased` job to `halted`, and reject a stale
+   worker's completion with the fenced CAS. Pavilion P1(c) stays red until then.
+3. **The SDK drops a completion that fails during a network partition.** `process_job()`
+   catches the exception and tries `fail()`, which also fails; the result is lost, not
+   late. This means a partitioned worker's work is silently discarded today, and it also
+   means the "stale writer returns" race cannot be reproduced through the SDK - the demo
+   replays the stale completion directly with the worker's token instead. WS1 should add
+   a bounded completion retry with the lease ID attached, so late completions are
+   *fenced* rather than *lost*.
+
+The demo's honesty board (`DEMO-epcot.md` section 6) is the live tracker for when these
+turn green.
