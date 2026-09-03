@@ -1,0 +1,34 @@
+# Copy to terraform.tfvars and fill in. Never commit terraform.tfvars.
+
+name   = "bitcadence-epcot"
+region = "us-east-1"
+
+# "postgres" = RDS behind PostgREST (Team/Enterprise posture).
+# "local"    = LocalStore on EFS (Appliance posture; zero PostgREST seam).
+store_backend = "postgres"
+
+# A model you have enabled in the Bedrock console for this region.
+bedrock_model_id = "SET-ME"
+
+worker_roles = ["claude", "reviewer", "servicenow", "dynatrace"]
+
+# Where the dead-man and chaos alerts go. Confirm the subscription email.
+alert_email = "you@example.com"
+alert_sms   = ""            # e.g. "+14405551234"; SNS SMS may need sandbox exit
+
+# Object Lock COMPLIANCE retention. Nobody can delete evidence before this.
+evidence_retention_days = 365
+
+# How often the city tests itself.
+chaos_schedule = "rate(6 hours)"
+
+# Optional pavilions. Leave empty to skip.
+servicenow_instance_url = ""   # https://dev12345.service-now.com
+servicenow_username     = ""
+servicenow_password     = ""
+
+dynatrace_base_url  = ""       # https://abc12345.live.dynatrace.com
+dynatrace_api_token = ""
+
+# IAM Identity Center user IDs to make Grafana admins (optional).
+grafana_admin_sso_user_ids = []
