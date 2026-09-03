@@ -504,3 +504,299 @@ not put it on the sole path between submission and execution.
 6. Canonical event ledger and a separate human feed projection.
 7. OTel semantic emitter, then one tested vendor pack at a time.
 8. Jetson evaluation; PWA after the control plane can prove it is alive.
+
+## Build assessment - codex
+
+### Estimating basis
+
+These are engineer-days for one person who already knows this repository. They
+include implementation, focused tests, documentation, and one local acceptance
+run; they exclude hardware shipping, review latency, and enterprise HA. The
+assessment is against `main` at `75e820e`. It also checks the live state of PR
+#47 rather than the older premise in this brief: that PR now contains the ADR
+0002 revision 2 rework, all reported GitHub checks are green, and it remains
+open.
+
+| Idea | Smallest honest shippable slice | One-person estimate |
+|---|---|---:|
+| 1. Pi gateway + scheduler + watchdog | Supported single-Pi appliance on USB SSD, recoverable but not HA | **8-12 days** |
+| 2. Fleet-silence watchdog | Debounced fleet incident plus secure push and recovery message | **4-6 days** colocated; **8-12 days** including external dead-man coverage |
+| 3. Audit trail as activity feed | Make the existing Activity implementation the primary, narrative feed | **4-7 days** |
+| 7. OpenTelemetry emitter | Versioned semantics, OTLP export, propagation, privacy controls, one collector pack | **10-15 days**; add **3-5 days per claimed vendor pack** |
+| 8. Progressive disclosure | One-box/one-feed console shell using today's role-based submit contract | **8-12 days**; intent routing is separate and materially larger |
+
+The important scope line is Idea 1: 8-12 days produces a good single-node
+appliance with a rehearsed restore. Making Pi #2 a genuinely warm standby adds
+replication, leadership, fencing, and failover and is a separate **25-40 day**
+project after the lease protocol is safe.
+
+### Idea 1 - put the control plane on a Pi
+
+**What is already reusable.** `service.install()`, `install_scheduler()`, and
+`_service_systemd_unit_text()` already dispatch Linux to `systemd --user`, set
+`Restart=always`, wait for `network-online.target`, and use `%h` instead of a
+Windows path. `scheduler.load_config()`, `launcher.tick()`, and
+`launcher.run_forever()` are platform-neutral; schedule state is already
+atomically written. `LocalStore` uses SQLite WAL and a process lock and needs no
+external database. Configuration, schedules, tokens, logs, the encrypted secret
+store, and schedule state all consistently live under `~/.mco`.
+
+**What has to be built and proved.** The appliance needs a reproducible ARM64
+install/image, pinned Python dependency smoke tests, an install-time choice of a
+dedicated service user versus a logged-in user, and a cold-boot test after power
+loss. A `systemd --user` unit does not start headlessly unless lingering is
+enabled; the installer currently prints that instruction but does not prove the
+result. The gateway and scheduler need explicit dependency and readiness
+ordering, log rotation, disk-space alarms, clock synchronization, unattended
+update/rollback policy, and tunnel/DNS recovery.
+
+State migration needs a manifest, not a copy of “the database”: `local.db`, its
+WAL state, `.env`, `secrets.enc`, the Linux unlock source,
+`schedules.yaml`, `schedule-state.json`, per-instance token files, and any
+operator TLS/tunnel configuration all matter. A Windows-created secret store is
+normally unlocked by Windows Credential Manager; Linux only auto-unlocks it
+from `MCO_MASTER_PASSWORD`, so copying `secrets.enc` alone deliberately leaves
+the Pi unable to start. Provide a secure re-enrollment/import flow instead of
+copying the Windows key.
+
+For durability, run SQLite on a quality USB SSD, set and test a busy timeout and
+checkpoint policy, add a SQLite backup-API snapshot rather than copying a live
+WAL database, encrypt the off-box backup, and rehearse restore onto replacement
+hardware. Test disk-full, corrupt/truncated state, sudden power loss, clock
+jump, router outage, and a week-long soak. Bind/auth/TLS also need an explicit
+network design: the current loopback default is safe, while exposing the Pi to
+the LAN or Internet without a reverse proxy, scoped credentials, and firewall
+rules is not.
+
+**Where 8-12 days is most likely wrong.** Native dependency wheels may be fine
+on 64-bit Raspberry Pi OS, but that is not covered by current x86 Ubuntu CI.
+The bigger uncertainty is operational: filesystem and power behavior under
+real failure, and whether remote workers can reliably reach the Pi through the
+actual router/tunnel. If “second Pi” means automatic failover rather than a
+cold, tested replacement, the estimate is wrong by several weeks.
+
+### Idea 2 - watchdog that speaks first
+
+**What is already reusable.** The gateway writes `last_seen_at`; workers refresh
+it through `touch_agent_presence()` and WebSocket authentication. The
+`decorate_presence()` and `get_offline_after_seconds()` functions already
+derive effective liveness from `MCO_AGENT_OFFLINE_AFTER`. `/api/agents` exposes
+that derived state without token hashes. `notifiers.ntfy.notify()` already has
+timeouts, optional bearer auth, priority, and tags, and `service.py` can install
+a long-running Linux service.
+
+**What has to be built.** Add a persisted incident state machine, not a loop
+that sends on every tick: startup grace, previous-online baseline, “all workers
+crossed offline within 60 seconds,” debounce, deduplication, maintenance/drain
+mode, one alert per incident, and a recovery notification. Record the incident
+and notification outcome so silence in the notifier is observable. The current
+role-specific notification helpers override the configured topic with
+`mco-<role>`; that public-topic leak must be fixed before real payloads are
+enabled.
+
+A colocated watchdog covers worker collapse but cannot report that the Pi,
+gateway process, power, router, DNS, or notification route died. The honest
+version therefore adds a heartbeat to an external dead-man in a different
+failure domain. Its acceptance test should kill workers, then the gateway, then
+power/network access separately and verify exactly one alert plus one recovery
+for each case.
+
+**Where the estimate is most likely wrong.** “All workers offline” is easy;
+avoiding false alarms across intentional shutdowns, sleeping laptops, stale
+registrations, clock skew, and notification-provider outages is the work. Four
+to six days is enough only for the local fleet-collapse detector. Claiming the
+original 24-hour failure is solved requires the external path and 8-12 days.
+
+### Idea 3 - make the audit trail the feed
+
+**What is already reusable.** This is further along than the brief implies.
+`GET /api/events` already returns the cross-job event stream newest first and
+enriches it with job title, status, and target role. `ActivityFeedScreen` already
+loads it, searches and filters it, calculates basic statistics, translates
+event names into plain copy, and opens the related job. The Overview also has a
+small `ActivityFeed`, and `/ws/broadcast` plus polling already provide refresh
+signals. Per-job `AuditTrail` remains available for the regulatory view.
+
+**What has to be built.** Replace the Overview/sidebar-first shell with a
+cursor-paginated primary feed and a persistent single composer. Add a canonical
+presentation mapping for every event type: narrative text, actor, duration,
+result reference, severity, and action such as Approve or Open PR. Coalesce
+retries and noisy status churn, redact sensitive details, group workflow steps,
+preserve accessible raw detail behind disclosure, and resume from a durable
+cursor after reconnect rather than synthesizing only changes observed by the
+open browser.
+
+The present endpoint limits events before applying `since`, joins against only
+the newest 500 jobs, and LocalStore scans/decodes JSON rows. It needs real
+pagination and query semantics before the feed can grow. The event vocabulary
+is also job-centric: gateway, scheduler, watchdog, agent-presence, and
+notification incidents need canonical events if the feed is truly “everything
+that matters.” Keep the audit row authoritative and make the human feed a
+projection; do not mutate or coalesce the evidence itself.
+
+**Where the estimate is most likely wrong.** Four to seven days is credible for
+the founder-fleet UX because the API and screens exist. It is not a compliance
+estimate. `record_event()` intentionally swallows write failures, and its chain
+serialization is process-local, so atomic state-plus-event persistence and
+multi-gateway audit correctness are separate backend projects.
+
+### Idea 7 - OpenTelemetry emitter
+
+**What is already reusable.** Stable job IDs, actors, roles, statuses, audit
+events, WebSocket lifecycle events, `MCO_LOG_JSON`, and Prometheus job/agent
+gauges provide most source facts. The mutation seams are reasonably
+centralized in job creation, lease, `handle_job_update()`, approval/rejection,
+retry, and escalation. That is enough to build one internal telemetry adapter
+instead of sprinkling vendor SDK calls through routes.
+
+**What has to be built.** Add optional OTel dependencies and configuration;
+define and version a low-cardinality BitCadence semantic convention; propagate
+trace context through the job row, SDK, MCP boundary, and worker wrapper; emit
+one span per execution attempt; represent state transitions as correlated
+events/logs; and use links for retry/escalation across attempts. Add queue age,
+lease age, fleet liveness, approval wait, retry, and failure metrics. Apply an
+explicit allowlist/redaction policy so prompts, outputs, error URLs, secrets,
+and Drumline content do not leak into attributes. Buffer/export failures must
+never block job state changes, but their drops must themselves be measurable.
+
+Then ship an OTLP Collector reference configuration and end-to-end tests for
+one backend. Datadog, Dynatrace, and Grafana each still need authentication,
+resource mapping, dashboards, alerts, cardinality/sampling limits, and a
+runbook; those are the 3-5 day vendor packs. A trace must not be held open for a
+multi-day job, and telemetry must not become the audit authority.
+
+**Where the estimate is most likely wrong.** The emitter is straightforward;
+distributed context ownership is not. Today a job crosses HTTP, MCP, database,
+poll/wake wrappers, and vendor CLIs, some of which cannot return usage or span
+context. Vendor-specific production acceptance and privacy review, not SDK
+calls, are what can double the estimate.
+
+### Idea 8 - progressive disclosure of the console
+
+**What is already reusable.** The console source is componentized by screen.
+It defaults to plain-language copy, stores an `advanced` preference, hides raw
+IDs/payloads/retry details when Advanced is off, and already has Overview,
+Activity, approvals, job detail, and a drawer composer. Approval actions and
+the audit trail are therefore available to surface contextually rather than
+through permanent navigation.
+
+**What has to be built.** Introduce a Level 1 shell with one persistent input,
+the narrative feed, inline approval cards, connection/fleet health, responsive
+mobile layout, keyboard/focus behavior, empty/error/reconnect states, and a
+clear disclosure control. Level 2 should open the relevant gate, retry, or
+escalation controls from the event that needs them. Level 3 can retain the
+existing Jobs, Workflows, Agents, Governance, Memory, Activity, and Settings
+screens behind one deliberate “Manage” entry. Preserve deep links and operator
+escape hatches, and test both plain and advanced modes with real gateway data,
+not only demo fixtures.
+
+The UI can submit a one-box request only if it still chooses a default role:
+both `create_job` paths currently require `target_agent_role`, and the composer
+hard-codes codex/claude/gemini choices. Parsing intent and choosing a worker is
+Idea 4, not a cosmetic part of Idea 8. The 8-12 day estimate therefore keeps a
+visible/default assignment disclosure. Automatic intent routing adds the
+capability registry, policy constraints, routing receipt, and safety work and
+should not be hidden inside this UI estimate.
+
+**Where the estimate is most likely wrong.** The component reuse is real, but
+“one feed” changes navigation, information architecture, mobile behavior, and
+how every failure is recovered. If product acceptance includes automatic
+routing rather than just progressive presentation, this becomes a 25-plus-day
+cross-stack effort, not an 8-12 day console change.
+
+### What Idea 1 actually requires - the non-obvious blockers
+
+1. **Identity and secret portability.** Windows Credential Manager cannot
+   unlock the copied Linux secret store. Re-enroll secrets on the Pi and define
+   who owns `~/.mco`, service environment files, token files, backups, and TLS
+   keys.
+2. **Cold-boot ownership.** `systemd --user` plus `loginctl enable-linger` can
+   work, but an appliance may want a dedicated system service. That decision
+   must align with ADR 0002's per-user supervisor boundary rather than quietly
+   creating two ownership models.
+3. **Durable state is more than SQLite.** Schedule definitions/state, secrets,
+   credentials, logs, notification state, and tunnel identity all need backup
+   and restore ordering. Copying `local.db` while WAL is active is not a backup
+   procedure.
+4. **LocalStore's scale contract.** Every filtered query decodes a whole JSON
+   table under one process lock. That is acceptable at this fleet's current
+   volume on SSD, but retention and a measured latency ceiling are required.
+5. **Clock and network are dependencies.** Cron/timezone schedules, lease age,
+   presence, TLS, and signed credentials all depend on correct time. The
+   appliance needs NTP recovery and tests for router/DNS/tunnel failure.
+6. **The watchdog needs an outside witness.** A process on the Pi cannot report
+   loss of Pi power or site connectivity. At least one heartbeat receiver must
+   live elsewhere.
+7. **Pi #2 is not warm today.** There is no replicated LocalStore, leader
+   election, writer fence, promotion protocol, or split-brain prevention.
+   Start with encrypted snapshots and a rehearsed cold replacement.
+8. **ARM is not in CI.** Linux code is tested on x86 runners; add an ARM64 image
+   build and real-hardware smoke/soak evidence before calling the Pi supported.
+
+The obvious Windows-path issue is comparatively small: platform dispatch and
+home-relative paths already exist. The material Windows-only assumptions are
+in deployed worker commands and the secret-key source, not the gateway's core
+Python paths.
+
+### Which idea is secretly hardest?
+
+I agree that Idea 4 is the hardest overall. It changes the required job
+contract, polling filters, authorization, capability inventory, account and
+cost state, policy constraints, reproducibility, and separation of duties.
+`max_retries` plus `escalate_to_role` is not half an automatic router; it is a
+post-failure rule applied to a job whose target was already chosen.
+
+The most underestimated “low effort” item is Idea 2. A fleet-silence query is a
+day; a watchdog that still reaches Joe when the gateway, Pi, power, router, or
+ntfy path is the failed component is an availability system with at least two
+failure domains. Among the five sized here, Idea 7 is the largest semantic
+swamp because “one emitter” is being asked to imply three supportable vendor
+integrations.
+
+### Build order while ADR 0002 and PR #47 are in flight
+
+The Pi plan **complements** agentd; it does not supersede it. Agentd owns worker
+processes per logged-in user on beast/mac. The Pi owns the gateway, scheduler,
+and watchdog as appliance control-plane services. Putting the gateway under
+every worker supervisor would couple worker restarts to control-plane uptime
+and create competing owners.
+
+PR #47 should not be paused for this brief. Its current head already says it is
+rebased and reworked for ADR 0002 revision 2, and CI is green. Review/merge that
+Windows supervisor core on its existing worker-only scope. Add the POSIX
+adapter and migration mechanics separately; do not expand #47 into Pi
+provisioning or HA.
+
+The practical order is:
+
+1. Fix the ntfy topic override and deploy an external dead-man heartbeat.
+2. Build/test the fleet-silence incident state machine and honest readiness.
+3. Finish review of #47 while those control-plane pieces proceed; it removes
+   Windows worker-service ambiguity but is not a Pi prerequisite.
+4. Build the single-Pi appliance image/install, SSD snapshot/restore, and
+   cold-boot/soak tests.
+5. Move the live gateway only after a rollback rehearsal. Keep Pi #2 cold until
+   replication and fencing exist.
+6. Promote the existing Activity implementation to the primary feed; then add
+   OTel and deeper progressive disclosure.
+
+### The honest contact-with-code test
+
+Five claims in the brief do not survive unchanged:
+
+- “The Pi is low effort” survives only for a single-node appliance. It does not
+  include safe migration, external detection, backup/restore, or warm standby.
+- “The watchdog on the Pi” cannot report the Pi's own death. It needs an
+  external witness.
+- “The audit trail is the feed” is directionally right and partly implemented,
+  but the feed must be a redacted/coalesced projection, not identical bytes.
+- “One emitter, three logos, zero bespoke vendor work” is false. One semantic
+  emitter reduces duplication; each logo still needs a tested deployment pack.
+- “One text box” has no backend contract today. Job creation requires a role;
+  without Idea 4's policy-aware router, the box merely hides a hard-coded
+  routing decision.
+
+The product thesis survives. The weekend sequence does not. The first shippable
+proof should be: an externally observed single-Pi appliance that cold-boots,
+alerts when workers or the appliance disappear, restores from a tested backup,
+and presents the already-existing event stream as the primary human feed.
