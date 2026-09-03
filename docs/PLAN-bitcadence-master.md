@@ -259,3 +259,107 @@ Attack Parts III and VIII especially:
 3. Is 30 days for WS1 + WS2 + Pi cutover honest for one person building before the house wakes up?
 4. What in Part V would a Dynatrace partner engineer laugh at?
 5. What did this plan still miss?
+
+---
+
+## Critique v1 - reviewer-beast
+
+**Verdict:** the product sequence is much better than the vision brief, but the plan still overclaims the market deadline, understates the lease protocol, and promises a stronger audit guarantee than the Appliance recovery design can preserve. The findings below are ranked by how much they should change the plan.
+
+### 1. CRITICAL — The market clock is wrong as of this plan's date
+
+Part I and Part VI say the EU AI Act's human-oversight and record-keeping obligations became enforceable in August 2026, and build the sales opener around "you are currently out of compliance." That is no longer a defensible general claim. The EU's AI Omnibus entered into force on 27 July 2026 and moved the high-risk-system rules to **2 December 2027 for Annex III systems** and **2 August 2028 for high-risk systems embedded in Annex I products**. August 2026 remains material for Article 50 transparency obligations and for enforcement of provisions already applicable, but it is not the blanket deadline this plan describes. See the European Commission's current [AI Act timeline](https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai) and [AI Omnibus notice](https://digital-strategy.ec.europa.eu/en/news/ai-omnibus-enters-force).
+
+**Required plan change:** replace the breach-alarm opener with a classification-first claim: "some duties are live; high-risk governance deadlines are approaching; BitCadence builds the operational evidence now." A prospect's use case, role (provider/deployer), risk classification, and applicable article must be established before anyone says it is out of compliance. This weakens the artificial September emergency but strengthens credibility with enterprise legal and compliance teams.
+
+### 2. CRITICAL — WS1 needs database-serialized reaping, not necessarily a reaper leader
+
+The current code confirms the underlying finding and makes it broader:
+
+- `LocalStore._lease_task()` atomically changes only `pending -> leased`, recording owner and `started_at`; there is no lease ID, epoch, expiry, or renewal.
+- `routes.reclaim_stale_leases()` does a full read of leased jobs and later updates each expired job **by ID only**. Two gateways can both decide that the same row expired, both requeue it, and both write `lease_expired` events.
+- `handlers.handle_job_update()` updates **by job ID only**. The HTTP route verifies that the job is addressed to the caller's role or instance, not that the caller owns the current attempt. The WebSocket handler is a second mutation path with the same unfenced update.
+
+Compare-and-set on `(job, state, owner, epoch)` is sufficient to serialize a completion only inside one uninterrupted authoritative database history. It is not the complete WS1 contract. Every acquire, renew, expire, retry, cancel, and terminal write must carry and condition on `(job_id, lease_id, lease_epoch, owner, allowed_state)`, use database time, and return whether it won. In particular, expiration must be one statement equivalent to `UPDATE ... WHERE lease_epoch = expected AND lease_expires_at <= database_now()`. Only the winner may advance the attempt/epoch and emit the requeue event.
+
+If reaping is implemented that way, **multiple reapers are safe and a lease leader is not needed for job correctness**; extra reapers merely do redundant scans. A database-held leader lease is still needed before multiple scheduler processes can emit schedules exactly once, and it reduces reaper load, but that is a separate WS3 concern. WS1 may therefore ship before WS3 for the single-gateway Appliance profile. Team/Enterprise may not advertise replaceable active gateways until the reaper CAS exists; if WS1 leaves the current read-then-update reaper, it must wait.
+
+The plan's unguessable `lease_id` must also appear in the CAS, not merely in prose. A restored nightly snapshot can roll an integer epoch backward; a new post-restore attempt can then reuse an old epoch (the ABA problem). A fresh random lease ID or a store-incarnation term prevents a pre-crash worker from matching after restore. The partition test must cover that restore case as well as ordinary re-lease.
+
+**Required acceptance tests:** run the stale-worker test through both HTTP and WebSocket paths; race two reapers and prove exactly one requeue/attempt increment/event; race cancel against completion; reject renewal after expiry; restore an old database snapshot and prove a pre-restore lease cannot write. Also state that split-brain writable databases are outside WS1: application fencing cannot repair a non-linearizable store.
+
+### 3. CRITICAL — Appliance audit is tamper-evident with bounded loss, not an immutable complete ledger
+
+A nightly snapshot can lose a day's suffix. The surviving rows may still be immutable and their hashes may still verify, but the record is not complete. Worse, the current per-job chain cannot detect deletion of its tail: `verify_chain()` starts at genesis and validates only the rows that remain, with no external signed head, event count, or global high-water mark to prove later rows once existed. The acceptance test "chain verifies with no gap larger than the snapshot interval" is therefore not testable from the restored snapshot alone; a missing suffix looks like a valid shorter chain.
+
+**Required plan change:** choose one of two honest Appliance contracts.
+
+1. Call it a **tamper-evident retained audit history with a stated backup RPO** (for example, up to 24 hours of events may be lost after total storage failure). Remove claims that every decision is durably retained.
+2. Preserve the stronger claim by forwarding every committed event or signed chain-head checkpoint to an independent append-only/off-site sink before acknowledging the governed transition. Then rehearse loss of the entire house site, not just Pi #1.
+
+HMAC does not add durability, and an HMAC key stored and backed up beside the database does not provide independent anchoring. A second Pi in the same house is a hardware-replacement target, not disaster recovery for fire, theft, power damage, or operator error. Encrypted off-site backup, key recovery, restore authorization, and a measured RPO/RTO belong in WS3.
+
+### 4. HIGH — Thirty days is not an honest commitment for the listed scope
+
+The 30-day window contains at least five release-sized changes: a cross-backend lease protocol and migration; renewal changes in every worker/client path; concurrent partition tests; honest readiness plus scheduler/worker health; an external dead-man and secure notification route; a Pi service/network/storage migration; ADR 0002 rework; and the ntfy leak. `service.py` also shows that gateway and scheduler are independent OS services, while `fleet.py` manages worker services separately. `/readyz` cannot infer scheduler health merely because the gateway process or database object exists; the scheduler needs a durable leadership/heartbeat signal that the gateway can query.
+
+At a sustainable **7–10 focused hours per week**, this is roughly **90–120 hours, or 12–16 calendar weeks including deployment and failure drills**. The honest committed number is 90 days, with 120 days as the outside bound—not 30.
+
+**Keep in the first 30 days:** the written WS1 protocol; schema changes for LocalStore and Postgres; fenced acquire/renew/expire/update on both HTTP and WebSocket; adversarial concurrency tests; the liveness/readiness split; the ntfy privacy fix; and a managed external dead-man if one can be configured rather than built.
+
+**Move out of the first 30 days:** custom Cloudflare dead-man code, production Pi cutover, backup/restore drill, and remaining #46/#47 rework. Pi cutover should follow fencing and a rehearsed rollback, not run beside their development. If keeping the Pi in 30 days is non-negotiable, WS1 is the only other engineering commitment; everything else falls out.
+
+### 5. HIGH — WS2 names the right failure domain but underspecifies the monitor
+
+A Cloudflare Worker genuinely is outside the home's router, ISP, and power domain. The sentence "does it share the router?" has a simple answer: **no**. But merely receiving a heartbeat at a Worker is not a dead-man. Cloud-side durable state plus a cloud-side alarm/cron must notice that invocations stopped, and the alert delivery must not depend on BitCadence or the home network.
+
+The minimum whole-site-dark detector is:
+
+- an independently hosted timer/monitor;
+- a freshness assertion from the site (authenticated heartbeat) or an external pull of a meaningful endpoint;
+- durable last-seen/deadline state with duplicate-alert suppression and recovery notification;
+- a second-provider notification path to a phone expected to have cellular service; and
+- a scheduled end-to-end test that deliberately stops heartbeats and proves delivery.
+
+The phone should be the receiver, **not the checker**. Phone background execution, battery state, OS suspension, and home Wi-Fi make it a poor monitor. Also distinguish the probes: `/healthz` should answer only "is this process alive?"; `/readyz` should answer "can this gateway safely accept work?"; fleet capability and scheduler leadership should be separately exposed as degraded operational health. Making readiness fail solely because no worker quorum exists can cause a load balancer to remove the control plane precisely when the operator needs it to approve, cancel, or repair work. Readiness should evaluate required capabilities for the deployment, not count generic workers.
+
+### 6. HIGH — A Dynatrace partner will laugh at the word "timeline" without a deployable contract
+
+The existing `DynatraceConnector` is a Problems API v2 poll/action adapter: it lists open problems and can comment or close them. It emits no OpenTelemetry data. The current `/metrics` endpoint is a hand-built Prometheus snapshot containing job counts, approval depth, and agent count; it has no spend, lease age, attempt latency, correlation model, traces, or Dynatrace topology. Calling the future result "an approval gate as an event on the same Dynatrace timeline as their microservices" skips every hard integration decision.
+
+A partner engineer will ask, specifically:
+
+- Is the supported target Dynatrace SaaS with Grail, ActiveGate, or Managed, and which versions are tested?
+- Is data sent directly or through the supported Dynatrace OTel Collector? Dynatrace's OTLP ingest requires HTTP/protobuf, separate signal paths/scopes, and deliberate cumulative-to-delta handling for metrics. See the current [OTLP endpoint contract](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/otlp-api) and [Collector configuration](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/collector/configuration).
+- Which standard attributes are used (`service.name`, `service.instance.id`, GenAI conventions), which BitCadence attributes are namespaced, and how are `job_id`, workflow/run/attempt, tenant, environment, and downstream `traceparent` correlated? A shared timestamp is not causality.
+- Is an approval transition a span event, log, custom event, or business event? A gate that waits hours should not keep one span open. Attempts can be spans; durable state changes should be separately queryable records linked by stable IDs.
+- What are the sampling, retry, queue, backpressure, cardinality, retention, and Dynatrace Platform Subscription cost budgets? `job_id` is useful on spans/logs but disastrous as an unbounded metric dimension unless the queries and cost are designed.
+- Where are secrets and prompts removed before export? What `dt.security_context`, Grail bucket/OpenPipeline routing, record permissions, and field restrictions enforce tenant boundaries? Dynatrace documents record-level and field-level controls in its [Grail permission model](https://docs.dynatrace.com/docs/platform/grail/organize-data/assign-permissions-in-grail).
+- Where are the versioned Collector config, DQL dashboard/notebook, Davis alert or Workflow definitions, synthetic demo data, support matrix, and a test against a real tenant?
+
+**Required plan change:** make the vendor pack acceptance test installable and measurable: a clean Dynatrace tenant receives a seeded BitCadence run through a versioned Collector config; DQL reconstructs job -> attempt -> downstream service; a lease-age or spend threshold raises the supplied alert; tenant-scoped users cannot query another tenant's telemetry; redaction tests prove prompts/secrets never arrive; and the runbook repeats the installation from zero. Until that exists, Part V has a connector plus an integration aspiration, not a Dynatrace product.
+
+### 7. HIGH — Correctness and evidence are scheduled too far apart
+
+WS6 says state change plus event will become atomic later, while WS1's acceptance test already requires an epoch-mismatch rejection "in the audit trail." Today `record_event()` is a separate best-effort write that deliberately swallows failures, and its chain lock is process-local. Lease acquisition, job mutation, retry, dependent unlock, and audit append are separate operations. A crash can therefore commit the business state without its evidence, or evidence without a related later action.
+
+**Required plan change:** pull the minimal transactional outbox/domain-event write into WS1. WS6 may still build the canonical schema, evidence boundary, and feed projection later, but the state-and-evidence atomicity invariant cannot wait if the ledger is used to prove fencing. Rejected stale writes need an append path that records expected/current lease metadata without mutating the job and without accepting worker-supplied actor identity.
+
+### 8. MEDIUM — Remaining omissions that need named owners and tests
+
+- **External side effects:** `(job, attempt)` is only an idempotency key if ServiceNow, Dynatrace, email, and every future connector durably honor it. For APIs without native idempotency, define an outbox, reconciliation policy, and "unknown outcome" state. Fencing a database completion does not unsend an email or unclose a problem.
+- **State-machine authority:** enumerate legal transitions and enforce them in the database/RPC. Current handlers accept an arbitrary status string and perform secondary retry/unlock work after the update. Fencing only `completed` leaves stale progress, failure, and retry paths open.
+- **Snapshot consistency:** specify SQLite backup API/`VACUUM INTO` or an equivalent WAL-aware method, encryption, checksums, retention, and restore of secrets/configuration as well as `local.db`. Copying the main file while WAL is active is not a backup design.
+- **Pi boot semantics:** `systemd --user` needs lingering or a real login session; prove cold boot after power loss, DNS/tunnel recovery, clock synchronization, disk-full behavior, UPS signaling, log rotation, and unattended security updates.
+- **Failure budgets:** define SLOs and error budgets for lease acquisition, renewal, notification latency, data loss, and restore time. "Inside three minutes" is one target, not an operability model.
+- **Edition promotion:** define the supported migration from Appliance SQLite to Team Postgres, including event IDs/order, chain verification, secrets, rollback, and compatibility. "One codebase" is not yet a migration path.
+
+### Revised sequencing recommendation
+
+**Days 0–30:** correct the regulatory language; freeze the lease/state-machine protocol; implement fenced acquire/renew/expire/all worker updates with lease ID + epoch on both backends and both transports; move minimal atomic evidence into WS1; fix ntfy privacy; split liveness/readiness/degraded health; configure the smallest external dead-man.
+
+**Days 31–90:** deploy and harden Pi #1; implement off-site, WAL-consistent encrypted backup; add the restore-incarnation fence; rehearse complete-site restore; finish ADR 0002 rework; publish measured RPO/RTO. Do not call the audit complete or immutable beyond that RPO.
+
+**Days 91–180:** Team Postgres, cost ledger/breaker, account capacity, database-enforced tenancy, and a hosted demo. Start design-partner discovery now, but do not make a legally categorical AI-Act accusation.
+
+**After the semantic/event model is stable:** build the Dynatrace pack against a real tenant, with installable artifacts and DQL proof. Do not put its acceptance date in the same window as the foundational ledger redesign.
