@@ -1030,6 +1030,13 @@ def open_gui(
         console.print(f"[yellow]Could not open a browser.[/yellow] Visit: {url}")
 
 
+@app.command("tray")
+def tray():
+    """Status light and a door into the console (Windows tray / macOS menu bar / Linux AppIndicator)."""
+    from mco.tray.app import main as tray_main
+    tray_main()
+
+
 @app.command("launch")
 def launch_now(
     name: str = typer.Argument(..., help="Launcher name from ~/.mco/schedules.yaml."),

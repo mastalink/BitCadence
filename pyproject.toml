@@ -58,6 +58,11 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
 ]
+# Optional desktop status light. Headless servers must not need this.
+tray = [
+    "pystray>=0.19.5",
+    "pillow>=10.0.0",
+]
 
 [project.scripts]
 mco = "mco.cli:main"
