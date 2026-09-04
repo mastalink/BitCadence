@@ -60,9 +60,10 @@ Open `terraform output console_url`, sign in with `MCO_LOCAL_TOKEN` from `terraf
 
 ## First-apply risks — read before you `apply`
 
-These are the seams I could not exercise against a live AWS account from here. Each is small; each is real.
+These are the first-apply seams. The PostgREST path below is locally exercised;
+the remaining AWS-managed integrations still need a live-account rehearsal.
 
-1. **PostgREST ⇄ Supabase client.** The gateway's Supabase client is pointed at nginx→PostgREST with a JWT minted by the entrypoint (`role: bitcadence`). Two things to verify on first boot: PostgREST accepts the JWT (`PGRST_JWT_SECRET` matches `JWT_SECRET`), and the SQL migrations apply cleanly to a bare Postgres — they were written against Supabase and may reference `auth.` schema objects. If they do, the fix is to strip those references in a `migrations/` overlay, not to install Supabase. **Escape hatch:** `store_backend = "local"` removes this seam entirely.
+1. **PostgREST ⇄ Supabase client.** This seam is exercised locally against PostgreSQL 16, `postgrest/postgrest:v12.2.3`, and `nginx:1.27-alpine`. The gateway mints a JWT with `role: bitcadence`; `PGRST_JWT_SECRET` must match `JWT_SECRET`. A bare RDS database does not have the three core objects that the additive project migrations assume, so the gateway first applies the idempotent SQL in `gateway/migrations-overlay/`, then runs the normal migrations, seeds the `epcot-operator` registry row from `MCO_LOCAL_TOKEN`, and reloads PostgREST's schema cache. Keep that overlay in the gateway image. **Escape hatch:** `store_backend = "local"` removes this seam entirely.
 2. **Migration entry point.** The entrypoint calls `mco.migrations_runner.apply_postgres(DATABASE_URL)`. If that signature has moved, the gateway task exits at boot with the traceback in CloudWatch under `/ecs/<name>`.
 3. **Events table columns.** The ledger shipper orders `agent_job_events` by `(created_at, id)`. If `id` is not text-castable or `created_at` is named differently, the shipper logs `shipper.error` and the gateway keeps serving — the vault just stays empty until the query is corrected.
 4. **Agent registration.** The conductor registers workers via `POST /api/agents` and expects the token in the response. If the field name differs, the conductor logs it and the workers stay unauthenticated.
