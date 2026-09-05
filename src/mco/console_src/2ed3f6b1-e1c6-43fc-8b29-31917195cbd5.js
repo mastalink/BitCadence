@@ -281,9 +281,9 @@ function SettingRow({ title, body, control }) {
   );
 }
 
-function Toggle({ on, onChange }) {
+function Toggle({ on, onChange, label }) {
   return (
-    <button onClick={() => onChange(!on)} aria-pressed={on} style={{
+    <button onClick={() => onChange(!on)} aria-label={label} aria-pressed={on} style={{
       width: 38, height: 22, borderRadius: 99, border: "none", cursor: "pointer", position: "relative",
       background: on ? "var(--accent)" : "var(--border-strong)", transition: "background .15s",
     }}>
@@ -611,7 +611,7 @@ function Settings({ tone, advanced, setAdvanced }) {
           }}></span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, fontSize: 13.5 }}>
-              {mode === "live" ? "Live — connected to your orchestrator" : mode === "connecting" ? "Connecting…" : "Demo mode — simulated data"}
+              {mode === "live" ? "Live — connected to your orchestrator" : mode === "connecting" ? "Connecting…" : mode === "offline" ? "Offline — connection unavailable" : "Demo mode — simulated data"}
             </div>
             <div style={{ fontSize: 12.5, color: "var(--text-2)", marginTop: 2 }}>
               {mode === "live"
@@ -637,7 +637,7 @@ function Settings({ tone, advanced, setAdvanced }) {
               setBusy(false);
             }}>{busy ? "Connecting…" : "Connect"}</Btn>
             {err ? <span style={{ fontSize: 12.5, color: "var(--st-failed-fg)" }}>{err}</span>
-              : <span style={{ fontSize: 12.5, color: "var(--text-3)" }}>{tone === "plain" ? "Nothing breaks if it fails — you stay in demo mode." : "Connection is verified against GET /api/agents before switching."}</span>}
+              : <span style={{ fontSize: 12.5, color: "var(--text-3)" }}>{tone === "plain" ? "Connect to load real jobs and settings." : "Connection is verified against GET /api/agents before switching."}</span>}
           </div>
         ) : err ? <div style={{ paddingTop: 12, fontSize: 12.5, color: "var(--st-failed-fg)" }}>Last poll error: {err}</div> : null}
       </Card>
@@ -648,35 +648,61 @@ function Settings({ tone, advanced, setAdvanced }) {
           title="Advanced mode"
           body={tone === "plain" ? "Show the technical layer: raw IDs, payloads, retry budgets, and YAML." : "Expose payload JSON, full UUIDs, retry/escalation config, and workflow YAML."}
           control={<Toggle on={advanced} onChange={setAdvanced} />} />
-        <SettingRow
-          title="Desktop notifications (ntfy)"
-          body="Push alerts when a job needs approval, completes, or fails. Uses your configured ntfy.sh topic."
-          control={<Toggle on={ntfy} onChange={setNtfy} />} />
       </Card>
-
-      <Card style={{ marginBottom: 18 }}>
-        <SectionTitle>Access</SectionTitle>
-        <SettingRow
-          title="Approver roles"
-          body={tone === "plain" ? "Which kinds of users are allowed to approve paused jobs." : "MCO_APPROVER_ROLES — comma-separated, case-insensitive."}
-          control={<input value={approvers} onChange={(e) => setApprovers(e.target.value)} style={inputStyle} />} />
-      </Card>
+      <LiveControlSettings />
 
       <ConnectorsCard tone={tone} />
       {advanced ? <TenancyCard tone={tone} advanced={advanced} /> : null}
 
-      {advanced ? (
-        <Card>
-          <SectionTitle>Environment</SectionTitle>
-          <SettingRow title="Profile" body="Environment profile chosen during `mco setup`." control={<Mono style={{ fontSize: 12.5 }}>Hybrid</Mono>} />
-          <SettingRow title="Secret store" body="AES-256-GCM envelope at ~/.mco/secrets.enc, unlocked via Windows Credential Manager."
-            control={<span style={{ fontSize: 12, fontWeight: 600, color: "var(--st-done-fg)", background: "var(--st-done-bg)", padding: "3px 10px", borderRadius: 999 }}>Unlocked</span>} />
-        </Card>
-      ) : (
-        <p style={{ fontSize: 12.5, color: "var(--text-3)" }}>Turn on Advanced mode to see environment details.</p>
-      )}
+
     </div>
   );
 }
 
 Object.assign(window, { AgentFleet, Settings, Toggle, SettingRow, ConnectorsCard });
+
+
+function LiveControlSettings() {
+  const store = window.BitCadenceStore;
+  const live = store.mode() === "live";
+  const [groups, setGroups] = useStateO(null);
+  const [form, setForm] = useStateO({});
+  const [dirty, setDirty] = useStateO({});
+  const [message, setMessage] = useStateO("");
+  const [busy, setBusy] = useStateO(false);
+  const hydrate = (data) => {
+    const selected = ["governance", "notifications", "presence", "memory"];
+    const g = Object.fromEntries(selected.map(k => [k, (data.groups || {})[k] || []]));
+    setGroups(g);
+    setForm(Object.fromEntries(Object.values(g).flat().map(f => [f.key, f.value])));
+    setDirty({});
+  };
+  useEffectO(() => {
+    if (live) store.getSettings().then(hydrate).catch(e => setMessage(e.message));
+  }, [live]);
+  const change = (key, value) => {
+    setForm(f => ({...f, [key]: value}));
+    setDirty(d => ({...d, [key]: true}));
+  };
+  return <Card style={{marginBottom:18}}>
+    <SectionTitle>Gateway controls</SectionTitle>
+    {!live ? <p>Connect to manage work, notifications, and approval policy.</p> : null}
+    {live && groups ? Object.entries(groups).map(([name, fields]) => <div key={name}>
+      <h3 style={{textTransform:"capitalize",fontSize:14}}>{name}</h3>
+      {fields.map(field => <SettingRow key={field.key} title={field.label}
+        body={field.key === "MCO_KILL_SWITCH" ? "Stops active attempts and pauses new work. Turning it off leaves halted jobs for you to retry." : ""}
+        control={field.type === "bool" ? <Toggle label={field.label} on={!!form[field.key]} onChange={v => change(field.key,v)} /> :
+          <input aria-label={field.label} value={form[field.key] || ""} onChange={e => change(field.key,e.target.value)}
+            style={{border:"1px solid var(--border)",padding:8,borderRadius:6,width:280}} />} />)}
+    </div>) : null}
+    {live ? <Btn kind="primary" disabled={busy || !Object.keys(dirty).length} onClick={async () => {
+      setBusy(true);setMessage("");
+      try {
+        await store.saveSettings(Object.fromEntries(Object.keys(dirty).map(k => [k,form[k]])));
+        hydrate(await store.getSettings());setMessage("Settings saved and recorded in the audit trail.");
+      } catch(e) { setMessage(e.message); }
+      finally { setBusy(false); }
+    }}>{busy ? "Saving…" : "Save gateway settings"}</Btn> : null}
+    {message ? <p role="status">{message}</p> : null}
+  </Card>;
+}

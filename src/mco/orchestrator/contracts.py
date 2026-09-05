@@ -13,6 +13,7 @@ class JobStatus(str, Enum):
     FAILED = "failed"                   # Execution failed (may retry/escalate)
     REJECTED = "rejected"               # Terminal: a human rejected the approval gate
     CANCELLED = "cancelled"             # Terminal: a human called off a not-yet-completed job
+    HALTED = "halted"                   # Stopped by an operator; manual retry required
 
 # Statuses a job can be cancelled from (anything not already terminal).
 CANCELLABLE_STATUSES = {
@@ -22,6 +23,7 @@ CANCELLABLE_STATUSES = {
 
 # Statuses a job can be reassigned from (it already ran its course unsuccessfully).
 REASSIGNABLE_STATUSES = {
+    JobStatus.HALTED.value,
     JobStatus.FAILED.value, JobStatus.REJECTED.value, JobStatus.CANCELLED.value,
 }
 
@@ -30,6 +32,7 @@ REASSIGNABLE_STATUSES = {
 # hidden from the default board view. Only terminal jobs may be archived so
 # in-flight work never silently disappears.
 ARCHIVABLE_STATUSES = {
+    JobStatus.HALTED.value,
     JobStatus.COMPLETED.value, JobStatus.FAILED.value,
     JobStatus.REJECTED.value, JobStatus.CANCELLED.value,
 }

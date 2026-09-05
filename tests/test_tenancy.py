@@ -122,11 +122,11 @@ class TestGuardrails(_TenancyBase):
         assert self.http.post("/api/jobs/lease",
                               json={"task_id": "j1", "agent_instance_id": "acme-1"}).status_code == 503
 
-    def test_kill_switch_still_allows_status_reporting(self, monkeypatch):
+    def test_unowned_result_is_fenced_during_kill_switch(self, monkeypatch):
         monkeypatch.setattr(routes_mod, "kill_switch_active", lambda: True)
         self.db.add_job(id="k1", status="in_progress", target_agent_role="codex", org_id="acme")
         resp = self.http.put("/api/jobs/k1", json={"status": "completed"})
-        assert resp.status_code == 200
+        assert resp.status_code == 409
 
 
 class TestHealthz:
@@ -138,5 +138,4 @@ class TestHealthz:
         assert resp.status_code == 200
         body = resp.json()
         assert body["status"] == "ok"
-        assert body["database"] is False
-        assert "paused" in body
+        assert body == {"status": "ok"}

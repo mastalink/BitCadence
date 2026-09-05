@@ -27,6 +27,7 @@ class FakeDB:
 
     def __init__(self):
         self._jobs: dict = {}
+        self._extra = {}
         self._agents: list = []
         self._events: list = []
         self._context: list = []
@@ -94,6 +95,11 @@ class FakeDB:
         self._q_insert_data = dict(data)
         return self
 
+    def upsert(self, data):
+        self._q_op = "upsert"
+        self._q_insert_data = dict(data)
+        return self
+
     def update(self, data):
         self._q_op = "update"
         self._q_update_data = dict(data)
@@ -122,6 +128,15 @@ class FakeDB:
         t = self._q_table
         op = self._q_op
 
+        if t.startswith("mco_"):
+            rows = self._extra.setdefault(t, [])
+            if op in ("insert", "upsert"):
+                data = dict(self._q_insert_data)
+                if op == "upsert":
+                    rows[:] = [r for r in rows if r.get("id") != data.get("id")]
+                rows.append(data)
+                return R([data])
+            return R([r for r in rows if all(r.get(k) == v for k,v in self._q_conds.items())])
         if t == "agent_registry":
             if op == "insert":
                 data = dict(self._q_insert_data)

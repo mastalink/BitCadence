@@ -5,9 +5,11 @@
 # were not altered; it cannot prove that rows which once existed still do. A
 # restored snapshot with its tail missing verifies as a valid, shorter chain.
 #
-# So every committed event, and every chaos-run evidence bundle, is written
-# HERE - to an S3 bucket with Object Lock in COMPLIANCE mode - and the write
-# is part of the governed transition, not a best-effort afterthought. In
+# Governed attempt acknowledgements wait for locked event writes here when
+# MCO_EVIDENCE_ACK_REQUIRED is enabled (the ECS default). The transactional
+# database outbox retains evidence if delivery fails. A separate shipper repairs
+# interrupted deliveries. Database commit and S3 write are not one transaction.
+# In
 # Compliance mode no principal in the account, root included, can delete or
 # overwrite an object before its retention expires. The only way to make
 # evidence disappear is to close the AWS account, and even that has a delay.
@@ -116,8 +118,8 @@ data "aws_iam_policy_document" "evidence_bucket" {
 }
 
 resource "aws_s3_bucket_policy" "evidence" {
-  bucket = aws_s3_bucket.evidence.id
-  policy = data.aws_iam_policy_document.evidence_bucket.json
+  bucket     = aws_s3_bucket.evidence.id
+  policy     = data.aws_iam_policy_document.evidence_bucket.json
   depends_on = [aws_s3_bucket_public_access_block.evidence]
 }
 

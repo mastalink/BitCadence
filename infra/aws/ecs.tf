@@ -5,17 +5,17 @@
 
 resource "aws_ecr_repository" "gateway" {
   name                 = "${var.name}/gateway"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
   force_delete         = true
 }
 resource "aws_ecr_repository" "worker" {
   name                 = "${var.name}/worker"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
   force_delete         = true
 }
 resource "aws_ecr_repository" "conductor" {
   name                 = "${var.name}/conductor"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
   force_delete         = true
 }
 
@@ -83,9 +83,9 @@ locals {
 
   # ── Gateway container ──
   gateway_container = {
-    name      = "gateway"
-    image     = "${aws_ecr_repository.gateway.repository_url}:latest"
-    essential = true
+    name         = "gateway"
+    image        = "${aws_ecr_repository.gateway.repository_url}:${var.image_tag}"
+    essential    = true
     portMappings = [{ containerPort = 18789, protocol = "tcp" }]
     environment = concat(
       [
@@ -95,12 +95,14 @@ locals {
         { name = "MCO_SYNC_INTERVAL", value = "120" },
         { name = "MCO_LOG_JSON", value = "true" },
         { name = "MCO_EVIDENCE_BUCKET", value = aws_s3_bucket.evidence.bucket },
+        { name = "MCO_EVIDENCE_ACK_REQUIRED", value = "true" },
+        { name = "MCO_EVIDENCE_RETENTION_DAYS", value = tostring(var.evidence_retention_days) },
         { name = "AWS_REGION", value = var.region },
         { name = "WORKER_ROLES", value = join(",", var.worker_roles) },
       ],
       var.store_backend == "postgres" ? [
         { name = "SUPABASE_URL", value = "http://127.0.0.1:3000" },
-      ] : [
+        ] : [
         { name = "MCO_LOCAL_STORE_PATH", value = "/mco/local.db" },
       ],
     )
@@ -229,7 +231,7 @@ resource "aws_ecs_service" "gateway" {
     registry_arn = aws_service_discovery_service.gateway.arn
   }
 
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.https]
 }
 
 # ── Workers: one Fargate task per role, all Bedrock-backed ──────────────────
@@ -247,7 +249,7 @@ resource "aws_ecs_task_definition" "worker" {
 
   container_definitions = jsonencode([{
     name      = "worker"
-    image     = "${aws_ecr_repository.worker.repository_url}:latest"
+    image     = "${aws_ecr_repository.worker.repository_url}:${var.image_tag}"
     essential = true
     environment = [
       { name = "GATEWAY_URL", value = local.gateway_internal_url },
@@ -298,11 +300,11 @@ resource "aws_ecs_task_definition" "conductor" {
 
   container_definitions = jsonencode([{
     name      = "conductor"
-    image     = "${aws_ecr_repository.conductor.repository_url}:latest"
+    image     = "${aws_ecr_repository.conductor.repository_url}:${var.image_tag}"
     essential = true
     environment = [
       { name = "GATEWAY_URL", value = local.gateway_internal_url },
-      { name = "PUBLIC_URL", value = "http://${aws_lb.city.dns_name}" },
+      { name = "PUBLIC_URL", value = "https://${var.console_hostname}" },
       { name = "EVIDENCE_BUCKET", value = aws_s3_bucket.evidence.bucket },
       { name = "STATUS_BUCKET", value = aws_s3_bucket.status.bucket },
       { name = "ECS_CLUSTER", value = aws_ecs_cluster.city.name },
@@ -330,9 +332,7 @@ resource "aws_ecs_task_definition" "conductor" {
 }
 
 # ── Public entry: the ALB ───────────────────────────────────────────────────
-# HTTP on purpose. bitcadence.ai's DNS is on Cloudflare, not Route53, so ACM
-# validation is not one-step here; put Cloudflare in front for TLS, or add
-# an ACM cert + 443 listener once a Route53 zone exists.
+# Public credentials are accepted only over TLS. DNS may be hosted anywhere.
 
 resource "aws_lb" "city" {
   name               = substr("${var.name}-alb", 0, 32)
@@ -349,7 +349,7 @@ resource "aws_lb_target_group" "gateway" {
   vpc_id      = aws_vpc.city.id
 
   health_check {
-    path                = "/healthz"
+    path                = "/readyz"
     interval            = 15
     timeout             = 5
     healthy_threshold   = 2
@@ -363,6 +363,22 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.city.arn
   port              = 80
   protocol          = "HTTP"
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.city.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.certificate_arn
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.gateway.arn

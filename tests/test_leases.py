@@ -121,7 +121,7 @@ def test_partitioned_worker_cannot_complete_a_rebleased_job(store):
     detail = err.value.as_detail()
     assert detail["fenced"] is True
     assert "stale lease" in detail["reason"], "must be refused BY THE FENCE, not by the terminal guard"
-    assert detail["actual"]["lease_id"] == b.lease_id, "the rejection names the real holder"
+    assert "lease_id" not in detail["actual"], "errors must not disclose another attempt capability"
 
     # B, which still owns the attempt, finishes normally and its result stands.
     fenced_update(store, "J-1", b.as_claim(), {"status": COMPLETED, "output_payload": {"by": "b"}})
@@ -229,8 +229,9 @@ def test_terminal_jobs_are_closed_to_workers(store):
     make_job(store)
     lease = acquire_lease(store, "J-1", "worker-a")
     fenced_update(store, "J-1", lease.as_claim(), {"status": COMPLETED})
-    with pytest.raises(LeaseError, match="terminal"):
-        fenced_update(store, "J-1", lease.as_claim(), {"status": COMPLETED})
+    assert fenced_update(store, "J-1", lease.as_claim(), {"status": COMPLETED})["_replayed"]
+    with pytest.raises(LeaseError):
+        fenced_update(store, "J-1", lease.as_claim(), {"status": COMPLETED, "output_payload": {"changed": True}})
 
 
 def test_progress_updates_are_allowed_and_keep_the_lease(store):

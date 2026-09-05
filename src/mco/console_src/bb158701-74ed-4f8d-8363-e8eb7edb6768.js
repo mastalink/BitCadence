@@ -148,6 +148,7 @@ function StepCard({ step, steps, tone, advanced, selected, onSelect, onChange, o
 }
 
 function WorkflowBuilder({ jobs, tone, advanced, onOpen }) {
+  const roles = Array.from(new Set((window.BitCadenceStore.getAgents() || []).map(a => a.role).filter(Boolean))).sort();
   const [tab, setTab] = useStateW("running");
   const [steps, setSteps] = useStateW([]);
   const [name, setName] = useStateW("");
@@ -165,7 +166,7 @@ function WorkflowBuilder({ jobs, tone, advanced, onOpen }) {
   const update = (id, patch) => setSteps((prev) => prev.map((s) => s.id === id ? Object.assign({}, s, patch) : s));
   const remove = (id) => { setSteps((prev) => prev.filter((s) => s.id !== id).map((s) => Object.assign({}, s, { deps: s.deps.filter((d) => d !== id) }))); if (sel === id) setSel(null); };
   const addStep = () => {
-    const s = { id: newTmpId(), title: "", role: "codex", instructions: "", deps: [], gate: false, retries: 0, escalate: "" };
+    const s = { id: newTmpId(), title: "", role: roles[0] || "", instructions: "", deps: [], gate: false, retries: 0, escalate: "" };
     setSteps((prev) => [...prev, s]); setSel(s.id);
   };
   const wouldCycle = (childId, parentId) => {
@@ -296,7 +297,7 @@ function WorkflowBuilder({ jobs, tone, advanced, onOpen }) {
                 <textarea value={selected.instructions} onChange={(e) => update(selected.id, { instructions: e.target.value })} rows={3} style={Object.assign({}, inputStyle, { resize: "vertical" })}></textarea>
                 <label style={lbl}>Who does it?</label>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {["codex", "claude", "gemini"].map((r) => (
+                  {Array.from(new Set([...roles, selected.role].filter(Boolean))).map((r) => (
                     <button key={r} onClick={() => update(selected.id, { role: r })} style={{
                       flex: 1, padding: "7px 4px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600,
                       border: selected.role === r ? "1.5px solid var(--accent)" : "1px solid var(--border-strong)",

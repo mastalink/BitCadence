@@ -90,14 +90,11 @@ class TestRecordEvent:
         assert insert_payload["actor_role"] == "codex"
         assert insert_payload["detail"] == {"reason": "retry"}
 
-    def test_db_exception_returns_false_and_logs(self, caplog):
-        """M-09-f: DB failure is caught and returns False without raising."""
+    def test_db_exception_propagates_and_logs(self, caplog):
         mock = _make_mock_db(fail_on_insert=True)
-        import logging
-        caplog.set_level(logging.WARNING)
-        result = record_event(mock, "job-1", "created")
-        assert result is False
-        assert "Audit write skipped" in caplog.text
+        with pytest.raises(Exception, match="DB unavailable"):
+            record_event(mock, "j1", "created")
+        assert "Audit write failed" in caplog.text
 
     def test_detail_defaults_to_empty_dict(self, mock_db):
         """M-09-g: detail is stored as {} when not provided."""
@@ -126,12 +123,20 @@ class TestGetEvents:
         get_events(mock_db, "")
         mock_db.table.assert_called_once_with(EVENTS_TABLE)
 
-    def test_db_exception_returns_empty_list(self, caplog):
+    def test_db_exception_does_not_report_an_empty_valid_chain(self, caplog):
         """M-09-k: DB exception is caught, logged, and returns []."""
         mock = _make_mock_db(return_data=None)
         mock.table.return_value.select.side_effect = Exception("Query failed")
         import logging
         caplog.set_level(logging.ERROR)
-        events = get_events(mock, "job-1")
-        assert events == []
+        with pytest.raises(Exception, match="Query failed"):
+            get_events(mock, "job-1")
         assert "Error fetching audit events" in caplog.text
+def test_postgrest_fractional_timestamp_preserves_hash_but_not_tamper():
+    from mco.orchestrator.audit import _content_of, _canonical, compute_hash
+    original = {'job_id':'j','event':'created','actor_id':None,'actor_role':None,
+                'detail':{'original':True},'created_at':'2026-09-05T05:44:45.898450+00:00'}
+    stored = {**original,'created_at':'2026-09-05T05:44:45.89845+00:00','canonical_content':_canonical(original)}
+    assert compute_hash('',_content_of(stored)) == compute_hash('',original)
+    stored['detail'] = {'tampered':True}
+    assert compute_hash('',_content_of(stored)) != compute_hash('',original)

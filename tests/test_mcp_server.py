@@ -24,6 +24,10 @@ class FakeGatewayClient:
         self.calls.append(("inbox",))
         return self._responses.get("inbox", [])
 
+    def flush_reports(self):
+        self.calls.append(("flush_reports",))
+        return 0
+
     def lease(self, task_id: str):
         self.calls.append(("lease", task_id))
         return self._responses.get("lease", {"success": True})
@@ -71,7 +75,7 @@ def test_mco_inbox_delegates_and_returns_payload(monkeypatch):
     fake = _fake(monkeypatch, inbox=jobs)
     result = mco_inbox()
     assert result == jobs
-    assert fake.calls == [("inbox",)]
+    assert fake.calls == [("flush_reports",), ("inbox",)]
 
 def test_mco_inbox_preserves_input_payload_shape(monkeypatch):
     jobs = [{"id": "j1", "input_payload": {"prompt": "run tests"}, "status": "pending"}]
@@ -141,8 +145,8 @@ def test_mco_agents_delegates_and_returns_list(monkeypatch):
     assert result == agents
     assert fake.calls == [("agents",)]
 
-def test_each_tool_call_builds_a_fresh_client(monkeypatch):
-    """_client() is called once per tool invocation (no shared HTTP state)."""
+def test_each_tool_call_resolves_the_configured_client(monkeypatch):
+    """Each invocation resolves identity; the real factory retains proofs."""
     call_count = 0
 
     def counting_factory():

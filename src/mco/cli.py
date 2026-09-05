@@ -170,7 +170,9 @@ async def server_broadcast_callback(event: str, job: dict) -> None:
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application server."""
+    from mco.orchestrator.health import lifespan, readyz
     app_server = FastAPI(
+        lifespan=lifespan,
         title="BitCadence Gateway Server",
         description="FastAPI WebSocket and REST Hub for Agent Job Coordination."
     )
@@ -243,14 +245,9 @@ def create_app() -> FastAPI:
     # orchestrators (K8s, ECS, Cloud Run). Reports DB wiring, never secrets.
     @app_server.get("/healthz", include_in_schema=False)
     async def healthz() -> dict:
-        from mco.orchestrator.routes import get_db_client, kill_switch_active
-        client = get_db_client()
-        return {
-            "status": "ok",
-            "database": client is not None,
-            "backend": getattr(client, "backend", "supabase") if client is not None else None,
-            "paused": kill_switch_active(),
-        }
+        return {"status": "ok"}
+
+    app_server.add_api_route("/readyz", readyz, methods=["GET"], include_in_schema=False)
 
     # Control-plane dashboard (static single page; auth happens via the API token)
     from fastapi.responses import HTMLResponse
@@ -366,6 +363,9 @@ def create_app() -> FastAPI:
 
                         if res.data:
                             row = res.data[0]
+                            if row.get("status") == "disabled":
+                                await websocket.close(code=1008)
+                                return
                             instance_id = row.get("instance_id") or instance_id
                             role = row.get("role") or role
                             authenticated = True
@@ -414,8 +414,10 @@ def create_app() -> FastAPI:
                 logger.warning("WebSocket authentication timeout (no authentication frame received in 5s).")
                 try:
                     await websocket.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.error(f"WebSocket request failed: {type(exc).__name__}")
+                    await websocket.send_json({"type": "error", "payload": {
+                        "error": "Request could not be committed; retry with the same lease proof", "status": 500}})
                 return
             except Exception as e:
                 logger.error(f"WebSocket authentication error: {e}")
@@ -435,19 +437,31 @@ def create_app() -> FastAPI:
                     msg_type = msg.get("type")
                     payload = msg.get("payload") or {}
 
-                    if msg_type == "job_update":
-                        # Forward/broadcast the update to all connected agents
-                        task_id = payload.get("task_id")
-                        status = payload.get("status")
-                        if task_id and status:
-                            job_update = {"id": task_id, "status": status, **payload}
-                            await ws_manager.broadcast({
-                                "type": "event",
-                                "payload": {
-                                    "event": "job_pending" if status == "pending" else "job_updated",
-                                    "job": job_update
-                                }
-                            }, job_update)
+                    if msg_type in {"job_update", "job_lease", "job_create"}:
+                        # Use the same authorization and mutation path as HTTP.
+                        # Never broadcast an unverified client-supplied status.
+                        from mco.orchestrator import routes
+                        from fastapi import HTTPException
+                        if not authenticated_instance_id or not db_client:
+                            await websocket.send_json({"type": "error", "payload": {"error": "Registered identity required"}})
+                            continue
+                        rows = db_client.table("agent_registry").select("*").eq("instance_id", authenticated_instance_id).execute().data
+                        actor = rows[0] if rows else None
+                        if not actor or actor.get("status") == "disabled":
+                            await websocket.close(code=1008)
+                            return
+                        from mco.orchestrator.auth import require_scopes
+                        try:
+                            await require_scopes("jobs:write")(actor)
+                            if msg_type == "job_update":
+                                result = await routes.update_job_status(payload.get("task_id", ""), payload, actor)
+                            elif msg_type == "job_lease":
+                                result = await routes.lease_job(payload, actor)
+                            else:
+                                result = await routes.create_job(payload, actor)
+                            await websocket.send_json({"type": "ack", "payload": result})
+                        except HTTPException as exc:
+                            await websocket.send_json({"type": "error", "payload": {"error": exc.detail, "status": exc.status_code}})
                 except Exception:
                     pass
         except WebSocketDisconnect:
@@ -1928,7 +1942,7 @@ def run_workflow(
         console.print(f"  {step_id} -> {job_id}")
 
 
-def _audit_verify(job_id: str) -> None:
+def _audit_verify(job_id: str, checkpoint_path: Optional[Path] = None) -> None:
     """Walk a job's audit hash chain locally and print the verdict.
 
     Verification reads the data plane directly (LocalStore or Supabase) rather
@@ -1944,7 +1958,8 @@ def _audit_verify(job_id: str) -> None:
         raise typer.Exit(code=1)
 
     try:
-        report = verify_chain(db_client, job_id)
+        checkpoint = json.loads(checkpoint_path.read_text(encoding='utf-8')) if checkpoint_path else None
+        report = verify_chain(db_client, job_id, checkpoint=checkpoint)
     except Exception as e:
         console.print(f"[red][ERROR] Failed to verify audit chain: {e}[/red]")
         raise typer.Exit(code=1)
@@ -1973,10 +1988,11 @@ def audit_trail(
         False, "--verify",
         help="Walk the hash chain and report OK or the first broken link.",
     ),
+    checkpoint: Optional[Path] = typer.Option(None, "--checkpoint", help="Verify against a previously exported signed checkpoint."),
 ):
-    """Print a job's immutable audit trail (oldest event first)."""
-    if verify:
-        _audit_verify(job_id)
+    """Print a job's tamper-evident audit trail (oldest event first)."""
+    if verify or checkpoint:
+        _audit_verify(job_id, checkpoint)
         return
 
     try:
@@ -2005,6 +2021,44 @@ def audit_trail(
             json.dumps(ev.get("detail") or {}),
         )
     console.print(table)
+
+
+@app.command("audit-checkpoint")
+def audit_checkpoint(job_id: str, output: Path):
+    """Export a signed checkpoint. Keep it outside the database/backup volume."""
+    from mco.orchestrator.routes import get_db_client
+    from mco.orchestrator.audit import drain_outbox, make_checkpoint
+    try:
+        db = get_db_client()
+        drain_outbox(db, job_id=job_id)
+        checkpoint = make_checkpoint(db, job_id)
+        with output.open('x', encoding='utf-8') as stream:
+            json.dump(checkpoint, stream, indent=2)
+        console.print(f"Signed checkpoint written to {output.resolve()}")
+    except Exception as exc:
+        console.print(f"[red]Checkpoint export failed: {exc}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command("restore-fence")
+def restore_fence():
+    """After a DB restore, pause work and invalidate every pre-restore claim.
+
+Run before reconnecting workers. Review halted jobs, turn off Stop work in
+Settings, then retry selected jobs explicitly.
+"""
+    from mco.orchestrator.routes import get_db_client
+    from mco.orchestrator.leases import set_paused, rotate_incarnation
+    from mco.orchestrator.audit import record_event
+    db = get_db_client()
+    if db is None:
+        raise typer.Exit(1)
+    halted = set_paused(db, True)
+    incarnation = rotate_incarnation(db)
+    get_config().set('MCO_KILL_SWITCH','true')
+    record_event(db, 'system:restore', 'restore_fenced', 'operator', 'admin',
+                 {'incarnation':incarnation,'halted_jobs':len(halted)})
+    console.print(f"Restored store fenced; {len(halted)} active jobs halted. Work remains paused.")
 
 
 @app.command("approve")

@@ -24,14 +24,18 @@ stand it up.
 2. **IAM Identity Center** enabled (Managed Grafana uses it for sign-in).
 3. Optional pavilions: a **ServiceNow** instance (a free Personal Developer Instance works) and/or a **Dynatrace** tenant (trial works) with a token scoped `problems.read`, `problems.write`, `metrics.ingest`.
 4. `terraform >= 1.6`, `aws` CLI v2, Docker.
+5. A deployment-capable AWS profile, an issued ACM certificate in the deployment region, and a DNS hostname covered by that certificate. The public listener requires HTTPS; HTTP redirects without accepting console requests.
 
 ## Apply
 
 ```bash
 cd infra/aws
-cp terraform.tfvars.example terraform.tfvars   # edit: alert_email, bedrock_model_id, tenants
+cp terraform.tfvars.example terraform.tfvars   # fill alert email, model, hostname, certificate ARN, image tag
 terraform init
-terraform apply
+terraform validate
+# First deployment only: create repositories before services refer to images.
+terraform plan -target=aws_ecr_repository.gateway -target=aws_ecr_repository.worker -target=aws_ecr_repository.conductor -out=ecr.plan
+terraform apply ecr.plan
 ```
 
 Then build and push the three images (ECR URLs are in `terraform output ecr`):
@@ -39,14 +43,22 @@ Then build and push the three images (ECR URLs are in `terraform output ecr`):
 ```bash
 ACCT=$(aws sts get-caller-identity --query Account --output text)
 REG=$(terraform output -raw region 2>/dev/null || echo us-east-1)
+TAG=$(git rev-parse HEAD) # Set image_tag in terraform.tfvars to this exact value.
 aws ecr get-login-password --region $REG | docker login --username AWS --password-stdin $ACCT.dkr.ecr.$REG.amazonaws.com
 cd ../..   # repo root - the Dockerfiles copy src/ from here
 for c in gateway worker conductor; do
-  docker build -f infra/aws/$c/Dockerfile -t $(cd infra/aws && terraform output -json ecr | jq -r .$c):latest . && \
-  docker push $(cd infra/aws && terraform output -json ecr | jq -r .$c):latest
+  REPO=$(cd infra/aws && terraform output -json ecr | jq -r .$c)
+  docker build -f infra/aws/$c/Dockerfile -t "$REPO:$TAG" . && docker push "$REPO:$TAG"
 done
-cd infra/aws && aws ecs update-service --cluster $(terraform output -raw cluster 2>/dev/null || echo bitcadence-epcot) --service gateway --force-new-deployment --region $REG
+cd infra/aws
+terraform plan -out=rollout.plan
+terraform show rollout.plan   # Review actual resources and persistent retention.
+terraform apply rollout.plan
 ```
+
+Create the DNS CNAME from `console_hostname` to `terraform output -raw console_dns_target`.
+Wait for `/readyz` and verify the console over HTTPS before triggering chaos.
+Build from a clean commit; immutable ECR tags prevent replacing a previously reviewed image.
 
 Confirm the two SNS subscription emails. Then run the conductor once without waiting for the schedule:
 

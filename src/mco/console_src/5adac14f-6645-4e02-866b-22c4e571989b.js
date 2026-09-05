@@ -7,7 +7,7 @@ const JOB_FILTERS = [
   { id: "needs_approval", label: "Needs approval", match: ["needs_approval"] },
   { id: "waiting", label: "Waiting", match: ["waiting"] },
   { id: "done", label: "Done", match: ["completed"] },
-  { id: "problems", label: "Problems", match: ["failed", "rejected"] },
+  { id: "problems", label: "Problems", match: ["failed", "rejected", "halted", "cancelled"] },
 ];
 
 function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
@@ -85,7 +85,7 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
                     ? <span style={{ color: "var(--text-2)" }}>{j.max_retries ? `${j.retry_count}/${j.max_retries}` : "—"}{j.escalate_to_role ? ` → ${j.escalate_to_role}` : ""}</span>
                     : <span style={{ color: "var(--text-2)" }}>{j.workflow || "—"}</span>}
                 </Td>
-                <Td><span style={{ color: "var(--text-3)", fontSize: 12.5, whiteSpace: "nowrap" }}>{timeAgo(j.updated_at)}</span></Td>
+                <Td><span style={{ color: "var(--text-3)", fontSize: 12.5, whiteSpace: "nowrap" }}>{timeAgo(j.updated_at || j.completed_at || j.started_at || j.created_at)}</span></Td>
               </tr>
             ))}
           </tbody>
@@ -116,7 +116,7 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
   if (!j) return null;
   // Cancel and reassign apply to anything the board has not finished with.
   // Terminal jobs are history and must not offer actions that would 409.
-  const TERMINAL = ["completed", "failed", "rejected", "cancelled"];
+  const TERMINAL = ["completed", "failed", "rejected", "cancelled", "halted"];
   const live = TERMINAL.indexOf(j.status) < 0;
   const roles = Array.from(new Set((window.BitCadenceStore.getAgents() || []).map((a) => a.role))).sort();
   const deps = (j.depends_on || []).map((d) => jobs.find((x) => x.id === d)).filter(Boolean);
@@ -158,7 +158,7 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
           </div>
         ) : null}
 
-        {j.status === "failed" ? (
+        {["failed", "rejected", "halted"].includes(j.status) ? (
           <div style={{ background: "var(--st-failed-bg)", border: "1px solid var(--st-failed-dot)", borderRadius: "var(--radius-m)", padding: 14, marginBottom: 16 }}>
             <div style={{ fontWeight: 600, color: "var(--st-failed-fg)", marginBottom: 4 }}>{tone === "plain" ? "This job hit a problem." : "Execution failed."}</div>
             <div style={{ fontSize: 12.5, color: "var(--st-failed-fg)", marginBottom: 10 }}>{j.error_message}</div>
@@ -259,12 +259,15 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
 
 // ----- New Job composer -----
 function NewJobForm({ tone, advanced, onClose }) {
+  const roles = Array.from(new Set((window.BitCadenceStore.getAgents() || []).filter(a => !a.disabled).map(a => a.role).filter(Boolean))).sort();
   const [title, setTitle] = useStateJ("");
   const [desc, setDesc] = useStateJ("");
-  const [role, setRole] = useStateJ("codex");
+  const [role, setRole] = useStateJ(roles[0] || "");
   const [gate, setGate] = useStateJ(false);
   const [retries, setRetries] = useStateJ(0);
   const [escalate, setEscalate] = useStateJ("");
+  const [busy, setBusy] = useStateJ(false);
+  const [error, setError] = useStateJ("");
   const inputStyle = { width: "100%", border: "1px solid var(--border-strong)", borderRadius: 8, padding: "8px 12px", fontSize: 13.5, background: "var(--surface)", color: "var(--text)", outline: "none" };
   const label = { display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--text-2)", margin: "14px 0 5px" };
 
@@ -280,8 +283,9 @@ function NewJobForm({ tone, advanced, onClose }) {
         <label style={label}>Details {tone === "plain" ? "(the agent reads this)" : "(instructions)"}</label>
         <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder="Anything the agent should know…" style={Object.assign({}, inputStyle, { resize: "vertical" })}></textarea>
         <label style={label}>Who should do it?</label>
+        {!roles.length ? <p>Register a worker in Agent Fleet before creating work.</p> : null}
         <div style={{ display: "flex", gap: 8 }}>
-          {["codex", "claude", "gemini"].map((r) => (
+          {roles.map((r) => (
             <button key={r} onClick={() => setRole(r)} style={{
               flex: 1, display: "flex", alignItems: "center", gap: 8, justifyContent: "center",
               border: role === r ? "1.5px solid var(--accent)" : "1px solid var(--border-strong)",
@@ -306,9 +310,15 @@ function NewJobForm({ tone, advanced, onClose }) {
       </div>
       <div style={{ padding: "14px 22px", borderTop: "1px solid var(--border)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <Btn onClick={onClose}>Cancel</Btn>
-        <Btn kind="primary" disabled={!title.trim()} onClick={() => {
-          window.BitCadenceStore.createJob({ title: title.trim(), description: desc.trim(), target_agent_role: role, requires_approval: gate, max_retries: retries || 0, escalate_to_role: escalate.trim() || null });
-          onClose();
+        {error ? <span role="alert">{error}</span> : null}
+        <Btn kind="primary" disabled={busy || !title.trim() || !role} onClick={async () => {
+          setBusy(true); setError("");
+          try {
+            const result = await window.BitCadenceStore.createJob({ title: title.trim(), description: desc.trim(), target_agent_role: role, requires_approval: gate, max_retries: retries || 0, escalate_to_role: escalate.trim() || null });
+            if (!result) throw new Error("Job was not created. Check the connection and try again.");
+            onClose();
+          } catch(e) { setError(e.message); }
+          finally { setBusy(false); }
         }}>Create job</Btn>
       </div>
     </div>

@@ -26,20 +26,29 @@ from mco.orchestrator.client import GatewayClient
 mcp = _Server("mco")
 
 
+_clients = {}
+
 def _client() -> GatewayClient:
-    # Built per-call so env changes are picked up and there's no shared HTTP state.
-    return GatewayClient()
+    # Preserve attempt proofs across MCP calls. Each HTTP request still uses
+    # its own connection. Changing credentials selects a different client.
+    import os
+    key = tuple(os.environ.get(k, "") for k in ("MCO_GATEWAY_URL", "MCO_AGENT_TOKEN", "AGENT_ROLE", "AGENT_INSTANCE_ID"))
+    if key not in _clients:
+        _clients[key] = GatewayClient()
+    return _clients[key]
 
 
 @mcp.tool()
 def mco_inbox() -> List[dict]:
     """List the jobs/messages addressed to you (your dropbox) that are pending."""
-    return _client().inbox()
+    client = _client()
+    client.flush_reports()
+    return client.inbox()
 
 
 @mcp.tool()
 def mco_lease(task_id: str) -> dict:
-    """Atomically claim a job before working it. Returns {'success': bool}."""
+    """Atomically claim a job before working it. Returns success and the lease proof; renew during long work."""
     return _client().lease(task_id)
 
 
@@ -214,6 +223,15 @@ def mco_platform_action(name: str, action: str, params: dict = None) -> dict:
 def run() -> None:
     """Run the MCP server over stdio."""
     mcp.run()
+
+
+
+
+@mcp.tool()
+def mco_renew(task_id: str) -> dict:
+    """Renew the attempt leased through this MCP session. Call between work units.
+    A 409 means stop: this attempt expired or an operator halted it."""
+    return _client().renew(task_id)
 
 
 if __name__ == "__main__":

@@ -284,13 +284,13 @@ def p1_stop_button() -> None:
                 final = st
                 break
         st = (job(jid) or {}).get("status")
-        run.mark(P, "c_inflight_halted_30s", "PASS" if st in ("halted", "cancelled", "paused") else "FAIL",
-                 {"final_status": st, "note": "gateway does not change leased jobs on kill-switch; worker never told to stop"})
+        run.mark(P, "c_inflight_halted_30s", "PASS" if st == "halted" else "FAIL",
+                 {"final_status": st, "note": "Gateway fencing observed; arbitrary external side effects require cooperative worker checkpoints."})
         # d. the flip itself is in the ledger
         evs = events(jid)
-        anywhere = any("kill" in json.dumps(e).lower() or "setting" in json.dumps(e).lower() for e in evs)
+        anywhere = any(e.get('event') == 'halted' and e.get('actor_id') for e in evs)
         run.mark(P, "d_flip_audited", "PASS" if anywhere else "FAIL",
-                 {"note": "put_settings() calls config.set() and never record_event(); the halt has no audit row"})
+                 {"note": "Requires a halt event attributed to an operator."})
         # f. metrics gauge
         if METRICS_TOKEN:
             m = api("GET", "/metrics", token=METRICS_TOKEN)
@@ -352,9 +352,9 @@ def p2_worker_killed() -> None:
     done = wait_until(lambda: (job(jid) or {}).get("status") == "completed", 600, 5, "complete")
     run.mark(P, "b_completes_after_reclaim", "PASS" if done else "FAIL", (job(jid) or {}).get("status"))
     evs = events(jid)
-    completions = [e for e in evs if (e.get("event_type") or e.get("event") or "") in ("completed", "job.completed") or "completed" == str(e.get("status"))]
+    completions = [e for e in evs if e.get('event') == 'status:completed']
     run.mark(P, "c_ledger_shows_attempts", "PASS" if reclaimed and done else "FAIL", {"events": len(evs)})
-    run.mark(P, "d_completed_once", "PASS" if len(completions) <= 1 else "FAIL", {"completion_events": len(completions)})
+    run.mark(P, "d_completed_once", "PASS" if len(completions) == 1 else "FAIL", {"completion_events": len(completions)})
     run.artifacts.setdefault("fis-experiments.json", []).append({"pavilion": "P2", "experiment": fis_result})
     run.artifacts["p2-events.json"] = evs
 
@@ -370,7 +370,12 @@ def p3_partition() -> None:
     if not wait_until(lambda: (job(jid) or {}).get("status") in ("leased", "in_progress"), 90, 2, "leased"):
         run.mark(P, "setup", "ERROR", "never leased")
         return
-    holder = (job(jid) or {}).get("leased_by_instance_id") or (job(jid) or {}).get("leased_by")
+    original = job(jid) or {}
+    holder = original.get('leased_by_instance_id')
+    proof = {k: original.get(k) for k in ('lease_id','lease_epoch','lease_incarnation')}
+    if not all(value is not None for value in proof.values()) or not holder:
+        run.mark(P,'setup','ERROR','No complete original lease proof captured')
+        return
     exp = start_fis(FIS["partition"], "P3")  # PT16M > 15-minute TTL: reclaim happens under real fault
     reclaimed = wait_until(lambda: any("expired" in json.dumps(e).lower() or "reclaim" in json.dumps(e).lower() for e in events(jid)), LEASE_TTL_S + 240, 15, "reclaim")
     run.mark(P, "c0_reclaimed_under_partition", "PASS" if reclaimed else "FAIL", {"holder": holder})
@@ -381,20 +386,20 @@ def p3_partition() -> None:
         run.mark(P, "setup2", "ERROR", "job never completed after reclaim; cannot replay stale write")
         return
 
-    # The stale writer returns. The SDK drops a completion that fails during
-    # a partition rather than retrying it, so the race cannot be produced
-    # through the SDK. Replay the completion directly with the ORIGINAL
-    # worker's token - exactly what a retrying worker would send.
+    # Replay with the ORIGINAL proof and authenticated worker token. Missing
+    # proof, auth rejection, and generic server errors do not prove fencing.
     before = events(jid)
     replay = api("PUT", f"/api/jobs/{jid}", token=worker_token(role),
-                 json={"status": "completed", "result": f"STALE WRITE from {holder} after re-lease", "agent_instance_id": holder})
+                 json={**proof, "status": "completed", "output_payload": {"result": f"STALE WRITE from {holder} after re-lease"}, "agent_instance_id": holder})
     after = events(jid)
-    completions = [e for e in after if "completed" in json.dumps(e).lower()]
-    rejected = replay.status_code >= 400
+    completions = [e for e in after if e.get('event') == 'status:completed']
+    rejected = replay.status_code == 409 and 'FENCED:' in replay.text
     run.mark(P, "a_stale_completion_rejected", "PASS" if rejected else "FAIL",
-             {"status": replay.status_code, "note": "handle_job_update() updates by job ID alone; no lease id/epoch exists"})
-    run.mark(P, "b_rejection_in_ledger", "PASS" if rejected and len(after) > len(before) else "FAIL", {"events_before": len(before), "after": len(after)})
-    run.mark(P, "c_single_completion", "PASS" if len(completions) <= 1 else "FAIL", {"completion_events": len(completions)})
+             {"status": replay.status_code, "note": "Requires HTTP 409 with the fencing reason."})
+    old_ids = {e.get('id') for e in before}
+    fenced_event = any(e.get('id') not in old_ids and e.get('event') == 'write_fenced' for e in after)
+    run.mark(P, "b_rejection_in_ledger", "PASS" if rejected and fenced_event else "FAIL", {"events_before": len(before), "after": len(after)})
+    run.mark(P, "c_single_completion", "PASS" if len(completions) == 1 else "FAIL", {"completion_events": len(completions)})
     run.artifacts["p3-stale-replay.json"] = {"job_id": jid, "holder": holder, "replay_status": replay.status_code, "replay_body": replay.text[:500], "final": job(jid)}
 
 
@@ -447,7 +452,8 @@ def p4_hub_dark() -> None:
 
 class _Q:
     """Just enough of the Supabase query builder for verify_chain(), over psycopg."""
-    def __init__(self, dsn: str, table: str):
+    def __init__(self, dsn: str, table: str, connection=None):
+        self.connection = connection
         self.dsn, self.table, self.filters, self.order_col, self.desc, self.lim = dsn, table, [], None, False, None
     def select(self, *_a, **_k): return self
     def eq(self, col, val): self.filters.append((col, val)); return self
@@ -462,8 +468,11 @@ class _Q:
             sql += f" ORDER BY {self.order_col} {'DESC' if self.desc else 'ASC'}, id ASC"
         if self.lim:
             sql += f" LIMIT {int(self.lim)}"
-        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
-            rows = conn.execute(sql, [v for _, v in self.filters]).fetchall()
+        if self.connection is not None:
+            rows = self.connection.execute(sql, [v for _, v in self.filters]).fetchall()
+        else:
+            with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
+                rows = conn.execute(sql, [v for _, v in self.filters]).fetchall()
         for r in rows:  # match the JSON shapes the gateway's client returns
             for k, v in list(r.items()):
                 if isinstance(v, datetime):
@@ -472,8 +481,8 @@ class _Q:
 
 
 class _DB:
-    def __init__(self, dsn: str): self.dsn = dsn
-    def table(self, name: str): return _Q(self.dsn, name)
+    def __init__(self, dsn: str, connection=None): self.dsn, self.connection = dsn, connection
+    def table(self, name: str): return _Q(self.dsn, name, self.connection)
 
 
 def p5_tamper(target_job: str | None) -> None:
@@ -500,33 +509,50 @@ def p5_tamper(target_job: str | None) -> None:
         run.mark(P, "shim", "ERROR", {"reason": "untampered chain did not verify through the shim", "report": baseline})
         return
 
-    with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+    # The tamper and trigger override exist only in this transaction. Rollback
+    # restores both, including on error; no corrupted evidence is committed.
+    from psycopg.rows import dict_row
+    with psycopg.connect(DATABASE_URL, row_factory=dict_row) as conn:
         row = conn.execute("SELECT id, detail FROM agent_job_events WHERE job_id = %s ORDER BY created_at, id LIMIT 1", (target_job,)).fetchone()
         if not row:
             run.mark(P, "setup", "ERROR", "job has no events")
             return
-        ev_id, original = row
-        conn.execute("UPDATE agent_job_events SET detail = detail || '{\"tampered_by\": \"EPCOT P5\"}'::jsonb WHERE id = %s", (ev_id,))
-    report = verify_chain(db, target_job)
+        ev_id, original = row['id'], row['detail']
+        try:
+            conn.execute("SET LOCAL lock_timeout = '5s'")
+            conn.execute("ALTER TABLE agent_job_events DISABLE TRIGGER trg_agent_job_events_immutable")
+            conn.execute("UPDATE agent_job_events SET detail = detail || '{\"tampered_by\": \"EPCOT P5\"}'::jsonb WHERE id = %s", (ev_id,))
+            report = verify_chain(_DB(DATABASE_URL, conn), target_job)
+        finally:
+            conn.rollback()
     run.mark(P, "a_verify_detects", "PASS" if not report.get("ok") else "FAIL", report)
 
     key = f"ledger/{target_job}/{ev_id}.json"
+    version = None
     try:
-        mirrored = json.loads(s3.get_object(Bucket=EVIDENCE, Key=key)["Body"].read())
-        intact = "tampered_by" not in json.dumps(mirrored.get("detail", {}))
+        mirrored_object = s3.get_object(Bucket=EVIDENCE, Key=key)
+        version = mirrored_object.get("VersionId")
+        mirrored = json.loads(mirrored_object["Body"].read())
+        intact = mirrored.get("detail") == original
         run.mark(P, "b_mirror_intact", "PASS" if intact else "FAIL", {"key": key, "note": "mirror lags the ledger by <= one shipping interval"})
     except ClientError as e:
         run.mark(P, "b_mirror_intact", "ERROR", {"key": key, "error": e.response["Error"]["Code"], "note": "mirror had not shipped this event yet"})
 
+    if not version:
+        for probe in ("c_delete_denied", "d_lock_weakening_denied"):
+            run.mark(P, probe, "ERROR", "No mirrored object version to test retention against")
+        return
+
     try:
-        s3.delete_object(Bucket=EVIDENCE, Key=key)
+        s3.delete_object(Bucket=EVIDENCE, Key=key, VersionId=version)
         run.mark(P, "c_delete_denied", "FAIL", "delete succeeded - Object Lock did not hold")
     except ClientError as e:
         code = e.response["Error"]["Code"]
         run.mark(P, "c_delete_denied", "PASS" if code in ("AccessDenied", "InvalidRequest") else "ERROR", code)
 
     try:
-        s3.put_object_lock_configuration(Bucket=EVIDENCE, ObjectLockConfiguration={"ObjectLockEnabled": "Enabled", "Rule": {"DefaultRetention": {"Mode": "GOVERNANCE", "Days": 1}}})
+        s3.put_object_retention(Bucket=EVIDENCE, Key=key, VersionId=version,
+            Retention={"Mode": "COMPLIANCE", "RetainUntilDate": datetime.now(timezone.utc) + timedelta(seconds=60)})
         run.mark(P, "d_lock_weakening_denied", "FAIL", "retention was weakened")
     except ClientError as e:
         run.mark(P, "d_lock_weakening_denied", "PASS" if e.response["Error"]["Code"] == "AccessDenied" else "ERROR", e.response["Error"]["Code"])
@@ -582,8 +608,8 @@ def file_evidence(gate_job: str | None = None) -> dict:
         "backend": BACKEND, "gateway": PUBLIC_URL, "summary": summary, "assertions": run.results, "touched_jobs": run.touched_jobs,
         "artifacts": sorted(run.artifacts.keys()),
         "honesty": {
-            "expected_red_today": ["P1.c_inflight_halted_30s", "P1.d_flip_audited", "P3.a_stale_completion_rejected", "P3.b_rejection_in_ledger", "P6.*"],
-            "mirror_lag_note": "ledger/ mirror is asynchronous until WS6; bundle reflects the ledger at run end",
+            "expected_red_today": ["P6.*"],
+            "mirror_lag_note": "ECS requires locked evidence before attempt acknowledgements; the background shipper is a repair path. Live retention assertions are recorded separately.",
         },
     }
     for name, obj in run.artifacts.items():

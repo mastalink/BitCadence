@@ -1,0 +1,33 @@
+name: PostgreSQL acceptance
+on: [push, pull_request]
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: bitcadence_test
+          POSTGRES_PASSWORD: acceptance-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      postgrest:
+        image: postgrest/postgrest:v12.2.3
+        env:
+          PGRST_DB_URI: postgres://postgres:acceptance-only@postgres:5432/bitcadence_test
+          PGRST_DB_ANON_ROLE: postgres
+          PGRST_DB_SCHEMAS: public
+        ports: ['53000:3000']
+    env:
+      BC_TEST_DATABASE_URL: postgresql://postgres:acceptance-only@localhost:5432/bitcadence_test
+      BC_TEST_POSTGREST_URL: http://localhost:53000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e '.[dev]' 'psycopg[binary]' boto3
+      - run: python scripts/check_postgres.py
+      - run: pytest tests/test_release_acceptance.py tests/test_cloud_tamper.py tests/test_evidence_acknowledgement.py -q

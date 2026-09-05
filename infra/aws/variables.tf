@@ -12,6 +12,25 @@ variable "region" {
   default     = "us-east-1"
 }
 
+variable "console_hostname" {
+  description = "DNS hostname pointing at the ALB; must match the ACM certificate."
+  type        = string
+}
+
+variable "certificate_arn" {
+  description = "Issued ACM certificate in this region for console_hostname."
+  type        = string
+}
+
+variable "image_tag" {
+  description = "Immutable release or git commit tag published to all three ECR repositories."
+  type        = string
+  validation {
+    condition     = length(var.image_tag) > 0 && var.image_tag != "latest"
+    error_message = "Use an immutable build tag, not latest."
+  }
+}
+
 # ── The core: which store holds the ledger ──────────────────────────────────
 
 variable "store_backend" {

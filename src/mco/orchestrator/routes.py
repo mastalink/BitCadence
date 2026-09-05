@@ -16,6 +16,7 @@ from mco.orchestrator.contracts import (
 )
 from mco.orchestrator.auth import require_agent, require_scopes
 from mco.orchestrator.audit import record_event, get_events
+from mco.orchestrator.leases import acquire_lease, renew_lease, Lease, expire_lease, is_expired
 from mco.config import get_config
 from mco.notifiers.ntfy import (
     notify_job_created,
@@ -58,7 +59,7 @@ def get_gated_roles() -> set:
 def kill_switch_active() -> bool:
     """Global pause (MCO_KILL_SWITCH): no new jobs created, no leases granted.
 
-    In-flight work may finish and report; humans can still approve/audit.
+    Active attempts are halted and fenced; humans can still inspect and audit.
     """
     return str(get_config().get("MCO_KILL_SWITCH") or "").lower() in ("1", "true", "on", "yes")
 
@@ -83,51 +84,18 @@ def get_lease_ttl_seconds() -> int:
 
 
 def reclaim_stale_leases(db_client) -> int:
-    """Revert LEASED jobs whose lease has outlived the TTL back to PENDING so
-    another worker can pick them up.
-
-    Without this, a worker that crashes / is Ctrl-C'd / loses the network
-    mid-job leaves that job LEASED forever - permanent starvation (audit
-    finding F-01). Matching the presence design (no standalone background
-    sweeper), this runs opportunistically on the pending-poll path: the next
-    time ANY worker polls, stale leases are recovered. Best-effort and never
-    raises - reclamation must never break the job path. Returns the count
-    reclaimed."""
+    """Timer and poll callers may race; only a successful CAS emits evidence."""
     ttl = get_lease_ttl_seconds()
     if ttl <= 0:
         return 0
-    try:
-        from datetime import datetime, timezone
-        res = db_client.table("agent_jobs").select("*").eq("status", "leased").execute()
-        now = datetime.now(timezone.utc)
-        reclaimed = 0
-        for job in (res.data or []):
-            started = job.get("started_at")
-            if not started:
-                continue
-            try:
-                ts = datetime.fromisoformat(str(started).replace("Z", "+00:00"))
-                if ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
-            except (ValueError, TypeError):
-                continue
-            if (now - ts).total_seconds() <= ttl:
-                continue
-            job_id = job.get("id")
-            db_client.table("agent_jobs").update({
-                "status": "pending",
-                "leased_by_instance_id": None,
-                "started_at": None,
-            }).eq("id", job_id).execute()
-            record_event(db_client, job_id, "lease_expired", "system", "reaper",
+    rows = db_client.table("agent_jobs").select("*").in_("status", ["leased", "in_progress"]).execute().data
+    reclaimed = 0
+    for job in rows or []:
+        if is_expired(job, ttl_seconds=ttl) and expire_lease(db_client, job, ttl_seconds=ttl):
+            record_event(db_client, job["id"], "lease_expired", "system", "reaper",
                          {"lease_ttl_seconds": ttl, "leased_by": job.get("leased_by_instance_id")})
             reclaimed += 1
-        if reclaimed:
-            logger.info(f"Reclaimed {reclaimed} stale lease(s) past the {ttl}s TTL back to pending.")
-        return reclaimed
-    except Exception as e:
-        logger.debug(f"Stale-lease reclamation skipped: {type(e).__name__}")
-        return 0
+    return reclaimed
 
 
 def decorate_presence(row: dict, threshold: int) -> dict:
@@ -479,12 +447,9 @@ async def lease_job(payload: dict, agent: dict = Depends(require_scopes("jobs:wr
                     detail="Cannot lease a job not addressed to you",
                 )
 
-        res = db_client.rpc("lease_task", {
-            "p_agent_instance_id": agent_instance_id,
-            "p_task_id": task_id
-        }).execute()
-        
-        success = res.data if hasattr(res, "data") else False
+        lease = acquire_lease(db_client, task_id, agent_instance_id,
+                              ttl_seconds=max(1, get_lease_ttl_seconds()))
+        success = lease is not None
         
         if success:
             record_event(db_client, task_id, "leased", agent_instance_id, agent["role"])
@@ -501,7 +466,8 @@ async def lease_job(payload: dict, agent: dict = Depends(require_scopes("jobs:wr
             except Exception as e:
                 logger.warning(f"Error executing broadcast callback after lease: {e}")
                 
-        return {"success": success}
+        return {"success": success, "lease": lease.as_claim() if lease else None,
+                "renew_after_seconds": max(1, get_lease_ttl_seconds() // 3)}
     except HTTPException:
         raise
     except Exception as e:
@@ -556,6 +522,7 @@ async def update_job_status(job_id: str, payload: dict, agent: dict = Depends(re
         await handle_job_update(
             db_client=db_client,
             payload={
+                **{k: payload.get(k) for k in ("lease_id", "lease_epoch", "lease_incarnation")},
                 "task_id": job_id,
                 "status": status,
                 "output_payload": output_payload,
@@ -569,7 +536,8 @@ async def update_job_status(job_id: str, payload: dict, agent: dict = Depends(re
         )
         
         if error_occurred:
-            raise HTTPException(status_code=400, detail=error_occurred)
+            code = 409 if error_occurred.startswith("FENCED:") else (503 if error_occurred.startswith("JOB_UPDATE failed:") else 400)
+            raise HTTPException(status_code=code, detail=error_occurred)
 
         # NTFY addon hooks for completion/failure
         try:
@@ -698,7 +666,7 @@ async def _decide_approval(job_id: str, agent: dict, approve: bool, reason: str 
         }
         event, event_name = "rejected", "job_updated"
 
-    res = db_client.table("agent_jobs").update(update_data).eq("id", job_id).execute()
+    res = db_client.table("agent_jobs").update(update_data).eq("id", job_id).eq("status", "needs_approval").execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Approval decision failed to persist")
     decided_job = res.data[0]
@@ -740,14 +708,19 @@ async def retry_job(job_id: str, agent: dict = Depends(require_scopes("jobs:appr
     job = job_res.data[0]
     if job_org(job) != agent_org(agent):
         raise HTTPException(status_code=404, detail="Job not found")
-    if job.get("status") not in (JobStatus.FAILED.value, JobStatus.REJECTED.value):
+    if job.get("status") not in (JobStatus.FAILED.value, JobStatus.REJECTED.value, "halted"):
         raise HTTPException(status_code=400, detail=f"Only failed/rejected jobs can be retried (status: {job.get('status')})")
 
     res = db_client.table("agent_jobs").update({
         "status": JobStatus.PENDING.value,
         "leased_by_instance_id": None,
         "error_message": None,
-    }).eq("id", job_id).execute()
+        "lease_id": None,
+        "lease_expires_at": None,
+        "started_at": None,
+        "completed_at": None,
+        "output_payload": None,
+    }).eq("id", job_id).eq("status", job.get("status")).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Retry failed to persist")
     requeued_job = res.data[0]
@@ -1062,3 +1035,38 @@ async def get_agents(agent: dict = Depends(require_scopes("agents:read"))):
     except Exception as e:
         logger.error(f"Error fetching registered agents: {e}")
         return []
+
+
+@router.post("/{job_id}/renew")
+async def renew_job(job_id: str, payload: dict, agent: dict = Depends(require_scopes("jobs:write"))):
+    db = get_db_client()
+    _load_job_in_org(db, job_id, agent)
+    try:
+        lease = Lease(job_id, payload["lease_id"], int(payload["lease_epoch"]),
+                      payload["lease_incarnation"], agent["instance_id"])
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Full lease claim required")
+    if kill_switch_active() or not renew_lease(db, lease, ttl_seconds=max(1, get_lease_ttl_seconds())):
+        raise HTTPException(status_code=409, detail="FENCED: lease expired, halted, or no longer owned")
+    touch_agent_presence(db, agent)
+    return {"success": True, "renew_after_seconds": max(1, get_lease_ttl_seconds() // 3)}
+
+
+@router.get("/{job_id}/checkpoint")
+async def export_checkpoint(job_id: str, agent: dict = Depends(require_scopes("jobs:read"))):
+    from mco.orchestrator.audit import make_checkpoint, drain_outbox
+    db = get_db_client()
+    _load_job_in_org(db, job_id, agent)
+    drain_outbox(db)
+    try:
+        return make_checkpoint(db, job_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.post("/{job_id}/verify")
+async def verify_job_evidence(job_id: str, payload: dict = None, agent: dict = Depends(require_scopes("jobs:read"))):
+    from mco.orchestrator.audit import verify_chain
+    db = get_db_client()
+    _load_job_in_org(db, job_id, agent)
+    return verify_chain(db, job_id, (payload or {}).get("checkpoint"))

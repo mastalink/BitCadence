@@ -9,12 +9,11 @@ Runs, in order:
 3. Run the LEDGER SHIPPER beside it: every committed audit event is copied to
    the S3 evidence vault (Object Lock, COMPLIANCE) as its own object.
 
-Be honest about what the shipper is and is not. It is an asynchronous
-append-only mirror with a bounded lag (`SHIP_INTERVAL`), running in the same
-task as the gateway. It is NOT the "forward before acknowledging" contract in
-ADR/plan WS6 - that needs the transactional outbox inside the gateway itself.
-Until WS6 lands, the evidence vault can be up to one shipping interval behind
-the ledger, and the demo's tamper pavilion states that lag in its evidence.
+The shipper is an asynchronous repair path. The gateway itself enforces
+MCO_EVIDENCE_ACK_REQUIRED: attempt acknowledgements wait for durable state
+outbox evidence and locked S3 versions. Emergency stops fence locally before
+waiting for the sink. The shipper also recovers events after interrupted work;
+its interval is not an acknowledgement guarantee during a storage outage.
 """
 
 from __future__ import annotations

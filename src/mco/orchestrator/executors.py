@@ -64,12 +64,11 @@ async def run_argv(argv: List[str], timeout: float = DEFAULT_TIMEOUT) -> Tuple[O
 
     try:
         out_b, err_b = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except asyncio.CancelledError:
+        await stop_process_tree(proc)
+        raise
     except asyncio.TimeoutError:
-        try:
-            proc.kill()
-            await proc.wait()  # reap so the transport closes cleanly (Windows Proactor)
-        except Exception:
-            pass
+        await stop_process_tree(proc)
         return None, f"Execution timed out after {timeout:.0f}s"
 
     out = out_b.decode(errors="replace").strip()
@@ -102,3 +101,20 @@ def register_default_executors(roles: Optional[List[str]] = None) -> List[str]:
     for role in roles:
         register_executor(role, make_cli_executor(role))
     return roles
+
+
+async def stop_process_tree(proc):
+    """Stop only this owned subprocess and its verified descendants."""
+    import psutil
+    try:
+        parent = psutil.Process(proc.pid)
+        children = parent.children(recursive=True)
+        for child in reversed(children):
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                pass
+        parent.kill()
+    except psutil.NoSuchProcess:
+        pass
+    await proc.wait()

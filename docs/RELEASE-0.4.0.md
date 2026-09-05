@@ -1,5 +1,11 @@
 # BitCadence 0.4.0 — "the claims become true"
 
+> Implementation status (2026-09-05): a candidate is implemented on
+> `codex/bitcadence-completion`; see [completion evidence](COMPLETION-2026-09.md).
+> The ledger below is the original release plan, not a claim of live AWS closure.
+> Version remains 0.3.0 until the live release gate passes. Existing workers must
+> upgrade with the gateway because new attempts require the full lease proof.
+
 **Version:** `0.4.0` (from `0.3.0`). Minor, not major: no breaking change for
 users. The CLI is still `mco`, every `MCO_*` variable is unchanged, config still
 lives in `~/.mco/`. What changes is that the governance claims stop being
@@ -197,10 +203,9 @@ dated plan is the posture; hiding it would cost more than it buys.
 5. Keep the evidence vault. It is Object Lock COMPLIANCE; nothing deletes it,
    including us. That is the point.
 
-**Before any of that:** the PostgREST seam has never been run. `codex` is
-already tasked with exercising it locally (job `b5b7e492`). If it cannot be
-made to work on bare Postgres, `store_backend = "local"` ships instead and the
-Team posture waits for 0.5.0 — a legitimate outcome, not a failure.
+The PostgREST seam has now been exercised locally against PostgreSQL 16.
+The automated acceptance workflow repeats bootstrap and tests both backends;
+live AWS-managed integration remains a separate release gate.
 
 ## 7. What 0.4.0 does not claim
 

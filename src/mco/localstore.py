@@ -32,12 +32,14 @@ import json
 import sqlite3
 import threading
 import uuid
+import re
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Tables whose history must never be rewritten (mirrors the Postgres trigger).
-APPEND_ONLY_TABLES = {"agent_job_events"}
+APPEND_ONLY_TABLES = {"agent_job_events", "mco_audit_outbox", "mco_attempt_receipts"}
 
 # Natural primary key per table (upsert conflict target).
 PRIMARY_KEYS = {"agent_registry": "instance_id"}
@@ -121,6 +123,13 @@ class _Query:
         self._filters.append(("in", column, list(values or [])))
         return self
 
+    def gt(self, column: str, value):
+        self._filters.append(("gt", column, value))
+        return self
+
+    def is_(self, column: str, value):
+        return self.eq(column, None if value == "null" else value)
+
     def order(self, column: str, desc: bool = False):
         self._order = (column, desc)
         return self
@@ -142,13 +151,39 @@ class LocalStore:
     def __init__(self, path: Optional[Path] = None):
         self._path = Path(path) if path else DEFAULT_DB_PATH
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._lock = threading.Lock()
-        self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
+        self._lock = threading.RLock()
+        self._depth = 0
+        self._conn = sqlite3.connect(str(self._path), check_same_thread=False, timeout=30)
         self._conn.execute("PRAGMA journal_mode=WAL")
 
     # ── public API (mirrors the Supabase client) ─────────────────────────
     def table(self, name: str) -> _Query:
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            raise ValueError("Invalid table name")
         return _Query(self, name)
+
+    @contextmanager
+    def transaction(self):
+        """Serialize read/modify/write across connections and roll back on failure."""
+        with self._lock:
+            outer = self._depth == 0
+            if outer:
+                self._conn.execute("BEGIN IMMEDIATE")
+            self._depth += 1
+            try:
+                yield self
+                if outer:
+                    self._conn.commit()
+            except BaseException:
+                if outer:
+                    self._conn.rollback()
+                raise
+            finally:
+                self._depth -= 1
+
+    def _commit(self):
+        if not self._depth:
+            self._conn.commit()
 
     def rpc(self, name: str, params: dict) -> _RpcCall:
         return _RpcCall(self, name, params)
@@ -173,10 +208,24 @@ class LocalStore:
 
     def _write_row(self, table: str, row: dict) -> None:
         pk = str(row[self._pk_field(table)])
+        before = None
+        if table == "agent_jobs":
+            old = self._conn.execute('SELECT data FROM agent_jobs WHERE pk=?', (pk,)).fetchone()
+            before = json.loads(old[0]) if old else None
         self._conn.execute(
             f'INSERT OR REPLACE INTO "{table}" (pk, data) VALUES (?, ?)',
             (pk, json.dumps(row, default=str)),
         )
+        if table == "agent_jobs":
+            # State and evidence commit together, even if a handler crashes
+            # before adding its richer actor/decision event.
+            self._ensure_table("mco_audit_outbox")
+            evidence = self._apply_defaults("mco_audit_outbox", {
+                "job_id": row["id"], "event": "state_committed",
+                "detail": {"operation": "UPDATE" if before else "INSERT", "before": before, "after": dict(row)},
+                "org_id": row.get("org_id", "default"),
+            })
+            self._write_row("mco_audit_outbox", evidence)
 
     @staticmethod
     def _matches(row: dict, filters: List[tuple]) -> bool:
@@ -185,6 +234,8 @@ class LocalStore:
             if kind == "eq" and have != val:
                 return False
             if kind == "in" and have not in val:
+                return False
+            if kind == "gt" and (have is None or have <= val):
                 return False
         return True
 
@@ -209,7 +260,9 @@ class LocalStore:
 
     # ── query execution ──────────────────────────────────────────────────
     def _run(self, q: _Query) -> APIResult:
-        with self._lock:
+        with self.transaction():
+            if q._table in APPEND_ONLY_TABLES and q._op == "upsert":
+                raise PermissionError(f"{q._table} is append-only: UPSERT is not allowed")
             if q._op == "select":
                 rows = [r for r in self._load_rows(q._table) if self._matches(r, q._filters)]
                 if q._order:
@@ -222,8 +275,11 @@ class LocalStore:
             if q._op == "insert":
                 self._ensure_table(q._table)
                 row = self._apply_defaults(q._table, q._payload or {})
+                if any(r.get(self._pk_field(q._table)) == row.get(self._pk_field(q._table))
+                       for r in self._load_rows(q._table)):
+                    raise ValueError("Duplicate primary key")
                 self._write_row(q._table, row)
-                self._conn.commit()
+                self._commit()
                 return APIResult([dict(row)])
 
             if q._op == "upsert":
@@ -238,7 +294,7 @@ class LocalStore:
                             break
                 row = {**existing, **payload} if existing else self._apply_defaults(q._table, payload)
                 self._write_row(q._table, row)
-                self._conn.commit()
+                self._commit()
                 return APIResult([dict(row)])
 
             if q._op == "update":
@@ -253,7 +309,7 @@ class LocalStore:
                             r["completed_at"] = _now_iso()
                         self._write_row(q._table, r)
                         updated.append(dict(r))
-                self._conn.commit()
+                self._commit()
                 return APIResult(updated)
 
             if q._op == "delete":
@@ -263,10 +319,17 @@ class LocalStore:
                 for r in self._load_rows(q._table):
                     (removed if self._matches(r, q._filters) else kept).append(r)
                 if removed:
-                    self._conn.execute(f'DELETE FROM "{q._table}"')
-                    for r in kept:
-                        self._write_row(q._table, r)
-                    self._conn.commit()
+                    for r in removed:
+                        if q._table == "agent_jobs":
+                            self._ensure_table("mco_audit_outbox")
+                            evidence = self._apply_defaults("mco_audit_outbox", {
+                                "job_id": r["id"], "event": "state_committed",
+                                "detail": {"operation": "DELETE", "before": r, "after": None},
+                                "org_id": r.get("org_id", "default"),
+                            })
+                            self._write_row("mco_audit_outbox", evidence)
+                        self._conn.execute(f'DELETE FROM "{q._table}" WHERE pk=?', (str(r[self._pk_field(q._table)]),))
+                    self._commit()
                 return APIResult(removed)
 
         raise ValueError(f"Unknown operation: {q._op}")
@@ -275,20 +338,8 @@ class LocalStore:
     def _lease_task(self, agent_instance_id: Optional[str], task_id: Optional[str]) -> bool:
         if not agent_instance_id or not task_id:
             return False
-        with self._lock:
-            for r in self._load_rows("agent_jobs"):
-                if (
-                    str(r.get("id")) == str(task_id)
-                    and r.get("status") == "pending"
-                    and not r.get("leased_by_instance_id")
-                ):
-                    r["status"] = "leased"
-                    r["leased_by_instance_id"] = agent_instance_id
-                    r["started_at"] = _now_iso()
-                    self._write_row("agent_jobs", r)
-                    self._conn.commit()
-                    return True
-        return False
+        from mco.orchestrator.leases import acquire_lease
+        return acquire_lease(self, task_id, agent_instance_id) is not None
 
 
 # ── module-level singleton + local operator seeding ──────────────────────────

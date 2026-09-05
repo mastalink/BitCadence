@@ -60,8 +60,8 @@ def notify(
     cfg = get_ntfy_config()
     if not cfg["topic"]:
         return False
-    server = server or cfg["server"]
-    topic = topic or cfg["topic"]
+    server = cfg["server"]
+    topic = cfg["topic"]  # Configuration is the sole destination authority.
 
     url = f"{server}/{topic}"
 
@@ -93,7 +93,6 @@ def notify_job_created(job_id: str, title: str, to_role: str):
         title="BitCadence Job Created",
         priority=3,
         tags=["mco", "job", to_role.lower()],
-        topic=f"mco-{to_role.lower()}" if to_role else None,
     )
 
 
@@ -103,7 +102,6 @@ def notify_job_leased(job_id: str, agent_id: str, to_role: str):
         title="BitCadence Job Leased",
         priority=2,
         tags=["mco", "job", "leased", to_role.lower()],
-        topic=f"mco-{to_role.lower()}" if to_role else None,
     )
 
 
@@ -114,7 +112,6 @@ def notify_job_completed(job_id: str, status: str, to_role: str):
         title="BitCadence Job Completed",
         priority=2 if status.lower() in ("success", "done", "completed") else 4,
         tags=["mco", "job", status.lower(), to_role.lower()],
-        topic=f"mco-{to_role.lower()}" if to_role else None,
     )
 
 
@@ -124,7 +121,6 @@ def notify_job_failed(job_id: str, error: str, to_role: str):
         title="BitCadence Job FAILED",
         priority=5,
         tags=["mco", "job", "failed", to_role.lower()],
-        topic=f"mco-{to_role.lower()}" if to_role else None,
     )
 
 
@@ -135,7 +131,6 @@ def notify_job_needs_approval(job_id: str, title: str, to_role: str):
         title="BitCadence Approval Required",
         priority=4,
         tags=["mco", "job", "approval", to_role.lower()],
-        topic=f"mco-{to_role.lower()}" if to_role else None,
     )
 
 
@@ -146,7 +141,6 @@ def notify_job_escalated(job_id: str, title: str, escalate_to_role: str, error: 
         title="BitCadence Job ESCALATED",
         priority=5,
         tags=["mco", "job", "escalated", escalate_to_role.lower()],
-        topic=f"mco-{escalate_to_role.lower()}" if escalate_to_role else None,
     )
 
 
@@ -157,7 +151,6 @@ def notify_force_pull(role: str, reason: str = "Manual trigger"):
         title=f"FORCE MCO PULL - {role}",
         priority=5,   # highest
         tags=["mco", "force-pull", role.lower()],
-        topic=f"mco-{role.lower()}",
     )
 
 
