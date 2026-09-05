@@ -103,7 +103,7 @@ resource "aws_iam_role_policy" "shutdown" {
 resource "aws_iam_role" "deploy" {
   name                 = "${local.prefix}-deploy"
   max_session_duration = 3600
-  assume_role_policy   = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Federated = aws_iam_openid_connect_provider.github.arn }, Action = "sts:AssumeRoleWithWebIdentity", Condition = { StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com", "token.actions.githubusercontent.com:sub" = "repo:${local.repo}:ref:refs/heads/${local.branch}" } } }] })
+  assume_role_policy   = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Federated = aws_iam_openid_connect_provider.github.arn }, Action = "sts:AssumeRoleWithWebIdentity", Condition = { StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com", "token.actions.githubusercontent.com:sub" = "repo:mastalink@72055896/BitCadence@1245844706:ref:refs/heads/${local.branch}" } } }] })
 }
 resource "aws_iam_role_policy" "deploy" {
   role = aws_iam_role.deploy.id
