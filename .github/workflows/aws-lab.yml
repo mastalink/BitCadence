@@ -1,0 +1,65 @@
+name: AWS private test lab
+on:
+  push:
+    branches: [codex/bitcadence-completion]
+    paths: ['infra/aws/lab/**', '.github/workflows/aws-lab.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: bitcadence-aws-lab
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.repository == 'mastalink/BitCadence' && github.ref == 'refs/heads/codex/bitcadence-completion'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AWS_REGION: us-east-1
+      TF_IN_AUTOMATION: 'true'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Obtain temporary deployment credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
+        with:
+          role-to-assume: arn:aws:iam::314086896527:role/bitcadence-lab-deploy
+          aws-region: us-east-1
+          role-session-name: bitcadence-lab-${{ github.run_id }}
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.12.2
+          terraform_wrapper: false
+      - name: Build and publish immutable runtime
+        run: |
+          set -euo pipefail
+          REGISTRY=314086896527.dkr.ecr.us-east-1.amazonaws.com
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY"
+          docker build -f infra/aws/lab/Dockerfile -t "$REGISTRY/bitcadence-lab:$GITHUB_SHA" .
+          docker run --rm --read-only --tmpfs /tmp --tmpfs /mco:uid=1000,gid=1000,mode=0700 -e HOME=/mco -v "$PWD/infra/aws/lab/smoke_local.py:/app/smoke.py:ro" "$REGISTRY/bitcadence-lab:$GITHUB_SHA" python /app/smoke.py
+          if ! aws ecr describe-images --repository-name bitcadence-lab --image-ids imageTag="$GITHUB_SHA" >/dev/null 2>&1; then
+            docker push "$REGISTRY/bitcadence-lab:$GITHUB_SHA"
+          fi
+      - name: Plan bounded test session
+        working-directory: infra/aws/lab
+        run: |
+          set -euo pipefail
+          terraform init -input=false -backend-config=bucket=bitcadence-lab-state-314086896527
+          terraform validate
+          export TF_VAR_image_tag="$GITHUB_SHA"
+          export TF_VAR_expires_at="$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%S)"
+          terraform plan -input=false -out=lab.tfplan
+          terraform show -json lab.tfplan > plan.json
+          python check_plan.py plan.json
+      - name: Apply reviewed resource bounds
+        working-directory: infra/aws/lab
+        run: |
+          terraform apply -input=false lab.tfplan
+          terraform output -json > outputs.json
+      - name: Verify hub and spoke execution
+        run: python infra/aws/lab/verify_cloud.py infra/aws/lab/outputs.json
+      - name: Stop lab if deployment or validation fails
+        if: failure()
+        run: |
+          IDS=$(aws ec2 describe-instances --filters Name=tag:Project,Values=bitcadence-lab Name=instance-state-name,Values=running,pending --query 'Reservations[].Instances[].InstanceId' --output text)
+          if [ -n "$IDS" ]; then aws ec2 stop-instances --instance-ids $IDS; fi

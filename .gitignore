@@ -168,3 +168,10 @@ infra/aws/.terraform/
 infra/aws/*.tfstate
 infra/aws/*.tfstate.*
 infra/aws/terraform.tfvars
+infra/aws/bootstrap/.terraform/
+infra/aws/bootstrap/*.tfstate*
+infra/aws/bootstrap/*.tfplan
+infra/aws/lab/.terraform/
+infra/aws/lab/*.tfstate*
+infra/aws/lab/*.tfplan
+infra/aws/lab/terraform.tfvars
