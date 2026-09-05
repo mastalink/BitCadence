@@ -85,7 +85,32 @@ def spoke(client, role):
     @agent.handler
     def handle(job, prompt):
         agent.checkpoint()
-        if (job.get("input_payload") or {}).get("lab_mode") == "bedrock":
+        mode = (job.get("input_payload") or {}).get("lab_mode")
+        if mode == "delegate":
+            if role != "worker":
+                raise ValueError("Only the worker starts the delegation demo")
+            digest = hashlib.sha256(prompt.encode()).hexdigest()
+            agent.checkpoint()
+            child = agent.send("reviewer", "Delegated review: verify the worker handoff",
+                f"Review the checksum handoff from worker-lab for parent job {job['id']}. "
+                f"The worker computed SHA-256 {digest}.",
+                to_instance="reviewer-lab", requires_approval=True,
+                depends_on=[job["id"]],
+                extra_payload={"lab_mode": "checksum", "parent_job_id": job["id"],
+                    "worker_sha256": digest})
+            child = child.get("job", child)
+            return (f"Computed sha256:{digest}; delegated review to reviewer-lab as {child['id']}",
+                    {"summary": "Worker computed a checksum and delegated an approval-gated review",
+                     "follow_ups": [child["id"]]})
+        if mode == "kill-demo":
+            # A harmless, finite operation with cooperative ownership checks. No model cost.
+            for step in range(90):
+                agent.checkpoint()
+                hashlib.sha256(f"{job['id']}:{step}".encode()).hexdigest()
+                time.sleep(2)
+            agent.checkpoint()
+            return "Bounded checkpoint demo finished without an operator halt"
+        if mode == "bedrock":
             response = bedrock.converse(modelId="amazon.nova-micro-v1:0",
                 messages=[{"role": "user", "content": [{"text": prompt[:4000]}]}],
                 inferenceConfig={"maxTokens": 128, "temperature": 0})
