@@ -163,6 +163,10 @@ docs/SMOKE_TEST.md
 # Stray per-repo codex config: it shadows ~/.codex/config.toml and can give an
 # agent the wrong identity. Keep codex config in the user home, not the repo.
 .codex/
+.playwright-cli/
+output/playwright/**/*.webm
+output/playwright/**/*.mp4
+output/playwright/**/*.png
 # Terraform (infra/aws): providers, state, and real tfvars never ship
 infra/aws/.terraform/
 infra/aws/*.tfstate

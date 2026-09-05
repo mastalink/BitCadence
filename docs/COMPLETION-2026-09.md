@@ -114,3 +114,24 @@ terraform -chdir=infra/aws validate
 contract. The dedicated GitHub workflow supplies both services and runs the
 tamper test with `boto3` and `psycopg`. Local mocked S3 assertions must not be
 reported as verified live AWS Object Lock behavior.
+
+## Live bounded AWS lab and demos — September 5
+
+The separate low-cost lab passed [run 33995144144](https://github.com/mastalink/BitCadence/actions/runs/33995144144)
+on commit `036f95d`: unauthenticated access denied, both EC2 spokes executing over
+private TLS, approval gating with worker approval denied, bounded Nova Micro
+inference through the spoke IAM role, and S3 object versions with active COMPLIANCE
+retention for all three acceptance jobs. PostgreSQL run `33995144142` also passed.
+This verifies the bounded lab, not the full EPCOT HA/chaos profile.
+
+Three silent browser recordings and a clickable infrastructure guide are available
+in `output/playwright/demo-pack/`. The approval clip includes a new real AWS job
+waiting for UI approval and completing on reviewer-lab. The stop/resume clip shows
+settings saves only, not an active-job interruption or stale-worker attack.
+See `docs/CLOUD-QUICKSTART.md` for exact operating steps and remaining limitations.
+
+After recording, `scripts/cloud_lab.ps1 -Action Stop` completed and a separate
+Status call verified hub, reviewer and worker all stopped. The helper validates
+account and expected role inventory before mutations. Bootstrap state was refreshed
+in the private encrypted state bucket. Human non-root login and budget-alert email
+remain pending; the $25 tracking budget is not a hard spending cap.
