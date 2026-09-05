@@ -53,6 +53,7 @@ Documentation = "https://github.com/mastalink/BitCadence/tree/main/docs"
 Changelog = "https://github.com/mastalink/BitCadence/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
+desktop = ["pystray>=0.19.5", "Pillow>=10.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -61,6 +62,9 @@ dev = [
 
 [project.scripts]
 mco = "mco.cli:main"
+
+[project.gui-scripts]
+bitcadence-desktop = "mco.desktop.app:main"
 
 [build-system]
 requires = ["setuptools>=61.0.0", "wheel"]

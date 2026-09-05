@@ -19,6 +19,9 @@ talk to ntfy.sh by default.
 
 ## Install
 
+For one Windows window and tray icon to manage the local server, scheduler, and
+workers, see the [desktop manager guide](docs/DESKTOP.md).
+
 ### macOS / Linux — one command
 
 ```bash
