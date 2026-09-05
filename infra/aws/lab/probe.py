@@ -20,6 +20,20 @@ def main():
         response.raise_for_status()
         return next(job for job in response.json() if job["id"] == job_id)
 
+    deadline = time.monotonic() + 300
+    while time.monotonic() < deadline:
+        response = client.get("/api/agents")
+        response.raise_for_status()
+        agents = response.json()
+        if isinstance(agents, dict):
+            agents = agents.get("agents", [])
+        online = {a["instance_id"] for a in agents if a.get("status") == "online"}
+        if {"worker-lab", "reviewer-lab"} <= online:
+            break
+        time.sleep(3)
+    else:
+        raise AssertionError("Both spokes must be online before running acceptance")
+
     def create(role, gated=False, model=False):
         response = client.post("/api/jobs", json={"title": f"Cloud lab {role} acceptance",
             "description": "Reply with a short confirmation that this governed test reached its worker.",
@@ -41,7 +55,7 @@ def main():
 
     normal = create("worker")
     completed = wait(normal["id"])
-    assert str(completed.get("result", "")).startswith("sha256:")
+    assert str((completed.get("output_payload") or {}).get("result", "")).startswith("sha256:")
     print("PASS worker spoke TLS, authentication, lease and execution", flush=True)
     gated = create("reviewer", gated=True)
     assert gated["status"] == "needs_approval"
@@ -55,7 +69,8 @@ def main():
     print("PASS approval fence, worker approval denial, reviewer spoke execution", flush=True)
     model = create("worker", model=True)
     model_result = wait(model["id"])
-    assert model_result.get("result") and not str(model_result["result"]).startswith("sha256:")
+    output = (model_result.get("output_payload") or {}).get("result")
+    assert output and not str(output).startswith("sha256:")
     print("PASS bounded Bedrock inference using the spoke IAM role", flush=True)
     from mco.localstore import LocalStore
     store = LocalStore("/mco/local.db")

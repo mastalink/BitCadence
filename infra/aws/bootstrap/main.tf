@@ -10,6 +10,28 @@ provider "aws" {
   default_tags { tags = { Project = "bitcadence-lab", ManagedBy = "terraform" } }
 }
 data "aws_caller_identity" "current" {}
+variable "alert_email" {
+  description = "Optional user-confirmed address for account cost alerts. Empty leaves email delivery unconfigured."
+  type        = string
+  default     = ""
+}
+resource "aws_budgets_budget" "account" {
+  name         = "bitcadence-lab-account-watch"
+  budget_type  = "COST"
+  limit_amount = "25"
+  limit_unit   = "USD"
+  time_unit    = "MONTHLY"
+  dynamic "notification" {
+    for_each = var.alert_email == "" ? [] : [50, 80, 100]
+    content {
+      comparison_operator        = "GREATER_THAN"
+      threshold                  = notification.value
+      threshold_type             = "PERCENTAGE"
+      notification_type          = "ACTUAL"
+      subscriber_email_addresses = [var.alert_email]
+    }
+  }
+}
 locals {
   account         = data.aws_caller_identity.current.account_id
   prefix          = "bitcadence-lab"
@@ -87,7 +109,7 @@ resource "aws_iam_role_policy" "node" {
     { Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = each.key == "hub" ? [for s in aws_secretsmanager_secret.lab : s.arn] : [aws_secretsmanager_secret.lab[each.key].arn, aws_secretsmanager_secret.lab["tls-ca"].arn] }
     ], jsondecode(each.key == "hub" ? jsonencode([
       { Effect = "Allow", Action = ["secretsmanager:PutSecretValue"], Resource = [for s in aws_secretsmanager_secret.lab : s.arn] },
-      { Effect = "Allow", Action = ["s3:PutObject", "s3:PutObjectRetention", "s3:GetObject", "s3:GetObjectVersion"], Resource = "arn:aws:s3:::${local.evidence_bucket}/*" }
+      { Effect = "Allow", Action = ["s3:PutObject", "s3:PutObjectRetention", "s3:GetObject", "s3:GetObjectVersion", "s3:GetObjectRetention"], Resource = "arn:aws:s3:::${local.evidence_bucket}/*" }
       ]) : jsonencode([
       { Effect = "Allow", Action = ["bedrock:InvokeModel"], Resource = "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-micro-v1:0" }
   ]))) })
@@ -111,6 +133,7 @@ resource "aws_iam_role_policy" "deploy" {
   policy = jsonencode({ Version = "2012-10-17", Statement = [
     { Effect = "Allow", Action = ["sts:GetCallerIdentity", "ecr:GetAuthorizationToken"], Resource = "*" },
     { Effect = "Allow", Action = ["ec2:Describe*"], Resource = "*", Condition = { StringEquals = { "aws:RequestedRegion" = "us-east-1" } } },
+    { Effect = "Allow", Action = ["ec2:CreateSubnet", "ec2:CreateRouteTable", "ec2:CreateSecurityGroup"], Resource = "arn:aws:ec2:us-east-1:${local.account}:vpc/*", Condition = { StringEquals = { "ec2:ResourceTag/Project" = local.prefix } } },
     { Effect = "Allow", Action = ["ec2:CreateVolume", "ec2:CreateVpc", "ec2:CreateSubnet", "ec2:CreateRouteTable", "ec2:CreateInternetGateway", "ec2:CreateSecurityGroup"], Resource = "*", Condition = { StringEquals = { "aws:RequestTag/Project" = local.prefix, "aws:RequestedRegion" = "us-east-1" } } },
     { Effect = "Allow", Action = ["ec2:RunInstances"], Resource = "*", Condition = { StringEquals = { "aws:RequestedRegion" = "us-east-1" }, "StringEqualsIfExists" = { "ec2:InstanceType" = ["t3.small", "t3.micro"] } } },
     { Effect = "Allow", Action = ["ec2:CreateTags"], Resource = "arn:aws:ec2:us-east-1:${local.account}:*/*", Condition = { StringEquals = { "aws:RequestTag/Project" = local.prefix } } },

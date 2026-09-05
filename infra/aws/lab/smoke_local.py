@@ -52,6 +52,7 @@ def main():
     result.raise_for_status()
     record = next(row for row in result.json() if row["id"] == job["id"])
     assert record["status"] == "completed", record
+    assert record["output_payload"]["result"] == "verified-tls-sdk"
     print("PASS real hub TLS, certificate verification, scoped worker auth, SDK lease and completion; AWS sink stubbed")
 
 

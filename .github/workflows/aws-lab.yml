@@ -21,6 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Obtain temporary deployment credentials
+        id: aws_credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
         with:
           role-to-assume: arn:aws:iam::314086896527:role/bitcadence-lab-deploy
@@ -56,10 +57,14 @@ jobs:
         run: |
           terraform apply -input=false lab.tfplan
           terraform output -json > outputs.json
+          IDS=$(python -c 'import json; print(" ".join(json.load(open("outputs.json"))["instances"]["value"].values()))')
+          STOPPED=$(aws ec2 describe-instances --instance-ids $IDS --filters Name=instance-state-name,Values=stopped --query 'Reservations[].Instances[].InstanceId' --output text)
+          if [ -n "$STOPPED" ]; then aws ec2 start-instances --instance-ids $STOPPED; fi
+          aws ec2 wait instance-running --instance-ids $IDS
       - name: Verify hub and spoke execution
         run: python infra/aws/lab/verify_cloud.py infra/aws/lab/outputs.json
       - name: Stop lab if deployment or validation fails
-        if: failure()
+        if: failure() && steps.aws_credentials.outcome == 'success'
         run: |
           IDS=$(aws ec2 describe-instances --filters Name=tag:Project,Values=bitcadence-lab Name=instance-state-name,Values=running,pending --query 'Reservations[].Instances[].InstanceId' --output text)
           if [ -n "$IDS" ]; then aws ec2 stop-instances --instance-ids $IDS; fi
