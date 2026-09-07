@@ -38,7 +38,9 @@ locals {
   state_bucket    = "${local.prefix}-state-${local.account}"
   evidence_bucket = "${local.prefix}-evidence-${local.account}"
   repo            = "mastalink/BitCadence"
-  branch          = "codex/bitcadence-completion"
+  # Manual deployments work before and after merge. Remove the candidate ref
+  # after promotion; no wildcard branch can obtain deployment credentials.
+  deploy_branches = ["main", "codex/bitcadence-completion"]
   secrets         = toset(["operator", "worker", "reviewer", "tls-ca"])
 }
 resource "aws_iam_openid_connect_provider" "github" {
@@ -109,6 +111,8 @@ resource "aws_iam_role_policy" "node" {
     { Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = each.key == "hub" ? [for s in aws_secretsmanager_secret.lab : s.arn] : [aws_secretsmanager_secret.lab[each.key].arn, aws_secretsmanager_secret.lab["tls-ca"].arn] }
     ], jsondecode(each.key == "hub" ? jsonencode([
       { Effect = "Allow", Action = ["secretsmanager:PutSecretValue"], Resource = [for s in aws_secretsmanager_secret.lab : s.arn] },
+      # Lets an absent acknowledgement return NoSuchKey instead of AccessDenied.
+      { Effect = "Allow", Action = ["s3:ListBucket"], Resource = "arn:aws:s3:::${local.evidence_bucket}" },
       { Effect = "Allow", Action = ["s3:PutObject", "s3:PutObjectRetention", "s3:GetObject", "s3:GetObjectVersion", "s3:GetObjectRetention"], Resource = "arn:aws:s3:::${local.evidence_bucket}/*" }
       ]) : jsonencode([
       { Effect = "Allow", Action = ["bedrock:InvokeModel"], Resource = "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-micro-v1:0" }
@@ -125,7 +129,9 @@ resource "aws_iam_role_policy" "shutdown" {
 resource "aws_iam_role" "deploy" {
   name                 = "${local.prefix}-deploy"
   max_session_duration = 3600
-  assume_role_policy   = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Federated = aws_iam_openid_connect_provider.github.arn }, Action = "sts:AssumeRoleWithWebIdentity", Condition = { StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com", "token.actions.githubusercontent.com:sub" = "repo:mastalink@72055896/BitCadence@1245844706:ref:refs/heads/${local.branch}" } } }] })
+  # Immutable subjects are GitHub's default for repositories created after
+  # July 15, 2026. This repository's API and the live role confirm this format.
+  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Federated = aws_iam_openid_connect_provider.github.arn }, Action = "sts:AssumeRoleWithWebIdentity", Condition = { StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com", "token.actions.githubusercontent.com:sub" = [for branch in local.deploy_branches : "repo:mastalink@72055896/BitCadence@1245844706:ref:refs/heads/${branch}"] } } }] })
 }
 resource "aws_iam_role_policy" "deploy" {
   role = aws_iam_role.deploy.id

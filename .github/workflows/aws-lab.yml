@@ -1,8 +1,5 @@
 name: AWS private test lab
 on:
-  push:
-    branches: [codex/bitcadence-completion]
-    paths: ['infra/aws/lab/**', '.github/workflows/aws-lab.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    if: github.repository == 'mastalink/BitCadence' && github.ref == 'refs/heads/codex/bitcadence-completion'
+    if: github.repository == 'mastalink/BitCadence' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/bitcadence-completion')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

@@ -3,6 +3,8 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import uuid
+import socket
 
 import psutil
 import pytest
@@ -13,6 +15,25 @@ from mco.fleet import WorkerConfig
 
 def config(mode="waker"):
     return WorkerConfig("example", "reviewer", "reviewer-local", mode, "example.cmd", 10, 60)
+
+
+@pytest.fixture
+def desktop_adapter(tmp_path):
+    from mco.agentd.platform.windows import WindowsSupervisorLock
+    from mco.desktop.windows import DesktopWindowsAdapter
+    name = 'Global\\BitCadence-test-' + uuid.uuid4().hex
+    def create():
+        lock = WindowsSupervisorLock(metadata_path=tmp_path / 'test.lock')
+        lock.name = name  # Real named mutex, isolated from the user's running app.
+        return DesktopWindowsAdapter(pidfile=tmp_path / 'pids.json', supervisor_lock=lock)
+    return create
+
+
+@pytest.fixture
+def gateway_port():
+    with socket.socket() as listener:
+        listener.bind(('127.0.0.1', 0))
+        return listener.getsockname()[1]
 
 
 def test_discovery_excludes_mcp_other_roles_and_other_ports():
@@ -36,7 +57,9 @@ def test_stop_tree_releases_descendants(tmp_path):
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     try:
         deadline = time.monotonic() + 10
-        while not child_pid.exists() and time.monotonic() < deadline:
+        while time.monotonic() < deadline:
+            if child_pid.exists() and child_pid.read_text().strip().isdigit():
+                break
             time.sleep(.05)
         child = psutil.Process(int(child_pid.read_text()))
         stop_tree(psutil.Process(process.pid))
@@ -48,13 +71,13 @@ def test_stop_tree_releases_descendants(tmp_path):
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows desktop runtime")
-def test_native_supervisor_launch_stop_and_singleton(tmp_path):
+def test_native_supervisor_launch_stop_and_singleton(tmp_path, desktop_adapter, gateway_port):
     from mco.agentd.platform.windows import SupervisorAlreadyRunning
-    controller = DesktopController(fleet_path=tmp_path / "empty.toml", runtime_dir=tmp_path / "runtime")
+    controller = DesktopController(fleet_path=tmp_path / "empty.toml", runtime_dir=tmp_path / "runtime", adapter=desktop_adapter(), port=gateway_port)
     try:
         assert all(row[1] == "stopped" for row in controller.rows())
         with pytest.raises(SupervisorAlreadyRunning):
-            DesktopController(fleet_path=tmp_path / "empty.toml", runtime_dir=tmp_path / "second")
+            DesktopController(fleet_path=tmp_path / "empty.toml", runtime_dir=tmp_path / "second", adapter=desktop_adapter(), port=gateway_port)
         controller.supervisor._argv = lambda cfg: [sys.executable, "-u", "-c", "import time; print('desktop child started'); time.sleep(120)"]
         controller.supervisor.start("gateway")
         runtime = controller.supervisor.workers["gateway"]
@@ -79,7 +102,7 @@ def test_orphan_reaper_rejects_recycled_pid(tmp_path):
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows desktop runtime")
-def test_real_gateway_readiness_and_stop(tmp_path):
+def test_real_gateway_readiness_and_stop(tmp_path, desktop_adapter):
     import socket
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
@@ -100,7 +123,7 @@ from mco.cli import create_app
 import uvicorn
 uvicorn.run(create_app(), host='127.0.0.1', port=int(sys.argv[1]))
 ''')
-    controller = DesktopController(fleet_path=tmp_path / "empty.toml", runtime_dir=tmp_path / "runtime", port=port)
+    controller = DesktopController(fleet_path=tmp_path / "empty.toml", runtime_dir=tmp_path / "runtime", port=port, adapter=desktop_adapter())
     try:
         controller.supervisor._argv = lambda cfg: [sys.executable, str(script), str(port)]
         controller.start("gateway")

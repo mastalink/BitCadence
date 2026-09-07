@@ -108,7 +108,11 @@ variable "dynatrace_api_token" {
 variable "evidence_retention_days" {
   description = "S3 Object Lock COMPLIANCE retention. Nobody - including root - can delete an evidence object before this elapses. Choose deliberately."
   type        = number
-  default     = 365
+  default     = 1
+  validation {
+    condition     = var.evidence_retention_days >= 1 && floor(var.evidence_retention_days) == var.evidence_retention_days
+    error_message = "Evidence retention must be a positive whole number of days."
+  }
 }
 
 variable "alert_email" {

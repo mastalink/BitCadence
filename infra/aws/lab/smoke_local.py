@@ -5,6 +5,7 @@ from pathlib import Path
 import threading
 import time
 import httpx
+from io import BytesIO
 
 
 class Secrets:
@@ -16,9 +17,19 @@ class Secrets:
 
 
 class Sink:
+    objects = {}
+
     def put_object(self, **kwargs):
         assert kwargs["ObjectLockMode"] == "COMPLIANCE"
+        self.objects[kwargs['Key']] = kwargs
         return {"VersionId": "local-stub-version"}
+
+    def get_object(self, **kwargs):
+        from botocore.exceptions import ClientError
+        if kwargs['Key'] not in self.objects:
+            raise ClientError({'Error': {'Code': 'NoSuchKey'}}, 'GetObject')
+        item = self.objects[kwargs['Key']]
+        return {**item, 'Body': BytesIO(item['Body']), 'VersionId': 'local-stub-version'}
 
 
 def main():

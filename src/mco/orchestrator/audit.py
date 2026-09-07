@@ -25,6 +25,10 @@ Optionally, when an audit HMAC key is configured in the encrypted secret store
 a holder of the key, defending against an attacker who recomputes a consistent
 chain from scratch.
 
+The vault is authoritative. Containers without a vault may explicitly enable
+MCO_ALLOW_ENV_AUDIT_KEY=1 to use an environment key; this emits a warning and
+does not override a vault key or bypass a vault that cannot be unlocked.
+
 Audit failures propagate. Job mutations also persist an outbox row in the
 same database transaction, so a failed rich event cannot erase state evidence.
 """
@@ -34,7 +38,8 @@ import hmac
 import json
 import logging
 import threading
-from mco.orchestrator.leases import transaction, is_postgres
+from datetime import datetime, timezone
+from mco.orchestrator.store_context import transaction, is_postgres
 from typing import Any, Optional
 
 logger = logging.getLogger("mco.orchestrator.audit")
@@ -72,22 +77,22 @@ def _canonical(content: dict) -> str:
 def _content_of(row: dict) -> dict:
     """Project a stored row down to the fields the hash is computed over."""
     content = {f: row.get(f) for f in _CONTENT_FIELDS}
-    # PostgREST trims fractional trailing zeroes from timestamptz; psycopg
-    # preserves six digits. Reuse the signed representation only when both
-    # timestamps denote the same instant. All actual row fields still get hashed.
-    if row.get('canonical_content'):
-        try:
-            from datetime import datetime
-            stamp = json.loads(row['canonical_content'])['created_at']
-            if datetime.fromisoformat(stamp.replace('Z','+00:00')) == datetime.fromisoformat(str(content['created_at']).replace('Z','+00:00')):
-                content['created_at'] = stamp
-        except (ValueError, TypeError, KeyError):
-            pass
+    content['created_at'] = _canonical_timestamp(content['created_at'])
     return content
+
+
+def _canonical_timestamp(value: Any) -> str:
+    """Match PostgreSQL's UTC, six-fractional-digit audit timestamp format."""
+    stamp = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+    if stamp.tzinfo is None:
+        raise ValueError('Audit timestamps must include a timezone')
+    return stamp.astimezone(timezone.utc).isoformat(timespec='microseconds')
 
 
 def compute_hash(prev_hash: str, content: dict) -> str:
     """Hash one event: sha256(prev_hash + '\\n' + canonical(content))."""
+    if 'created_at' in content:
+        content = {**content, 'created_at': _canonical_timestamp(content['created_at'])}
     material = f"{prev_hash or ''}\n{_canonical(content)}".encode("utf-8")
     return hashlib.sha256(material).hexdigest()
 
@@ -100,19 +105,19 @@ def _resolve_audit_hmac_key() -> Optional[bytes]:
     """
     try:
         import os
-        if os.environ.get(HMAC_SECRET_NAME):
-            return os.environ[HMAC_SECRET_NAME].encode("utf-8")
         from mco.security import get_secret_store
 
         store = get_secret_store()
-        if not store.is_initialized():
-            return None
-        if not store.is_unlocked and not store.auto_unlock():
-            return None
-        raw = store.get(HMAC_SECRET_NAME)
-        if not raw:
-            return None
-        return raw.encode("utf-8")
+        if store.is_initialized():
+            if not store.is_unlocked and not store.auto_unlock():
+                return None
+            raw = store.get(HMAC_SECRET_NAME)
+            if raw:
+                return raw.encode("utf-8")
+        if os.environ.get('MCO_ALLOW_ENV_AUDIT_KEY') == '1' and os.environ.get(HMAC_SECRET_NAME):
+            logger.warning('Using explicitly enabled environment audit key; prefer the encrypted vault')
+            return os.environ[HMAC_SECRET_NAME].encode('utf-8')
+        return None
     except Exception as e:  # pragma: no cover - defensive
         logger.debug(f"Audit HMAC key unavailable: {type(e).__name__}")
         return None
@@ -181,7 +186,7 @@ def _record_event(
                 # so Python and PostgreSQL hash exactly the same bytes.
                 from mco.localstore import _now_iso
                 content = {"job_id": str(job_id), "event": event, "actor_id": actor_id,
-                           "actor_role": actor_role, "detail": detail or {}, "created_at": _now_iso()}
+                           "actor_role": actor_role, "detail": detail or {}, "created_at": _canonical_timestamp(_now_iso())}
                 key = _audit_hmac_key()
                 db_client.rpc("mco_append_event", {"p_content": _canonical(content),
                     "p_key": key.decode("utf-8") if key else None,
@@ -203,7 +208,7 @@ def _record_event(
                 "actor_id": actor_id,
                 "actor_role": actor_role,
                 "detail": detail or {},
-                "created_at": _now_iso(),
+                "created_at": _canonical_timestamp(_now_iso()),
             }
             row_hash = compute_hash(prev_hash, content)
             signature = _sign(row_hash, _audit_hmac_key())
@@ -219,7 +224,7 @@ def _record_event(
             # Keep per-job timestamps ordered even if the system clock moves back.
             if prev and content["created_at"] <= prev["created_at"]:
                 from datetime import datetime, timedelta
-                record["created_at"] = (datetime.fromisoformat(prev["created_at"]) + timedelta(microseconds=1)).isoformat()
+                record["created_at"] = (datetime.fromisoformat(prev["created_at"]) + timedelta(microseconds=1)).isoformat(timespec='microseconds')
                 record["hash"] = compute_hash(prev_hash, _content_of(record))
                 if signature is not None:
                     record["signature"] = _sign(record["hash"], _audit_hmac_key())
@@ -248,7 +253,7 @@ def get_events(db_client: Any, job_id: str) -> list:
         raise
 
 
-def verify_chain(db_client: Any, job_id: str, checkpoint: Optional[dict] = None) -> dict:
+def verify_chain(db_client: Any, job_id: str, checkpoint: Optional[dict] = None, *, events: Optional[list] = None) -> dict:
     """Walk a job's hash chain and report integrity.
 
     Returns a dict::
@@ -266,7 +271,7 @@ def verify_chain(db_client: Any, job_id: str, checkpoint: Optional[dict] = None)
     prev_hash linkage, or HMAC signature does not match is reported as the
     broken link; verification stops there.
     """
-    events = get_events(db_client, str(job_id))
+    events = get_events(db_client, str(job_id)) if events is None else events
     key = _audit_hmac_key()
     result = {
         "job_id": str(job_id),
@@ -287,8 +292,23 @@ def verify_chain(db_client: Any, job_id: str, checkpoint: Optional[dict] = None)
                                  f"got {stored_prev or '<genesis>'})")
             return result
 
-        recomputed = compute_hash(stored_prev, _content_of(row))
+        try:
+            recomputed = compute_hash(stored_prev, _content_of(row))
+        except (ValueError, TypeError):
+            result.update(ok=False, broken_at=idx, reason=f'invalid audit timestamp at event {idx}')
+            return result
         stored_hash = row.get("hash") or ""
+        # Older Python writers omitted fractions exactly on a whole second.
+        # Accept that one deterministic legacy encoding, independently derived
+        # from the row timestamp. Never use canonical_content as verification input.
+        if not hmac.compare_digest(recomputed, stored_hash):
+            legacy = _content_of(row)
+            stamp = datetime.fromisoformat(legacy['created_at'])
+            if stamp.microsecond == 0:
+                legacy['created_at'] = stamp.isoformat(timespec='seconds')
+                candidate = hashlib.sha256(f"{stored_prev}\n{_canonical(legacy)}".encode('utf-8')).hexdigest()
+                if hmac.compare_digest(candidate, stored_hash):
+                    recomputed = candidate
         if not hmac.compare_digest(recomputed, stored_hash):
             result.update(ok=False, broken_at=idx,
                           reason=f"content hash mismatch at event {idx} "

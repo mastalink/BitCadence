@@ -96,6 +96,8 @@ locals {
         { name = "MCO_LOG_JSON", value = "true" },
         { name = "MCO_EVIDENCE_BUCKET", value = aws_s3_bucket.evidence.bucket },
         { name = "MCO_EVIDENCE_ACK_REQUIRED", value = "true" },
+        # ECS injects the signing key from Secrets Manager; no local vault exists.
+        { name = "MCO_ALLOW_ENV_AUDIT_KEY", value = "1" },
         { name = "MCO_EVIDENCE_RETENTION_DAYS", value = tostring(var.evidence_retention_days) },
         { name = "AWS_REGION", value = var.region },
         { name = "WORKER_ROLES", value = join(",", var.worker_roles) },

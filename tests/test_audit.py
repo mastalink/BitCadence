@@ -140,3 +140,59 @@ def test_postgrest_fractional_timestamp_preserves_hash_but_not_tamper():
     assert compute_hash('',_content_of(stored)) == compute_hash('',original)
     stored['detail'] = {'tampered':True}
     assert compute_hash('',_content_of(stored)) != compute_hash('',original)
+
+
+@pytest.mark.parametrize('stamp', ['2026-09-05T05:44:45.89845Z', '2026-09-05T01:44:45.898450-04:00'])
+def test_timestamp_is_canonical_without_trusting_shadow_content(stamp):
+    from mco.orchestrator.audit import _content_of
+    row = {'created_at': stamp, 'canonical_content': '{"created_at":"attacker"}'}
+    assert _content_of(row)['created_at'] == '2026-09-05T05:44:45.898450+00:00'
+
+
+@pytest.mark.parametrize('vault_key,opt_in,expected', [
+    ('vault-secret', '1', b'vault-secret'),
+    ('vault-secret', '', b'vault-secret'),
+    (None, '', None),
+    (None, '1', b'env-secret'),
+])
+def test_audit_key_vault_precedes_explicit_env_fallback(monkeypatch, caplog, vault_key, opt_in, expected):
+    from mco.orchestrator.audit import _resolve_audit_hmac_key
+    store = MagicMock()
+    store.is_initialized.return_value = True
+    store.is_unlocked = True
+    store.get.return_value = vault_key
+    monkeypatch.setattr('mco.security.get_secret_store', lambda: store)
+    monkeypatch.setenv('MCO_AUDIT_HMAC_KEY', 'env-secret')
+    monkeypatch.setenv('MCO_ALLOW_ENV_AUDIT_KEY', opt_in)
+    assert _resolve_audit_hmac_key() == expected
+    assert ('explicitly enabled environment audit key' in caplog.text) == (expected == b'env-secret')
+    assert 'env-secret' not in caplog.text and 'vault-secret' not in caplog.text
+
+
+def test_locked_vault_cannot_be_bypassed_by_env(monkeypatch):
+    from mco.orchestrator.audit import _resolve_audit_hmac_key
+    store = MagicMock()
+    store.is_initialized.return_value = True
+    store.is_unlocked = False
+    store.auto_unlock.return_value = False
+    monkeypatch.setattr('mco.security.get_secret_store', lambda: store)
+    monkeypatch.setenv('MCO_AUDIT_HMAC_KEY', 'env-secret')
+    monkeypatch.setenv('MCO_ALLOW_ENV_AUDIT_KEY', '1')
+    assert _resolve_audit_hmac_key() is None
+
+
+def test_legacy_whole_second_history_stays_verifiable(tmp_path, monkeypatch):
+    import hashlib
+    from mco.localstore import LocalStore
+    from mco.orchestrator import audit
+    monkeypatch.setattr(audit, '_hmac_key_cache', None)
+    content = {'job_id': 'legacy', 'event': 'created', 'actor_id': None,
+               'actor_role': None, 'detail': {}, 'created_at': '2026-09-05T05:44:45+00:00'}
+    old_hash = hashlib.sha256(('\n' + audit._canonical(content)).encode()).hexdigest()
+    db = LocalStore(tmp_path / 'legacy.db')
+    try:
+        db.table(audit.EVENTS_TABLE).insert({**content, 'hash': old_hash, 'prev_hash': ''}).execute()
+        audit.record_event(db, 'legacy', 'new-canonical-event')
+        assert audit.verify_chain(db, 'legacy')['ok']
+    finally:
+        db.close()

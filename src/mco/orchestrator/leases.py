@@ -1,11 +1,38 @@
-"""Fenced attempt ownership. Rotate incarnation explicitly after a database restore."""
+"""Fenced leases: one owner per attempt, proven at every worker write.
+
+F1: A partitioned worker must not overwrite its replacement's result. The
+random lease id, owner, epoch, store incarnation and current state all belong
+to the proof; HTTP and WebSocket handlers use this same state machine.
+
+F2: Reapers compare the observed expiry as well as the attempt. Only one can
+requeue it, and a renewal since observation prevents a stale reaper winning.
+F3: Renewal must arrive before expiry; a reaper need not run to fence a lease.
+
+F4: Epochs roll back with database snapshots (the ABA problem). Operators must
+run restore-fence to rotate the persisted incarnation after restoring a backup.
+Identity is read inside each transaction, never cached across a restore.
+
+F5: Worker transitions are enforced here before handlers unlock dependent jobs
+or emit success. HALTED is terminal for worker claims; operator retry is a
+separate path that requires a new attempt. Pause fences existing work atomically.
+
+F6: A receipt permits an identical final result to be retried after a lost
+response; a changed result is rejected. External effects still require the
+downstream service to honor the provided idempotency key.
+
+SQLite serializes these multi-step checks in a LocalStore transaction.
+PostgreSQL serializes them inside mco_lease, not across separate HTTP queries.
+Required off-box acknowledgement runs after commit; failure cannot undo work
+already committed, so callers retain their proof and retry the same result.
+"""
 from __future__ import annotations
 import uuid
-from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+from typing import Any, Iterable
 from mco.orchestrator.evidence import attempt_boundary
+from mco.orchestrator.store_context import transaction, is_postgres
 
 PENDING, LEASED, IN_PROGRESS = 'pending', 'leased', 'in_progress'
 COMPLETED, FAILED, CANCELLED, HALTED = 'completed', 'failed', 'cancelled', 'halted'
@@ -17,10 +44,10 @@ DEFAULT_TTL_SECONDS, DEFAULT_RENEW_SECONDS = 900, 300
 _INCARNATION_TABLE, _INCARNATION_ROW = 'mco_store_identity', 'store'
 
 class LeaseError(RuntimeError):
-    def __init__(self, reason, *, expected=None, actual=None):
+    def __init__(self, reason: str, *, expected: dict | None = None, actual: dict | None = None):
         super().__init__(reason)
         self.reason, self.expected, self.actual = reason, expected or {}, actual or {}
-    def as_detail(self):
+    def as_detail(self) -> dict:
         return {'fenced': True, 'reason': self.reason, 'expected': self.expected, 'actual': self.actual}
 
 @dataclass(frozen=True)
@@ -30,16 +57,9 @@ class Lease:
     epoch: int
     incarnation: str
     owner: str
-    def as_claim(self):
+    def as_claim(self) -> dict:
         return {'lease_id': self.lease_id, 'lease_epoch': self.epoch,
                 'lease_incarnation': self.incarnation, 'agent_instance_id': self.owner}
-
-def is_postgres(db):
-    return type(db).__module__.split('.')[0] in {'supabase', 'postgrest'}
-
-def transaction(db):
-    from mco.localstore import LocalStore
-    return db.transaction() if isinstance(db, LocalStore) else nullcontext()
 
 def atomic(func):
     @wraps(func)
@@ -59,7 +79,7 @@ def _remote(db, action, job_id='', owner='', claim=None, updates=None, ttl=900):
     return data or {}
 
 @atomic
-def store_incarnation(db, *, refresh=False):
+def store_incarnation(db: Any, *, refresh: bool = False) -> str:
     if is_postgres(db):
         return _remote(db, 'identity')['incarnation']
     rows = db.table(_INCARNATION_TABLE).select('*').eq('id', _INCARNATION_ROW).execute().data
@@ -70,11 +90,11 @@ def store_incarnation(db, *, refresh=False):
         'incarnation': fresh, 'created_at': _now_iso()}).execute()
     return fresh
 
-def reset_incarnation_cache():
+def reset_incarnation_cache() -> None:
     pass  # No cache: identity is read in every transaction.
 
 @atomic
-def rotate_incarnation(db):
+def rotate_incarnation(db: Any) -> str:
     if is_postgres(db):
         return _remote(db, 'rotate')['incarnation']
     fresh = uuid.uuid4().hex
@@ -109,7 +129,7 @@ def _lease(job):
 
 @attempt_boundary
 @atomic
-def acquire_lease(db, job_id, owner, *, ttl_seconds=DEFAULT_TTL_SECONDS):
+def acquire_lease(db: Any, job_id: str, owner: str, *, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> Lease | None:
     if not owner:
         return None
     if is_postgres(db):
@@ -127,7 +147,7 @@ def acquire_lease(db, job_id, owner, *, ttl_seconds=DEFAULT_TTL_SECONDS):
     rows = db.table('agent_jobs').update(updates).eq('id', str(job_id)).eq('status', PENDING).execute().data
     return _lease(rows[0]) if rows else None
 
-def is_expired(job, *, now=None, ttl_seconds=DEFAULT_TTL_SECONDS):
+def is_expired(job: dict, *, now: datetime | None = None, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> bool:
     expires, started = _parse(job.get('lease_expires_at')), _parse(job.get('started_at'))
     expires = expires or (started + timedelta(seconds=ttl_seconds) if started else None)
     return expires is not None and expires <= (now or _now())
@@ -154,7 +174,7 @@ def _claim_query(db, job, claim, updates):
 
 @attempt_boundary
 @atomic
-def renew_lease(db, lease, *, ttl_seconds=DEFAULT_TTL_SECONDS):
+def renew_lease(db: Any, lease: Lease, *, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> bool:
     if is_postgres(db):
         try:
             return bool(_remote(db, 'renew', lease.job_id, lease.owner, lease.as_claim(), ttl=ttl_seconds).get('job'))
@@ -170,7 +190,7 @@ def renew_lease(db, lease, *, ttl_seconds=DEFAULT_TTL_SECONDS):
         return False
 
 @atomic
-def expire_lease(db, job, *, ttl_seconds=DEFAULT_TTL_SECONDS):
+def expire_lease(db: Any, job: dict, *, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> bool:
     if is_postgres(db):
         return bool(_remote(db, 'expire', job['id'], claim=job, ttl=ttl_seconds).get('job'))
     current = _get(db, job.get('id'))
@@ -185,7 +205,7 @@ def expire_lease(db, job, *, ttl_seconds=DEFAULT_TTL_SECONDS):
 
 @attempt_boundary
 @atomic
-def fenced_update(db, job_id, claim, updates, *, allowed_from=None):
+def fenced_update(db: Any, job_id: str, claim: dict, updates: dict, *, allowed_from: Iterable[str] | None = None) -> dict:
     if set(updates) - {'status', 'output_payload', 'error_message'}:
         raise LeaseError('worker update contains protected fields')
     if is_postgres(db):
@@ -218,7 +238,7 @@ def fenced_update(db, job_id, claim, updates, *, allowed_from=None):
     return rows[0]
 
 @atomic
-def set_paused(db, paused, actor=None):
+def set_paused(db: Any, paused: bool, actor: dict | None = None) -> list[dict]:
     """Commit admission barrier and halt together, serialized with acquisition."""
     if is_postgres(db):
         return _remote(db, 'pause' if paused else 'resume', updates=actor or {}).get('halted', [])
@@ -232,5 +252,5 @@ def set_paused(db, paused, actor=None):
                 'error_message': 'Halted by operator kill switch'}).eq('id', job['id']).eq('status', job['status']).execute().data)
     return halted
 
-def idempotency_key(job_id, attempt):
+def idempotency_key(job_id: str, attempt: Any) -> str:
     return f'bitcadence:{job_id}:{int(attempt or 0)}'
