@@ -61,9 +61,10 @@ These are four different claims, and only the last one is delivery:
 `ROLE_COMMANDS` in `src/mco/orchestrator/executors.py` defines the headless
 executor per role. Two consequences that surprise people:
 
-- **`antigravity` runs the `gemini` CLI**, not the Antigravity IDE. Opening the
-  IDE starts no unattended worker; it is a separate manual path over the same
-  MCP tools.
+- **`antigravity` must run the Antigravity IDE desktop app**, via
+  `antigravity-ide chat --mode agent <prompt>`. `ROLE_COMMANDS` still maps the
+  role to the `gemini` CLI, which is now a dead path (see below), so this role
+  works only through its `--exec` script.
 - **`grok` has no entry at all.** It works only through its `--exec` script, so
   the built-in `listen` daemon path cannot run it.
 
@@ -72,8 +73,14 @@ executor per role. Two consequences that surprise people:
 Each worker's log is `~/.mco/logs/<instance>.log`. Observed on 2026-09-08:
 
 - **gemini** — `IneligibleTierError: This client is no longer supported for
-  Gemini Code Assist for individuals.` The free OAuth tier is refused, so the
-  `antigravity` role cannot run headlessly without a paid key.
+  Gemini Code Assist for individuals. ... migrate to the Antigravity suite of
+  products.` The error is the instruction: drive the Antigravity IDE instead.
+  `scripts/workers/antigravity-worker-run.ps1` does that. Two traps there — the
+  IDE keeps its MCP config at `%APPDATA%/Antigravity IDE/User/mcp.json` and does
+  **not** read `~/.gemini/*/mcp_config.json`, so registration must go through
+  `--add-mcp`; and `chat` dispatches to the GUI and returns 0 immediately, so
+  exit status says nothing about whether the job ran. This role also needs a
+  live desktop session and cannot run truly headless.
 - **claude** — `Failed to authenticate: OAuth session expired and could not be
   refreshed.` Reproduces from any plain shell, so it is CLI-level auth, not the
   runner.
