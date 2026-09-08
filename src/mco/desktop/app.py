@@ -166,6 +166,10 @@ class DesktopApp:
             show_request.unlink(missing_ok=True)
             self.root.deiconify()
             self.root.lift()
+        start_request = self.controller.runtime_dir / "start-all-request"
+        if start_request.exists() and not self.busy and not self.closing:
+            start_request.unlink(missing_ok=True)
+            self.submit(self.controller.start_all)
         while not self.messages.empty():
             kind, value = self.messages.get_nowait()
             if kind == "show":
@@ -229,6 +233,8 @@ def main():
     parser.add_argument("--port", type=int, default=18789)
     parser.add_argument("--fleet", type=Path)
     parser.add_argument("--quit", action="store_true", help="Close the running manager and its owned processes")
+    parser.add_argument("--start-all", action="store_true", help="Start the configured local stack through the desktop supervisor")
+    parser.add_argument("--minimized", action="store_true", help="Start in the notification area when tray support is available")
     args = parser.parse_args()
     if args.quit:
         marker = Path.home() / ".mco" / "desktop" / "exit-request"
@@ -244,12 +250,19 @@ def main():
         if args.fleet:
             kwargs["fleet_path"] = args.fleet
         controller = DesktopController(**kwargs)
-        DesktopApp(controller).run()
+        app = DesktopApp(controller)
+        if args.start_all:
+            app.root.after(0, lambda: app.submit(controller.start_all))
+        if args.minimized and app.tray:
+            app.root.after(0, app.root.withdraw)
+        app.run()
     except Exception as exc:
         from mco.agentd.platform.windows import SupervisorAlreadyRunning
         if isinstance(exc, SupervisorAlreadyRunning):
             marker = Path.home() / ".mco" / "desktop" / "show-window"
             if marker.parent.exists():
+                if args.start_all:
+                    (marker.parent / "start-all-request").touch()
                 marker.touch()
                 return
         root = tk.Tk()

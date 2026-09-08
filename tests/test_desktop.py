@@ -75,7 +75,9 @@ def test_native_supervisor_launch_stop_and_singleton(tmp_path, desktop_adapter, 
     from mco.agentd.platform.windows import SupervisorAlreadyRunning
     controller = DesktopController(fleet_path=tmp_path / "empty.toml", runtime_dir=tmp_path / "runtime", adapter=desktop_adapter(), port=gateway_port)
     try:
-        assert all(row[1] == "stopped" for row in controller.rows())
+        # The isolated port belongs to this test; a real user's scheduler may
+        # legitimately be discovered as external on this machine.
+        assert next(row[1] for row in controller.rows() if row[0] == "gateway") == "stopped"
         with pytest.raises(SupervisorAlreadyRunning):
             DesktopController(fleet_path=tmp_path / "empty.toml", runtime_dir=tmp_path / "second", adapter=desktop_adapter(), port=gateway_port)
         controller.supervisor._argv = lambda cfg: [sys.executable, "-u", "-c", "import time; print('desktop child started'); time.sleep(120)"]
