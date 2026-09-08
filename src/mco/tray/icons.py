@@ -4,8 +4,8 @@ Four states, and only four:
 
 * green  - daemon reachable, nothing restarting or crash-looped
 * amber  - something restarting, backing off, or otherwise degraded
-* red    - a worker is crash-looped
-* grey   - daemon not running / control API unreachable
+* red    - a worker is crash-looped (latched; it is not retrying)
+* grey   - daemon not running / control API unreachable / no agentd token
 
 Badge overlay (approval count) is applied only when the count is live.
 A ``None`` count means the gateway was unreachable - never paint a stale
@@ -41,8 +41,9 @@ def icon_state_from_status(
 ) -> str:
     """Pick the tray color from a ``GET /v1/status`` payload.
 
-    ``daemon_reachable`` is the tray's own verdict (could we talk to
-    127.0.0.1:18790?). Grey wins over everything when the daemon is gone.
+    ``daemon_reachable`` is the tray's own verdict (could we talk to the
+    per-user loopback control port with the daemon token?). Grey wins over
+    everything when the daemon is gone or the token is missing.
     """
     if not daemon_reachable or status is None:
         return ICON_GREY
@@ -76,7 +77,7 @@ def tooltip_text(icon_state: str, approval_count: Optional[int]) -> str:
     health = {
         ICON_GREEN: "healthy",
         ICON_AMBER: "degraded",
-        ICON_RED: "crash-looped",
+        ICON_RED: "crash-looped (latched until reset)",
         ICON_GREY: "daemon not running",
     }.get(icon_state, icon_state)
     if not should_show_approval_badge(approval_count):

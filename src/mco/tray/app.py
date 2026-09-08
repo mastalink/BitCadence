@@ -4,12 +4,21 @@ pystray - one codebase for Windows tray, macOS menu bar, Linux AppIndicator.
 It will not feel fully native on macOS; that is accepted. Do not reach for rumps.
 
 This is a STATUS LIGHT AND A DOOR, not a control panel. Menu: Open Console,
-Start all, Stop all, Restart all, per-worker (state + Restart), Quit.
-Everything else is a click into the console.
+Start all, Stop all, Restart all, per-worker (state + mode + Restart, and
+Reset when crashlooped), Quit. Everything else is a click into the console.
 
-The daemon's control API is local HTTP on 127.0.0.1:18790 (ADR 0002 §4.4).
-Approval counts come from the GATEWAY, not the daemon - the daemon knows
-about processes, not jobs. A stale count is never shown as live.
+Two credentials, never mixed (ADR 0002 R7):
+  daemon control API  -> ~/.mco/agentd.token
+  gateway (approvals) -> the existing gateway token
+If agentd.token is missing, the daemon is treated as unreachable (grey icon).
+There is no fallback to the gateway token.
+
+/v1/logs is a separate capability. The tray does not put logs in the menu; if
+it ever fetches them, a missing or rejected log token degrades to "no logs"
+instead of erroring.
+
+The control endpoint is per-user, not per-machine (ADR 0002 R1): loopback,
+port namespaced by the logged-in user. Workers do not run before login.
 
 Headless servers have no tray. ``mco tray`` exits with a clear message;
 the daemon must never depend on this app running.
@@ -23,6 +32,7 @@ import threading
 import subprocess
 import webbrowser
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import quote
 
@@ -40,6 +50,9 @@ GATEWAY_DEFAULT = "http://127.0.0.1:18789"
 POLL_INTERVAL_S = 5.0
 HTTP_TIMEOUT_S = 2.0
 
+AGENTD_TOKEN_PATH = Path.home() / ".mco" / "agentd.token"
+AGENTD_LOGS_TOKEN_PATH = Path.home() / ".mco" / "agentd.logs.token"
+
 AGENTD_TASK = "BitCadence-agentd"
 AGENTD_LAUNCHD = "com.bitcadence.agentd"
 AGENTD_SYSTEMD = "bitcadence-agentd.service"
@@ -55,6 +68,8 @@ MISSING_EXTRA_MESSAGE = (
     'pip install "bitcadence[tray]"'
 )
 
+_CRASHLOOPED = "crashlooped"
+
 
 @dataclass
 class Snapshot:
@@ -65,6 +80,7 @@ class Snapshot:
     status: Optional[dict[str, Any]]
     workers: list[dict[str, Any]]
     approval_count: Optional[int]
+    logs: Optional[list[str]] = None
 
 
 def display_available() -> bool:
@@ -85,13 +101,53 @@ def display_available() -> bool:
     return True
 
 
-def load_local_token() -> str:
-    """Bearer token from MCO_LOCAL_TOKEN in ~/.mco/.env (same as the gateway)."""
+def _read_token_file(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def load_agentd_control_token() -> str:
+    """Daemon control bearer. Never falls back to the gateway token.
+
+    A missing or empty ``~/.mco/agentd.token`` returns "" so the tray paints
+    grey rather than sending ``MCO_LOCAL_TOKEN`` at the daemon. This function
+    does not create the file — that is the daemon's job.
+    """
+    env = (os.environ.get("MCO_AGENTD_TOKEN") or "").strip()
+    if env:
+        return env
+    return _read_token_file(AGENTD_TOKEN_PATH)
+
+
+def load_agentd_logs_token() -> str:
+    """Separate log-read capability (ADR 0002 R7). Empty means no log access."""
+    env = (os.environ.get("MCO_AGENTD_LOGS_TOKEN") or "").strip()
+    if env:
+        return env
+    return _read_token_file(AGENTD_LOGS_TOKEN_PATH)
+
+
+def load_gateway_token() -> str:
+    """Gateway bearer for approval counts. Distinct from the daemon token."""
     try:
         from mco.config import get_config
-        return (get_config().get("MCO_LOCAL_TOKEN") or "").strip()
+        cfg = get_config()
+        token = (
+            cfg.get("MCO_AGENT_TOKEN")
+            or cfg.get("MCO_LOCAL_TOKEN")
+            or ""
+        )
+        if token:
+            return str(token).strip()
     except Exception:
-        return (os.environ.get("MCO_LOCAL_TOKEN") or "").strip()
+        pass
+    return (
+        os.environ.get("MCO_AGENT_TOKEN")
+        or os.environ.get("MCO_LOCAL_TOKEN")
+        or ""
+    ).strip()
 
 
 def load_gateway_url() -> str:
@@ -103,7 +159,12 @@ def load_gateway_url() -> str:
 
 
 def load_daemon_url() -> str:
-    return (os.environ.get("MCO_AGENTD_URL") or DAEMON_DEFAULT).rstrip("/")
+    """Per-user loopback URL. Env override wins; otherwise the namespaced port."""
+    env = (os.environ.get("MCO_AGENTD_URL") or "").strip()
+    if env:
+        return env.rstrip("/")
+    from mco.agentd.control import CONTROL_HOST, CONTROL_PORT
+    return f"http://{CONTROL_HOST}:{CONTROL_PORT}"
 
 
 def approval_count_from_jobs(jobs: Any) -> int:
@@ -112,11 +173,38 @@ def approval_count_from_jobs(jobs: Any) -> int:
     return sum(1 for job in jobs if isinstance(job, dict) and job.get("status") == "needs_approval")
 
 
+def worker_name(worker: dict[str, Any]) -> str:
+    return str(worker.get("name") or worker.get("instance") or "worker")
+
+
+def worker_state(worker: dict[str, Any]) -> str:
+    return str(worker.get("state") or "unknown")
+
+
+def worker_mode(worker: dict[str, Any]) -> str:
+    """Fleet schema field. Disabled is mode='off'; there is no 'enabled'."""
+    return str(worker.get("mode") or "").strip()
+
+
+def worker_menu_label(worker: dict[str, Any]) -> str:
+    name = worker_name(worker)
+    state = worker_state(worker)
+    mode = worker_mode(worker)
+    if mode:
+        return f"{name} ({state}, {mode})"
+    return f"{name} ({state})"
+
+
+def is_crashlooped(worker: dict[str, Any]) -> bool:
+    return worker_state(worker).lower().replace("-", "").replace("_", "") == _CRASHLOOPED
+
+
 def menu_structure(workers: list[dict[str, Any]], daemon_reachable: bool) -> list[dict[str, Any]]:
     """Serializable menu tree. Used by tests and by the pystray builder.
 
-    Per-worker entries are submenus showing state with a Restart action.
-    No settings, no forms.
+    Per-worker entries are submenus showing observed state and fleet mode,
+    with Restart, plus Reset when the worker is crashlooped (a latched
+    terminal state — not a transient retry). No settings, no forms.
     """
     items: list[dict[str, Any]] = [
         {"label": "Open Console", "action": "open_console"},
@@ -126,12 +214,14 @@ def menu_structure(workers: list[dict[str, Any]], daemon_reachable: bool) -> lis
     ]
     if workers:
         for worker in workers:
-            name = str(worker.get("name") or worker.get("instance") or "worker")
-            state = str(worker.get("state") or "unknown")
+            name = worker_name(worker)
+            children = [{"label": "Restart", "action": "restart", "worker": name}]
+            if is_crashlooped(worker):
+                children.append({"label": "Reset crash loop", "action": "reset", "worker": name})
             items.append({
-                "label": f"{name} ({state})",
+                "label": worker_menu_label(worker),
                 "action": "submenu",
-                "children": [{"label": "Restart", "action": "restart", "worker": name}],
+                "children": children,
             })
     else:
         hint = "Daemon not running" if not daemon_reachable else "No workers"
@@ -141,7 +231,7 @@ def menu_structure(workers: list[dict[str, Any]], daemon_reachable: bool) -> lis
 
 
 def start_daemon_service() -> tuple[bool, str]:
-    """Ask the OS to start BitCadence-agentd. Never raises."""
+    """Ask the OS to start BitCadence-agentd for this user session. Never raises."""
     try:
         if os.name == "nt":
             cmd = ["schtasks", "/Run", "/TN", AGENTD_TASK]
@@ -185,7 +275,9 @@ class TrayApp:
         self,
         daemon_url: str = DAEMON_DEFAULT,
         gateway_url: str = GATEWAY_DEFAULT,
-        token: str = "",
+        daemon_token: str = "",
+        gateway_token: str = "",
+        logs_token: str = "",
         poll_interval: float = POLL_INTERVAL_S,
         http_get: Optional[Callable[..., Any]] = None,
         http_post: Optional[Callable[..., Any]] = None,
@@ -194,10 +286,12 @@ class TrayApp:
     ):
         self.daemon_url = daemon_url.rstrip("/")
         self.gateway_url = gateway_url.rstrip("/")
-        self.token = token
+        self.daemon_token = daemon_token
+        self.gateway_token = gateway_token
+        self.logs_token = logs_token
         self.poll_interval = poll_interval
-        self._http_get = http_get or (lambda url: _request("GET", url, self.token))
-        self._http_post = http_post or (lambda url: _request("POST", url, self.token))
+        self._http_get = http_get
+        self._http_post = http_post
         self._service_starter = service_starter or start_daemon_service
         self._opener = opener or webbrowser.open
         self._snapshot = Snapshot(
@@ -206,9 +300,20 @@ class TrayApp:
             status=None,
             workers=[],
             approval_count=None,
+            logs=None,
         )
         self._stop = threading.Event()
         self._icon = None
+
+    def _get(self, url: str, token: str) -> Any:
+        if self._http_get is not None:
+            return self._http_get(url, token)
+        return _request("GET", url, token)
+
+    def _post(self, url: str, token: str) -> Any:
+        if self._http_post is not None:
+            return self._http_post(url, token)
+        return _request("POST", url, token)
 
     def refresh(self) -> Snapshot:
         status, reachable = self._poll_daemon()
@@ -221,12 +326,15 @@ class TrayApp:
             status=status,
             workers=workers,
             approval_count=approvals,
+            logs=self._snapshot.logs,
         )
         return self._snapshot
 
     def _poll_daemon(self) -> tuple[Optional[dict[str, Any]], bool]:
+        if not self.daemon_token:
+            return None, False
         try:
-            data = self._http_get(f"{self.daemon_url}/v1/status")
+            data = self._get(f"{self.daemon_url}/v1/status", self.daemon_token)
         except Exception:
             return None, False
         if not isinstance(data, dict):
@@ -237,9 +345,12 @@ class TrayApp:
         """Live count from the gateway, or None when it cannot be reached.
 
         Never returns a cached value - a failed poll hides the badge.
+        Uses the gateway token, never the daemon token.
         """
+        if not self.gateway_token:
+            return None
         try:
-            data = self._http_get(f"{self.gateway_url}/api/jobs")
+            data = self._get(f"{self.gateway_url}/api/jobs", self.gateway_token)
         except Exception:
             return None
         if data is None:
@@ -249,6 +360,29 @@ class TrayApp:
         if not isinstance(data, list):
             return None
         return approval_count_from_jobs(data)
+
+    def fetch_logs(self, worker: str | None = None, tail: int = 100) -> Optional[list[str]]:
+        """Best-effort log tail. Not shown in the menu.
+
+        Control access does not imply log access. Missing token, 401/403, or
+        any transport error returns None — never raises, never retries with
+        the control token.
+        """
+        if not self.logs_token:
+            return None
+        query = f"tail={int(tail)}"
+        if worker:
+            query += f"&worker={quote(worker, safe='')}"
+        try:
+            data = self._get(f"{self.daemon_url}/v1/logs?{query}", self.logs_token)
+        except Exception:
+            return None
+        if not isinstance(data, dict):
+            return None
+        lines = data.get("lines")
+        if not isinstance(lines, list):
+            return None
+        return [str(line) for line in lines]
 
     def start_all(self, *args: Any) -> None:
         snap = self._snapshot
@@ -276,6 +410,12 @@ class TrayApp:
             return
         self._post_named(name, "restart")
 
+    def reset_worker(self, name: str, *args: Any) -> None:
+        """Clear a latched crashlooped state. No-op if the daemon is gone."""
+        if not self._snapshot.daemon_reachable:
+            return
+        self._post_named(name, "reset")
+
     def open_console(self, *args: Any) -> None:
         self._opener(f"{self.gateway_url}/console")
 
@@ -289,14 +429,16 @@ class TrayApp:
                 pass
 
     def _post_worker(self, worker: dict[str, Any], action: str) -> None:
-        name = str(worker.get("name") or worker.get("instance") or "")
+        name = worker_name(worker)
         if name:
             self._post_named(name, action)
 
     def _post_named(self, name: str, action: str) -> None:
+        if not self.daemon_token:
+            return
         path = f"{self.daemon_url}/v1/workers/{quote(name, safe='')}/{action}"
         try:
-            self._http_post(path)
+            self._post(path, self.daemon_token)
         except Exception:
             return
 
@@ -339,17 +481,18 @@ class TrayApp:
         ]
         if snap.workers:
             for worker in snap.workers:
-                name = str(worker.get("name") or worker.get("instance") or "worker")
-                state = str(worker.get("state") or "unknown")
+                name = worker_name(worker)
+                submenu_items = [
+                    pystray.MenuItem("Restart", self._restart_callback(name)),
+                ]
+                if is_crashlooped(worker):
+                    submenu_items.append(
+                        pystray.MenuItem("Reset crash loop", self._reset_callback(name)),
+                    )
                 items.append(
                     pystray.MenuItem(
-                        f"{name} ({state})",
-                        pystray.Menu(
-                            pystray.MenuItem(
-                                "Restart",
-                                self._restart_callback(name),
-                            ),
-                        ),
+                        worker_menu_label(worker),
+                        pystray.Menu(*submenu_items),
                     )
                 )
         else:
@@ -362,6 +505,11 @@ class TrayApp:
     def _restart_callback(self, name: str):
         def _cb(*args: Any) -> None:
             self.restart_worker(name)
+        return _cb
+
+    def _reset_callback(self, name: str):
+        def _cb(*args: Any) -> None:
+            self.reset_worker(name)
         return _cb
 
 
@@ -385,7 +533,9 @@ def main() -> None:
     app = TrayApp(
         daemon_url=load_daemon_url(),
         gateway_url=load_gateway_url(),
-        token=load_local_token(),
+        daemon_token=load_agentd_control_token(),
+        gateway_token=load_gateway_token(),
+        logs_token=load_agentd_logs_token(),
     )
     app.run()
 
