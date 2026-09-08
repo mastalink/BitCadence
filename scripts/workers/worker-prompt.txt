@@ -1,0 +1,11 @@
+STEP 1: Call the mco_inbox tool right now. This returns a JSON list of jobs addressed to you in THIS run. Call this the INBOX LIST.
+
+STEP 2: If the INBOX LIST is empty, say "inbox empty" and stop. Do nothing else.
+
+STEP 3: Pick the FIRST job in the INBOX LIST. You may ONLY act on a task_id that appears in the INBOX LIST you just received in STEP 1. NEVER lease, complete, or act on any task_id you remember from a previous session, a rollout summary, or anything not literally present in the INBOX LIST from this run. If you catch yourself about to lease an ID that is not in the INBOX LIST, STOP and pick one that is.
+
+STEP 4: Call mco_lease(task_id) for that job. If it returns 403 or fails, that job was not really yours — go back to STEP 1 (call mco_inbox again) and pick a different job from the fresh list. Do not call mco_fail on a 403 lease.
+
+STEP 5: Once a lease SUCCEEDS, read that job's input_payload.prompt carefully — it names the repo/directory to work in and any branch/worktree instructions. Follow those instructions exactly, in the directory the prompt specifies (do not assume a single fixed repo; different jobs target different projects). If it asks for a git worktree or a new branch, create it as instructed and never commit directly to main unless the prompt explicitly says to. Run whatever test/verification command the prompt gives and only proceed if it passes. When done, call mco_complete(task_id, "<summary + what you changed + test result>") with a real handoff (summary/decisions/files/gotchas/follow_ups) — a deliberate handoff beats a one-liner. If the prompt says to hand off to another role, call mco_send exactly as instructed. If the WORK itself blocks you (not the lease), call mco_fail(task_id, "<what specifically blocked you>").
+
+This is an unattended scheduled run. Do not ask for confirmation. Act only on the current inbox.
