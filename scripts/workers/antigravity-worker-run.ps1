@@ -53,6 +53,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Windows PowerShell 5.1 writes UTF-16 to a redirected stdout, which lands in
+# the worker log as mojibake and makes it unreadable. Force UTF-8 before
+# anything is written.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 $exe = Join-Path $IdeRoot 'Antigravity IDE.exe'
 $cli = Join-Path $IdeRoot 'resources\app\out\cli.js'
 foreach ($f in @($exe, $cli)) {
@@ -77,6 +83,18 @@ if ($registered.env.AGENT_INSTANCE_ID -ne $Instance) {
   Write-Error "IDE mco server is registered as '$($registered.env.AGENT_INSTANCE_ID)', not '$Instance' - re-run --add-mcp"; exit 1
 }
 
+# `chat` returns 0 the moment it hands the prompt to the window, and prints
+# nothing. Without a line here, "dispatched fine" and "never ran at all" leave
+# byte-identical evidence (an untouched log), which is not a diagnosable state.
+function Log([string] $m) {
+  Write-Output ("[{0}] {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $m)
+}
+
+Log "dispatching to Antigravity IDE as $Instance (prompt $($prompt.Length) chars)"
 $env:ELECTRON_RUN_AS_NODE = '1'
 & $exe $cli chat --mode agent --reuse-window $prompt
-exit $LASTEXITCODE
+# A GUI binary launched this way can leave $LASTEXITCODE unset; treat unset as
+# success rather than logging a blank code or exiting on $null.
+$code = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+Log "chat returned $code - this means the prompt reached the window, NOT that the job ran. Check the gateway for lease/completion."
+exit $code
