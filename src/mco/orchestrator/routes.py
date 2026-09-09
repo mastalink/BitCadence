@@ -386,6 +386,31 @@ def _job_priority(job: dict) -> int:
         return 0
 
 
+def _pending_for_agent(db_client, role: str, instance_id, agent: dict) -> list:
+    """The agent's inbox, in the order work should actually be taken.
+
+    Shared by /pending and /lease_next deliberately. If the list a worker reads
+    and the job the server hands out were produced by two different pieces of
+    code they would eventually disagree, and the scheduling policy would
+    silently depend on which path a worker happened to use.
+
+    Highest priority first, then oldest within a band - so raising one job's
+    priority cannot starve equally-urgent older work.
+    """
+    res = db_client.table("agent_jobs")        .select("*")        .eq("status", "pending")        .eq("target_agent_role", role)        .execute()
+
+    filtered = []
+    for job in res.data or []:
+        if job_org(job) != agent_org(agent):
+            continue
+        target_id = job.get("target_agent_id")
+        if target_id and target_id != instance_id:
+            continue
+        filtered.append(job)
+    filtered.sort(key=lambda j: (-_job_priority(j), j.get("created_at") or ""))
+    return filtered
+
+
 @router.get("/pending")
 async def get_pending_jobs(role: str, instance_id: str = None, agent: dict = Depends(require_scopes("jobs:read"))):
     """Retrieve pending jobs for a role. Dropbox rule: you may only poll your own mail."""
@@ -401,31 +426,84 @@ async def get_pending_jobs(role: str, instance_id: str = None, agent: dict = Dep
     # this poller its work. Best-effort; never blocks the poll on failure.
     reclaim_stale_leases(db_client)
     try:
-        res = db_client.table("agent_jobs")\
-            .select("*")\
-            .eq("status", "pending")\
-            .eq("target_agent_role", role)\
-            .execute()
-
-        jobs = res.data or []
-        filtered = []
-        for job in jobs:
-            if job_org(job) != agent_org(agent):
-                continue
-            target_id = job.get("target_agent_id")
-            if target_id and target_id != instance_id:
-                continue
-            filtered.append(job)
-        # Workers are told to take the FIRST job in their inbox, so the order
-        # this returns IS the scheduling policy. Unordered, it was insertion
-        # order, which starves newer urgent work behind an old backlog.
-        # Highest priority first, then oldest within a band (FIFO, no
-        # starvation inside a priority level).
-        filtered.sort(key=lambda j: (-_job_priority(j), j.get("created_at") or ""))
-        return filtered
+        return _pending_for_agent(db_client, role, instance_id, agent)
     except Exception as e:
         logger.error(f"Error fetching pending jobs: {e}")
         return []
+
+
+@router.post("/lease_next")
+async def lease_next_job(payload: dict = None, agent: dict = Depends(require_scopes("jobs:write"))):
+    """Atomically lease the highest-priority job addressed to this agent.
+
+    Ordering alone could not make priority stick. A worker reads its inbox and
+    is *told* to take the first entry, but the choice is still the worker's, so
+    a run could read straight past an urgent job and lease an old one - observed
+    live on 2026-09-09, where a worker took a P0 escalation with a P100 job
+    sitting at position 1. This endpoint removes the choice: the server picks,
+    so priority is enforced rather than advised.
+
+    It also closes a race the read-then-lease pattern always had: two workers on
+    one role both see the same job at position 1 and fight over it, with the
+    loser getting a bare 403. Here a lost race just falls through to the next
+    candidate, because acquire_lease is the atomic arbiter either way.
+    """
+    db_client = get_db_client()
+    if not db_client:
+        raise HTTPException(status_code=400, detail="Database not configured")
+    if kill_switch_active():
+        raise HTTPException(status_code=503, detail="MCO_KILL_SWITCH is active: leasing is paused")
+
+    instance_id = agent["instance_id"]
+    role = agent["role"]
+    if payload:
+        claimed = payload.get("agent_instance_id")
+        if claimed and claimed != instance_id:
+            raise HTTPException(status_code=403, detail="Cannot lease on behalf of another agent")
+
+    touch_agent_presence(db_client, agent)
+    reclaim_stale_leases(db_client)
+
+    try:
+        candidates = _pending_for_agent(db_client, role, instance_id, agent)
+        for job in candidates:
+            task_id = job.get("id")
+            if not task_id:
+                continue
+            lease = acquire_lease(db_client, task_id, instance_id,
+                                  ttl_seconds=max(1, get_lease_ttl_seconds()))
+            if lease is None:
+                # Someone else took it between the read and the write. Not an
+                # error - try the next one down rather than failing the call.
+                continue
+
+            record_event(db_client, task_id, "leased", instance_id, role)
+            try:
+                notify_job_leased(task_id, instance_id, role)
+            except Exception as ntfy_err:
+                logger.debug(f"ntfy lease hook skipped: {ntfy_err}")
+
+            fresh = db_client.table("agent_jobs").select("*").eq("id", task_id).execute()
+            leased_job = fresh.data[0] if fresh.data else job
+            if _broadcast_callback:
+                try:
+                    await _broadcast_callback("job_leased", leased_job)
+                except Exception as e:
+                    logger.warning(f"Error executing broadcast callback after lease_next: {e}")
+
+            return {"success": True, "job": leased_job,
+                    "lease": lease.as_claim(),
+                    "renew_after_seconds": max(1, get_lease_ttl_seconds() // 3)}
+
+        # Empty inbox and "every candidate was taken by someone else" are the
+        # same outcome for the caller: there is nothing for you right now.
+        return {"success": False, "job": None, "lease": None,
+                "reason": "no pending jobs addressed to you"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error leasing next job: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/lease")

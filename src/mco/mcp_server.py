@@ -47,6 +47,20 @@ def mco_inbox() -> List[dict]:
 
 
 @mcp.tool()
+def mco_lease_next() -> dict:
+    """Lease the highest-priority job addressed to you, chosen by the server.
+
+    Prefer this over mco_inbox + mco_lease. The server applies the priority
+    order and hands you exactly one job, so urgent work cannot be read past,
+    and two workers on the same role cannot collide on the same entry.
+    Returns {"success": true, "job": {...}, "lease": {...}} or
+    {"success": false, "job": null} when nothing is waiting for you."""
+    client = _client()
+    client.flush_reports()
+    return client.lease_next()
+
+
+@mcp.tool()
 def mco_lease(task_id: str) -> dict:
     """Atomically claim a job before working it. Returns success and the lease proof; renew during long work."""
     return _client().lease(task_id)
