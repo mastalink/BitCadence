@@ -27,7 +27,7 @@ from starlette.responses import JSONResponse
 
 # ── Exempt paths ──────────────────────────────────────────────────────────────
 
-_EXEMPT_PATHS = frozenset({"/healthz"})
+_EXEMPT_PATHS = frozenset({"/healthz", "/readyz"})
 
 
 # ── Token bucket ──────────────────────────────────────────────────────────────

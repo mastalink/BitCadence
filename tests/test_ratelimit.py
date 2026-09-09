@@ -37,6 +37,10 @@ def _app_with_limit(limit: int) -> FastAPI:
     def healthz():
         return {"status": "ok"}
 
+    @app.get("/readyz")
+    def readyz():
+        return {"status": "ok"}
+
     @app.get("/api/test")
     def api_test():
         return {"ok": True}
@@ -99,6 +103,18 @@ class TestHealthzExempt:
         # /healthz must still return 200 no matter how many times we call it.
         for _ in range(5):
             assert client.get("/healthz", headers=headers).status_code == 200
+
+    def test_readyz_never_rate_limited(self):
+        # /readyz must also remain exempt from rate limiting
+        limit = 1
+        client = TestClient(_app_with_limit(limit))
+        headers = {"Authorization": "Bearer tok-ready"}
+        # Exhaust the bucket.
+        client.get("/api/test", headers=headers)
+        assert client.get("/api/test", headers=headers).status_code == 429
+        # /readyz must still return 200 no matter how many times we call it.
+        for _ in range(5):
+            assert client.get("/readyz", headers=headers).status_code == 200
 
 
 # ── Identity: token vs IP ─────────────────────────────────────────────────────

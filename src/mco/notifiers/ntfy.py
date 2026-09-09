@@ -36,11 +36,13 @@ def get_ntfy_config() -> dict:
     config = get_config()
     # Blank NTFY_TOPIC means off. Do not default to "mco-events"; that
     # silently enabled public ntfy.sh on Local-Only installs.
+    per_role = str(config.get("NTFY_PER_ROLE_TOPICS") or "").lower() in ("1", "true", "on", "yes")
     return {
         "server": (config.get("NTFY_SERVER") or "https://ntfy.sh").rstrip("/"),
         "topic": (config.get("NTFY_TOPIC") or "").strip(),
         "token": config.get("NTFY_TOKEN"),
         "levels": [x.strip().upper() for x in config.get("NTFY_LEVELS", "INFO,WARNING,ERROR,CRITICAL").split(",")],
+        "per_role_topics": per_role,
     }
 
 
@@ -51,6 +53,7 @@ def notify(
     tags: Optional[List[str]] = None,
     topic: Optional[str] = None,
     server: Optional[str] = None,
+    role: Optional[str] = None,
 ) -> bool:
     """
     Send a notification to ntfy.
@@ -58,12 +61,22 @@ def notify(
     Returns True on success, False on failure (errors are logged but do not crash the orchestrator).
     """
     cfg = get_ntfy_config()
-    if not cfg["topic"]:
+    base_topic = cfg["topic"]
+    if not base_topic:
         return False
     server = server or cfg["server"]
-    topic = topic or cfg["topic"]
 
-    url = f"{server}/{topic}"
+    # F15 fix: The configured NTFY_TOPIC is the only destination base.
+    # Topic cannot be an unconfigured public topic. If per-role routing is enabled,
+    # it must be a suffix of the configured topic: f"{base_topic}-{role}".
+    if cfg.get("per_role_topics") and role:
+        target_topic = f"{base_topic}-{role.strip().lower()}"
+    elif cfg.get("per_role_topics") and topic and topic.startswith(f"{base_topic}-"):
+        target_topic = topic
+    else:
+        target_topic = base_topic
+
+    url = f"{server}/{target_topic}"
 
     headers = {
         "Title": title or "BitCadence",
@@ -79,7 +92,7 @@ def notify(
     try:
         resp = requests.post(url, data=message.encode("utf-8"), headers=headers, timeout=10)
         resp.raise_for_status()
-        logger.debug(f"ntfy notification sent to {topic}")
+        logger.debug(f"ntfy notification sent to {target_topic}")
         return True
     except Exception as e:
         logger.warning(f"Failed to send ntfy notification: {e}")
@@ -93,7 +106,7 @@ def notify_job_created(job_id: str, title: str, to_role: str):
         title="BitCadence Job Created",
         priority=3,
         tags=["mco", "job", to_role.lower()],
-        topic=f"mco-{to_role.lower()}" if to_role else None,
+        role=to_role,
     )
 
 
@@ -103,7 +116,7 @@ def notify_job_leased(job_id: str, agent_id: str, to_role: str):
         title="BitCadence Job Leased",
         priority=2,
         tags=["mco", "job", "leased", to_role.lower()],
-        topic=f"mco-{to_role.lower()}" if to_role else None,
+        role=to_role,
     )
 
 
@@ -114,7 +127,7 @@ def notify_job_completed(job_id: str, status: str, to_role: str):
         title="BitCadence Job Completed",
         priority=2 if status.lower() in ("success", "done", "completed") else 4,
         tags=["mco", "job", status.lower(), to_role.lower()],
-        topic=f"mco-{to_role.lower()}" if to_role else None,
+        role=to_role,
     )
 
 
@@ -124,7 +137,7 @@ def notify_job_failed(job_id: str, error: str, to_role: str):
         title="BitCadence Job FAILED",
         priority=5,
         tags=["mco", "job", "failed", to_role.lower()],
-        topic=f"mco-{to_role.lower()}" if to_role else None,
+        role=to_role,
     )
 
 
@@ -135,7 +148,7 @@ def notify_job_needs_approval(job_id: str, title: str, to_role: str):
         title="BitCadence Approval Required",
         priority=4,
         tags=["mco", "job", "approval", to_role.lower()],
-        topic=f"mco-{to_role.lower()}" if to_role else None,
+        role=to_role,
     )
 
 
@@ -146,7 +159,7 @@ def notify_job_escalated(job_id: str, title: str, escalate_to_role: str, error: 
         title="BitCadence Job ESCALATED",
         priority=5,
         tags=["mco", "job", "escalated", escalate_to_role.lower()],
-        topic=f"mco-{escalate_to_role.lower()}" if escalate_to_role else None,
+        role=escalate_to_role,
     )
 
 
@@ -157,7 +170,7 @@ def notify_force_pull(role: str, reason: str = "Manual trigger"):
         title=f"FORCE MCO PULL - {role}",
         priority=5,   # highest
         tags=["mco", "force-pull", role.lower()],
-        topic=f"mco-{role.lower()}",
+        role=role,
     )
 
 
@@ -167,6 +180,7 @@ def notify_agent_online(role: str, instance_id: str):
         title="BitCadence Agent Online",
         priority=2,
         tags=["mco", "agent", "online", role.lower()],
+        role=role,
     )
 
 
@@ -176,6 +190,7 @@ def notify_agent_offline(role: str, instance_id: str):
         title="BitCadence Agent Offline",
         priority=3,
         tags=["mco", "agent", "offline", role.lower()],
+        role=role,
     )
 
 
