@@ -295,6 +295,11 @@ async def create_job(payload: dict, agent: dict = Depends(require_scopes("jobs:w
         requires_approval = bool(payload.get("requires_approval"))
         max_retries = int(payload.get("max_retries") or 0)
         escalate_to_role = payload.get("escalate_to_role")
+        # Higher runs first. Default 0 keeps every existing caller unchanged.
+        try:
+            priority = int(payload.get("priority") or 0)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="priority must be an integer")
 
         if not title or not target_agent_role:
             raise HTTPException(status_code=400, detail="title and target_agent_role are required")
@@ -328,6 +333,8 @@ async def create_job(payload: dict, agent: dict = Depends(require_scopes("jobs:w
             data["max_retries"] = max_retries
         if escalate_to_role:
             data["escalate_to_role"] = escalate_to_role
+        if priority:
+            data["priority"] = priority
 
         res = db_client.table("agent_jobs").insert(data).execute()
         if res.data:
@@ -371,6 +378,14 @@ async def create_job(payload: dict, agent: dict = Depends(require_scopes("jobs:w
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _job_priority(job: dict) -> int:
+    """Job priority as an int; absent/garbage sorts as 0 (normal)."""
+    try:
+        return int(job.get("priority") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 @router.get("/pending")
 async def get_pending_jobs(role: str, instance_id: str = None, agent: dict = Depends(require_scopes("jobs:read"))):
     """Retrieve pending jobs for a role. Dropbox rule: you may only poll your own mail."""
@@ -401,6 +416,12 @@ async def get_pending_jobs(role: str, instance_id: str = None, agent: dict = Dep
             if target_id and target_id != instance_id:
                 continue
             filtered.append(job)
+        # Workers are told to take the FIRST job in their inbox, so the order
+        # this returns IS the scheduling policy. Unordered, it was insertion
+        # order, which starves newer urgent work behind an old backlog.
+        # Highest priority first, then oldest within a band (FIFO, no
+        # starvation inside a priority level).
+        filtered.sort(key=lambda j: (-_job_priority(j), j.get("created_at") or ""))
         return filtered
     except Exception as e:
         logger.error(f"Error fetching pending jobs: {e}")

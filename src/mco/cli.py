@@ -1867,6 +1867,7 @@ def send_job(
     approve: bool = typer.Option(False, "--approve", help="Pause at the human approval gate before execution."),
     retries: int = typer.Option(0, "--retries", help="Retry budget on failure."),
     escalate: str = typer.Option("", "--escalate", help="Role to escalate to after retries are exhausted."),
+    priority: int = typer.Option(0, "--priority", help="Higher runs first (default 0). Workers take the first job in their inbox, so this is what jumps the queue."),
 ):
     """Drop a job into an agent's dropbox from the terminal."""
     try:
@@ -1878,12 +1879,14 @@ def send_job(
             requires_approval=approve,
             max_retries=retries,
             escalate_to_role=escalate or None,
+            priority=priority,
         )
         job = (res or {}).get("job") or {}
         if res.get("success") and job.get("id"):
             console.print(f"[green][OK][/green] Job [bold]{job['id']}[/bold] -> {to_role}"
                           f"{' / ' + instance if instance else ''} "
-                          f"(status: {job.get('status')})")
+                          f"(status: {job.get('status')}"
+                          f"{', priority ' + str(priority) if priority else ''})")
             if job.get("status") == "needs_approval":
                 console.print(f"[dim]Approve it with: mco approve {job['id']}[/dim]")
         else:
