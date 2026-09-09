@@ -37,26 +37,25 @@ def _run_prefix(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
     probe = tmp_path / "probe.sh"
     probe.write_text(_prefix_through_tty_guard(), encoding="utf-8")
     return subprocess.run(
-        ["bash", str(probe), *args],
-        input="",
+        ["bash", "-c", _prefix_through_tty_guard(), "probe", *args],
+        input=b"",
         capture_output=True,
-        text=True,
         timeout=5,
     )
 
 
 def test_pipe_no_prompt_survives(tmp_path):
     r = _run_prefix(tmp_path, "--no-prompt")
-    assert "No such device or address" not in r.stderr
-    assert "SURVIVED" in r.stdout
+    assert b"No such device or address" not in r.stderr
+    assert b"SURVIVED" in r.stdout
     assert r.returncode == 0
 
 
 def test_pipe_without_flags_survives(tmp_path):
     """Advertised curl|bash: stdin is a pipe, no --no-prompt."""
     r = _run_prefix(tmp_path)
-    assert "No such device or address" not in r.stderr
-    assert "SURVIVED" in r.stdout
+    assert b"No such device or address" not in r.stderr
+    assert b"SURVIVED" in r.stdout
     assert r.returncode == 0
 
 

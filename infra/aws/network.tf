@@ -90,6 +90,13 @@ resource "aws_security_group" "alb" {
   vpc_id      = aws_vpc.city.id
 
   ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -145,14 +152,26 @@ resource "aws_security_group" "workers" {
 resource "aws_security_group" "db" {
   count       = var.store_backend == "postgres" ? 1 : 0
   name        = "${var.name}-db"
-  description = "RDS: reachable only from the gateway task"
+  description = "RDS: gateway and isolated chaos conductor only"
   vpc_id      = aws_vpc.city.id
 
   ingress {
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
-    security_groups = [aws_security_group.gateway.id]
+    security_groups = [aws_security_group.gateway.id, aws_security_group.conductor.id]
+  }
+}
+
+resource "aws_security_group" "conductor" {
+  name        = "${var.name}-conductor"
+  description = "Dedicated chaos conductor with database probe access"
+  vpc_id      = aws_vpc.city.id
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 

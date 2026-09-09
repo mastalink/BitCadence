@@ -44,8 +44,8 @@
   }
 
   // Re-emit demo store changes while in demo mode
-  demo.subscribe(() => { if (!isLive()) emit(); });
-  demo.onToast((t) => { if (!isLive()) toastFns.forEach((fn) => fn(t)); });
+  demo.subscribe(() => { if (connState === 'demo') emit(); });
+  demo.onToast((t) => { if (connState === 'demo') toastFns.forEach((fn) => fn(t)); });
 
   async function api(path, opts = {}) {
     const base = (cfg && cfg.url ? cfg.url : "").replace(/\/+$/, "");
@@ -93,10 +93,12 @@
       });
       liveActivity = liveActivity.slice(0, 50);
       jobs = normalized; agents = a || [];
+      if (connState === 'offline') connState = 'live';
       if (lastError) { lastError = null; }
       emit();
     } catch (e) {
       lastError = e.message;
+      if (connState === 'live') connState = 'offline';
       emit();
     }
   }
@@ -171,7 +173,7 @@
         emit();
         return true;
       } catch (e) {
-        connState = "demo"; lastError = e.message;
+        connState = "offline"; lastError = e.message;
         toast("err", "Connection failed", e.message);
         emit();
         return false;
@@ -188,10 +190,10 @@
     },
 
     // ---- reads ----
-    getJobs: () => isLive() ? jobs.slice() : demo.getJobs(),
-    getAgents: () => isLive() ? agents.slice() : demo.getAgents(),
+    getJobs: () => connState === "demo" ? demo.getJobs() : jobs.slice(),
+    getAgents: () => connState === "demo" ? demo.getAgents() : agents.slice(),
     getEvents(jobId) {
-      if (!isLive()) return demo.getEvents(jobId);
+      if (connState === "demo") return demo.getEvents(jobId);
       if (!eventsCache[jobId]) {
         eventsCache[jobId] = [];
         api("/api/jobs/" + jobId + "/events")
@@ -204,22 +206,22 @@
 
     // ---- writes ----
     async approve(jobId, actor) {
-      if (!isLive()) return demo.approve(jobId, actor);
+      if (connState === "demo") return demo.approve(jobId, actor);
       try { await api("/api/jobs/" + jobId + "/approve", { method: "POST" }); await poll(); }
       catch (e) { toast("err", "Approve failed", e.message); }
     },
     async reject(jobId, actor, reason) {
-      if (!isLive()) return demo.reject(jobId, actor, reason);
+      if (connState === "demo") return demo.reject(jobId, actor, reason);
       try { await api("/api/jobs/" + jobId + "/reject", { method: "POST", body: JSON.stringify({ reason: reason || "" }) }); await poll(); }
       catch (e) { toast("err", "Reject failed", e.message); }
     },
     async retryNow(jobId) {
-      if (!isLive()) return demo.retryNow(jobId);
+      if (connState === "demo") return demo.retryNow(jobId);
       try { await api("/api/jobs/" + jobId + "/retry", { method: "POST" }); await poll(); toast("ok", "Re-queued", "Job sent back to the board."); }
       catch (e) { toast("err", "Retry failed", e.message + " (retry needs an approver-role token)"); }
     },
     async cancelJob(jobId, reason) {
-      if (!isLive()) return demo.cancelJob ? demo.cancelJob(jobId, reason) : null;
+      if (connState === "demo") return demo.cancelJob ? demo.cancelJob(jobId, reason) : null;
       try {
         await api("/api/jobs/" + jobId + "/cancel", { method: "POST", body: JSON.stringify({ reason: reason || "" }) });
         await poll();
@@ -228,7 +230,7 @@
       catch (e) { toast("err", "Cancel failed", e.message + " (cancel needs an approver-role token)"); }
     },
     async reassignJob(jobId, toRole, toInstance) {
-      if (!isLive()) return demo.reassignJob ? demo.reassignJob(jobId, toRole, toInstance) : null;
+      if (connState === "demo") return demo.reassignJob ? demo.reassignJob(jobId, toRole, toInstance) : null;
       try {
         const body = { to_role: toRole };
         if (toInstance) body.to_instance = toInstance;
@@ -239,7 +241,7 @@
       catch (e) { toast("err", "Reassign failed", e.message + " (reassign needs an approver-role token)"); }
     },
     async createJob(payload) {
-      if (!isLive()) return demo.createJob(payload);
+      if (connState === "demo") return demo.createJob(payload);
       try {
         const res = await api("/api/jobs", { method: "POST", body: JSON.stringify(payload) });
         await poll();
@@ -248,7 +250,7 @@
       } catch (e) { toast("err", "Create failed", e.message); }
     },
     async submitWorkflow(name, steps) {
-      if (!isLive()) return demo.submitWorkflow(name, steps);
+      if (connState === "demo") return demo.submitWorkflow(name, steps);
       // topo order: place steps whose deps are all already submitted
       const remaining = steps.slice();
       const idMap = {};
@@ -280,7 +282,7 @@
       } catch (e) { toast("err", "Workflow failed", e.message); return idMap; }
     },
     async seedDemoPipeline() {
-      if (!isLive()) return demo.seedDemoPipeline();
+      if (connState === "demo") return demo.seedDemoPipeline();
       try {
         const res = await api("/api/workflows/demo-pipeline", { method: "POST", body: JSON.stringify({}) });
         await poll();
@@ -289,7 +291,7 @@
       } catch (e) { toast("err", "Demo seed failed", e.message); }
     },
     async exportEvidencePack(payload) {
-      if (!isLive()) return demo.exportEvidencePack(payload);
+      if (connState === "demo") return demo.exportEvidencePack(payload);
       return api("/api/governance/evidence-pack", { method: "POST", body: JSON.stringify(payload || {}) });
     },
 
@@ -300,7 +302,9 @@
     },
     async saveSettings(values) {
       if (!isLive()) throw new Error("Connect to your orchestrator first.");
-      return api("/api/settings", { method: "PUT", body: JSON.stringify(values) });
+      const result = await api("/api/settings", { method: "PUT", body: JSON.stringify(values) });
+      await poll();
+      return result;
     },
     async testConnector(name) {
       if (!isLive()) throw new Error("Connect to your orchestrator first.");

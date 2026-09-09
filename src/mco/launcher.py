@@ -420,6 +420,11 @@ def run_forever(
     while max_ticks is None or ticks < max_ticks:
         try:
             report = tick(client, config_path, state_path)
+            from mco.config import get_config
+            heartbeat = get_config().get("MCO_SCHEDULER_HEARTBEAT_FILE")
+            if heartbeat:
+                Path(heartbeat).parent.mkdir(parents=True, exist_ok=True)
+                Path(heartbeat).touch()
             if report and on_report:
                 on_report(report)
         except Exception as exc:

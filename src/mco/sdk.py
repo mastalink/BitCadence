@@ -34,6 +34,9 @@ from __future__ import annotations
 
 import logging
 import time
+import threading
+import httpx
+from contextlib import contextmanager
 from typing import Callable, List, Optional, Tuple, Union
 
 from mco.orchestrator.client import GatewayClient
@@ -44,6 +47,10 @@ logger = logging.getLogger("mco.sdk")
 # A handler returns the result text, optionally with a structured handoff:
 #   {summary, decisions, files, gotchas, follow_ups}
 HandlerResult = Union[str, Tuple[str, dict]]
+
+
+class Halted(RuntimeError):
+    """The worker lost permission to continue this attempt."""
 
 
 class BitCadenceAgent:
@@ -68,6 +75,8 @@ class BitCadenceAgent:
             role=role, instance_id=instance_id,
         )
         self._handler: Optional[Callable[[dict, str], HandlerResult]] = None
+        self._active_job = None
+        self._halted = threading.Event()
 
     # ── Wiring ───────────────────────────────────────────────────────────
 
@@ -126,6 +135,41 @@ class BitCadenceAgent:
 
     # ── The work loop ────────────────────────────────────────────────────
 
+    def checkpoint(self):
+        """Call between work units and before any irreversible external action.
+
+        Python cannot safely interrupt arbitrary user code. A handler must
+        cooperate here; built-in subprocess workers cancel their child task.
+        """
+        if self._halted.is_set():
+            raise Halted("Lease expired, was cancelled, or was halted")
+        if self._active_job:
+            try:
+                self.client.renew(self._active_job)
+            except (httpx.HTTPError, RuntimeError) as exc:
+                self._halted.set()
+                raise Halted("Cannot confirm ownership; stop work") from exc
+
+    @contextmanager
+    def _keep_lease(self, job_id, interval):
+        self._active_job = job_id
+        self._halted.clear()
+        stop = threading.Event()
+        def maintain():
+            while not stop.wait(max(0.1, interval)):
+                try:
+                    self.checkpoint()
+                except Halted:
+                    return
+        thread = threading.Thread(target=maintain, daemon=True)
+        thread.start()
+        try:
+            yield
+        finally:
+            stop.set()
+            thread.join(timeout=self.client.timeout + 1 if isinstance(self.client, GatewayClient) else 1)
+            self._active_job = None
+
     def process_job(self, job: dict) -> bool:
         """Lease and execute one job. True if this instance won and ran it."""
         if self._handler is None:
@@ -137,9 +181,18 @@ class BitCadenceAgent:
         if not (lease or {}).get("success"):
             return False  # another instance won the race
 
+        job = {**job, **(lease.get("lease") or {})}
+        from mco.orchestrator.leases import idempotency_key
+        job["idempotency_key"] = idempotency_key(job_id, job.get("lease_epoch"))
         prompt = self.build_prompt(job)
         try:
-            result = self._handler(job, prompt)
+            with self._keep_lease(job_id, min(5, lease.get("renew_after_seconds", 300))):
+                result = self._handler(job, prompt)
+                if self._halted.is_set():
+                    raise Halted("Handler stopped after losing its lease")
+        except Halted:
+            logger.warning("Job %s halted; result withheld", job_id)
+            return True
         except Exception as e:
             logger.exception(f"Handler failed for job {job_id}")
             self.client.fail(job_id, str(e) or e.__class__.__name__)
@@ -155,6 +208,8 @@ class BitCadenceAgent:
         """One poll cycle: process every pending job in the inbox.
         Returns how many jobs this instance executed."""
         executed = 0
+        if hasattr(self.client, 'flush_reports'):
+            self.client.flush_reports()
         for job in self.client.inbox() or []:
             if self.process_job(job):
                 executed += 1

@@ -1,6 +1,11 @@
 output "console_url" {
   description = "The pedestrian level. Log in with the MCO_LOCAL_TOKEN from Secrets Manager."
-  value       = "http://${aws_lb.city.dns_name}/console"
+  value       = "https://${var.console_hostname}/console"
+}
+
+output "console_dns_target" {
+  description = "Create a DNS CNAME for console_hostname pointing here."
+  value       = aws_lb.city.dns_name
 }
 
 output "status_page_url" {
@@ -40,5 +45,5 @@ output "fis_templates" {
 
 output "run_conductor_now" {
   description = "Trigger a chaos run without waiting for the schedule."
-  value       = "aws ecs run-task --cluster ${aws_ecs_cluster.city.name} --launch-type FARGATE --task-definition ${aws_ecs_task_definition.conductor.family} --network-configuration 'awsvpcConfiguration={subnets=[${join(",", aws_subnet.private[*].id)}],securityGroups=[${aws_security_group.workers.id}],assignPublicIp=DISABLED}' --region ${var.region}"
+  value       = "aws ecs run-task --cluster ${aws_ecs_cluster.city.name} --launch-type FARGATE --task-definition ${aws_ecs_task_definition.conductor.family} --network-configuration 'awsvpcConfiguration={subnets=[${join(",", aws_subnet.private[*].id)}],securityGroups=[${aws_security_group.conductor.id}],assignPublicIp=DISABLED}' --region ${var.region}"
 }

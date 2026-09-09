@@ -47,8 +47,8 @@ resource "aws_iam_role_policy" "exec_secrets" {
 }
 
 # ── Gateway task role ───────────────────────────────────────────────────────
-# The gateway forwards committed events to the evidence vault. Put only: it
-# must never be able to read back and rewrite, and Object Lock stops deletes.
+# The gateway appends locked evidence and reads only its acknowledgement files.
+# Reading an offset cannot alter a retained version; delete remains ungranted.
 
 resource "aws_iam_role" "gateway" {
   name               = "${var.name}-gateway"
@@ -62,7 +62,17 @@ data "aws_iam_policy_document" "gateway" {
     resources = ["${aws_s3_bucket.evidence.arn}/ledger/*"]
   }
   statement {
-    actions   = ["kms:GenerateDataKey", "kms:Encrypt"]
+    sid       = "EvidenceAcknowledgements"
+    actions   = ["s3:GetObject", "s3:GetObjectRetention"]
+    resources = ["${aws_s3_bucket.evidence.arn}/ledger/*/acknowledged.json"]
+  }
+  statement {
+    # Required for GET of a missing acknowledgement to return 404, not 403.
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.evidence.arn]
+  }
+  statement {
+    actions   = ["kms:GenerateDataKey", "kms:Encrypt", "kms:Decrypt"]
     resources = [aws_kms_key.evidence.arn]
   }
   statement {

@@ -1,0 +1,113 @@
+[
+  {
+    "stem": "01-approval-to-execution",
+    "title": "Approval before execution",
+    "duration": 77.32,
+    "segments": [
+      {
+        "start": 0,
+        "text": "This is Bit Cadence running in our AWS test environment. The important question is simple: who decides when an automated worker is allowed to act?"
+      },
+      {
+        "start": 18,
+        "text": "Here, we create a harmless job and require human approval. The job waits. Being assigned to a worker does not give that worker permission to skip the approval step."
+      },
+      {
+        "start": 43,
+        "text": "The operator can inspect the request before releasing it. Once approved, the cloud worker picks up the job and performs a checksum calculation."
+      },
+      {
+        "start": 62,
+        "text": "The job completes, and its history records approval and execution. This demonstrates human control over real cloud work. It is a control demonstration, not a claim about artificial intelligence reasoning."
+      }
+    ]
+  },
+  {
+    "stem": "02-stop-and-resume",
+    "title": "The stop control",
+    "duration": 41.24,
+    "segments": [
+      {
+        "start": 0,
+        "text": "This shorter recording introduces the stop control in the live console. The operator enables Stop work and saves the setting."
+      },
+      {
+        "start": 15,
+        "text": "The setting pauses intake and governs active attempts. This clip shows the control being saved; our separate active kill switch demo shows a running job being halted."
+      },
+      {
+        "start": 29,
+        "text": "Turning the control off allows new work again. It does not automatically retry halted jobs, and it does not shut down the AWS machines."
+      }
+    ]
+  },
+  {
+    "stem": "03-cloud-infrastructure",
+    "title": "Where everything lives",
+    "duration": 53.76,
+    "segments": [
+      {
+        "start": 0,
+        "text": "Think of this cloud lab as a small supervised team. Your computer is the operator's desk. A private tunnel connects your browser to the hub in AWS."
+      },
+      {
+        "start": 17,
+        "text": "The hub assigns work and checks permission. Two separate cloud machines act as workers. They connect to the hub privately, using separate identities."
+      },
+      {
+        "start": 32,
+        "text": "Audit evidence is stored separately in Amazon S three. Deployments use temporary credentials, and the lab has timed shutdown safeguards."
+      },
+      {
+        "start": 44,
+        "text": "This diagram explains the architecture. It is not a live status display, and this small test environment is not yet a highly available production service."
+      }
+    ]
+  },
+  {
+    "stem": "04-delegation",
+    "title": "One task, two cloud workers",
+    "duration": 84.68,
+    "segments": [
+      {
+        "start": 0,
+        "text": "This is a real delegation demonstration in our AWS lab. The operator gives one task to the first worker. That worker calculates a checksum and creates a follow-up task for a separate reviewer."
+      },
+      {
+        "start": 24,
+        "text": "Notice who requested the follow-up: worker lab. The operator did not create this second job. The handoff carries the original job identifier and the worker's result."
+      },
+      {
+        "start": 46,
+        "text": "Delegation does not bypass human control. The review is waiting for approval. We inspect the handoff and release it, allowing the reviewer on the second cloud machine to continue."
+      },
+      {
+        "start": 67,
+        "text": "The reviewer completes the delegated job. The history connects the request, approval, and execution. We have demonstrated controlled delegation across machines, using deterministic work rather than simulated AI reasoning."
+      }
+    ]
+  },
+  {
+    "stem": "05-kill-switch",
+    "title": "Stop an active attempt",
+    "duration": 87.6,
+    "segments": [
+      {
+        "start": 0,
+        "text": "A cloud worker has picked up a real job. This harmless test performs small work units for up to three minutes and checks its permission to continue between units."
+      },
+      {
+        "start": 28,
+        "text": "Now the operator enables Stop work and saves the setting. This is the governance control. It is separate from shutting down the cloud machines."
+      },
+      {
+        "start": 51,
+        "text": "The job changes to Stopped by operator. The worker's log confirms that it halted and withheld its result. The stop decision remains visible in the job history."
+      },
+      {
+        "start": 70,
+        "text": "A separate check replayed the old completion claim. The server rejected it with HTTP four oh nine, and the job stayed halted. This proves the cooperative worker and result boundary."
+      }
+    ]
+  }
+]

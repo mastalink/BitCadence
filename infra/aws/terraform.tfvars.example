@@ -3,6 +3,10 @@
 name   = "bitcadence-epcot"
 region = "us-east-1"
 
+console_hostname = "console.example.com"
+certificate_arn  = "arn:aws:acm:us-east-1:ACCOUNT:certificate/ISSUED-CERTIFICATE"
+image_tag        = "REPLACE-WITH-GIT-COMMIT"
+
 # "postgres" = RDS behind PostgREST (Team/Enterprise posture).
 # "local"    = LocalStore on EFS (Appliance posture; zero PostgREST seam).
 store_backend = "postgres"

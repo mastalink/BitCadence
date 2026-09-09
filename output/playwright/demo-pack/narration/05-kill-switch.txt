@@ -1,0 +1,13 @@
+Stop an active attempt
+
+[00s]
+A cloud worker has picked up a real job. This harmless test performs small work units for up to three minutes and checks its permission to continue between units.
+
+[28s]
+Now the operator enables Stop work and saves the setting. This is the governance control. It is separate from shutting down the cloud machines.
+
+[51s]
+The job changes to Stopped by operator. The worker's log confirms that it halted and withheld its result. The stop decision remains visible in the job history.
+
+[70s]
+A separate check replayed the old completion claim. The server rejected it with HTTP four oh nine, and the job stayed halted. This proves the cooperative worker and result boundary.

@@ -5,6 +5,20 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 ## [Unreleased]
 
 ### Changed
+- **Breaking: audit failures now fail the triggering operation.** A failed audit
+  write or required S3 acknowledgement no longer returns success. The database
+  mutation may already be committed; its transactional outbox preserves evidence.
+  Retry the same attempt and result after restoring the sink, rather than creating
+  duplicate work. The kill switch still fences active attempts during a sink outage.
+- Audit signing keys prefer the encrypted vault. Environment injection requires
+  `MCO_ALLOW_ENV_AUDIT_KEY=1` and emits a warning; ECS explicitly opts in for its
+  Secrets Manager injection. An inaccessible vault cannot be bypassed this way.
+- Evidence COMPLIANCE retention defaults to **one day**, including Terraform.
+  Existing locked versions keep their original retention. A durable S3 checkpoint
+  avoids re-uploading acknowledged events across restarts; chain verification
+  still reads the full history to detect corruption and rollback.
+- AWS lab runs only through manual dispatch on `main` or the completion candidate.
+  Bootstrap trust explicitly allows those two refs; remove the candidate after merge.
 - **Renamed: BatonCadence is now BitCadence** (`bitcadence.ai`). The tagline is
   now *"Every agent. One beat."* — the drumline metaphor stays, the relay-race
   pun goes. The Python distribution is `bitcadence`; **the CLI is still `mco`**,

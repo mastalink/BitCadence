@@ -153,10 +153,11 @@ provider "aws" {
 }
 
 resource "aws_route53_health_check" "gateway" {
-  fqdn              = aws_lb.city.dns_name
-  port              = 80
-  type              = "HTTP"
-  resource_path     = "/healthz"
+  fqdn              = var.console_hostname
+  port              = 443
+  type              = "HTTPS"
+  enable_sni        = true
+  resource_path     = "/readyz"
   request_interval  = 30
   failure_threshold = 3
   tags              = { Name = "${var.name}-deadman" }

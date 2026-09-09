@@ -158,7 +158,7 @@ function App() {
               <React.Fragment>
                 <span style={{ width: 7, height: 7, borderRadius: 99, flex: "none", background: mode === "live" ? "var(--st-done-dot)" : "var(--st-approval-dot)", animation: "cadence-pulse 2.2s infinite" }}></span>
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {mode === "live" ? "Live \u00B7 " + host : mode === "connecting" ? "Connecting\u2026" : "Demo \u00B7 simulated data"}
+                  {mode === "live" ? "Live \u00B7 " + host : mode === "connecting" ? "Connecting\u2026" : mode === "offline" ? "Offline \u00B7 connection failed" : "Demo \u00B7 simulated data"}
                 </span>
               </React.Fragment>
             );
@@ -184,10 +184,10 @@ function App() {
             <span style={{
               width: 28, height: 28, borderRadius: 99, background: "var(--accent-soft)", color: "var(--accent-text)",
               display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12.5,
-            }}>J</span>
+            }}>BC</span>
             <div style={{ lineHeight: 1.2 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600 }}>joe-laptop</div>
-              <div style={{ fontSize: 10.5, color: "var(--text-3)" }}>approver · human</div>
+              <div style={{ fontSize: 12.5, fontWeight: 600 }}>Operator console</div>
+              <div style={{ fontSize: 10.5, color: "var(--text-3)" }}>BitCadence</div>
             </div>
           </div>
         </header>
