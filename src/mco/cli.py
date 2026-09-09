@@ -239,18 +239,168 @@ def create_app() -> FastAPI:
     from mco.orchestrator.metrics_routes import metrics_router
     app_server.include_router(metrics_router)
 
-    # Unauthenticated liveness/readiness probe for cloud load balancers and
-    # orchestrators (K8s, ECS, Cloud Run). Reports DB wiring, never secrets.
+    # Unauthenticated pure liveness probe for cloud load balancers and
+    # orchestrators (K8s, ECS, Cloud Run). Answers: "is this process alive."
     @app_server.get("/healthz", include_in_schema=False)
     async def healthz() -> dict:
         from mco.orchestrator.routes import get_db_client, kill_switch_active
         client = get_db_client()
         return {
             "status": "ok",
+            "process": "alive",
             "database": client is not None,
             "backend": getattr(client, "backend", "supabase") if client is not None else None,
             "paused": kill_switch_active(),
         }
+
+    # Unauthenticated readiness probe for load balancers and orchestrators.
+    # Answers: "can this gateway safely accept work."
+    # Queries the store, checks scheduler heartbeat if configured, and reports fleet presence.
+    # Fleet absence reports degraded health in body, never a non-200.
+    @app_server.get("/readyz", include_in_schema=False)
+    async def readyz():
+        from mco.orchestrator.routes import (
+            get_db_client,
+            kill_switch_active,
+            get_offline_after_seconds,
+            decorate_presence,
+        )
+        from starlette.responses import JSONResponse
+        from datetime import datetime, timezone
+
+        checks: dict[str, Any] = {}
+        is_ready = True
+
+        # 1. Store check (trivial query to verify database is reachable)
+        client = get_db_client()
+        if client is None:
+            checks["store"] = {"status": "failed", "error": "Database not configured"}
+            is_ready = False
+        else:
+            try:
+                client.table("agent_jobs").select("id").limit(1).execute()
+                checks["store"] = {
+                    "status": "ok",
+                    "backend": getattr(client, "backend", "supabase"),
+                }
+            except Exception as e:
+                checks["store"] = {
+                    "status": "failed",
+                    "error": str(e),
+                }
+                is_ready = False
+
+        # 2. Scheduler check (heartbeat freshness if scheduler is configured)
+        from mco import launcher
+        state_path = launcher._state_path(None)
+        scheduler_configured = (
+            str(os.environ.get("MCO_REQUIRE_SCHEDULER") or "").lower() in ("1", "true", "yes")
+            or state_path.is_file()
+        )
+        if not scheduler_configured:
+            checks["scheduler"] = {"status": "ok", "configured": False}
+        else:
+            if not state_path.is_file():
+                checks["scheduler"] = {
+                    "status": "missing",
+                    "configured": True,
+                    "error": f"Scheduler state file not found at {state_path}",
+                }
+                is_ready = False
+            else:
+                try:
+                    raw = json.loads(state_path.read_text(encoding="utf-8"))
+                    updated_at_str = raw.get("updated_at")
+                    if updated_at_str:
+                        ts = datetime.fromisoformat(str(updated_at_str).replace("Z", "+00:00"))
+                        if ts.tzinfo is None:
+                            ts = ts.replace(tzinfo=timezone.utc)
+                        age = max(0.0, (datetime.now(timezone.utc) - ts).total_seconds())
+                        max_age = float(os.environ.get("MCO_SCHEDULER_HEARTBEAT_MAX_AGE", "120.0"))
+                        if age <= max_age:
+                            checks["scheduler"] = {
+                                "status": "ok",
+                                "configured": True,
+                                "last_heartbeat_seconds": int(age),
+                            }
+                        else:
+                            checks["scheduler"] = {
+                                "status": "stale",
+                                "configured": True,
+                                "last_heartbeat_seconds": int(age),
+                                "error": f"Scheduler heartbeat is stale ({int(age)}s > {int(max_age)}s)",
+                            }
+                            is_ready = False
+                    else:
+                        checks["scheduler"] = {
+                            "status": "stale",
+                            "configured": True,
+                            "error": "Scheduler state missing updated_at timestamp",
+                        }
+                        is_ready = False
+                except Exception as e:
+                    checks["scheduler"] = {
+                        "status": "failed",
+                        "configured": True,
+                        "error": f"Error reading scheduler state: {e}",
+                    }
+                    is_ready = False
+
+        # 3. Fleet presence check (reported as DEGRADED health, never a non-200)
+        fleet_status = "ok"
+        if client is not None and checks.get("store", {}).get("status") == "ok":
+            try:
+                agents_res = client.table("agent_registry").select("*").execute()
+                agents = agents_res.data or []
+                threshold = get_offline_after_seconds()
+                online_count = sum(
+                    1 for a in agents
+                    if decorate_presence(dict(a), threshold)["effective_status"] == "online"
+                )
+                if online_count == 0:
+                    fleet_status = "degraded"
+                    checks["fleet"] = {
+                        "status": "degraded",
+                        "online_workers": 0,
+                        "registered_workers": len(agents),
+                        "detail": "No workers currently online",
+                    }
+                else:
+                    checks["fleet"] = {
+                        "status": "ok",
+                        "online_workers": online_count,
+                        "registered_workers": len(agents),
+                    }
+            except Exception as e:
+                fleet_status = "degraded"
+                checks["fleet"] = {
+                    "status": "degraded",
+                    "error": f"Failed to query fleet presence: {e}",
+                }
+        else:
+            checks["fleet"] = {
+                "status": "unknown",
+                "error": "Store unreachable",
+            }
+
+        # Determine overall readiness status
+        if not is_ready:
+            overall_status = "unavailable"
+            status_code = 503
+        elif fleet_status == "degraded":
+            overall_status = "degraded"
+            status_code = 200
+        else:
+            overall_status = "ok"
+            status_code = 200
+
+        content = {
+            "status": overall_status,
+            "process": "alive",
+            "paused": kill_switch_active(),
+            "checks": checks,
+        }
+        return JSONResponse(status_code=status_code, content=content)
 
     # Control-plane dashboard (static single page; auth happens via the API token)
     from fastapi.responses import HTMLResponse
