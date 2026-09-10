@@ -140,7 +140,7 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
                 <Td><span style={{ color: "var(--text-2)" }}>{j.source_agent_id}</span></Td>
                 <Td>
                   {advanced
-                    ? <span style={{ color: "var(--text-2)" }}>{j.max_retries ? `${j.retry_count}/${j.max_retries}` : "—"}{j.escalate_to_role ? ` → ${j.escalate_to_role}` : ""}</span>
+                    ? <span style={{ color: "var(--text-2)" }}>{j.max_retries ? `${j.retry_count || 0}/${j.max_retries}` : "—"}{j.escalate_to_role ? ` → ${j.escalate_to_role}` : ""}</span>
                     : <span style={{ color: "var(--text-2)" }}>{j.workflow || "—"}</span>}
                 </Td>
                 <Td><span style={{ color: "var(--text-3)", fontSize: 12.5, whiteSpace: "nowrap" }}>{timeAgo(j.updated_at || j.completed_at || j.started_at || j.created_at)}</span></Td>
@@ -275,7 +275,7 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
           {j.workflow ? <MetaRow label="Workflow">{j.workflow}</MetaRow> : null}
           {j.approved_by ? <MetaRow label="Decided by"><Mono>{j.approved_by}</Mono></MetaRow> : null}
           {advanced ? <MetaRow label="Job ID"><Mono style={{ fontSize: 11.5 }}>{j.id}</Mono></MetaRow> : null}
-          {advanced && j.max_retries ? <MetaRow label="Retry budget">{j.retry_count} of {j.max_retries} used{j.escalate_to_role ? <span style={{ color: "var(--text-3)" }}> · escalates to {j.escalate_to_role}</span> : null}</MetaRow> : null}
+          {advanced && j.max_retries ? <MetaRow label="Retry budget">{j.retry_count || 0} of {j.max_retries} used{j.escalate_to_role ? <span style={{ color: "var(--text-3)" }}> · escalates to {j.escalate_to_role}</span> : null}</MetaRow> : null}
         </div>
 
         {deps.length || dependents.length ? (
