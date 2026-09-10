@@ -47,6 +47,20 @@ def mco_inbox() -> List[dict]:
 
 
 @mcp.tool()
+def mco_lease_next() -> dict:
+    """Lease the highest-priority job addressed to you, chosen by the server.
+
+    Prefer this over mco_inbox + mco_lease. The server applies the priority
+    order and hands you exactly one job, so urgent work cannot be read past,
+    and two workers on the same role cannot collide on the same entry.
+    Returns {"success": true, "job": {...}, "lease": {...}} or
+    {"success": false, "job": null} when nothing is waiting for you."""
+    client = _client()
+    client.flush_reports()
+    return client.lease_next()
+
+
+@mcp.tool()
 def mco_lease(task_id: str) -> dict:
     """Atomically claim a job before working it. Returns success and the lease proof; renew during long work."""
     return _client().lease(task_id)
@@ -80,14 +94,17 @@ def mco_fail(task_id: str, error: str) -> dict:
 @mcp.tool()
 def mco_send(to_role: str, title: str, instructions: str, to_instance: str = "",
              requires_approval: bool = False, max_retries: int = 0,
-             escalate_to_role: str = "") -> dict:
+             escalate_to_role: str = "", priority: int = 0) -> dict:
     """Drop a task/message into another agent's dropbox. to_instance is optional
     (omit to address the whole role). Set requires_approval=True to pause the job
     at a human approval gate; max_retries/escalate_to_role control what happens
-    when the job fails."""
+    when the job fails. priority (higher first, default 0) jumps the queue:
+    workers take the first job in their inbox, so an urgent job sent to a role
+    with an existing backlog needs one to be picked up next."""
     return _client().send(to_role, title, instructions, to_instance or None,
                           requires_approval=requires_approval, max_retries=max_retries,
-                          escalate_to_role=escalate_to_role or None)
+                          escalate_to_role=escalate_to_role or None,
+                          priority=priority)
 
 
 @mcp.tool()

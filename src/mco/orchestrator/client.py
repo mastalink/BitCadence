@@ -50,6 +50,20 @@ class GatewayClient:
             r.raise_for_status()
             return r.json()
 
+    def lease_next(self) -> dict:
+        """Lease the highest-priority job addressed to this agent, server-picked.
+
+        Preferred over inbox()+lease(): the server chooses, so priority is
+        enforced rather than left to whoever is reading the list."""
+        with self._client() as c:
+            r = c.post("/api/jobs/lease_next", json={"agent_instance_id": self.instance_id})
+            r.raise_for_status()
+            result = r.json()
+        job = result.get("job") or {}
+        if result.get("success") and result.get("lease") and job.get("id"):
+            self._leases[job["id"]] = result["lease"]
+        return result
+
     def lease(self, task_id: str) -> dict:
         """Claim a job and retain its proof for subsequent renew/complete/fail."""
         with self._client() as c:
@@ -154,7 +168,7 @@ class GatewayClient:
     def send(self, to_role: str, title: str, instructions: str, to_instance: Optional[str] = None,
              depends_on: Optional[List[str]] = None, requires_approval: bool = False,
              max_retries: int = 0, escalate_to_role: Optional[str] = None,
-             extra_payload: Optional[dict] = None) -> dict:
+             extra_payload: Optional[dict] = None, priority: int = 0) -> dict:
         """Drop a task/message into another agent's dropbox.
 
         `extra_payload` is merged into input_payload (e.g. the workflow
@@ -176,6 +190,8 @@ class GatewayClient:
             payload["max_retries"] = max_retries
         if escalate_to_role:
             payload["escalate_to_role"] = escalate_to_role
+        if priority:
+            payload["priority"] = priority
         with self._client() as c:
             r = c.post("/api/jobs", json=payload)
             r.raise_for_status()

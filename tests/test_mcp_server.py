@@ -41,7 +41,8 @@ class FakeGatewayClient:
         return self._responses.get("fail", {"success": True})
 
     def send(self, to_role: str, title: str, instructions: str, to_instance=None,
-             depends_on=None, requires_approval=False, max_retries=0, escalate_to_role=None):
+             depends_on=None, requires_approval=False, max_retries=0, escalate_to_role=None,
+             priority=0):
         self.calls.append(("send", to_role, title, instructions, to_instance))
         return self._responses.get("send", {"success": True})
 

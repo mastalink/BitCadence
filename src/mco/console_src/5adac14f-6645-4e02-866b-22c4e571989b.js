@@ -10,20 +10,62 @@ const JOB_FILTERS = [
   { id: "problems", label: "Problems", match: ["failed", "rejected", "halted", "cancelled"] },
 ];
 
+// Workers take the first job in their inbox, so priority is scheduling, not
+// decoration: it is what lets an urgent job jump an existing backlog.
+const JOB_SORTS = [
+  { id: "priority", label: "Priority, then oldest" },
+  { id: "newest",   label: "Newest first" },
+  { id: "oldest",   label: "Oldest first" },
+  { id: "status",   label: "Status" },
+  { id: "role",     label: "Assigned role" },
+  { id: "title",    label: "Title A–Z" },
+];
+
+const jobPriority = (j) => Number(j && j.priority) || 0;
+const jobTime = (j) => new Date(j.updated_at || j.created_at || 0).getTime() || 0;
+
 function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
   const [filter, setFilter] = useStateJ("all");
   const [query, setQuery] = useStateJ("");
+  const [role, setRole] = useStateJ("all");
+  const [sort, setSort] = useStateJ("priority");
+
+  const roles = useMemoJ(() => {
+    const set = new Set(jobs.map((j) => j.target_agent_role).filter(Boolean));
+    return Array.from(set).sort();
+  }, [jobs]);
 
   const visible = useMemoJ(() => {
     const f = JOB_FILTERS.find((x) => x.id === filter);
     let list = jobs;
     if (f && f.match) list = list.filter((j) => f.match.includes(j.status));
+    if (role !== "all") list = list.filter((j) => j.target_agent_role === role);
     if (query) {
       const q = query.toLowerCase();
       list = list.filter((j) => (j.title + " " + j.target_agent_role + " " + (j.workflow || "")).toLowerCase().includes(q));
     }
+    list = list.slice();
+    // Every comparator falls through to newest-first so the order is stable and
+    // never depends on however the store happened to return rows.
+    const byNewest = (a, b) => jobTime(b) - jobTime(a);
+    if (sort === "priority") {
+      // Mirrors the gateway's own inbox ordering, so the board shows the queue
+      // in the order workers will actually pick it up.
+      list.sort((a, b) => (jobPriority(b) - jobPriority(a))
+        || (new Date(a.created_at || 0) - new Date(b.created_at || 0)));
+    } else if (sort === "newest") {
+      list.sort(byNewest);
+    } else if (sort === "oldest") {
+      list.sort((a, b) => (new Date(a.created_at || 0) - new Date(b.created_at || 0)));
+    } else if (sort === "status") {
+      list.sort((a, b) => String(a.status).localeCompare(String(b.status)) || byNewest(a, b));
+    } else if (sort === "role") {
+      list.sort((a, b) => String(a.target_agent_role).localeCompare(String(b.target_agent_role)) || byNewest(a, b));
+    } else if (sort === "title") {
+      list.sort((a, b) => String(a.title).localeCompare(String(b.title)) || byNewest(a, b));
+    }
     return list;
-  }, [jobs, filter, query]);
+  }, [jobs, filter, query, role, sort]);
 
   const counts = useMemoJ(() => {
     const c = {};
@@ -51,6 +93,15 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
           border: "1px solid var(--border)", borderRadius: 8, padding: "7px 12px", fontSize: 13,
           background: "var(--surface)", color: "var(--text)", width: 200, outline: "none",
         }} />
+        <select aria-label="Filter by assigned role" value={role} onChange={(e) => setRole(e.target.value)} style={ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
+          background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }>
+          <option value="all">All roles</option>
+          {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select aria-label="Sort jobs" value={sort} onChange={(e) => setSort(e.target.value)} style={ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
+          background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }>
+          {JOB_SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+        </select>
         <div style={{ flex: 1 }}></div>
         <Btn kind="primary" onClick={onCompose}>+ New job</Btn>
       </div>
@@ -60,7 +111,7 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
           <THead cols={["Job", "Status", "Assigned to", "From", advanced ? "Retries" : "Workflow", "Updated"]} />
           <tbody>
             {visible.length === 0 ? (
-              <tr><Td style={{ borderBottom: "none" }} ><EmptyState icon="○" title="No jobs here" body="Try another filter, or create a new job." /></Td></tr>
+              <tr><Td style={{ borderBottom: "none" }} ><EmptyState icon="○" title="No jobs here" body={role !== "all" || query ? "Nothing matches these filters. Clear the role or search to widen it." : "Try another filter, or create a new job."} /></Td></tr>
             ) : visible.map((j) => (
               <tr key={j.id} onClick={() => onOpen(j.id)} style={{ cursor: "pointer" }}
                 onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-2)"}
@@ -70,6 +121,13 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
                   <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 1 }}>
                     <Mono style={{ fontSize: 11 }}>{shortId(j.id)}</Mono>
                     {j.workflow ? <span> · {j.workflow}</span> : null}
+                    {jobPriority(j) !== 0 ? (
+                      <span title="Higher priority is leased first" style={{
+                        marginLeft: 6, padding: "1px 6px", borderRadius: 999, fontSize: 10.5, fontWeight: 700,
+                        background: jobPriority(j) > 0 ? "var(--accent-soft)" : "var(--surface-2)",
+                        color: jobPriority(j) > 0 ? "var(--accent-text)" : "var(--text-3)",
+                      }}>P{jobPriority(j)}</span>
+                    ) : null}
                   </div>
                 </Td>
                 <Td><StatusBadge status={j.status} tone={tone} /></Td>
