@@ -93,13 +93,13 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
           border: "1px solid var(--border)", borderRadius: 8, padding: "7px 12px", fontSize: 13,
           background: "var(--surface)", color: "var(--text)", width: 200, outline: "none",
         }} />
-        <select aria-label="Filter by assigned role" value={role} onChange={(e) => setRole(e.target.value)} style={ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
-          background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }>
+        <select aria-label="Filter by assigned role" value={role} onChange={(e) => setRole(e.target.value)} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
+          background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }}>
           <option value="all">All roles</option>
           {roles.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select aria-label="Sort jobs" value={sort} onChange={(e) => setSort(e.target.value)} style={ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
-          background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }>
+        <select aria-label="Sort jobs" value={sort} onChange={(e) => setSort(e.target.value)} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
+          background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }}>
           {JOB_SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
         </select>
         <div style={{ flex: 1 }}></div>
