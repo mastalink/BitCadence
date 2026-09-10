@@ -10,12 +10,26 @@ come from env by default:
     AGENT_INSTANCE_ID (this agent's instance name)
 """
 
+import hashlib
+import json
 import os
+import uuid
+from pathlib import Path
 from typing import Any, List, Optional
 
 import httpx
 
 DEFAULT_GATEWAY = "http://127.0.0.1:18789"
+_LEASE_PROOF_FIELDS = (
+    "lease_id",
+    "lease_epoch",
+    "lease_incarnation",
+    "agent_instance_id",
+)
+
+
+class LeaseProofAmbiguityError(RuntimeError):
+    """No single lease attempt can be selected safely for a job write."""
 
 
 class GatewayClient:
@@ -27,6 +41,7 @@ class GatewayClient:
         instance_id: Optional[str] = None,
         timeout: float = 30.0,
         transport: Optional[httpx.BaseTransport] = None,
+        lease_store_dir: Optional[os.PathLike] = None,
     ):
         self.base_url = (base_url or os.environ.get("MCO_GATEWAY_URL") or DEFAULT_GATEWAY).rstrip("/")
         self.token = token if token is not None else os.environ.get("MCO_AGENT_TOKEN", "")
@@ -34,6 +49,22 @@ class GatewayClient:
         self.instance_id = instance_id if instance_id is not None else os.environ.get("AGENT_INSTANCE_ID", "")
         self.timeout = timeout
         self._transport = transport  # test hook (httpx.MockTransport); None in production
+        configured_store = (
+            lease_store_dir
+            if lease_store_dir is not None
+            else os.environ.get("MCO_LEASE_STORE_DIR")
+        )
+        if configured_store is None and transport is not None:
+            self._lease_store_root = None
+        else:
+            self._lease_store_root = (
+                Path(configured_store).expanduser()
+                if configured_store
+                else Path.home() / ".mco" / "leases"
+            )
+        self._lease_proofs: dict[str, dict] = {}
+        self._legacy_leases: set[str] = set()
+        self._retired_tasks: set[str] = set()
 
     def _client(self) -> httpx.Client:
         headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
@@ -50,11 +81,200 @@ class GatewayClient:
             return r.json()
 
     def lease(self, task_id: str) -> dict:
-        """Atomically claim a job before working it."""
+        """Atomically claim a job and retain its proof for reporting."""
         with self._client() as c:
             r = c.post("/api/jobs/lease", json={"task_id": task_id, "agent_instance_id": self.instance_id})
             r.raise_for_status()
-            return r.json()
+            result = r.json()
+
+        if result.get("success"):
+            raw_proof = result.get("lease")
+            if raw_proof is None:
+                self._legacy_leases.add(task_id)
+                self._write_legacy_marker(task_id)
+            else:
+                proof = self._normalize_lease_proof(raw_proof)
+                if not proof:
+                    raise LeaseProofAmbiguityError(
+                        f"Gateway returned an invalid lease proof for job {task_id}"
+                    )
+                self._lease_proofs[task_id] = proof
+                self._write_lease_proof(task_id, proof)
+        return result
+
+    def _normalize_lease_proof(self, proof: Any) -> dict:
+        if not isinstance(proof, dict):
+            return {}
+        normalized = {field: proof.get(field) for field in _LEASE_PROOF_FIELDS}
+        if any(value is None or value == "" for value in normalized.values()):
+            return {}
+        epoch = normalized["lease_epoch"]
+        if isinstance(epoch, bool) or not isinstance(epoch, int) or epoch < 1:
+            return {}
+        if self.instance_id and normalized["agent_instance_id"] != self.instance_id:
+            return {}
+        return normalized
+
+    def _identity_digest(self) -> str:
+        identity = "\0".join((self.base_url, self.token, self.role, self.instance_id))
+        return hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _task_digest(task_id: str) -> str:
+        return hashlib.sha256(str(task_id).encode("utf-8")).hexdigest()
+
+    def _lease_directory(self) -> Optional[Path]:
+        if self._lease_store_root is None:
+            return None
+        directory = self._lease_store_root / self._identity_digest()
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        try:
+            directory.chmod(0o700)
+        except OSError:
+            pass
+        return directory
+
+    def _lease_path(self, task_id: str, proof: dict) -> Optional[Path]:
+        directory = self._lease_directory()
+        if directory is None:
+            return None
+        lease_digest = hashlib.sha256(str(proof["lease_id"]).encode("utf-8")).hexdigest()
+        return directory / f"{self._task_digest(task_id)}.{lease_digest}.json"
+
+    def _legacy_path(self, task_id: str) -> Optional[Path]:
+        directory = self._lease_directory()
+        if directory is None:
+            return None
+        return directory / f"{self._task_digest(task_id)}.legacy"
+
+    def _active_paths(self, task_id: str) -> list[Path]:
+        directory = self._lease_directory()
+        if directory is None:
+            return []
+        return list(directory.glob(f"{self._task_digest(task_id)}.*.json"))
+
+    def _retired_paths(self, task_id: str) -> list[Path]:
+        directory = self._lease_directory()
+        if directory is None:
+            return []
+        return list(directory.glob(f"{self._task_digest(task_id)}.*.retired"))
+
+    @staticmethod
+    def _write_record(path: Path, record: dict) -> None:
+        temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+        try:
+            fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                json.dump(record, stream, sort_keys=True)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def _write_lease_proof(self, task_id: str, proof: dict) -> None:
+        path = self._lease_path(task_id, proof)
+        if path is not None:
+            self._write_record(path, {"task_id": str(task_id), "lease": proof})
+
+    def _write_legacy_marker(self, task_id: str) -> None:
+        path = self._legacy_path(task_id)
+        if path is not None:
+            self._write_record(path, {"task_id": str(task_id), "legacy": True})
+
+    def _has_legacy_marker(self, task_id: str) -> bool:
+        path = self._legacy_path(task_id)
+        if path is None:
+            return False
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return False
+        except (OSError, json.JSONDecodeError) as exc:
+            raise LeaseProofAmbiguityError(
+                f"Unreadable legacy lease proof for job {task_id}"
+            ) from exc
+        if record != {"task_id": str(task_id), "legacy": True}:
+            raise LeaseProofAmbiguityError(
+                f"Invalid legacy lease proof for job {task_id}"
+            )
+        return True
+
+    def _load_lease_proof(self, task_id: str) -> dict:
+        if task_id in self._lease_proofs:
+            return dict(self._lease_proofs[task_id])
+        if task_id in self._legacy_leases:
+            return {}
+        if task_id in self._retired_tasks or self._retired_paths(task_id):
+            raise LeaseProofAmbiguityError(
+                f"A retired lease proof exists for job {task_id}; refusing replay"
+            )
+
+        proofs = []
+        for path in self._active_paths(task_id):
+            try:
+                record = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise LeaseProofAmbiguityError(
+                    f"Unreadable lease proof for job {task_id}"
+                ) from exc
+            proof = self._normalize_lease_proof(record.get("lease"))
+            if record.get("task_id") != str(task_id) or not proof:
+                raise LeaseProofAmbiguityError(
+                    f"Invalid lease proof for job {task_id}"
+                )
+            proofs.append(proof)
+
+        legacy = self._has_legacy_marker(task_id)
+        if len(proofs) > 1 or (legacy and proofs):
+            raise LeaseProofAmbiguityError(
+                f"Multiple lease proofs exist for job {task_id}; refusing automatic selection"
+            )
+        if proofs:
+            self._lease_proofs[task_id] = proofs[0]
+            return dict(proofs[0])
+        if legacy:
+            self._legacy_leases.add(task_id)
+        return {}
+
+    def _clear_lease_proof(self, task_id: str, proof: dict) -> None:
+        self._lease_proofs.pop(task_id, None)
+        self._legacy_leases.discard(task_id)
+        path = self._lease_path(task_id, proof) if proof else self._legacy_path(task_id)
+        if path is not None:
+            path.unlink(missing_ok=True)
+
+    def _retire_lease_proof(self, task_id: str, proof: dict) -> None:
+        self._lease_proofs.pop(task_id, None)
+        self._legacy_leases.discard(task_id)
+        self._retired_tasks.add(task_id)
+        active = self._lease_path(task_id, proof) if proof else self._legacy_path(task_id)
+        if active is None:
+            return
+        retired = active.with_name(f"{active.name}.retired")
+        if active.exists():
+            os.replace(active, retired)
+        elif not retired.exists():
+            self._write_record(
+                retired,
+                {"task_id": str(task_id), "lease": proof, "retired": True},
+            )
+
+    def _report(self, task_id: str, payload: dict) -> dict:
+        proof = self._load_lease_proof(task_id)
+        known_attempt = bool(proof) or task_id in self._legacy_leases
+        with self._client() as c:
+            r = c.put(f"/api/jobs/{task_id}", json={**payload, **proof})
+            try:
+                r.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 409 and known_attempt:
+                    self._retire_lease_proof(task_id, proof)
+                raise
+            result = r.json()
+        if known_attempt:
+            self._clear_lease_proof(task_id, proof)
+        return result
 
     def complete(self, task_id: str, output: str, handoff: Optional[dict] = None) -> dict:
         """Mark a job completed. `handoff` is the structured Context Exchange
@@ -63,16 +283,16 @@ class GatewayClient:
         output_payload: dict = {"result": output}
         if handoff:
             output_payload["handoff"] = handoff
-        with self._client() as c:
-            r = c.put(f"/api/jobs/{task_id}", json={"status": "completed", "output_payload": output_payload})
-            r.raise_for_status()
-            return r.json()
+        return self._report(
+            task_id,
+            {"status": "completed", "output_payload": output_payload},
+        )
 
     def fail(self, task_id: str, error: str) -> dict:
-        with self._client() as c:
-            r = c.put(f"/api/jobs/{task_id}", json={"status": "failed", "error_message": error})
-            r.raise_for_status()
-            return r.json()
+        return self._report(
+            task_id,
+            {"status": "failed", "error_message": error},
+        )
 
     def send(self, to_role: str, title: str, instructions: str, to_instance: Optional[str] = None,
              depends_on: Optional[List[str]] = None, requires_approval: bool = False,
