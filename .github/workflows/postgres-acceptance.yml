@@ -30,4 +30,4 @@ jobs:
           python-version: '3.12'
       - run: pip install -e '.[dev]' 'psycopg[binary]' boto3
       - run: python scripts/check_postgres.py
-      - run: pytest tests/test_release_acceptance.py tests/test_cloud_tamper.py tests/test_evidence_acknowledgement.py -q
+      - run: pytest tests/test_release_acceptance.py tests/test_cloud_tamper.py tests/test_evidence_acknowledgement.py tests/test_job_creation_postgres.py -q
