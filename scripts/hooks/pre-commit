@@ -1,0 +1,46 @@
+#!/bin/sh
+# Refuse a fleet worker's commit in the shared checkout.
+#
+# git's branch, index and working tree are global per checkout. When unattended
+# workers and interactive sessions share one, they race - and the damage is
+# quiet: a fix lands on someone else's PR branch, or a finished critique sits
+# uncommitted until the next checkout throws it away.
+#
+# This fires ONLY when both are true:
+#   1. BC_FLEET_WORKTREE=1 is set  -> the committer is an unattended worker
+#   2. the repo top-level is the shared checkout
+#
+# So it never blocks a human, and never blocks a worker in its own worktree.
+# Every worktree of this repo shares this hook via core.hooksPath, which
+# scripts/fleet-worktree.ps1 configures on each run.
+
+[ "${BC_FLEET_WORKTREE:-}" = "1" ] || exit 0
+
+top=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+shared=${BC_SHARED_CHECKOUT:-C:/AI/baton/Batoncadence}
+
+# Compare case- and separator-insensitively; Windows paths reach here both ways.
+norm() { printf '%s' "$1" | tr 'A-Z\\' 'a-z/' | sed 's:/*$::'; }
+
+if [ "$(norm "$top")" = "$(norm "$shared")" ]; then
+    cat >&2 <<'MSG'
+
+  ✗ Refusing to commit: this is the SHARED checkout.
+
+  You are running as a fleet worker (BC_FLEET_WORKTREE=1). Committing here
+  races the human's session and other agents - branch, index and working tree
+  are global per checkout.
+
+  Work in your own worktree instead:
+
+      pwsh -File scripts/fleet-worktree.ps1 -Instance <your-instance-id>
+      # prints the path; cd there, then branch and commit normally
+
+  If you genuinely need to commit in the shared checkout, unset
+  BC_FLEET_WORKTREE first - and be sure you know why.
+
+MSG
+    exit 1
+fi
+
+exit 0

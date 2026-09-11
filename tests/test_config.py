@@ -2,9 +2,11 @@
 
 import tempfile
 from pathlib import Path
+import os
 import pytest
 
-from mco.config import ConfigManager, EnvironmentProfile
+from mco.config import ConfigManager, EnvironmentProfile, is_sensitive_key
+from mco.security import SecretStore
 
 
 def test_config_profiles():
@@ -43,9 +45,11 @@ def test_masked_config():
     """Verify that sensitive keys are masked in output."""
     with tempfile.TemporaryDirectory() as tmpdir:
         env_file = Path(tmpdir) / ".env"
-        
-        manager = ConfigManager(env_path=env_file)
-        manager.set("SUPABASE_KEY", "sb_key_123456789")
+
+        # store_path is NOT optional in tests: omitting it binds this manager
+        # to the singleton pointing at the operator's real ~/.mco store.
+        manager = ConfigManager(env_path=env_file, store_path=Path(tmpdir) / "s.enc")
+        manager.set("SUPABASE_KEY", "sb_key_123456789", encrypt=False)
         manager.set("OPERATOR_NAME", "Alice")
         
         masked = manager.get_masked_config()
@@ -137,4 +141,165 @@ def test_sentinel_in_store_does_not_shadow_real_env_value():
         manager.load()
         assert manager.get("SUPABASE_URL") == "https://real.example.co"
         assert manager.get("SUPABASE_KEY") == "real_key_123"
+
+
+
+# ── credentials are encrypted by default ──────────────────────────────────────
+
+from mco.config import SENSITIVE_KEY_MARKERS, is_sensitive_key
+import mco.security as security_mod
+
+
+@pytest.fixture
+def fresh_config(tmp_path, monkeypatch):
+    """A ConfigManager with its own .env and secret store.
+
+    `get_secret_store()` is a process-wide singleton that ignores its
+    store_path once created, so without resetting it every test inherits the
+    previous test's store.
+    """
+    from mco.config import ConfigManager
+
+    def _make(with_store: bool):
+        monkeypatch.setattr(security_mod, "_store", None, raising=False)
+        env = tmp_path / f"{'enc' if with_store else 'plain'}.env"
+        store = tmp_path / f"{'enc' if with_store else 'plain'}.enc"
+        cfg = ConfigManager(env_path=env, store_path=store)
+        if with_store:
+            cfg._store.initialize(b"0" * 32)
+        return cfg, env
+
+    return _make
+
+
+@pytest.mark.parametrize("key", [
+    "SUPABASE_KEY", "SERVICENOW_PASSWORD", "DYNATRACE_API_TOKEN", "MCO_WEBHOOK_SECRET",
+    # Runtime-named secrets can never live in a static set - and these are
+    # exactly what got written to .env in clear text.
+    "LLM_CONN_abc123_API_KEY", "LLM_CONN_xyz_API_KEY",
+    "SOME_PRIVATE_KEY", "CUSTOM_PASSWORD", "X_SECRET",
+])
+def test_credential_shaped_keys_are_sensitive(key):
+    assert is_sensitive_key(key) is True
+
+
+@pytest.mark.parametrize("key", ["OPERATOR_NAME", "MCO_PROFILE", "MCO_GATEWAY_URL", "NTFY_URL"])
+def test_ordinary_settings_are_not_sensitive(key):
+    assert is_sensitive_key(key) is False
+
+
+def test_secret_is_encrypted_without_the_caller_asking(fresh_config):
+    """The regression this change exists for.
+
+    `config.set(key, api_key)` with no `encrypt=` used to write clear text.
+    Every caller had to remember; the LLM connections route did not.
+    """
+    cfg, env = fresh_config(with_store=True)
+    cfg.set("LLM_CONN_abc_API_KEY", "sk-super-secret-value")
+
+    on_disk = env.read_text(encoding="utf-8")
+    assert "sk-super-secret-value" not in on_disk, "credential leaked into .env"
+    assert "encrypted_in_secret_store" in on_disk
+    assert cfg._store.get("LLM_CONN_abc_API_KEY") == "sk-super-secret-value"
+
+
+def test_credentials_never_fall_back_to_plaintext(fresh_config, monkeypatch):
+    """The silent-fallback era is over.
+
+    A warned plaintext write is not a control - the credential still lands on
+    disk in the clear. Off Windows (no OS keychain to auto-provision a store),
+    the write must REFUSE with instructions instead.
+    """
+    monkeypatch.setattr(os, "name", "posix")
+    cfg, env = fresh_config(with_store=False)
+    with pytest.raises(RuntimeError, match="MCO_MASTER_PASSWORD"):
+        cfg.set("LLM_CONN_abc_API_KEY", "sk-plain")
+    assert "sk-plain" not in env.read_text(encoding="utf-8") if env.exists() else True
+
+
+def test_windows_auto_provisions_a_store_key_first(fresh_config, monkeypatch):
+    """On Windows the store is created on demand - key persisted BEFORE the
+    store exists, so an interrupt can never orphan it."""
+    import mco.config as config_mod
+
+    monkeypatch.setattr(os, "name", "nt")
+    calls = []
+
+    class _FakeCredMan:
+        @classmethod
+        def store_key(cls, key):
+            calls.append(("persist", key))
+
+    monkeypatch.setattr(security_mod, "WindowsCredentialProvider", _FakeCredMan)
+    cfg, env = fresh_config(with_store=False)
+
+    real_init = cfg._store.initialize
+    def _tracked_init(key, **kw):
+        calls.append(("initialize", key))
+        return real_init(key, **kw)
+    monkeypatch.setattr(cfg._store, "initialize", _tracked_init)
+
+    cfg.set("LLM_CONN_auto_API_KEY", "sk-auto")
+
+    assert [c[0] for c in calls] == ["persist", "initialize"], "key must be persisted before the store exists"
+    assert calls[0][1] == calls[1][1], "the persisted key and the store key must match"
+    assert "sk-auto" not in env.read_text(encoding="utf-8")
+    assert cfg._store.get("LLM_CONN_auto_API_KEY") == "sk-auto"
+
+
+def test_locked_existing_store_refuses_rather_than_stacking(fresh_config, monkeypatch):
+    """An orphaned store must not be silently replaced - that loses data."""
+    cfg, env = fresh_config(with_store=True)
+    cfg._store.lock() if hasattr(cfg._store, "lock") else None
+    if cfg._store.is_unlocked:
+        # simulate the orphaned state: initialized on disk, no key in memory
+        monkeypatch.setattr(type(cfg._store), "is_unlocked", property(lambda self: False))
+    with pytest.raises(RuntimeError, match="locked"):
+        cfg.set("SERVICENOW_PASSWORD", "hunter2")
+
+
+def test_explicit_plaintext_opt_out_still_available(fresh_config):
+    """encrypt=False remains a deliberate, visible escape hatch."""
+    cfg, env = fresh_config(with_store=False)
+    cfg.set("MCO_WEBHOOK_SECRET", "shhh", encrypt=False)
+    assert "shhh" in env.read_text(encoding="utf-8")
+
+
+def test_non_secret_values_stay_readable_in_env(fresh_config):
+    cfg, env = fresh_config(with_store=True)
+    cfg.set("OPERATOR_NAME", "joe")
+    assert "OPERATOR_NAME=joe" in env.read_text(encoding="utf-8")
+
+
+def test_encrypt_false_still_forces_plaintext(fresh_config):
+    """Explicit opt-out remains available for callers that need it."""
+    cfg, env = fresh_config(with_store=True)
+    cfg.set("MCO_WEBHOOK_SECRET", "shhh", encrypt=False)
+    assert "shhh" in env.read_text(encoding="utf-8")
+def test_dynamic_model_connection_key_is_sensitive_and_resolves_immediately(tmp_path):
+    env_file = tmp_path / ".env"
+    store_file = tmp_path / "secrets.enc"
+    manager = ConfigManager(env_path=env_file, store_path=store_file)
+    # SecretStore is process-global in production; isolate this test from
+    # earlier ConfigManager instances that intentionally exercise that singleton.
+    manager._store = SecretStore(store_path=store_file)
+    manager._store.initialize(b"D" * 32)
+    key = "LLM_CONN_123_API_KEY"
+
+    assert is_sensitive_key(key)
+    manager.set(key, "sk-dynamic-secret", encrypt=True)
+
+    assert manager.get(key) == "sk-dynamic-secret"
+    assert "sk-dynamic-secret" not in env_file.read_text(encoding="utf-8")
+    assert manager.get_masked_config()[key] != "sk-dynamic-secret"
+
+
+def test_config_rejects_newline_injection(tmp_path):
+    manager = ConfigManager(
+        env_path=tmp_path / ".env",
+        store_path=tmp_path / "secrets.enc",
+    )
+
+    with pytest.raises(ValueError, match="newlines"):
+        manager.set("MCO_ORGS", "acme\nMCO_VAULT_MASTER_KEY=attacker")
 

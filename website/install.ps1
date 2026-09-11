@@ -1,28 +1,28 @@
 # ============================================================================
-# BatonCadence - Windows bootstrap installer
+# BitCadence - Windows bootstrap installer
 # ============================================================================
 # Usage (run in PowerShell):
-#   iwr -useb https://batoncadence.com/install.ps1 | iex
+#   iwr -useb https://bitcadence.ai/install.ps1 | iex
 #
 # What this does:
 #   1. Detects an existing install (via PATH, common locations, or env var)
 #   2. If found: pulls updates, re-runs setup in-place - never double-installs
-#   3. If not found: clones to $HOME\BatonCadence and runs setup
+#   3. If not found: clones to $HOME\BitCadence and runs setup
 # ============================================================================
 $ErrorActionPreference = "Stop"
 
-$REPO = "https://github.com/mastalink/Batoncadence"
+$REPO = "https://github.com/mastalink/BitCadence"
 
 Write-Host ""
-Write-Host "  BatonCadence installer" -ForegroundColor Cyan
+Write-Host "  BitCadence installer" -ForegroundColor Cyan
 Write-Host "  =======================" -ForegroundColor Cyan
 Write-Host ""
 
 # ---- 1. Locate an existing install ----------------------------------------
 function Find-ExistingInstall {
     # Explicit override wins
-    if ($env:BATONCADENCE_INSTALL_DIR -and (Test-Path (Join-Path $env:BATONCADENCE_INSTALL_DIR ".git"))) {
-        return $env:BATONCADENCE_INSTALL_DIR
+    if ($env:BITCADENCE_INSTALL_DIR -and (Test-Path (Join-Path $env:BITCADENCE_INSTALL_DIR ".git"))) {
+        return $env:BITCADENCE_INSTALL_DIR
     }
 
     # mco already on PATH? resolve back to the repo root
@@ -40,7 +40,7 @@ function Find-ExistingInstall {
         $candidate = Split-Path (Split-Path (Split-Path $mcoPath))
         if (Test-Path (Join-Path $candidate "pyproject.toml")) {
             $content = Get-Content (Join-Path $candidate "pyproject.toml") -Raw -ErrorAction SilentlyContinue
-            if ($content -match "batoncadence|BatonCadence|mco") {
+            if ($content -match "bitcadence|BitCadence|mco") {
                 return $candidate
             }
         }
@@ -48,10 +48,10 @@ function Find-ExistingInstall {
 
     # Check common install locations
     foreach ($loc in @(
-        "$HOME\BatonCadence",
-        "$HOME\batoncadence",
-        "C:\BatonCadence",
-        "C:\AI\baton\Batoncadence"
+        "$HOME\BitCadence",
+        "$HOME\bitcadence",
+        "C:\BitCadence",
+        "C:\AI\baton\BitCadence"
     )) {
         if ((Test-Path (Join-Path $loc ".git")) -and (Test-Path (Join-Path $loc "pyproject.toml"))) {
             return $loc
@@ -64,7 +64,7 @@ function Find-ExistingInstall {
 $existing = Find-ExistingInstall
 
 if ($existing) {
-    Write-Host "[OK] Found existing BatonCadence install at:" -ForegroundColor Green
+    Write-Host "[OK] Found existing BitCadence install at:" -ForegroundColor Green
     Write-Host "     $existing"
     Write-Host ""
     Write-Host "->  Checking for updates..." -ForegroundColor Cyan
@@ -92,7 +92,7 @@ if ($existing) {
 }
 
 # ---- 2. Fresh install -------------------------------------------------------
-$DEST = if ($env:BATONCADENCE_INSTALL_DIR) { $env:BATONCADENCE_INSTALL_DIR } else { "$HOME\BatonCadence" }
+$DEST = if ($env:BITCADENCE_INSTALL_DIR) { $env:BITCADENCE_INSTALL_DIR } else { "$HOME\BitCadence" }
 
 $gitCmd = Get-Command git -ErrorAction SilentlyContinue
 if (-not $gitCmd) {
@@ -102,12 +102,12 @@ if (-not $gitCmd) {
 }
 
 if ((Test-Path $DEST) -and (Get-ChildItem $DEST -ErrorAction SilentlyContinue | Select-Object -First 1)) {
-    Write-Host "[X]  $DEST exists and is not empty (and is not a BatonCadence repo)." -ForegroundColor Red
-    Write-Host "     Move it or set `$env:BATONCADENCE_INSTALL_DIR to a different path." -ForegroundColor DarkGray
+    Write-Host "[X]  $DEST exists and is not empty (and is not a BitCadence repo)." -ForegroundColor Red
+    Write-Host "     Move it or set `$env:BITCADENCE_INSTALL_DIR to a different path." -ForegroundColor DarkGray
     exit 1
 }
 
-Write-Host "->  Cloning BatonCadence to $DEST..." -ForegroundColor Cyan
+Write-Host "->  Cloning BitCadence to $DEST..." -ForegroundColor Cyan
 git clone --depth 1 $REPO $DEST
 Write-Host "[OK] Repository ready at $DEST" -ForegroundColor Green
 Write-Host ""

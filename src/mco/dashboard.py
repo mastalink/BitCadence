@@ -8,6 +8,11 @@ panel with full CLI parity:
 - Operations: approval queue (approve/reject), job board (+retry), audit viewer.
 - Agents: register (token shown once), reset token, edit role/scopes/status,
   delete - the `mco register` surface, point-and-click.
+- Model Connections: add/edit/delete/test named connections to LLM providers
+  (Anthropic, OpenAI, Gemini, or a custom OpenAI-compatible endpoint) for
+  custom workers that need one. Not a chat gateway - BitCadence orchestrates
+  agents, it doesn't call a model on their behalf. API keys are write-only,
+  mirroring every other secret in the Control Panel.
 - Workflows: paste YAML, submit a governed DAG (`mco workflow` parity).
 - Settings: server-driven groups (governance, memory, edition, security,
   notifications) rendered from /api/settings metadata - the whitelist on the
@@ -23,7 +28,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>BatonCadence Control Plane</title>
+<title>BitCadence Control Plane</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -102,7 +107,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
 <div id="lock">
   <div class="card">
     <div class="logo">&#129345;</div>
-    <h1>BatonCadence Control Plane</h1>
+    <h1>BitCadence Control Plane</h1>
     <p class="muted">Paste an agent bearer token to unlock.<br>Approver/admin tokens see everything; scoped tokens see what they may.</p>
     <input id="lock-token" type="password" placeholder="mco_tok_..." onkeydown="if(event.key==='Enter')unlock()">
     <button class="primary" style="width:100%" onclick="unlock()">Unlock</button>
@@ -112,9 +117,10 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
 
 <div id="shell">
   <aside>
-    <div class="brand">&#129345; BatonCadence</div>
+    <div class="brand">&#129345; BitCadence</div>
     <button id="nav-ops" class="active" onclick="nav('ops')">Operations</button>
     <button id="nav-agents" onclick="nav('agents')">Agents &amp; Tokens</button>
+    <button id="nav-models" onclick="nav('models')">Model Connections</button>
     <button id="nav-workflows" onclick="nav('workflows')">Workflows</button>
     <button id="nav-settings" onclick="nav('settings')">Settings</button>
     <div style="margin-top:1.2rem; padding:0 .8rem">
@@ -149,6 +155,16 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
       <table><thead><tr><th>Instance</th><th>Role</th><th>Org</th><th>Scopes</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody id="agents"><tr><td colspan="6" class="muted">-</td></tr></tbody></table>
       <p id="agents-msg" class="err"></p>
+    </section>
+
+    <!-- ── Model Connections ──────────────────────────────────── -->
+    <section id="view-models" class="view">
+      <div class="topbar"><h1>Model Connections</h1>
+        <button class="primary" onclick="openAddModel()">+ Add connection</button></div>
+      <p class="muted" style="font-size:.83rem">Named, testable connections to LLM providers, for custom workers/executors that need one. BitCadence orchestrates agents (Claude, Codex, Gemini, ...) rather than calling a model directly - this is credential management, not a chat gateway. <b>Test</b> makes one real call to the provider to prove the key works. Keys are never shown again after saving.</p>
+      <table><thead><tr><th>Name</th><th>Provider</th><th>Model</th><th>Key</th><th>Actions</th></tr></thead>
+      <tbody id="models"><tr><td colspan="5" class="muted">-</td></tr></tbody></table>
+      <p id="models-msg" class="err"></p>
     </section>
 
     <!-- ── Workflows ──────────────────────────────────────────── -->
@@ -228,11 +244,12 @@ function lockUp() {
 
 /* ── navigation ──────────────────────────────────────────────── */
 function nav(view) {
-  for (const v of ["ops","agents","workflows","settings"]) {
+  for (const v of ["ops","agents","models","workflows","settings"]) {
     $("view-" + v).classList.toggle("on", v === view);
     $("nav-" + v).classList.toggle("active", v === view);
   }
   if (view === "agents") loadAgents();
+  if (view === "models") loadModels();
   if (view === "settings") loadSettings();
 }
 
@@ -424,6 +441,101 @@ async function resetToken(id, role) {
 async function deleteAgent(id) {
   if (!confirm(`Delete agent '${id}'? Its token stops working immediately.`)) return;
   try { await api(`/api/agents/${encodeURIComponent(id)}`, { method: "DELETE" }); loadAgents(); }
+  catch (e) { alert("delete failed: " + e.message); }
+}
+
+/* ── model connections ──────────────────────────────────────── */
+let MODEL_PROVIDERS = {};
+
+async function loadModels() {
+  try {
+    const [conns, providers] = await Promise.all([
+      api("/api/llm-connections"), api("/api/llm-connections/providers"),
+    ]);
+    MODEL_PROVIDERS = providers;
+    $("models-msg").textContent = "";
+    $("models").innerHTML = conns.length ? conns.map(c => `
+      <tr><td>${esc(c.name)}</td>
+      <td class="muted">${esc((providers[c.provider] || {}).label || c.provider)}</td>
+      <td class="muted">${esc(c.model || "-")}</td>
+      <td>${c.key_set ? '<span class="good">set</span>' : '<span class="err">not set</span>'}</td>
+      <td><button onclick="testModelConn('${esc(c.id)}')">Test</button>
+          <button onclick="openEditModel(${esc(JSON.stringify(c))})">Edit</button>
+          <button class="no" onclick="deleteModelConn('${esc(c.id)}')">Delete</button></td></tr>`).join("")
+      : '<tr><td colspan="5" class="muted">No model connections yet.</td></tr>';
+  } catch (e) { $("models-msg").textContent = e.message; }
+}
+
+function providerOptions(selected) {
+  return Object.entries(MODEL_PROVIDERS).map(([key, meta]) =>
+    `<option value="${esc(key)}" ${key === selected ? "selected" : ""}>${esc(meta.label)}</option>`).join("");
+}
+
+async function openAddModel() {
+  try { MODEL_PROVIDERS = await api("/api/llm-connections/providers"); } catch (e) { }
+  openModal(`<h3>Add a model connection</h3>
+    <div class="formgrid">
+      <label>Name</label><input id="mc-name" placeholder="prod-anthropic">
+      <label>Provider</label><select id="mc-provider" onchange="toggleModelBaseUrl()">${providerOptions("anthropic")}</select>
+      <label id="mc-baseurl-lbl" style="display:none">Base URL</label>
+      <input id="mc-baseurl" style="display:none" placeholder="http://localhost:11434/v1">
+      <label>Model</label><input id="mc-model" placeholder="claude-opus-4 (optional)">
+      <label>API key</label><input id="mc-key" type="password" placeholder="sk-...">
+    </div>
+    <button class="primary" onclick="submitAddModel()">Add &amp; save</button>
+    <button onclick="closeModal()">Cancel</button>
+    <p id="mc-msg" class="err"></p>`);
+  toggleModelBaseUrl();
+}
+function toggleModelBaseUrl() {
+  const provider = $("mc-provider").value;
+  const editable = !MODEL_PROVIDERS[provider] || MODEL_PROVIDERS[provider].base_url_editable;
+  $("mc-baseurl-lbl").style.display = editable ? "" : "none";
+  $("mc-baseurl").style.display = editable ? "" : "none";
+}
+async function submitAddModel() {
+  try {
+    await api("/api/llm-connections", { method: "POST", body: JSON.stringify({
+      name: $("mc-name").value.trim(), provider: $("mc-provider").value,
+      base_url: $("mc-baseurl").value.trim(), model: $("mc-model").value.trim(),
+      api_key: $("mc-key").value.trim(),
+    })});
+    closeModal(); loadModels();
+  } catch (e) { $("mc-msg").textContent = e.message; }
+}
+
+function openEditModel(c) {
+  const meta = MODEL_PROVIDERS[c.provider] || {};
+  openModal(`<h3>Edit '${esc(c.name)}'</h3>
+    <div class="formgrid">
+      <label>Name</label><input id="me-name" value="${esc(c.name)}">
+      ${meta.base_url_editable ? `<label>Base URL</label><input id="me-baseurl" value="${esc(c.base_url || "")}">` : ""}
+      <label>Model</label><input id="me-model" value="${esc(c.model || "")}">
+      <label>New API key</label><input id="me-key" type="password" placeholder="blank keeps the current key">
+    </div>
+    <button class="primary" onclick="saveEditModel('${esc(c.id)}', ${meta.base_url_editable ? "true" : "false"})">Save</button>
+    <button onclick="closeModal()">Cancel</button>
+    <p id="me-msg" class="err"></p>`);
+}
+async function saveEditModel(id, baseUrlEditable) {
+  const payload = { name: $("me-name").value.trim(), model: $("me-model").value.trim() };
+  if (baseUrlEditable) payload.base_url = $("me-baseurl").value.trim();
+  const key = $("me-key").value.trim();
+  if (key) payload.api_key = key;
+  try {
+    await api(`/api/llm-connections/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(payload) });
+    closeModal(); loadModels();
+  } catch (e) { $("me-msg").textContent = e.message; }
+}
+async function testModelConn(id) {
+  try {
+    const res = await api(`/api/llm-connections/${encodeURIComponent(id)}/test`, { method: "POST" });
+    alert(res.ok ? `OK (${res.latency_ms}ms): ${res.detail}` : `Failed: ${res.detail}`);
+  } catch (e) { alert("test failed: " + e.message); }
+}
+async function deleteModelConn(id) {
+  if (!confirm("Delete this connection? Its stored key is removed too.")) return;
+  try { await api(`/api/llm-connections/${encodeURIComponent(id)}`, { method: "DELETE" }); loadModels(); }
   catch (e) { alert("delete failed: " + e.message); }
 }
 

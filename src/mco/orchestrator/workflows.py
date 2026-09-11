@@ -45,13 +45,21 @@ class WorkflowError(ValueError):
     """Raised when a workflow definition is invalid."""
 
 
-def load_workflow(source: Union[str, Path, dict]) -> dict:
-    """Load and validate a workflow from a YAML path/string or a parsed dict."""
+def load_workflow(source: Union[str, Path, dict], allow_path: bool = False) -> dict:
+    """Load and validate a workflow from a YAML string/dict, or (only when
+    explicitly requested) a local file path.
+
+    `allow_path` defaults to False - reading `source` off the local disk is
+    only safe for the trusted CLI operator (`mco workflow <file>`), never for
+    `source` sourced from a network request (POST /api/workflows). Without
+    this, any caller able to submit a workflow could pass a bare path and
+    have the gateway read an arbitrary local file (CWE-22 path injection).
+    """
     if isinstance(source, dict):
         workflow = source
     else:
         text = str(source)
-        if "\n" not in text:
+        if allow_path and "\n" not in text:
             path = Path(text)
             if path.exists():
                 text = path.read_text(encoding="utf-8")

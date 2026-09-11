@@ -1,4 +1,4 @@
-"""Shared fixtures and fakes for BatonCadence tests.
+"""Shared fixtures and fakes for BitCadence tests.
 
 Provides reusable FakeDB and FakeConfig implementations that all test files
 can import. This eliminates duplication across test files and ensures
@@ -312,3 +312,61 @@ def isolated_db(fake_db: FakeDB) -> FakeDB:
     fake_db.add_job(id="org-b-job", org_id="org-b", title="Org B job")
     fake_db.add_job(id="default-job", title="default org job")
     return fake_db
+
+# ══════════════════════════════════════════════════════════════════════════
+# Machine protection: tests must never touch the operator's real secrets
+# ══════════════════════════════════════════════════════════════════════════
+
+@pytest.fixture(autouse=True)
+def _isolate_operator_secrets(monkeypatch, tmp_path_factory):
+    """Keep every test off the operator's real secret store, two ways.
+
+    A test on a developer machine silently orphaned the operator's real secret
+    store at ~/.mco/secrets.enc - the store existed but nothing could unlock it
+    again, surfacing as a mystery warning on every CLI run. It happened
+    repeatedly on the machine this project is developed on.
+
+    There are TWO paths to the real store, and both must be closed:
+
+    1. The KEY, in Windows Credential Manager. A test calling the real
+       `WindowsCredentialProvider.store_key()` overwrites the master key for
+       the real store. Closed by swapping in an in-memory credential vault.
+
+    2. The FILE, at the default path ~/.mco/secrets.enc. Any test that reaches
+       for the store WITHOUT an explicit path - `get_secret_store()`,
+       `SecretStore()`, or `ConfigManager()` with no store_path - binds to the
+       real file and can re-initialize it with a throwaway key that never
+       reaches (the real) Credential Manager, orphaning it. The first guard
+       alone did not catch this: it protected the key, not the file. Closed by
+       redirecting the default path to a temp dir and resetting the process
+       singleton so no default store is ever the real one.
+
+    A test that genuinely needs the real store must opt out explicitly - and
+    should think hard first.
+    """
+    import mco.security as security_mod
+
+    vault: Dict[str, bytes] = {}
+    real_provider = security_mod.WindowsCredentialProvider
+
+    class _InMemoryCredMan(real_provider):  # keeps isinstance() checks working
+        @classmethod
+        def store_key(cls, key: bytes) -> None:
+            vault["key"] = key
+
+        def get_key(self) -> bytes:
+            if "key" not in vault:
+                raise RuntimeError("no key stored (in-memory test vault)")
+            return vault["key"]
+
+    monkeypatch.setattr(security_mod, "WindowsCredentialProvider", _InMemoryCredMan)
+
+    # Redirect the default store path away from ~/.mco/secrets.enc, and reset
+    # the global singleton so a test that grabs a default store gets a fresh
+    # temp one - never the operator's.
+    temp_store = tmp_path_factory.mktemp("secret-store") / "secrets.enc"
+    monkeypatch.setattr(security_mod, "DEFAULT_STORE_PATH", temp_store)
+    monkeypatch.setattr(security_mod, "_store", None)
+    yield
+    # Leave no singleton pointing at a now-deleted temp path for the next test.
+    monkeypatch.setattr(security_mod, "_store", None, raising=False)

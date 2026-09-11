@@ -4,6 +4,44 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 
 ## [Unreleased]
 
+### Changed
+- **Breaking: audit failures now fail the triggering operation.** A failed audit
+  write or required S3 acknowledgement no longer returns success. The database
+  mutation may already be committed; its transactional outbox preserves evidence.
+  Retry the same attempt and result after restoring the sink, rather than creating
+  duplicate work. The kill switch still fences active attempts during a sink outage.
+- Audit signing keys prefer the encrypted vault. Environment injection requires
+  `MCO_ALLOW_ENV_AUDIT_KEY=1` and emits a warning; ECS explicitly opts in for its
+  Secrets Manager injection. An inaccessible vault cannot be bypassed this way.
+- Evidence COMPLIANCE retention defaults to **one day**, including Terraform.
+  Existing locked versions keep their original retention. A durable S3 checkpoint
+  avoids re-uploading acknowledged events across restarts; chain verification
+  still reads the full history to detect corruption and rollback.
+- AWS lab runs only through manual dispatch on `main` or the completion candidate.
+  Bootstrap trust explicitly allows those two refs; remove the candidate after merge.
+- **Renamed: BatonCadence is now BitCadence** (`bitcadence.ai`). The tagline is
+  now *"Every agent. One beat."* — the drumline metaphor stays, the relay-race
+  pun goes. The Python distribution is `bitcadence`; **the CLI is still `mco`**,
+  every `MCO_*` environment variable is unchanged, and config still lives in
+  `~/.mco/`, so existing installs keep working without edits.
+- **Services register under the new brand** — `BitCadence-gateway`,
+  `bitcadence-gateway.service`, `com.bitcadence.gateway`. Machines installed
+  under the old names are still discovered, addressed, and uninstallable:
+  `mco service status|restart|logs|uninstall` resolve `BatonCadence-*` units,
+  tasks, and plists alongside the new ones. **To move a machine onto the new
+  names, run `mco service uninstall` then `mco service install`** — an
+  in-place upgrade leaves the old-named service running (and working).
+
+### Fixed
+- **Security (dropbox isolation):** `POST /api/jobs/lease` now enforces the
+  same addressee rule as the inbox and the completion endpoint - an agent may
+  only lease jobs addressed to its own role (or to its specific instance).
+  Previously the lease endpoint checked only org isolation, so any authenticated
+  agent could lease another agent's pending job; completion was still blocked,
+  so the job would strand in `leased` state and record a false actor in the
+  audit trail. The check mirrors the inbox filter, so a same-role sibling
+  instance is still blocked from an instance-targeted job.
+
 ## [0.3.0] - 2026-07-01
 
 The parity release: everything the API can do, the CLI and the console can

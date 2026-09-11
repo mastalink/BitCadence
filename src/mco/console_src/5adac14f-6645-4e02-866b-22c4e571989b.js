@@ -1,4 +1,4 @@
-// Baton — Job Board screen + Job detail drawer + New Job composer.
+// BitCadence — Job Board screen + Job detail drawer + New Job composer.
 const { useState: useStateJ, useMemo: useMemoJ, useEffect: useEffectJ } = React;
 
 const JOB_FILTERS = [
@@ -7,23 +7,65 @@ const JOB_FILTERS = [
   { id: "needs_approval", label: "Needs approval", match: ["needs_approval"] },
   { id: "waiting", label: "Waiting", match: ["waiting"] },
   { id: "done", label: "Done", match: ["completed"] },
-  { id: "problems", label: "Problems", match: ["failed", "rejected"] },
+  { id: "problems", label: "Problems", match: ["failed", "rejected", "halted", "cancelled"] },
 ];
+
+// Workers take the first job in their inbox, so priority is scheduling, not
+// decoration: it is what lets an urgent job jump an existing backlog.
+const JOB_SORTS = [
+  { id: "priority", label: "Priority, then oldest" },
+  { id: "newest",   label: "Newest first" },
+  { id: "oldest",   label: "Oldest first" },
+  { id: "status",   label: "Status" },
+  { id: "role",     label: "Assigned role" },
+  { id: "title",    label: "Title A–Z" },
+];
+
+const jobPriority = (j) => Number(j && j.priority) || 0;
+const jobTime = (j) => new Date(j.updated_at || j.created_at || 0).getTime() || 0;
 
 function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
   const [filter, setFilter] = useStateJ("all");
   const [query, setQuery] = useStateJ("");
+  const [role, setRole] = useStateJ("all");
+  const [sort, setSort] = useStateJ("priority");
+
+  const roles = useMemoJ(() => {
+    const set = new Set(jobs.map((j) => j.target_agent_role).filter(Boolean));
+    return Array.from(set).sort();
+  }, [jobs]);
 
   const visible = useMemoJ(() => {
     const f = JOB_FILTERS.find((x) => x.id === filter);
     let list = jobs;
     if (f && f.match) list = list.filter((j) => f.match.includes(j.status));
+    if (role !== "all") list = list.filter((j) => j.target_agent_role === role);
     if (query) {
       const q = query.toLowerCase();
       list = list.filter((j) => (j.title + " " + j.target_agent_role + " " + (j.workflow || "")).toLowerCase().includes(q));
     }
+    list = list.slice();
+    // Every comparator falls through to newest-first so the order is stable and
+    // never depends on however the store happened to return rows.
+    const byNewest = (a, b) => jobTime(b) - jobTime(a);
+    if (sort === "priority") {
+      // Mirrors the gateway's own inbox ordering, so the board shows the queue
+      // in the order workers will actually pick it up.
+      list.sort((a, b) => (jobPriority(b) - jobPriority(a))
+        || (new Date(a.created_at || 0) - new Date(b.created_at || 0)));
+    } else if (sort === "newest") {
+      list.sort(byNewest);
+    } else if (sort === "oldest") {
+      list.sort((a, b) => (new Date(a.created_at || 0) - new Date(b.created_at || 0)));
+    } else if (sort === "status") {
+      list.sort((a, b) => String(a.status).localeCompare(String(b.status)) || byNewest(a, b));
+    } else if (sort === "role") {
+      list.sort((a, b) => String(a.target_agent_role).localeCompare(String(b.target_agent_role)) || byNewest(a, b));
+    } else if (sort === "title") {
+      list.sort((a, b) => String(a.title).localeCompare(String(b.title)) || byNewest(a, b));
+    }
     return list;
-  }, [jobs, filter, query]);
+  }, [jobs, filter, query, role, sort]);
 
   const counts = useMemoJ(() => {
     const c = {};
@@ -51,6 +93,15 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
           border: "1px solid var(--border)", borderRadius: 8, padding: "7px 12px", fontSize: 13,
           background: "var(--surface)", color: "var(--text)", width: 200, outline: "none",
         }} />
+        <select aria-label="Filter by assigned role" value={role} onChange={(e) => setRole(e.target.value)} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
+          background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }}>
+          <option value="all">All roles</option>
+          {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select aria-label="Sort jobs" value={sort} onChange={(e) => setSort(e.target.value)} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
+          background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }}>
+          {JOB_SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+        </select>
         <div style={{ flex: 1 }}></div>
         <Btn kind="primary" onClick={onCompose}>+ New job</Btn>
       </div>
@@ -60,7 +111,7 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
           <THead cols={["Job", "Status", "Assigned to", "From", advanced ? "Retries" : "Workflow", "Updated"]} />
           <tbody>
             {visible.length === 0 ? (
-              <tr><Td style={{ borderBottom: "none" }} ><EmptyState icon="○" title="No jobs here" body="Try another filter, or create a new job." /></Td></tr>
+              <tr><Td style={{ borderBottom: "none" }} ><EmptyState icon="○" title="No jobs here" body={role !== "all" || query ? "Nothing matches these filters. Clear the role or search to widen it." : "Try another filter, or create a new job."} /></Td></tr>
             ) : visible.map((j) => (
               <tr key={j.id} onClick={() => onOpen(j.id)} style={{ cursor: "pointer" }}
                 onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-2)"}
@@ -70,6 +121,13 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
                   <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 1 }}>
                     <Mono style={{ fontSize: 11 }}>{shortId(j.id)}</Mono>
                     {j.workflow ? <span> · {j.workflow}</span> : null}
+                    {jobPriority(j) !== 0 ? (
+                      <span title="Higher priority is leased first" style={{
+                        marginLeft: 6, padding: "1px 6px", borderRadius: 999, fontSize: 10.5, fontWeight: 700,
+                        background: jobPriority(j) > 0 ? "var(--accent-soft)" : "var(--surface-2)",
+                        color: jobPriority(j) > 0 ? "var(--accent-text)" : "var(--text-3)",
+                      }}>P{jobPriority(j)}</span>
+                    ) : null}
                   </div>
                 </Td>
                 <Td><StatusBadge status={j.status} tone={tone} /></Td>
@@ -82,10 +140,10 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
                 <Td><span style={{ color: "var(--text-2)" }}>{j.source_agent_id}</span></Td>
                 <Td>
                   {advanced
-                    ? <span style={{ color: "var(--text-2)" }}>{j.max_retries ? `${j.retry_count}/${j.max_retries}` : "—"}{j.escalate_to_role ? ` → ${j.escalate_to_role}` : ""}</span>
+                    ? <span style={{ color: "var(--text-2)" }}>{j.max_retries ? `${j.retry_count || 0}/${j.max_retries}` : "—"}{j.escalate_to_role ? ` → ${j.escalate_to_role}` : ""}</span>
                     : <span style={{ color: "var(--text-2)" }}>{j.workflow || "—"}</span>}
                 </Td>
-                <Td><span style={{ color: "var(--text-3)", fontSize: 12.5, whiteSpace: "nowrap" }}>{timeAgo(j.updated_at)}</span></Td>
+                <Td><span style={{ color: "var(--text-3)", fontSize: 12.5, whiteSpace: "nowrap" }}>{timeAgo(j.updated_at || j.completed_at || j.started_at || j.created_at)}</span></Td>
               </tr>
             ))}
           </tbody>
@@ -109,7 +167,16 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
   const j = jobs.find((x) => x.id === jobId);
   const [reason, setReason] = useStateJ("");
   const [rejecting, setRejecting] = useStateJ(false);
+  const [cancelling, setCancelling] = useStateJ(false);
+  const [cancelReason, setCancelReason] = useStateJ("");
+  const [reassigning, setReassigning] = useStateJ(false);
+  const [toRole, setToRole] = useStateJ("");
   if (!j) return null;
+  // Cancel and reassign apply to anything the board has not finished with.
+  // Terminal jobs are history and must not offer actions that would 409.
+  const TERMINAL = ["completed", "failed", "rejected", "cancelled", "halted"];
+  const live = TERMINAL.indexOf(j.status) < 0;
+  const roles = Array.from(new Set((window.BitCadenceStore.getAgents() || []).map((a) => a.role))).sort();
   const deps = (j.depends_on || []).map((d) => jobs.find((x) => x.id === d)).filter(Boolean);
   const dependents = jobs.filter((x) => (x.depends_on || []).includes(j.id));
 
@@ -136,24 +203,66 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
             </div>
             {!rejecting ? (
               <div style={{ display: "flex", gap: 8 }}>
-                <Btn kind="ok" small onClick={() => window.BatonStore.approve(j.id, "joe-laptop")}>✓ Approve &amp; run</Btn>
+                <Btn kind="ok" small onClick={() => window.BitCadenceStore.approve(j.id, "joe-laptop")}>✓ Approve &amp; run</Btn>
                 <Btn kind="danger" small onClick={() => setRejecting(true)}>Reject…</Btn>
               </div>
             ) : (
               <div style={{ display: "flex", gap: 8 }}>
                 <input autoFocus value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why? (recorded in the audit trail)" style={{ flex: 1, border: "1px solid var(--border-strong)", borderRadius: 6, padding: "5px 10px", fontSize: 12.5 }} />
-                <Btn kind="danger" small onClick={() => { window.BatonStore.reject(j.id, "joe-laptop", reason); setRejecting(false); }}>Reject</Btn>
+                <Btn kind="danger" small onClick={() => { window.BitCadenceStore.reject(j.id, "joe-laptop", reason); setRejecting(false); }}>Reject</Btn>
                 <Btn kind="ghost" small onClick={() => setRejecting(false)}>Cancel</Btn>
               </div>
             )}
           </div>
         ) : null}
 
-        {j.status === "failed" ? (
+        {["failed", "rejected", "halted"].includes(j.status) ? (
           <div style={{ background: "var(--st-failed-bg)", border: "1px solid var(--st-failed-dot)", borderRadius: "var(--radius-m)", padding: 14, marginBottom: 16 }}>
             <div style={{ fontWeight: 600, color: "var(--st-failed-fg)", marginBottom: 4 }}>{tone === "plain" ? "This job hit a problem." : "Execution failed."}</div>
             <div style={{ fontSize: 12.5, color: "var(--st-failed-fg)", marginBottom: 10 }}>{j.error_message}</div>
-            <Btn small onClick={() => window.BatonStore.retryNow(j.id)}>↻ Try again</Btn>
+            <Btn small onClick={() => window.BitCadenceStore.retryNow(j.id)}>↻ Try again</Btn>
+          </div>
+        ) : null}
+
+        {live ? (
+          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-m)", padding: 14, marginBottom: 16 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>
+              {tone === "plain" ? "Change this job" : "Job control"}
+            </div>
+
+            {!cancelling && !reassigning ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Btn small onClick={() => setReassigning(true)}>&#8644; Reassign&#8230;</Btn>
+                <Btn kind="danger" small onClick={() => setCancelling(true)}>&#10005; Call it off&#8230;</Btn>
+              </div>
+            ) : null}
+
+            {reassigning ? (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <select value={toRole} onChange={(e) => setToRole(e.target.value)}
+                        style={{ border: "1px solid var(--border-strong)", borderRadius: 6, padding: "5px 10px", fontSize: 12.5 }}>
+                  <option value="">Send to role&#8230;</option>
+                  {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <Btn kind="primary" small disabled={!toRole}
+                     onClick={() => { window.BitCadenceStore.reassignJob(j.id, toRole); setReassigning(false); setToRole(""); }}>Reassign</Btn>
+                <Btn kind="ghost" small onClick={() => { setReassigning(false); setToRole(""); }}>Back</Btn>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+                  {tone === "plain" ? "currently waiting on " : "target_agent_role: "}<Mono>{j.target_agent_role}</Mono>
+                </span>
+              </div>
+            ) : null}
+
+            {cancelling ? (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <input autoFocus value={cancelReason} onChange={(e) => setCancelReason(e.target.value)}
+                       placeholder="Why? (recorded in the audit trail)"
+                       style={{ flex: 1, minWidth: 200, border: "1px solid var(--border-strong)", borderRadius: 6, padding: "5px 10px", fontSize: 12.5 }} />
+                <Btn kind="danger" small
+                     onClick={() => { window.BitCadenceStore.cancelJob(j.id, cancelReason); setCancelling(false); setCancelReason(""); }}>Call it off</Btn>
+                <Btn kind="ghost" small onClick={() => { setCancelling(false); setCancelReason(""); }}>Back</Btn>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -166,7 +275,7 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
           {j.workflow ? <MetaRow label="Workflow">{j.workflow}</MetaRow> : null}
           {j.approved_by ? <MetaRow label="Decided by"><Mono>{j.approved_by}</Mono></MetaRow> : null}
           {advanced ? <MetaRow label="Job ID"><Mono style={{ fontSize: 11.5 }}>{j.id}</Mono></MetaRow> : null}
-          {advanced && j.max_retries ? <MetaRow label="Retry budget">{j.retry_count} of {j.max_retries} used{j.escalate_to_role ? <span style={{ color: "var(--text-3)" }}> · escalates to {j.escalate_to_role}</span> : null}</MetaRow> : null}
+          {advanced && j.max_retries ? <MetaRow label="Retry budget">{j.retry_count || 0} of {j.max_retries} used{j.escalate_to_role ? <span style={{ color: "var(--text-3)" }}> · escalates to {j.escalate_to_role}</span> : null}</MetaRow> : null}
         </div>
 
         {deps.length || dependents.length ? (
@@ -208,12 +317,15 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
 
 // ----- New Job composer -----
 function NewJobForm({ tone, advanced, onClose }) {
+  const roles = Array.from(new Set((window.BitCadenceStore.getAgents() || []).filter(a => !a.disabled).map(a => a.role).filter(Boolean))).sort();
   const [title, setTitle] = useStateJ("");
   const [desc, setDesc] = useStateJ("");
-  const [role, setRole] = useStateJ("codex");
+  const [role, setRole] = useStateJ(roles[0] || "");
   const [gate, setGate] = useStateJ(false);
   const [retries, setRetries] = useStateJ(0);
   const [escalate, setEscalate] = useStateJ("");
+  const [busy, setBusy] = useStateJ(false);
+  const [error, setError] = useStateJ("");
   const inputStyle = { width: "100%", border: "1px solid var(--border-strong)", borderRadius: 8, padding: "8px 12px", fontSize: 13.5, background: "var(--surface)", color: "var(--text)", outline: "none" };
   const label = { display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--text-2)", margin: "14px 0 5px" };
 
@@ -229,8 +341,9 @@ function NewJobForm({ tone, advanced, onClose }) {
         <label style={label}>Details {tone === "plain" ? "(the agent reads this)" : "(instructions)"}</label>
         <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder="Anything the agent should know…" style={Object.assign({}, inputStyle, { resize: "vertical" })}></textarea>
         <label style={label}>Who should do it?</label>
+        {!roles.length ? <p>Register a worker in Agent Fleet before creating work.</p> : null}
         <div style={{ display: "flex", gap: 8 }}>
-          {["codex", "claude", "gemini"].map((r) => (
+          {roles.map((r) => (
             <button key={r} onClick={() => setRole(r)} style={{
               flex: 1, display: "flex", alignItems: "center", gap: 8, justifyContent: "center",
               border: role === r ? "1.5px solid var(--accent)" : "1px solid var(--border-strong)",
@@ -255,9 +368,15 @@ function NewJobForm({ tone, advanced, onClose }) {
       </div>
       <div style={{ padding: "14px 22px", borderTop: "1px solid var(--border)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <Btn onClick={onClose}>Cancel</Btn>
-        <Btn kind="primary" disabled={!title.trim()} onClick={() => {
-          window.BatonStore.createJob({ title: title.trim(), description: desc.trim(), target_agent_role: role, requires_approval: gate, max_retries: retries || 0, escalate_to_role: escalate.trim() || null });
-          onClose();
+        {error ? <span role="alert">{error}</span> : null}
+        <Btn kind="primary" disabled={busy || !title.trim() || !role} onClick={async () => {
+          setBusy(true); setError("");
+          try {
+            const result = await window.BitCadenceStore.createJob({ title: title.trim(), description: desc.trim(), target_agent_role: role, requires_approval: gate, max_retries: retries || 0, escalate_to_role: escalate.trim() || null });
+            if (!result) throw new Error("Job was not created. Check the connection and try again.");
+            onClose();
+          } catch(e) { setError(e.message); }
+          finally { setBusy(false); }
         }}>Create job</Btn>
       </div>
     </div>
@@ -324,7 +443,7 @@ function computeFeedStats(events, jobs) {
 }
 
 function ActivityFeedScreen({ jobs, tone, advanced, onOpen }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const live = (store.mode ? store.mode() : "demo") === "live";
   const [events, setEvents] = useStateJ(null); // null = not loaded yet
   const [err, setErr] = useStateJ(null);

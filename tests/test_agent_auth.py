@@ -1,4 +1,4 @@
-"""Unit tests for the BatonCadence Client Authentication and Presence tracking."""
+"""Unit tests for the BitCadence Client Authentication and Presence tracking."""
 
 import hashlib
 import json

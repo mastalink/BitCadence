@@ -1,12 +1,12 @@
 @echo off
 REM ============================================================================
-REM Start BatonCadence
+REM Start BitCadence
 REM ============================================================================
 cd /d "%~dp0"
-title BatonCadence Server
+title BitCadence Server
 
 if not exist ".venv\Scripts\python.exe" (
-    echo BatonCadence is not installed yet. Double-click install.bat first.
+    echo BitCadence is not installed yet. Double-click install.bat first.
     pause
     exit /b 1
 )
@@ -29,7 +29,7 @@ powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing http://
 if %errorlevel%==0 (
     cls
     echo ============================================================
-    echo   BatonCadence is already running
+    echo   BitCadence is already running
     echo ============================================================
     echo.
     if not "%MCO_LOCAL_TOKEN%"=="" (
@@ -49,7 +49,7 @@ if %errorlevel%==0 (
 cls
 echo.
 echo ============================================================
-echo   Starting BatonCadence...
+echo   Starting BitCadence...
 echo ============================================================
 echo.
 
@@ -63,13 +63,13 @@ if not "%MCO_LOCAL_TOKEN%"=="" (
     echo   In 5 seconds your browser will open the console.
     echo   Paste the token into the "Agent token" box and click Connect.
     echo.
-    echo   Keep this window open while BatonCadence is running.
-    echo   Close it to stop BatonCadence.
+    echo   Keep this window open while BitCadence is running.
+    echo   Close it to stop BitCadence.
     echo.
     echo ============================================================
 ) else (
     echo   Opening console in a few seconds...
-    echo   Keep this window open. Close it to stop BatonCadence.
+    echo   Keep this window open. Close it to stop BitCadence.
     echo ============================================================
 )
 

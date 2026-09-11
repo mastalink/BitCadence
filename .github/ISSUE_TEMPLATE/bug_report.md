@@ -16,7 +16,7 @@ A clear description of the bug.
 What you expected instead.
 
 **Environment**
-- BatonCadence version / commit:
+- BitCadence version / commit:
 - OS:
 - Edition (community / team / enterprise):
 - Backend (embedded LocalStore / Supabase):
