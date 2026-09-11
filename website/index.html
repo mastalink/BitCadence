@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BatonCadence — Every agent. One baton.</title>
-<meta name="description" content="BatonCadence is a self-hosted orchestration hub for AI agents: a governed job board with human approval gates, an immutable audit trail, and Drumline — one shared memory every agent reads and writes. Free, MIT, runs on your machine.">
-<meta property="og:title" content="BatonCadence — Every agent. One baton.">
+<title>BitCadence — Every agent. One beat.</title>
+<meta name="description" content="BitCadence is a self-hosted orchestration hub for AI agents: a governed job board with human approval gates, an immutable audit trail, governed scheduling with bounded loops, a live Flow Control canvas, and Drumline — one shared memory every agent reads and writes. Free, MIT, runs on your machine.">
+<meta property="og:title" content="BitCadence — Every agent. One beat.">
 <meta property="og:description" content="Orchestrate Claude, Codex, Gemini, and your ITSM stack from one governed job board. Approval gates, immutable audit, shared memory. Free and local-first.">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -300,16 +300,16 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
   <div class="wrap bar">
     <a class="wordmark" href="#">
       <svg width="26" height="26" viewBox="0 0 100 100"><rect width="100" height="100" rx="18" fill="#4a4ac4"/><path d="M28 72 L72 28" stroke="#faf9f5" stroke-width="9" stroke-linecap="round"/><circle cx="72" cy="28" r="8" fill="#ff7a18"/></svg>
-      BatonCadence
+      BitCadence
     </a>
     <nav>
       <a href="#drumline">Drumline</a>
       <a href="#features">Features</a>
       <a href="#editions">Editions</a>
       <a href="#install">Install</a>
-      <a href="https://github.com/mastalink/Batoncadence/tree/main/docs">Docs</a>
+      <a href="https://github.com/mastalink/BitCadence/tree/main/docs">Docs</a>
     </nav>
-    <a class="gh" href="https://github.com/mastalink/Batoncadence">★ GitHub</a>
+    <a class="gh" href="https://github.com/mastalink/BitCadence">★ GitHub</a>
   </div>
 </header>
 
@@ -318,11 +318,11 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
   <div class="wrap hero-grid">
     <div>
       <div class="kicker rise d1">Agent orchestration · self-hosted · MIT</div>
-      <h1 class="rise d2">Every agent.<br>One <em>baton</em>.</h1>
+      <h1 class="rise d2">Every agent.<br>One <em>beat</em>.</h1>
       <p class="lede rise d3">
         The real work lives <em>between</em> your agents — remembering what changed,
         handing it off, knowing when to stop. That wiring has always been on you.
-        BatonCadence is the <strong>loop manager</strong> that carries it: one governed
+        BitCadence is the <strong>loop manager</strong> that carries it: one governed
         job board with human approval gates, an immutable audit trail, and
         <strong>Drumline</strong> — a shared memory every agent reads and writes.
       </p>
@@ -331,7 +331,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
         <a class="btn ghost" href="#drumline">Why Drumline?</a>
       </div>
       <div class="hero-note rise d4">
-        <b>$ curl -sSf https://batoncadence.com/install.sh | bash</b> &nbsp;·&nbsp; or one double-click on Windows &nbsp;·&nbsp; no cloud account required
+        <b>$ curl -sSf https://bitcadence.ai/install.sh | bash</b> &nbsp;·&nbsp; or one double-click on Windows &nbsp;·&nbsp; no cloud account required
       </div>
     </div>
     <div class="rise d5">
@@ -348,17 +348,13 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
   </div>
 </div>
 
-<!-- ════════ DEMO VIDEO ════════ -->
-<div class="wrap" style="max-width:880px;padding:4px 28px 34px">
-  <video controls preload="metadata" playsinline poster="baton-demo2-poster.jpg"
-         style="width:100%;display:block;border-radius:10px;border:1.5px solid var(--ink);box-shadow:0 18px 50px rgba(28,27,24,.18);background:#0d1117">
-    <source src="baton-demo2.mp4" type="video/mp4">
-    Your browser can&rsquo;t play this video — <a href="baton-demo2.mp4">download it</a>.
-  </video>
-  <p class="hero-note" style="text-align:center">
-    <b>See it run</b> — ServiceNow + Dynatrace problems on one governed board, shared memory across every agent.
-  </p>
-</div>
+<!-- ════════ DEMO VIDEO ════════
+     Pulled 2026-09-01: the recording's narration names the product
+     "BatonCadence". Re-shooting against the local-first framing rather than
+     shipping a demo that names a product that no longer exists. The hero
+     terminal above carries the proof until the new cut lands.
+     Assets kept in the repo: baton-demo2.mp4 / baton-demo2-poster.jpg
+════════ -->
 
 <!-- ════════ CONDUCTS STRIP ════════ -->
 <div class="strip">
@@ -382,7 +378,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
       <div>
         <h2>Drumline — memory that outlives the job</h2>
         <p class="sec-sub">Most agent fleets have amnesia: every task starts from zero.
-        BatonCadence gives the whole mesh one collective memory.</p>
+        BitCadence gives the whole mesh one collective memory.</p>
       </div>
     </div>
     <div class="bento">
@@ -470,6 +466,27 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
         <p>Multi-agent pipelines in YAML — per-step approval gates, retry budgets,
         and escalation roles. Or draw them in the visual builder.</p>
       </div>
+      <div class="box indigo span3 sr">
+        <span class="tag">Live process view</span>
+        <h3>Flow Control</h3>
+        <p>The board as a diagram at <code class="inline">/flow</code>, where every edge is a real
+        <code class="inline">depends_on</code> gate the runtime enforces — not decoration. Click a node for its
+        audit trail, approve or cancel inline, or drag to author a workflow and export the YAML.</p>
+      </div>
+      <div class="box span3 sr">
+        <span class="tag">Loops that stop</span>
+        <h3>Governed scheduling</h3>
+        <p>Cron and interval schedules that run <em>through</em> the governed board. Loops must declare
+        how they end — a count, a deadline, or "until the queue is clear" — or they're refused at parse
+        time. Every scheduled job is stamped with what created it, so the audit trail answers a question
+        plain cron can't.</p>
+      </div>
+      <div class="box span2 sr">
+        <span class="tag">Encrypted by default</span>
+        <h3>Credentials, never in the clear</h3>
+        <p>API keys, tokens, and passwords go to an AES-256-GCM store, never silently to plaintext
+        <code class="inline">.env</code>. Auto-provisioned on Windows; a deliberate opt-out anywhere else.</p>
+      </div>
       <div class="box span2 sr">
         <span class="tag">Enterprise connectors</span>
         <h3>ITSM, both directions</h3>
@@ -547,7 +564,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
           <li>Docker image + any-cloud deploy</li>
           <li>CI-tested container builds</li>
         </ul>
-        <a class="btn ghost" href="https://github.com/mastalink/Batoncadence/blob/main/docs/DEPLOYMENT.md">Deployment guide</a>
+        <a class="btn ghost" href="https://github.com/mastalink/BitCadence/blob/main/docs/DEPLOYMENT.md">Deployment guide</a>
       </div>
       <div class="ed sr">
         <div class="name">Enterprise</div>
@@ -559,7 +576,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
           <li>Policy-gated roles + kill switch</li>
           <li>Escalation bridge into ITSM</li>
         </ul>
-        <a class="btn ghost" href="mailto:pilots@batoncadence.com?subject=BatonCadence%20pilot">Talk to us</a>
+        <a class="btn ghost" href="mailto:pilots@bitcadence.ai?subject=BitCadence%20pilot">Talk to us</a>
       </div>
     </div>
   </div>
@@ -580,7 +597,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
       <!-- one-liner hero -->
       <div class="one-liner" id="one-liner-box">
         <span class="prompt">$</span>
-        <code id="one-liner-cmd">curl -sSf https://batoncadence.com/install.sh | bash</code>
+        <code id="one-liner-cmd">curl -sSf https://bitcadence.ai/install.sh | bash</code>
         <button class="copy-btn" id="copy-one-liner" onclick="copyOneLiner()">Copy</button>
       </div>
       <p class="ol-caption">macOS &amp; Linux &nbsp;·&nbsp; <a href="#win-tab" onclick="switchTab('win')" style="color:#9d9df0;text-decoration:none">Windows instructions below</a></p>
@@ -589,12 +606,12 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
       <div class="ptabs">
         <button class="ptab-btn active" id="tab-mac" onclick="switchTab('mac')"><span class="platform-icon">&#xf8ff;</span> macOS / Linux</button>
         <button class="ptab-btn" id="tab-win" onclick="switchTab('win')">&#9000; Windows</button>
-        <button class="ptab-btn" id="tab-pip" onclick="switchTab('pip')">&#x1F4E6; pip / Docker</button>
+        <button class="ptab-btn" id="tab-pip" onclick="switchTab('pip')">&#x1F4E6; Source / Docker</button>
       </div>
       <div class="ptab-panel active" id="panel-mac" style="background:#201f19;border:1px solid #36342b;border-bottom-left-radius:12px;border-bottom-right-radius:12px">
         <p style="font-family:var(--mono);font-size:.78rem;color:#a8a494;margin-bottom:14px">One command installs everything and walks you through setup:</p>
         <pre><span class="c"># Works on macOS and any Linux distro</span>
-<span class="g">curl -sSf https://batoncadence.com/install.sh | bash</span>
+<span class="g">curl -sSf https://bitcadence.ai/install.sh | bash</span>
 
 <span class="c"># Clones the repo, finds/installs Python, creates the venv,
 # generates your access token, adds 'mco' to your PATH,
@@ -607,13 +624,13 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
       <div class="ptab-panel" id="panel-win" style="background:#201f19;border:1px solid #36342b;border-bottom-left-radius:12px;border-bottom-right-radius:12px">
         <p style="font-family:var(--mono);font-size:.78rem;color:#a8a494;margin-bottom:14px">Double-click installer — no terminal needed:</p>
         <pre><span class="c"># 1. Download the ZIP from GitHub and extract it anywhere</span>
-<span class="c">#    (e.g. C:\BatonCadence)</span>
+<span class="c">#    (e.g. C:\BitCadence)</span>
 
 <span class="c"># 2. Double-click:</span>
 <span class="g">install.bat</span>
 
 <span class="c"># Finds (or installs) Python, creates .venv, generates your
-# access token, copies a BatonCadence shortcut to the Desktop,
+# access token, copies a BitCadence shortcut to the Desktop,
 # then asks: demo or connect now.
 # Your browser opens the console automatically.</span></pre>
         <p class="copy-note">Or run headless: <span style="color:#8fc97f">powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -NoPrompt</span></p>
@@ -621,8 +638,8 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
       <div class="ptab-panel" id="panel-pip" style="background:#201f19;border:1px solid #36342b;border-bottom-left-radius:12px;border-bottom-right-radius:12px">
         <p style="font-family:var(--mono);font-size:.78rem;color:#a8a494;margin-bottom:14px">For developers who prefer explicit control:</p>
         <pre><span class="c"># Clone + pip editable install</span>
-<span class="g">git clone</span> https://github.com/mastalink/Batoncadence
-<span class="g">pip install</span> -e Batoncadence
+<span class="g">git clone</span> https://github.com/mastalink/BitCadence
+<span class="g">pip install</span> -e BitCadence
 <span class="g">mco setup --guided</span>   <span class="c"># configure in 60 seconds</span>
 <span class="g">mco serve</span>             <span class="c"># console at 127.0.0.1:18789/console</span>
 
@@ -645,7 +662,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
     <div class="faq">
       <details class="sr">
         <summary>How is this different from LangChain / CrewAI / AutoGen?</summary>
-        <p>Those are frameworks for <em>building</em> agents in one codebase. BatonCadence
+        <p>Those are frameworks for <em>building</em> agents in one codebase. BitCadence
         coordinates agents you already have — Claude Desktop, Codex CLI, Gemini, custom
         workers — across machines and vendors, with the governance layer (approvals,
         audit, escalation) those frameworks leave as an exercise for the reader.</p>
@@ -679,12 +696,12 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
 
 <footer>
   <div class="wrap foot">
-    <span class="mono">BatonCadence — every agent, one baton. © 2026</span>
+    <span class="mono">BitCadence — every agent, one beat. © 2026</span>
     <nav>
-      <a href="https://github.com/mastalink/Batoncadence">GitHub</a>
-      <a href="https://github.com/mastalink/Batoncadence/blob/main/docs/INSTALL.md">Install guide</a>
-      <a href="https://github.com/mastalink/Batoncadence/blob/main/docs/DRUMLINE.md">Drumline</a>
-      <a href="https://github.com/mastalink/Batoncadence/blob/main/docs/GOVERNANCE.md">Governance</a>
+      <a href="https://github.com/mastalink/BitCadence">GitHub</a>
+      <a href="https://github.com/mastalink/BitCadence/blob/main/docs/INSTALL.md">Install guide</a>
+      <a href="https://github.com/mastalink/BitCadence/blob/main/docs/DRUMLINE.md">Drumline</a>
+      <a href="https://github.com/mastalink/BitCadence/blob/main/docs/GOVERNANCE.md">Governance</a>
     </nav>
   </div>
 </footer>
@@ -731,13 +748,13 @@ function tick(){
 }
 tick();
 
-/* ── scroll reveal ──────────────────────────────────────────────────────── */
+/* ── scroll reveal ──────────────────────────────────────── */
 const io = new IntersectionObserver(es=>{
   es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target);} });
 },{threshold:.12});
 document.querySelectorAll(".sr").forEach(el=>io.observe(el));
 
-/* ── platform tabs ──────────────────────────────────────────────────────── */
+/* ── platform tabs ──────────────────────────────────────── */
 function switchTab(name) {
   ["mac","win","pip"].forEach(n => {
     document.getElementById("tab-"+n).classList.toggle("active", n===name);
@@ -747,18 +764,18 @@ function switchTab(name) {
   const cmd = document.getElementById("one-liner-cmd");
   const box = document.getElementById("one-liner-box");
   if(name === "win") {
-    cmd.textContent = 'iwr -useb https://batoncadence.com/install.ps1 | iex';
+    cmd.textContent = 'iwr -useb https://bitcadence.ai/install.ps1 | iex';
     box.style.display = "";
   } else if(name === "pip") {
-    cmd.textContent = 'pip install batoncadence';
+    cmd.textContent = 'git clone https://github.com/mastalink/BitCadence && pip install -e BitCadence';
     box.style.display = "";
   } else {
-    cmd.textContent = 'curl -sSf https://batoncadence.com/install.sh | bash';
+    cmd.textContent = 'curl -sSf https://bitcadence.ai/install.sh | bash';
     box.style.display = "";
   }
 }
 
-/* ── copy one-liner ─────────────────────────────────────────────────────── */
+/* ── copy one-liner ───────────────────────────────────────── */
 function copyOneLiner() {
   const txt = document.getElementById("one-liner-cmd").textContent;
   navigator.clipboard.writeText(txt).catch(() => {

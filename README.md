@@ -1,29 +1,34 @@
-# BatonCadence
+# BitCadence
 
-**Every agent. One baton.**
+**Every agent. One beat.**
 
-[![CI](https://github.com/mastalink/Batoncadence/actions/workflows/ci.yml/badge.svg)](https://github.com/mastalink/Batoncadence/actions/workflows/ci.yml)
+[![CI](https://github.com/mastalink/BitCadence/actions/workflows/ci.yml/badge.svg)](https://github.com/mastalink/BitCadence/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](docs/INSTALL.md)
-[![Changelog](https://img.shields.io/badge/changelog-0.2.0-blue.svg)](CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/changelog-0.3.0-blue.svg)](CHANGELOG.md)
 
 A self-hosted orchestration hub for AI agents: a governed job board with
 human approval gates, an immutable audit trail, and **Drumline** — one shared
 memory every agent reads and writes. Runs entirely on your machine; no cloud
 account required.
+Push alerts (ntfy) stay off until you set `NTFY_TOPIC`. Local-Only does not
+talk to ntfy.sh by default.
 
 ---
 
 ## Install
 
+For one Windows window and tray icon to manage the local server, scheduler, and
+workers, see the [desktop manager guide](docs/DESKTOP.md).
+
 ### macOS / Linux — one command
 
 ```bash
-curl -sSf https://batoncadence.com/install.sh | bash
+curl -sSf https://bitcadence.ai/install.sh | bash
 ```
 
-Clones the repo to `~/BatonCadence`, finds/installs Python, creates the venv,
+Clones the repo to `~/BitCadence`, finds/installs Python, creates the venv,
 generates your access token, adds `mco` to your PATH, then asks: demo mode
 or connect now. Takes about two minutes.
 
@@ -36,12 +41,12 @@ bash scripts/install.sh
 
 Download the ZIP from GitHub, extract it anywhere, then double-click
 **`install.bat`**. It finds (or installs) Python, builds the venv, generates
-your access token, and drops a **BatonCadence** shortcut on the Desktop.
+your access token, and drops a **BitCadence** shortcut on the Desktop.
 Your browser opens the console automatically.
 
 ```powershell
 # PowerShell one-liner (no ZIP download needed):
-iwr -useb https://batoncadence.com/install.ps1 | iex
+iwr -useb https://bitcadence.ai/install.ps1 | iex
 
 # Or headless / CI:
 powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -NoPrompt
@@ -49,13 +54,11 @@ powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -NoPrompt
 
 Full walkthrough and troubleshooting: [docs/INSTALL.md](docs/INSTALL.md)
 
-### pip / Docker
+### From source / Docker
 
 ```bash
-pip install batoncadence   # from PyPI (released versions)
-# or from source:
-git clone https://github.com/mastalink/Batoncadence
-pip install -e Batoncadence
+git clone https://github.com/mastalink/BitCadence
+pip install -e BitCadence
 mco setup --guided    # configure in 60 seconds
 mco start             # console at http://127.0.0.1:18789/console
 ```
@@ -69,7 +72,7 @@ docker compose up     # see docs/DEPLOYMENT.md
 
 ## What it does
 
-BatonCadence sits between your agents and the work they do. It gives you:
+BitCadence sits between your agents and the work they do. It gives you:
 
 | | |
 |---|---|
@@ -77,6 +80,9 @@ BatonCadence sits between your agents and the work they do. It gives you:
 | **Drumline** | One shared memory across the whole mesh. Completed jobs auto-distill into recallable handoffs. |
 | **Approval gates** | Flag any job — or an entire role — to pause at `needs_approval` until a human decides. |
 | **Immutable audit** | Every mutation appends to `agent_job_events`. UPDATE and DELETE are rejected at the storage layer. |
+| **Scheduling & loops** | Cron/interval schedules and *bounded* loops — a loop must declare how it stops (count, deadline, or "until the queue is clear") or it's refused. Every scheduled job is stamped with what created it. |
+| **Flow Control** | Live DAG canvas at `/flow` — the board as a diagram whose edges are real `depends_on` gates, not decoration. Click a node for its audit trail; approve/reject/retry/cancel inline; drag to author a workflow and export YAML. |
+| **Encrypted secrets** | Credentials encrypt by default (AES-256-GCM) — never silently written to `.env` in the clear. Auto-provisioned on Windows; explicit master password elsewhere. |
 | **Embedded store** | No Supabase? An embedded SQLite store (`~/.mco/local.db`) takes over — the free edition is the full product. |
 | **Enterprise connectors** | Ingest ServiceNow incidents and Dynatrace problems as jobs; act back with auditable, gated platform actions. |
 | **Console GUI** | Zero-build web UI at `/console` — job board, approval queue, audit drawer, visual workflow builder. |
@@ -86,7 +92,7 @@ BatonCadence sits between your agents and the work they do. It gives you:
 ## Quick start
 
 ```bash
-mco start             # start the gateway in the background (logs to ~/.mco/gateway.log)
+mco start             # start the gateway in the background (logs to ~/.mco/logs/gateway.log)
 mco stop              # stop it
 mco restart           # stop + start
 mco serve             # foreground alternative (terminals, systemd, Docker)
@@ -101,10 +107,14 @@ mco send codex -t "Summarize repo" -m "..."   # drop a job into a dropbox
 mco listen --role codex --instance worker-1   # start a worker
 mco audit <job_id>    # inspect a job's full history
 mco approve <job_id>  # approve a gate
+mco gui               # open the console in your browser (--flow for Flow Control)
+mco schedule init     # start declarative schedules & bounded loops
+mco launch <name>     # fire a named launcher (job, workflow, app, or URL) now
 ```
 
 Open **http://127.0.0.1:18789/console** in your browser, paste your access
-token (shown at startup, or in `~/.mco/.env`), and click Connect.
+token (shown at startup, or in `~/.mco/.env`), and click Connect — or just run
+`mco gui`. For the live workflow canvas, `mco gui --flow`.
 
 ---
 
@@ -143,7 +153,7 @@ Full spec: [docs/DRUMLINE.md](docs/DRUMLINE.md)
 | Docker + any-cloud deploy | — | ✓ | ✓ |
 | ServiceNow & Dynatrace connectors | — | — | ✓ |
 | SSO via your reverse proxy (trusted headers) | — | — | ✓ |
-| Pilot program | — | — | [email us](mailto:pilots@batoncadence.com) |
+| Pilot program | — | — | [email us](mailto:pilots@bitcadence.ai) |
 
 One codebase, no separate builds: `mco edition` shows the active edition
 (inferred from your config, or pinned with `MCO_EDITION`). Details, scope
@@ -157,6 +167,8 @@ vocabulary, and SSO setup: [docs/ENTERPRISE.md](docs/ENTERPRISE.md).
 - [docs/SETUP.md](docs/SETUP.md) — full multi-agent setup: Supabase schema, agent registration, MCP wiring
 - [docs/DRUMLINE.md](docs/DRUMLINE.md) — shared memory: how it works, how to use it
 - [docs/GOVERNANCE.md](docs/GOVERNANCE.md) — approval gates, audit trail, workflow DSL
+- [docs/SCHEDULING.md](docs/SCHEDULING.md) — launchers, cron/interval schedules, bounded loops
+- [docs/FLOW-CONTROL.md](docs/FLOW-CONTROL.md) — the live DAG canvas + visual workflow authoring
 - [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) — ServiceNow, Dynatrace, webhooks
 - [docs/ENTERPRISE.md](docs/ENTERPRISE.md) — editions, scoped-token RBAC, SSO delegation
 - [docs/SDK.md](docs/SDK.md) — write a custom agent/worker in fifteen lines
@@ -172,6 +184,9 @@ vocabulary, and SSO setup: [docs/ENTERPRISE.md](docs/ENTERPRISE.md).
   `/healthz` by default; set `MCO_METRICS_TOKEN` to require a bearer token when
   the gateway is network-exposed.
 - **`/healthz`** — unauthenticated liveness/readiness for load balancers.
+  Right after Uvicorn prints running, `/healthz` and `/console` can 500 for
+  ~10s (asyncio backend import). Retry until 200; do not treat the first 500
+  as death.
 - **`MCO_LOG_JSON=true`** — one JSON object per log line for Loki / Datadog /
   CloudWatch ingestion.
 
@@ -179,7 +194,7 @@ vocabulary, and SSO setup: [docs/ENTERPRISE.md](docs/ENTERPRISE.md).
 
 ## Security
 
-BatonCadence binds to **`127.0.0.1` by default** — only your machine can reach
+BitCadence binds to **`127.0.0.1` by default** — only your machine can reach
 it. Before exposing it on a network:
 
 - **Set a token.** `mco setup` generates `MCO_LOCAL_TOKEN`; every request and
@@ -188,11 +203,14 @@ it. Before exposing it on a network:
   carried in a job, but only when you opt in with `MCO_ENABLE_SHELL_EXECUTOR=1`.
   Leave it unset unless you fully trust everyone who can post jobs; prefer typed
   executors (`register_executor`) instead.
-- **Tokens are bearer credentials** — keep them out of git. `.env` and the
-  encrypted secret store (`~/.mco/secrets.enc`, AES-256-GCM) hold them; never
-  commit real tokens.
+- **Credentials encrypt by default.** Anything credential-shaped (API keys,
+  tokens, passwords) goes to the AES-256-GCM secret store (`~/.mco/secrets.enc`),
+  never silently to plaintext `.env`. On Windows the store is auto-provisioned
+  (key held by Credential Manager); elsewhere set a master password via
+  `mco setup --menu → Security`. Plaintext is only ever a deliberate, visible
+  opt-out. Either way, keep secrets out of git.
 
-Found a vulnerability? Email **security@batoncadence.com** rather than opening a
+Found a vulnerability? Email **security@bitcadence.ai** rather than opening a
 public issue.
 
 ---

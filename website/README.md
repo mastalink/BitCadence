@@ -1,4 +1,4 @@
-# BatonCadence Website
+# BitCadence Website
 
 Static, zero-build marketing site — one HTML file, same philosophy as the
 product's console. No node_modules, no framework, no build step.
@@ -22,15 +22,15 @@ wrangler login
 Deploy (from the repo root):
 
 ```bash
-wrangler pages deploy website --project-name batoncadence
+wrangler pages deploy website --project-name bitcadence
 ```
 
 First run creates the project and prints the live URL
-(`https://batoncadence.pages.dev`). Subsequent runs deploy in seconds.
+(`https://bitcadence.pages.dev`). Subsequent runs deploy in seconds.
 
-**Custom domain:** Cloudflare dashboard → Pages → batoncadence →
-Custom domains → add `batoncadence.com` (already owned, catch-all email
-configured — `pilots@batoncadence.com` just works).
+**Custom domain:** Cloudflare dashboard → Pages → bitcadence →
+Custom domains → add `bitcadence.ai` (already owned, catch-all email
+configured — `pilots@bitcadence.ai` just works).
 
 **Zero-config alternative:** the Cloudflare dashboard also accepts a
 drag-and-drop of the `website/` folder, or can auto-deploy from this

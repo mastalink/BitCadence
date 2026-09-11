@@ -1,4 +1,4 @@
-// Baton — mock data store + live simulation engine.
+// BitCadence — mock data store + live simulation engine.
 // Shapes mirror the real MCOrchestr8 schema (agent_jobs, agent_registry,
 // agent_job_events) so screens can later be pointed at the real REST API:
 //   GET /api/jobs, GET /api/agents, GET /api/jobs/{id}/events,
@@ -164,6 +164,76 @@
       notify();
       return idMap;
     },
+    seedDemoPipeline() {
+      const name = "jde-demo-live-pipeline";
+      const run = uuid().slice(0, 12);
+      const steps = [
+        { tmpId: "plan", role: "claude", title: "Demo pipeline: plan the customer change", instructions: "Read the pilot brief and hand Codex a scoped build plan.", depends_on: [] },
+        { tmpId: "build", role: "codex", title: "Demo pipeline: build the approved slice", instructions: "Implement the planned change and return files plus verification output.", depends_on: ["plan"], max_retries: 1 },
+        { tmpId: "review", role: "reviewer", title: "Demo pipeline: test and sign off", instructions: "Review the branch, run tests, and approve or return findings.", depends_on: ["build"] },
+      ];
+      const idMap = {};
+      steps.forEach((s) => {
+        const deps = (s.depends_on || []).map((d) => idMap[d]).filter(Boolean);
+        const j = mkJob({
+          title: s.title, description: s.instructions, target_agent_role: s.role,
+          depends_on: deps, status: deps.length ? "waiting" : "pending",
+          max_retries: s.max_retries || 0, workflow: name,
+          input_payload: { prompt: s.instructions, workflow: { name, run, step: s.tmpId } },
+        });
+        jobs.unshift(j);
+        record(j.id, "created", "joe-laptop", "human", { status: j.status, workflow: name });
+        idMap[s.tmpId] = j.id;
+      });
+      toast("ok", "Demo pipeline running", "Claude -> Codex -> reviewer is now visible on the board.");
+      notify();
+      return { success: true, workflow: name, run, jobs: idMap };
+    },
+    exportEvidencePack(payload) {
+      const start = (payload || {}).start_date || null;
+      const end = (payload || {}).end_date || null;
+      const inRange = (e) => {
+        const ts = e.created_at || "";
+        if (start && ts && ts < start) return false;
+        if (end && ts && ts > end + "T23:59:59") return false;
+        return true;
+      };
+      const auditEvents = events.filter(inRange).map((e) => {
+        const j = find(e.job_id);
+        return Object.assign({}, e, {
+          job_title: j && j.title,
+          job_status: j && j.status,
+          target_agent_role: j && j.target_agent_role,
+        });
+      });
+      const pending = jobs.filter((j) => j.status === "needs_approval").map((j) => ({
+        id: j.id, title: j.title, target_agent_role: j.target_agent_role, created_at: j.created_at,
+      }));
+      const decisions = auditEvents.filter((e) => e.event === "approved" || e.event === "rejected");
+      const audit = {
+        exported_at: now(),
+        requested_by: "joe-laptop",
+        org_id: "default",
+        range: { start, end },
+        regulatory_basis: {
+          eu_ai_act_article_12: "Record-keeping: preserve system event logs and job lifecycle audit data.",
+          eu_ai_act_article_14: "Human oversight: preserve approval requests and operator decisions.",
+        },
+        summary: { audit_events: auditEvents.length, pending_approvals: pending.length, decisions: decisions.length },
+        pending_approvals: pending,
+        decision_history: decisions,
+        audit_events: auditEvents,
+      };
+      return {
+        success: true,
+        generated_at: audit.exported_at,
+        summary: audit.summary,
+        files: [
+          { filename: "cover.pdf", mime: "application/pdf", base64: "JVBERi0xLjQK" },
+          { filename: "audit-trail.json", mime: "application/json", text: JSON.stringify(audit, null, 2) },
+        ],
+      };
+    },
   };
 
   // ---------------- Live simulation ----------------
@@ -237,5 +307,5 @@
   store.startSim = () => { if (!timer) timer = setInterval(tick, 2600); };
   store.stopSim = () => { clearInterval(timer); timer = null; };
 
-  window.BatonStore = store;
+  window.BitCadenceStore = store;
 })();

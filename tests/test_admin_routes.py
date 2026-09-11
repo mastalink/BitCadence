@@ -1,5 +1,8 @@
 """Admin API tests: agent management, settings whitelist, workflow submission."""
 
+import base64
+import json
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -11,6 +14,7 @@ import mco.orchestrator.routes as routes_mod
 from mco.orchestrator.auth import require_agent, verify_token
 from mco.orchestrator.admin_routes import (
     agents_admin_router,
+    governance_router,
     settings_router,
     workflows_router,
 )
@@ -33,12 +37,14 @@ class FakeConfig:
     def __init__(self, **values):
         self.values = dict(values)
         self.deleted = []
+        self.set_calls = []
 
     def get(self, key, default=None):
         return self.values.get(key, default)
 
     def set(self, key, value, encrypt=False):
         self.values[key] = value
+        self.set_calls.append((key, value, encrypt))
 
     def delete(self, key):
         self.values.pop(key, None)
@@ -58,6 +64,7 @@ def setup(monkeypatch):
     app.include_router(jobs_router)
     app.include_router(agents_router)
     app.include_router(agents_admin_router)
+    app.include_router(governance_router)
     app.include_router(settings_router)
     app.include_router(workflows_router)
     app.dependency_overrides[require_agent] = lambda: ADMIN
@@ -159,9 +166,9 @@ class TestInstanceIdValidation:
 
 class TestOrgAllowlist:
     def test_unknown_org_is_rejected_not_minted(self):
-        """The Baton-worker accident: a typo'd org must never create a tenant."""
+        """The BitCadence-worker accident: a typo'd org must never create a tenant."""
         resp = _ctx().http.post("/api/agents", json={
-            "instance_id": "oops", "role": "codex", "org": "Baton-worker"})
+            "instance_id": "oops", "role": "codex", "org": "BitCadence-worker"})
         assert resp.status_code == 400
         assert "not configured" in resp.json()["detail"]
         assert "Settings" in resp.json()["detail"]
@@ -285,6 +292,33 @@ class TestSettings:
         assert resp.status_code == 200
         assert _ctx().cfg.values["MCO_KILL_SWITCH"] == "true"
 
+    def test_put_secret_requires_encrypted_storage(self):
+        resp = _ctx().http.put(
+            "/api/settings",
+            json={"MCO_TRUSTED_HEADER_SECRET": "proxy-secret"},
+        )
+        assert resp.status_code == 200
+        assert _ctx().cfg.set_calls[-1] == (
+            "MCO_TRUSTED_HEADER_SECRET",
+            "proxy-secret",
+            True,
+        )
+
+    def test_locked_secret_store_fails_closed(self):
+        def locked_set(key, value, encrypt=False):
+            if encrypt:
+                raise RuntimeError("locked")
+            _ctx().cfg.values[key] = value
+
+        _ctx().cfg.set = locked_set
+        resp = _ctx().http.put(
+            "/api/settings",
+            json={"MCO_WEBHOOK_SECRET": "must-not-be-plaintext"},
+        )
+
+        assert resp.status_code == 503
+        assert "MCO_WEBHOOK_SECRET" not in _ctx().cfg.values
+
     def test_put_unknown_key_rejected(self):
         resp = _ctx().http.put("/api/settings", json={"SUPABASE_KEY": "sneaky"})
         assert resp.status_code == 400
@@ -376,6 +410,44 @@ class TestPresence:
         assert out["last_seen_seconds"] is None
         assert decorate_presence({"status": "offline"}, 300)["effective_status"] == "offline"
 
+    def test_response_status_is_the_derived_truth_not_the_stale_value(self):
+        """The "board says online but the agent died days ago" bug.
+
+        A consumer reading `status` (the MCP mco_agents tool, the console, an
+        ad-hoc client) must NOT get a stale 'online'. The response `status` is
+        collapsed onto the derived value.
+        """
+        row = decorate_presence(
+            {"status": "online", "last_seen_at": "2026-01-01T00:00:00Z"}, threshold=300
+        )
+        assert row["status"] == "offline"          # the field consumers read
+        assert row["effective_status"] == "offline"
+
+    def test_fresh_agent_reads_online_on_both_fields(self):
+        from datetime import datetime, timezone
+        row = decorate_presence(
+            {"status": "online", "last_seen_at": datetime.now(timezone.utc).isoformat()},
+            threshold=300,
+        )
+        assert row["status"] == "online"
+
+    def test_disabled_state_is_not_clobbered(self):
+        # Only stale 'online' is demoted; 'disabled' must survive.
+        row = decorate_presence(
+            {"status": "disabled", "last_seen_at": "2026-01-01T00:00:00Z"}, threshold=300
+        )
+        assert row["status"] == "disabled"
+        assert row["effective_status"] == "disabled"
+
+    def test_stored_row_is_not_mutated_only_the_response_copy(self):
+        # The endpoint hands decorate_presence a per-read dict copy; the fix
+        # must not depend on that being the store, and must not flip the DB.
+        original = {"status": "online", "last_seen_at": "2026-01-01T00:00:00Z"}
+        copy = dict(original)
+        decorate_presence(copy, threshold=300)
+        assert original["status"] == "online"      # untouched
+        assert copy["status"] == "offline"         # derived on the copy
+
     def test_polling_is_the_heartbeat(self):
         """GET /api/jobs/pending stamps last_seen_at and flips the poller online."""
         _ctx().db.add_agent("w1", "codex", "tok-w1", status="offline")
@@ -391,7 +463,10 @@ class TestPresence:
         resp = _ctx().http.get("/api/agents")
         assert resp.status_code == 200
         agent = resp.json()[0]
-        assert agent["status"] == "online"              # stored value untouched
+        # The response status IS the derived truth now: a client reading the
+        # plain `status` field can no longer be told a dead agent is online.
+        # (The DB row is unchanged; only this read-time response reflects it.)
+        assert agent["status"] == "offline"
         assert agent["effective_status"] == "offline"   # derived: silent too long
         assert agent["last_seen_seconds"] > 300
 
@@ -448,3 +523,74 @@ class TestWorkflowSubmit:
     def test_worker_may_submit(self):
         _as(WORKER)  # jobs:write is a worker default scope
         assert _ctx().http.post("/api/workflows", json={"yaml": WF_YAML}).status_code == 200
+
+
+class TestDemoPipeline:
+    def test_demo_pipeline_seeds_three_job_dag(self):
+        resp = _ctx().http.post("/api/workflows/demo-pipeline")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["workflow"] == "jde-demo-live-pipeline"
+        assert set(body["jobs"]) == {"plan", "build", "review"}
+
+        plan = _ctx().db._jobs[body["jobs"]["plan"]]
+        build = _ctx().db._jobs[body["jobs"]["build"]]
+        review = _ctx().db._jobs[body["jobs"]["review"]]
+        assert plan["target_agent_role"] == "claude"
+        assert build["target_agent_role"] == "codex"
+        assert review["target_agent_role"] == "reviewer"
+        assert build["depends_on"] == [plan["id"]]
+        assert review["depends_on"] == [build["id"]]
+        assert plan["input_payload"]["workflow"]["run"] == body["run"]
+        assert len(_ctx().db._events) == 3
+
+
+class TestGovernanceEvidencePack:
+    def test_evidence_pack_returns_pdf_cover_and_audit_json(self):
+        pending = _ctx().http.post("/api/jobs", json={
+            "title": "Release approval",
+            "target_agent_role": "codex",
+            "requires_approval": True,
+        }).json()["job"]
+        decided = _ctx().http.post("/api/jobs", json={
+            "title": "Firewall change",
+            "target_agent_role": "codex",
+            "requires_approval": True,
+        }).json()["job"]
+        assert _ctx().http.post(f"/api/jobs/{decided['id']}/approve").status_code == 200
+
+        resp = _ctx().http.post("/api/governance/evidence-pack", json={
+            "start_date": "2026-01-01",
+            "end_date": "2026-12-31",
+        })
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["summary"]["pending_approvals"] == 1
+        assert body["summary"]["decisions"] == 1
+
+        files = {f["filename"]: f for f in body["files"]}
+        assert base64.b64decode(files["cover.pdf"]["base64"]).startswith(b"%PDF-1.4")
+        audit = json.loads(files["audit-trail.json"]["text"])
+        assert audit["regulatory_basis"]["eu_ai_act_article_12"].startswith("Record-keeping")
+        assert audit["regulatory_basis"]["eu_ai_act_article_14"].startswith("Human oversight")
+        assert audit["pending_approvals"][0]["id"] == pending["id"]
+
+    def test_evidence_pack_date_only_end_includes_selected_day(self):
+        job = _ctx().http.post("/api/jobs", json={
+            "title": "Year end approval",
+            "target_agent_role": "codex",
+        }).json()["job"]
+        for event in _ctx().db._events:
+            if event.get("job_id") == job["id"]:
+                event["created_at"] = "2026-12-31T15:30:00Z"
+
+        resp = _ctx().http.post("/api/governance/evidence-pack", json={
+            "start_date": "2026-12-31",
+            "end_date": "2026-12-31",
+        })
+        assert resp.status_code == 200
+        files = {f["filename"]: f for f in resp.json()["files"]}
+        audit = json.loads(files["audit-trail.json"]["text"])
+
+        assert audit["summary"]["audit_events"] == 1
+        assert audit["audit_events"][0]["job_id"] == job["id"]

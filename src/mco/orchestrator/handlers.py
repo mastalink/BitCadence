@@ -4,6 +4,7 @@ import logging
 from typing import Any, Callable, Coroutine, Dict, Optional
 from mco.orchestrator.contracts import JobStatus
 from mco.orchestrator.audit import record_event
+from mco.orchestrator.leases import acquire_lease, fenced_update, LeaseError
 
 logger = logging.getLogger("mco.orchestrator.handlers")
 
@@ -105,7 +106,10 @@ async def handle_job_lease(
 ) -> None:
     """Handle atomic leasing/claiming of a pending job."""
     task_id = payload.get("task_id")
-    agent_instance_id = payload.get("agent_instance_id") or fallback_agent_instance_id
+    agent_instance_id = fallback_agent_instance_id
+    if payload.get("agent_instance_id", agent_instance_id) != agent_instance_id:
+        await send_error("Cannot lease on behalf of another agent", correlation_id)
+        return
 
     if not task_id:
         await send_error("Missing 'task_id'", correlation_id)
@@ -113,12 +117,7 @@ async def handle_job_lease(
 
     try:
         # Atomic database-level lease function (uses Supabase RPC lease_task)
-        res = db_client.rpc("lease_task", {
-            "p_agent_instance_id": agent_instance_id,
-            "p_task_id": task_id
-        }).execute()
-
-        success = res.data if hasattr(res, "data") else False
+        success = acquire_lease(db_client, task_id, agent_instance_id)
 
         if success:
             # Fetch updated job details
@@ -168,17 +167,30 @@ async def handle_job_update(
         if error_message is not None:
             update_data["error_message"] = error_message
 
-        res = db_client.table("agent_jobs").update(update_data).eq("id", task_id).execute()
-        if not res.data:
-            await send_error("Job not found or update failed", correlation_id)
+        actor = actor or {}
+        claim = {k: payload.get(k) for k in ("lease_id", "lease_epoch", "lease_incarnation")}
+        claim["agent_instance_id"] = actor.get("instance_id")
+        try:
+            updated_job = fenced_update(db_client, task_id, claim, update_data)
+        except LeaseError as exc:
+            record_event(db_client, task_id, "write_fenced", actor.get("instance_id"),
+                         actor.get("role"), {"reason": exc.reason})
+            await send_error("FENCED: " + exc.reason, correlation_id)
             return
 
-        updated_job = res.data[0]
-
-        actor = actor or {}
+        replayed = updated_job.pop('_replayed', False)
         record_event(db_client, task_id, f"status:{status}",
                      actor.get("instance_id"), actor.get("role"),
-                     {"error_message": error_message} if error_message else None)
+                     {"error_message": error_message} if error_message else None,
+                     outbox_id=f"attempt-status:{claim['lease_id']}:{status}" if claim.get('lease_id') else None)
+        if replayed:
+            # A result may have committed before its downstream work or its
+            # response survived. Dependency release is idempotent and repairable.
+            if status == JobStatus.COMPLETED.value:
+                await _unlock_dependents(db_client, task_id, broadcast_event)
+            await send_ack({"status": "job_updated", "job": updated_job, "replayed": True})
+            return
+        actor = actor or {}
 
         # ACK to agent
         await send_ack({"status": "job_updated", "job": updated_job})
@@ -226,7 +238,7 @@ async def _unlock_dependents(
             continue
         # Check all parent statuses
         parents_res = db_client.table("agent_jobs").select("status").in_("id", depends_on).execute()
-        all_completed = all(
+        all_completed = len(parents_res.data or []) == len(set(depends_on)) and all(
             parent.get("status") == JobStatus.COMPLETED.value
             for parent in (parents_res.data or [])
         )
@@ -241,7 +253,7 @@ async def _unlock_dependents(
             next_status = JobStatus.PENDING.value
             event_name = "job_pending"
 
-        unlock_res = db_client.table("agent_jobs").update({"status": next_status}).eq("id", waiting_job["id"]).execute()
+        unlock_res = db_client.table("agent_jobs").update({"status": next_status}).eq("id", waiting_job["id"]).eq("status", "waiting").execute()
         if unlock_res.data:
             unlocked_job = unlock_res.data[0]
             record_event(db_client, waiting_job["id"], f"status:{next_status}",
@@ -274,7 +286,10 @@ async def _handle_failure(
             "status": JobStatus.PENDING.value,
             "retry_count": retry_count + 1,
             "leased_by_instance_id": None,
-        }).eq("id", job_id).execute()
+            "lease_id": None,
+            "lease_expires_at": None,
+            "started_at": None,
+        }).eq("id", job_id).eq("status", "failed").execute()
         if requeue.data:
             requeued_job = requeue.data[0]
             record_event(db_client, job_id, "retried", "system", "orchestrator",

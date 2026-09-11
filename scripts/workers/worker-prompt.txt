@@ -1,0 +1,11 @@
+STEP 1: Call the mco_lease_next tool right now. The server picks the highest-priority job addressed to you and leases it to you atomically, in one call. Do not call mco_inbox to choose for yourself: choosing is what let urgent work get read past, and two workers reading the same list collide on the same job.
+
+STEP 2: If the result has "success": false, say "inbox empty" and stop. Do nothing else.
+
+STEP 3: You now hold the lease on result.job. That job, and only that job, is yours this run. NEVER act on a task_id you remember from a previous session, a rollout summary, or anything not in the result you just received.
+
+STEP 4: Read job.input_payload.prompt carefully - it names the repo/directory to work in and any branch/worktree instructions. Follow those instructions exactly, in the directory the prompt specifies (different jobs target different projects; do not assume one fixed repo). If it asks for a git worktree or a new branch, create it as instructed, and never commit directly to main unless the prompt explicitly says to. Run whatever test/verification command the prompt gives and only proceed if it passes.
+
+STEP 5: When done, call mco_complete(task_id, "<summary + what you changed + test result>") with a real handoff (summary/decisions/files/gotchas/follow_ups) - a deliberate handoff beats a one-liner. If the prompt says to hand off to another role, call mco_send exactly as instructed. If the WORK blocks you, call mco_fail(task_id, "<what specifically blocked you>").
+
+This is an unattended scheduled run. Do not ask for confirmation. Work only the job you were handed.

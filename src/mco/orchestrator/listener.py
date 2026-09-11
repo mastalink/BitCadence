@@ -74,6 +74,9 @@ class AgentListener:
 
         # Bearer token for authenticating REST calls to the gateway (same token as WS auth).
         self.token = get_config().get("MCO_AGENT_TOKEN") or os.environ.get("MCO_AGENT_TOKEN") or ""
+        from mco.orchestrator.client import GatewayClient
+        self.result_client = GatewayClient(base_url=self.gateway_http_url, token=self.token,
+            role=self.role, instance_id=self.instance_id)
 
         logger.info(f"Agent Listener initialized: {self.instance_id} ({self.role}) using gateway HTTP: {self.gateway_http_url}")
 
@@ -215,6 +218,7 @@ class AgentListener:
     async def poll_and_execute(self) -> None:
         """Poll the Gateway for pending jobs and process them."""
         logger.debug("Polling Gateway for pending tasks...")
+        await asyncio.to_thread(self.result_client.flush_reports)
         
         import httpx
         url = f"{self.gateway_http_url}/api/jobs/pending"
@@ -233,58 +237,47 @@ class AgentListener:
             logger.error(f"Error polling pending jobs: {e}")
 
     async def _process_single_job(self, job: Dict[str, Any]) -> None:
-        """Atomically leases and executes a single job."""
+        """Run one attempt, renewing it and cancelling on loss of ownership."""
+        import httpx
+        from mco.orchestrator.leases import idempotency_key
         job_id = job.get("id")
-        title = job.get("title")
         if not job_id:
             return
-
-        logger.info(f"Attempting to lease job: {title} ({job_id})")
-
-        import httpx
-        try:
-            async with httpx.AsyncClient() as client:
-                # 1. Atomic lease request
-                lease_url = f"{self.gateway_http_url}/api/jobs/lease"
-                lease_payload = {
-                    "task_id": job_id,
-                    "agent_instance_id": self.instance_id
-                }
-                lease_res = await client.post(lease_url, json=lease_payload, headers=self._auth_headers(), timeout=10.0)
-                if lease_res.status_code != 200:
-                    logger.error(f"Lease request failed: HTTP {lease_res.status_code}")
+        async with httpx.AsyncClient(headers=self._auth_headers(), timeout=10) as client:
+            try:
+                response = await client.post(f"{self.gateway_http_url}/api/jobs/lease",
+                    json={"task_id": job_id, "agent_instance_id": self.instance_id})
+                response.raise_for_status()
+                leased = response.json()
+                if not leased.get("success"):
                     return
-
-                leased = lease_res.json().get("success", False)
-                if not leased:
-                    logger.debug(f"Job {job_id} already leased or not assignable.")
-                    return
-
-                logger.info(f"Successfully leased job: {title}. Starting execution.")
-
-                # 2. Update status to in_progress
-                update_url = f"{self.gateway_http_url}/api/jobs/{job_id}"
-                await client.put(update_url, headers=self._auth_headers(), json={
-                    "status": "in_progress"
-                }, timeout=10.0)
-
-                # Execute the job
-                output, error = await self._execute_task(job)
-
-                if error:
-                    logger.error(f"Job failed: {title}. Error: {error}")
-                    await client.put(update_url, headers=self._auth_headers(), json={
-                        "status": "failed",
-                        "error_message": error
-                    }, timeout=10.0)
-                else:
-                    logger.info(f"Job completed successfully: {title}")
-                    await client.put(update_url, headers=self._auth_headers(), json={
-                        "status": "completed",
-                        "output_payload": {"result": output}
-                    }, timeout=10.0)
-        except Exception as e:
-            logger.error(f"Error processing job {job_id}: {e}")
+                claim = leased.get("lease") or {}
+                job = {**job, **claim, "idempotency_key": idempotency_key(job_id, claim.get("lease_epoch"))}
+                url = f"{self.gateway_http_url}/api/jobs/{job_id}"
+                response = await client.put(url, json={"status": "in_progress", **claim})
+                response.raise_for_status()
+                work = asyncio.create_task(self._execute_task(job))
+                async def renew():
+                    while True:
+                        await asyncio.sleep(min(5, max(0.1, leased.get("renew_after_seconds", 300))))
+                        r = await client.post(url + "/renew", json=claim)
+                        r.raise_for_status()
+                heartbeat = asyncio.create_task(renew())
+                try:
+                    done, _ = await asyncio.wait({work, heartbeat}, return_when=asyncio.FIRST_COMPLETED)
+                    if heartbeat in done:
+                        heartbeat.result()  # Network/fence failure stops work.
+                    output, error = await work
+                finally:
+                    work.cancel()
+                    heartbeat.cancel()
+                    await asyncio.gather(work, heartbeat, return_exceptions=True)
+                payload = ({"status": "failed", "error_message": error} if error else
+                           {"status": "completed", "output_payload": {"result": output}})
+                self.result_client._leases[job_id] = claim
+                await asyncio.to_thread(self.result_client._report, job_id, payload)
+            except Exception as exc:
+                logger.error("Job %s could not continue/report: %s", job_id, exc)
 
     async def _fetch_shared_context(self, job: Dict[str, Any]) -> str:
         """Drumline tap: build the context to prepend to this job's prompt.
@@ -380,7 +373,12 @@ class AgentListener:
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )
-                stdout, stderr = await proc.communicate()
+                try:
+                    stdout, stderr = await proc.communicate()
+                except asyncio.CancelledError:
+                    from mco.orchestrator.executors import stop_process_tree
+                    await stop_process_tree(proc)
+                    raise
                 
                 stdout_str = stdout.decode().strip()
                 stderr_str = stderr.decode().strip()
@@ -390,7 +388,9 @@ class AgentListener:
                 else:
                     return None, f"Command failed with code {proc.returncode}. Stderr: {stderr_str}"
 
-            # Fallback mock executor for default test/setup
+            if str(get_config().get("MCO_DEMO_MODE") or "").lower() not in {"1", "true", "yes"}:
+                return None, f"No executor configured for role '{self.role}'. Register a worker or enable explicit demo mode."
+            # Explicit demo executor only; never report work that did not run.
             logger.info("No explicit command/executor found. Mocking successful execution of instruction.")
             mock_result = f"Executed instruction: '{title}' locally. Prompt: {prompt[:100]}..."
             return mock_result, None

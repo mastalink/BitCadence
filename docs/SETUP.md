@@ -1,4 +1,4 @@
-# BatonCadence — Full Setup Guide (Backend + Agents)
+# BitCadence — Full Setup Guide (Backend + Agents)
 
 This is a complete, share-with-a-friend walkthrough. It takes you from an empty
 machine to three AI coding agents (Claude, Codex, Antigravity/Gemini) passing
@@ -48,7 +48,7 @@ the next agent with `mco_send`.
 
 ```bash
 # Clone, then:
-cd C:/BatonCadence      # adjust to wherever you cloned it
+cd C:/BitCadence      # adjust to wherever you cloned it
 
 python -m venv .venv
 # Windows:
@@ -233,7 +233,7 @@ Create `.mcp.json` in your project root:
 {
   "mcpServers": {
     "mco": {
-      "command": "C:/BatonCadence/.venv/Scripts/mco.exe",
+      "command": "C:/BitCadence/.venv/Scripts/mco.exe",
       "args": ["mcp"],
       "env": {
         "MCO_GATEWAY_URL": "http://127.0.0.1:18789",
@@ -246,7 +246,7 @@ Create `.mcp.json` in your project root:
 }
 ```
 
-Or: `claude mcp add mco -- C:/BatonCadence/.venv/Scripts/mco.exe mcp` then set
+Or: `claude mcp add mco -- C:/BitCadence/.venv/Scripts/mco.exe mcp` then set
 the four env vars.
 
 ### Codex
@@ -254,7 +254,7 @@ Append to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.mco]
-command = "C:/BatonCadence/.venv/Scripts/mco.exe"
+command = "C:/BitCadence/.venv/Scripts/mco.exe"
 args = ["mcp"]
 env = { MCO_GATEWAY_URL = "http://127.0.0.1:18789", MCO_AGENT_TOKEN = "mco_tok_REPLACE_ME", AGENT_ROLE = "codex", AGENT_INSTANCE_ID = "coding-beast-codex" }
 ```
@@ -266,7 +266,7 @@ Add the `mco` entry to Antigravity's MCP config:
 {
   "mcpServers": {
     "mco": {
-      "command": "C:/BatonCadence/.venv/Scripts/mco.exe",
+      "command": "C:/BitCadence/.venv/Scripts/mco.exe",
       "args": ["mcp"],
       "env": {
         "MCO_GATEWAY_URL": "http://127.0.0.1:18789",
