@@ -1,5 +1,5 @@
 """
-BatonCadence Encrypted Secret Store
+BitCadence Encrypted Secret Store
 ==================================
 AES-256-GCM encryption for sensitive configuration values.
 
@@ -314,8 +314,13 @@ class SecretStore:
         with self._lock:
             if self._secrets is None or self._master_key is None:
                 raise RuntimeError("Secret store is locked. Call unlock() first.")
+            previous = dict(self._secrets)
             self._secrets[key] = value
-            self._persist()
+            try:
+                self._persist()
+            except Exception:
+                self._secrets = previous
+                raise
             logger.debug("Secret '{}' updated", key)
 
     def delete(self, key: str) -> None:
@@ -323,8 +328,13 @@ class SecretStore:
         with self._lock:
             if self._secrets is None or self._master_key is None:
                 raise RuntimeError("Secret store is locked. Call unlock() first.")
+            previous = dict(self._secrets)
             self._secrets.pop(key, None)
-            self._persist()
+            try:
+                self._persist()
+            except Exception:
+                self._secrets = previous
+                raise
             logger.debug("Secret '{}' deleted", key)
 
     def list_keys(self) -> list[str]:
@@ -381,10 +391,21 @@ class SecretStore:
         }
 
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(
-            json.dumps(envelope, indent=2),
-            encoding="utf-8",
+        temporary = self._path.with_name(
+            f".{self._path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
         )
+        try:
+            with temporary.open("w", encoding="utf-8", newline="\n") as handle:
+                json.dump(envelope, handle, indent=2)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            if os.name != "nt":
+                os.chmod(temporary, 0o600)
+            os.replace(temporary, self._path)
+        finally:
+            temporary.unlink(missing_ok=True)
+        self._envelope = envelope
 
 
 _store: Optional[SecretStore] = None

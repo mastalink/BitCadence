@@ -1,4 +1,4 @@
-// BatonCadence — live gateway adapter.
+// BitCadence — live gateway adapter.
 // Wraps the demo store (data.js) in a facade. When connected, all reads/writes
 // go to the real MCOrchestr8 REST API:
 //   GET  /api/jobs            GET /api/agents       GET /api/jobs/{id}/events
@@ -12,11 +12,16 @@
 // 30s safety net when the socket is up, 4s otherwise. Poll() synthesizes
 // toasts + an activity feed from status diffs either way.
 (function () {
-  const demo = window.BatonStore; // set by data.js (must load first)
+  const demo = window.BitCadenceStore; // set by data.js (must load first)
   const listeners = new Set();
   const toastFns = new Set();
   let cfg = null;
-  try { cfg = JSON.parse(localStorage.getItem("baton_conn") || "null"); } catch (e) { cfg = null; }
+  try {
+    // "baton_conn" is the pre-BitCadence key: read it once so an existing
+    // console keeps its saved gateway instead of dropping back to demo.
+    const saved = localStorage.getItem("bitcadence_conn") || localStorage.getItem("baton_conn");
+    cfg = JSON.parse(saved || "null");
+  } catch (e) { cfg = null; }
   let connState = "demo"; // demo | connecting | live
   let lastError = null;
   let pollTimer = null;
@@ -32,10 +37,15 @@
   const emit = () => listeners.forEach((fn) => fn());
   const rid = () => Math.random().toString(36).slice(2);
   const toast = (kind, title, body) => toastFns.forEach((fn) => fn({ id: rid(), kind, title, body }));
+  function withWorkflow(job) {
+    const wf = job && job.input_payload && job.input_payload.workflow;
+    if (!wf || job.workflow) return job;
+    return Object.assign({}, job, { workflow: wf.name || wf.run, workflow_run: wf.run, workflow_step: wf.step });
+  }
 
   // Re-emit demo store changes while in demo mode
-  demo.subscribe(() => { if (!isLive()) emit(); });
-  demo.onToast((t) => { if (!isLive()) toastFns.forEach((fn) => fn(t)); });
+  demo.subscribe(() => { if (connState === 'demo') emit(); });
+  demo.onToast((t) => { if (connState === 'demo') toastFns.forEach((fn) => fn(t)); });
 
   async function api(path, opts = {}) {
     const base = (cfg && cfg.url ? cfg.url : "").replace(/\/+$/, "");
@@ -64,8 +74,9 @@
   async function poll() {
     try {
       const [j, a] = await Promise.all([api("/api/jobs"), api("/api/agents")]);
+      const normalized = (j || []).map(withWorkflow);
       const seenBefore = Object.keys(prevStatus).length > 0;
-      (j || []).forEach((job) => {
+      normalized.forEach((job) => {
         const old = prevStatus[job.id];
         if (seenBefore && old !== job.status) {
           liveActivity.unshift({
@@ -81,11 +92,13 @@
         prevStatus[job.id] = job.status;
       });
       liveActivity = liveActivity.slice(0, 50);
-      jobs = j || []; agents = a || [];
+      jobs = normalized; agents = a || [];
+      if (connState === 'offline') connState = 'live';
       if (lastError) { lastError = null; }
       emit();
     } catch (e) {
       lastError = e.message;
+      if (connState === 'live') connState = 'offline';
       emit();
     }
   }
@@ -149,7 +162,7 @@
       connState = "connecting"; lastError = null; emit();
       try {
         await api("/api/agents"); // auth + reachability check
-        localStorage.setItem("baton_conn", JSON.stringify(cfg));
+        localStorage.setItem("bitcadence_conn", JSON.stringify(cfg));
         demo.stopSim();
         connState = "live";
         jobs = []; agents = []; eventsCache = {}; prevStatus = {}; liveActivity = [];
@@ -160,7 +173,7 @@
         emit();
         return true;
       } catch (e) {
-        connState = "demo"; lastError = e.message;
+        connState = "offline"; lastError = e.message;
         toast("err", "Connection failed", e.message);
         emit();
         return false;
@@ -170,16 +183,17 @@
       stopWs();
       stopPolling();
       connState = "demo"; lastError = null;
+      localStorage.removeItem("bitcadence_conn");
       localStorage.removeItem("baton_conn");
       toast("info", "Demo mode", "Showing simulated data again.");
       emit();
     },
 
     // ---- reads ----
-    getJobs: () => isLive() ? jobs.slice() : demo.getJobs(),
-    getAgents: () => isLive() ? agents.slice() : demo.getAgents(),
+    getJobs: () => connState === "demo" ? demo.getJobs() : jobs.slice(),
+    getAgents: () => connState === "demo" ? demo.getAgents() : agents.slice(),
     getEvents(jobId) {
-      if (!isLive()) return demo.getEvents(jobId);
+      if (connState === "demo") return demo.getEvents(jobId);
       if (!eventsCache[jobId]) {
         eventsCache[jobId] = [];
         api("/api/jobs/" + jobId + "/events")
@@ -192,22 +206,42 @@
 
     // ---- writes ----
     async approve(jobId, actor) {
-      if (!isLive()) return demo.approve(jobId, actor);
+      if (connState === "demo") return demo.approve(jobId, actor);
       try { await api("/api/jobs/" + jobId + "/approve", { method: "POST" }); await poll(); }
       catch (e) { toast("err", "Approve failed", e.message); }
     },
     async reject(jobId, actor, reason) {
-      if (!isLive()) return demo.reject(jobId, actor, reason);
+      if (connState === "demo") return demo.reject(jobId, actor, reason);
       try { await api("/api/jobs/" + jobId + "/reject", { method: "POST", body: JSON.stringify({ reason: reason || "" }) }); await poll(); }
       catch (e) { toast("err", "Reject failed", e.message); }
     },
     async retryNow(jobId) {
-      if (!isLive()) return demo.retryNow(jobId);
+      if (connState === "demo") return demo.retryNow(jobId);
       try { await api("/api/jobs/" + jobId + "/retry", { method: "POST" }); await poll(); toast("ok", "Re-queued", "Job sent back to the board."); }
       catch (e) { toast("err", "Retry failed", e.message + " (retry needs an approver-role token)"); }
     },
+    async cancelJob(jobId, reason) {
+      if (connState === "demo") return demo.cancelJob ? demo.cancelJob(jobId, reason) : null;
+      try {
+        await api("/api/jobs/" + jobId + "/cancel", { method: "POST", body: JSON.stringify({ reason: reason || "" }) });
+        await poll();
+        toast("ok", "Cancelled", "The job was called off.");
+      }
+      catch (e) { toast("err", "Cancel failed", e.message + " (cancel needs an approver-role token)"); }
+    },
+    async reassignJob(jobId, toRole, toInstance) {
+      if (connState === "demo") return demo.reassignJob ? demo.reassignJob(jobId, toRole, toInstance) : null;
+      try {
+        const body = { to_role: toRole };
+        if (toInstance) body.to_instance = toInstance;
+        await api("/api/jobs/" + jobId + "/reassign", { method: "POST", body: JSON.stringify(body) });
+        await poll();
+        toast("ok", "Reassigned", "Now waiting on " + (toInstance || toRole) + ".");
+      }
+      catch (e) { toast("err", "Reassign failed", e.message + " (reassign needs an approver-role token)"); }
+    },
     async createJob(payload) {
-      if (!isLive()) return demo.createJob(payload);
+      if (connState === "demo") return demo.createJob(payload);
       try {
         const res = await api("/api/jobs", { method: "POST", body: JSON.stringify(payload) });
         await poll();
@@ -216,7 +250,7 @@
       } catch (e) { toast("err", "Create failed", e.message); }
     },
     async submitWorkflow(name, steps) {
-      if (!isLive()) return demo.submitWorkflow(name, steps);
+      if (connState === "demo") return demo.submitWorkflow(name, steps);
       // topo order: place steps whose deps are all already submitted
       const remaining = steps.slice();
       const idMap = {};
@@ -247,6 +281,19 @@
         return idMap;
       } catch (e) { toast("err", "Workflow failed", e.message); return idMap; }
     },
+    async seedDemoPipeline() {
+      if (connState === "demo") return demo.seedDemoPipeline();
+      try {
+        const res = await api("/api/workflows/demo-pipeline", { method: "POST", body: JSON.stringify({}) });
+        await poll();
+        toast("ok", "Demo pipeline running", "Claude -> Codex -> reviewer is now visible in the live feed.");
+        return res;
+      } catch (e) { toast("err", "Demo seed failed", e.message); }
+    },
+    async exportEvidencePack(payload) {
+      if (connState === "demo") return demo.exportEvidencePack(payload);
+      return api("/api/governance/evidence-pack", { method: "POST", body: JSON.stringify(payload || {}) });
+    },
 
     // ---- settings & connectors (live only) ----
     async getSettings() {
@@ -255,7 +302,9 @@
     },
     async saveSettings(values) {
       if (!isLive()) throw new Error("Connect to your orchestrator first.");
-      return api("/api/settings", { method: "PUT", body: JSON.stringify(values) });
+      const result = await api("/api/settings", { method: "PUT", body: JSON.stringify(values) });
+      await poll();
+      return result;
     },
     async testConnector(name) {
       if (!isLive()) throw new Error("Connect to your orchestrator first.");
@@ -332,7 +381,7 @@
     onToast(fn) { toastFns.add(fn); return () => toastFns.delete(fn); },
   };
 
-  window.BatonStore = facade;
+  window.BitCadenceStore = facade;
 
   // Auto-reconnect if a saved connection exists
   if (cfg && cfg.url && cfg.token) {

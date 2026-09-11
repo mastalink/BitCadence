@@ -1,4 +1,4 @@
-// Baton — Overview (mission control) + Approvals inbox.
+// BitCadence — Overview (mission control) + Approvals inbox.
 const { useState: useStateH, useMemo: useMemoH, useEffect: useEffectH } = React;
 
 // ----- Overview -----
@@ -80,7 +80,7 @@ function WorkflowStrip({ jobs, tone, onOpen }) {
 }
 
 function ActivityFeed({ jobs, tone, onOpen }) {
-  const evts = window.BatonStore.getAllEvents(9);
+  const evts = window.BitCadenceStore.getAllEvents(9);
   const titleOf = (jobId) => { const j = jobs.find((x) => x.id === jobId); return j ? j.title : shortId(jobId); };
   return (
     <Card pad={false}>
@@ -114,6 +114,49 @@ function eventKindH(ev) {
   return "waiting";
 }
 
+function DemoLaunchPanel({ tone, onNav }) {
+  const [busy, setBusy] = useStateH(false);
+  const [lastRun, setLastRun] = useStateH(null);
+  async function runDemo() {
+    setBusy(true);
+    try {
+      const res = await window.BitCadenceStore.seedDemoPipeline();
+      if (res) {
+        setLastRun(res.run || "created");
+        onNav("overview");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Card style={{
+      marginBottom: 18,
+      borderColor: "color-mix(in srgb, var(--accent) 32%, var(--border))",
+      background: "linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 72%, var(--surface)), var(--surface))",
+    }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) auto", gap: 18, alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: 11.5, fontWeight: 750, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--accent-text)", marginBottom: 6 }}>Pilot demo</div>
+          <h2 style={{ margin: "0 0 6px", fontSize: 22, lineHeight: 1.15, letterSpacing: "-0.01em" }}>
+            Launch Claude -> Codex -> reviewer in the live console
+          </h2>
+          <p style={{ margin: 0, color: "var(--text-2)", fontSize: 13.5, maxWidth: 680 }}>
+            {tone === "plain"
+              ? "Seeds a three-job workflow and lets the activity stream show work arriving, waiting, and moving."
+              : "Creates a stamped workflow run through the same job intake path as production: dependencies, audit rows, and broadcasts included."}
+          </p>
+          {lastRun ? <div style={{ marginTop: 9, fontSize: 12, color: "var(--text-3)" }}>Last demo run: <Mono>{lastRun}</Mono></div> : null}
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <Btn kind="primary" disabled={busy} onClick={runDemo}>{busy ? "Seeding..." : "Run demo pipeline"}</Btn>
+          <Btn kind="ghost" onClick={() => onNav("governance")}>Governance tab</Btn>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function Overview({ jobs, agents, tone, advanced, onNav, onOpen }) {
   const active = jobs.filter((j) => ["pending", "leased", "in_progress"].includes(j.status)).length;
   const gates = jobs.filter((j) => j.status === "needs_approval").length;
@@ -123,6 +166,8 @@ function Overview({ jobs, agents, tone, advanced, onNav, onOpen }) {
 
   return (
     <div>
+      <DemoLaunchPanel tone={tone} onNav={onNav} />
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 22 }}>
         <StatCard label={tone === "plain" ? "Working now" : "Active jobs"} value={active} sub={tone === "plain" ? "jobs moving through the pipeline" : "pending · leased · in progress"} kind="active" onClick={() => onNav("jobs")} />
         <StatCard label={tone === "plain" ? "Needs your OK" : "Approval gates"} value={gates} sub={gates ? (tone === "plain" ? "paused until you decide" : "paused at needs_approval") : "all clear"} kind="approval" onClick={() => onNav("approvals")} />
@@ -145,7 +190,7 @@ function Overview({ jobs, agents, tone, advanced, onNav, onOpen }) {
                       <div style={{ fontWeight: 600, fontSize: 13.5 }}>{j.title}</div>
                       <div style={{ fontSize: 12, color: "var(--text-3)" }}>from {j.source_agent_id} · {timeAgo(j.created_at)}</div>
                     </div>
-                    <Btn kind="ok" small onClick={() => window.BatonStore.approve(j.id, "joe-laptop")}>✓ Approve</Btn>
+                    <Btn kind="ok" small onClick={() => window.BitCadenceStore.approve(j.id, "joe-laptop")}>✓ Approve</Btn>
                     <Btn small onClick={() => onOpen(j.id)}>Review</Btn>
                   </div>
                 </Card>
@@ -215,9 +260,9 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
                 {advanced ? <span>ID: <Mono>{shortId(selected.id)}</Mono></span> : null}
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                <Btn kind="primary" onClick={() => window.BatonStore.approve(selected.id, "joe-laptop")}>✓ Approve &amp; run</Btn>
+                <Btn kind="primary" onClick={() => window.BitCadenceStore.approve(selected.id, "joe-laptop")}>✓ Approve &amp; run</Btn>
                 <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tone === "plain" ? "Reason for saying no…" : "Rejection reason (audited)…"} style={{ flex: 1, minWidth: 160, border: "1px solid var(--border-strong)", borderRadius: 8, padding: "8px 12px", fontSize: 13 }} />
-                <Btn kind="danger" onClick={() => window.BatonStore.reject(selected.id, "joe-laptop", reason)}>Reject</Btn>
+                <Btn kind="danger" onClick={() => window.BitCadenceStore.reject(selected.id, "joe-laptop", reason)}>Reject</Btn>
                 <Btn kind="ghost" onClick={() => onOpen(selected.id)}>Full details →</Btn>
               </div>
             </Card>
@@ -251,6 +296,148 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
   );
 }
 
+function Governance({ jobs, tone, advanced, onOpen }) {
+  const store = window.BitCadenceStore;
+  const live = (store.mode ? store.mode() : "demo") === "live";
+  const [events, setEvents] = useStateH([]);
+  const [err, setErr] = useStateH(null);
+  const [start, setStart] = useStateH("");
+  const [end, setEnd] = useStateH("");
+  const [exporting, setExporting] = useStateH(false);
+  const [pack, setPack] = useStateH(null);
+  const pending = jobs.filter((j) => j.status === "needs_approval");
+  const inputStyle = { border: "1px solid var(--border-strong)", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "var(--surface)", color: "var(--text)" };
+
+  async function loadEvents() {
+    setErr(null);
+    try {
+      if (live && store.getRecentEvents) setEvents(await store.getRecentEvents({ limit: 150 }) || []);
+      else setEvents(store.getAllEvents ? store.getAllEvents(150) : []);
+    } catch (e) {
+      setErr(e.message);
+      setEvents([]);
+    }
+  }
+  useEffectH(() => { loadEvents(); }, [live, jobs.length]);
+
+  async function exportPack() {
+    setExporting(true);
+    setErr(null);
+    try {
+      const res = await store.exportEvidencePack({ start_date: start || null, end_date: end || null });
+      setPack(res);
+      const blob = new Blob([JSON.stringify(res, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "bitcadence-evidence-pack.json";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { setErr(e.message); }
+    setExporting(false);
+  }
+
+  const decisions = (events || [])
+    .filter((e) => e.event === "approved" || e.event === "rejected")
+    .slice(0, 12);
+  const approvalEvents = (events || [])
+    .filter((e) => String(e.event || "").indexOf("approv") >= 0 || e.event === "rejected")
+    .slice(0, 18);
+
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.25fr) minmax(320px, .75fr)", gap: 18, alignItems: "start" }}>
+        <div>
+          <SectionTitle action={<Btn small kind="ghost" onClick={loadEvents}>Refresh</Btn>}>
+            {tone === "plain" ? "Pending approvals" : "Human oversight queue"}
+          </SectionTitle>
+          <Card pad={false} style={{ marginBottom: 18 }}>
+            {pending.length ? (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+                <THead cols={["Job", "Target", "Requested", ""]} />
+                <tbody>
+                  {pending.map((j) => (
+                    <tr key={j.id}>
+                      <Td><span style={{ fontWeight: 600 }}>{j.title}</span><br /><span style={{ color: "var(--text-3)", fontSize: 12 }}>{shortId(j.id)}</span></Td>
+                      <Td><RoleChip role={j.target_agent_role} /></Td>
+                      <Td><span style={{ color: "var(--text-3)", fontSize: 12.5 }}>{timeAgo(j.created_at)}</span></Td>
+                      <Td><Btn small onClick={() => onOpen(j.id)}>Review</Btn></Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <EmptyState icon="OK" title={tone === "plain" ? "No approvals waiting" : "No pending approval gates"} body="New human oversight gates appear here as jobs pause." />
+            )}
+          </Card>
+
+          <SectionTitle>{tone === "plain" ? "Decision history" : "Approval decision history"}</SectionTitle>
+          <Card pad={false}>
+            {decisions.length ? (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+                <THead cols={advanced ? ["Decision", "Job", "Actor", "When", "Detail"] : ["Decision", "Job", "Actor", "When"]} />
+                <tbody>
+                  {decisions.map((e) => (
+                    <tr key={e.id || e.job_id + e.created_at}>
+                      <Td><span style={{ fontWeight: 700, color: e.event === "approved" ? "var(--st-done-fg)" : "var(--st-failed-fg)" }}>{eventLabel(e.event, tone)}</span></Td>
+                      <Td>{e.job_title || shortId(e.job_id)}</Td>
+                      <Td><Mono>{e.actor_id || "-"}</Mono></Td>
+                      <Td><span style={{ color: "var(--text-3)", fontSize: 12.5 }}>{timeAgo(e.created_at)}</span></Td>
+                      {advanced ? <Td><span style={{ color: "var(--text-3)", fontSize: 12 }}>{JSON.stringify(e.detail || {})}</span></Td> : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <EmptyState icon="--" title={tone === "plain" ? "No decisions in the feed" : "No approved/rejected events loaded"} body="Approval decisions will appear once a human acts on a gate." />
+            )}
+          </Card>
+        </div>
+
+        <div>
+          <SectionTitle>Evidence export</SectionTitle>
+          <Card style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 13.5, color: "var(--text-2)", marginBottom: 14 }}>
+              PDF cover page plus JSON audit trail for EU AI Act Art. 12 record-keeping and Art. 14 human oversight.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+              <label style={{ fontSize: 12, color: "var(--text-3)" }}>Start<br /><input type="date" value={start} onChange={(e) => setStart(e.target.value)} style={Object.assign({}, inputStyle, { width: "100%" })} /></label>
+              <label style={{ fontSize: 12, color: "var(--text-3)" }}>End<br /><input type="date" value={end} onChange={(e) => setEnd(e.target.value)} style={Object.assign({}, inputStyle, { width: "100%" })} /></label>
+            </div>
+            <Btn kind="primary" disabled={exporting} onClick={exportPack}>
+              {exporting ? "Exporting..." : "Export compliance evidence pack"}
+            </Btn>
+            {pack ? (
+              <div style={{ marginTop: 14, fontSize: 12.5, color: "var(--text-2)" }}>
+                Exported {pack.summary.audit_events} audit events, {pack.summary.pending_approvals} pending approvals, {pack.summary.decisions} decisions.
+                <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {(pack.files || []).map((f) => <span key={f.filename} style={{ fontFamily: "var(--font-mono)", color: "var(--text-3)", background: "var(--surface-2)", padding: "2px 7px", borderRadius: 6 }}>{f.filename}</span>)}
+                </div>
+              </div>
+            ) : null}
+            {err ? <div style={{ marginTop: 12, color: "var(--st-failed-fg)", fontSize: 12.5 }}>{err}</div> : null}
+          </Card>
+
+          <SectionTitle>{tone === "plain" ? "Oversight trail" : "Approval-related events"}</SectionTitle>
+          <Card pad={false}>
+            {approvalEvents.length ? approvalEvents.map((e, i) => (
+              <button key={e.id || i} onClick={() => e.job_id && onOpen(e.job_id)} style={{
+                display: "flex", width: "100%", textAlign: "left", gap: 10, alignItems: "center",
+                padding: "10px 14px", border: "none", borderBottom: i < approvalEvents.length - 1 ? "1px solid var(--border)" : "none",
+                background: "transparent", cursor: "pointer", fontSize: 13,
+              }}>
+                <span style={{ width: 8, height: 8, borderRadius: 99, background: `var(--st-${eventKindH(e.event)}-dot)`, flex: "none" }}></span>
+                <span style={{ flex: 1, minWidth: 0 }}>{eventLabel(e.event, tone)}<br /><span style={{ color: "var(--text-3)", fontSize: 12 }}>{e.job_title || shortId(e.job_id)}</span></span>
+                <span style={{ color: "var(--text-3)", fontSize: 11.5 }}>{timeAgo(e.created_at)}</span>
+              </button>
+            )) : <EmptyState icon="--" title="No oversight events loaded" body="Refresh after approvals, rejections, or demo activity." />}
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ----- Drumline shared memory -----
 // Browse/search the collective agent memory (/api/context) and add entries.
 // Recall scoring happens server-side; this screen just asks and renders.
@@ -275,7 +462,7 @@ function KindChip({ kind }) {
 }
 
 function DrumlineMemory({ tone, advanced }) {
-  const store = window.BatonStore;
+  const store = window.BitCadenceStore;
   const live = (store.mode ? store.mode() : "demo") === "live";
   const [query, setQuery] = useStateH("");
   const [tags, setTags] = useStateH("");
@@ -408,4 +595,4 @@ function DrumlineMemory({ tone, advanced }) {
   );
 }
 
-Object.assign(window, { Overview, Approvals, StatCard, DrumlineMemory, KindChip });
+Object.assign(window, { Overview, Approvals, Governance, StatCard, DrumlineMemory, KindChip });

@@ -3,6 +3,9 @@ docs/TEST_PLAN.md
 # Private founder war-room: pitch, outreach, credits, exit positioning
 founder/
 
+# Local MCP wiring - contains live mco_tok_... agent tokens
+/.mcp.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -152,3 +155,29 @@ plans/
 docs/VALIDATION_SUMMARY.md
 docs/ROADMAP.md
 docs/SMOKE_TEST.md
+
+# macOS finder metadata (the Mac mini in the fleet keeps creating these)
+.DS_Store
+**/.DS_Store
+
+# Stray per-repo codex config: it shadows ~/.codex/config.toml and can give an
+# agent the wrong identity. Keep codex config in the user home, not the repo.
+.codex/
+.playwright-cli/
+output/playwright/**/*.webm
+output/playwright/**/*.mp4
+output/playwright/**/*.png
+output/playwright/**/*.mp3
+output/playwright/**/*.wav
+# Terraform (infra/aws): providers, state, and real tfvars never ship
+infra/aws/.terraform/
+infra/aws/*.tfstate
+infra/aws/*.tfstate.*
+infra/aws/terraform.tfvars
+infra/aws/bootstrap/.terraform/
+infra/aws/bootstrap/*.tfstate*
+infra/aws/bootstrap/*.tfplan
+infra/aws/lab/.terraform/
+infra/aws/lab/*.tfstate*
+infra/aws/lab/*.tfplan
+infra/aws/lab/terraform.tfvars

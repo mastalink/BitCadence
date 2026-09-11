@@ -1,17 +1,20 @@
 """
 Gateway authentication & authorization.
 
-Three layers, evaluated in order:
+Four layers, evaluated in order:
 
-1. **Trusted-header identity (enterprise)** - when BatonCadence sits behind an
+1. **Trusted-header identity (enterprise)** - when BitCadence sits behind an
    SSO reverse proxy (Cloudflare Access, oauth2-proxy, Authelia, ...), the
    proxy authenticates the human and asserts identity via headers. We don't
-   implement SAML/OIDC ourselves; we delegate to infrastructure enterprises
-   already run. Disabled unless MCO_TRUSTED_HEADER_AUTH is explicitly on.
-2. **Bearer-token authentication** - agents and workers authenticate with
+   run SAML/OIDC inside this compatibility path; it delegates to infrastructure
+   enterprises already run. Disabled unless MCO_TRUSTED_HEADER_AUTH is explicitly on.
+2. **Human sessions** - OIDC-authenticated users receive an opaque,
+   short-lived cookie whose hash is resolved through an active Organization
+   Membership on every request.
+3. **Bearer-token authentication** - agents and workers authenticate with
    tokens, reusing the same SHA-256 token-hash scheme the WebSocket handshake
    uses (one source of truth).
-3. **Scope-based authorization (RBAC)** - every endpoint declares the scopes
+4. **Scope-based authorization (RBAC)** - every endpoint declares the scopes
    it needs via `require_scopes`. A registry row may carry an explicit
    `scopes` list; rows without one get role-derived defaults that match
    pre-RBAC behavior exactly (workers work, approvers approve).
@@ -25,7 +28,9 @@ job's addressee.
 import hashlib
 import hmac
 import logging
+from datetime import datetime, timezone
 from typing import Any, Iterable, List, Optional
+from urllib.parse import urlparse
 
 from fastapi import Depends, Header, HTTPException, Request
 
@@ -141,6 +146,73 @@ def extract_bearer(authorization: str) -> str:
     return ""
 
 
+def verify_user_session(db_client: Any, raw_token: str) -> Optional[dict]:
+    """Resolve one active human session and its current Organization Membership."""
+    if not raw_token or db_client is None:
+        return None
+    token_hash = hash_token(raw_token)
+    try:
+        sessions = (
+            db_client.table("user_sessions")
+            .select("*")
+            .eq("session_token_hash", token_hash)
+            .execute()
+        ).data or []
+        if not sessions:
+            return None
+        session = sessions[0]
+        if session.get("revoked_at"):
+            return None
+        expires_at = datetime.fromisoformat(
+            str(session.get("expires_at") or "").replace("Z", "+00:00")
+        )
+        if expires_at <= datetime.now(timezone.utc):
+            return None
+        memberships = (
+            db_client.table("org_memberships")
+            .select("*")
+            .eq("org_id", session.get("org_id") or "default")
+            .eq("user_id", session.get("user_id"))
+            .execute()
+        ).data or []
+        if not memberships or not memberships[0].get("active", True):
+            return None
+        users = (
+            db_client.table("users")
+            .select("*")
+            .eq("id", session.get("user_id"))
+            .execute()
+        ).data or []
+        if not users or not users[0].get("active", True):
+            return None
+    except Exception as exc:
+        logger.warning("User session lookup failed: %s", exc)
+        return None
+    membership = memberships[0]
+    return {
+        "instance_id": f"user:{session['user_id']}",
+        "user_id": session["user_id"],
+        "role": membership.get("role") or "viewer",
+        "scopes": normalize_scopes(membership.get("scopes")),
+        "status": "online",
+        "org_id": session.get("org_id") or "default",
+        "auth_method": "session",
+        "session_id": session.get("id"),
+    }
+
+
+def enforce_session_csrf(request: Optional[Request]) -> None:
+    """Require same-origin browser context for cookie-authenticated mutations."""
+    if request is None or request.method.upper() in {"GET", "HEAD", "OPTIONS"}:
+        return
+    if (request.headers.get("sec-fetch-site") or "").lower() == "cross-site":
+        raise HTTPException(status_code=403, detail="Cross-site session request denied")
+    origin = request.headers.get("origin", "")
+    host = request.headers.get("host", "")
+    if not origin or urlparse(origin).netloc.casefold() != host.casefold():
+        raise HTTPException(status_code=403, detail="Session request origin did not match this gateway")
+
+
 # ── Trusted-header identity (SSO delegation) ─────────────────────────────────
 
 def _truthy(value) -> bool:
@@ -208,9 +280,9 @@ async def require_agent(
 ) -> dict:
     """FastAPI dependency: authenticate the caller.
 
-    Order: trusted proxy headers (when enabled) -> bearer token against the
-    agent registry -> Local-Only static token (MCO_LOCAL_TOKEN) when no
-    database is configured.
+    Order: trusted proxy headers (when enabled) -> human session cookie ->
+    bearer token against the agent registry -> Local-Only static token
+    (MCO_LOCAL_TOKEN) when no database is configured.
 
     Raises 401 if no path authenticates.
     Returns the agent's {instance_id, role, status, org_id, scopes?, ...}.
@@ -245,6 +317,14 @@ async def require_agent(
             "status": "online",
             "org_id": "default",
         }
+
+    session = verify_user_session(
+        db_client,
+        request.cookies.get("mco_session", "") if request is not None else "",
+    )
+    if session:
+        enforce_session_csrf(request)
+        return session
 
     agent = verify_token(db_client, extract_bearer(authorization))
     if not agent:

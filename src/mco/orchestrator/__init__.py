@@ -1,1 +1,1 @@
-"""BatonCadence Job Board and Orchestrator."""
+"""BitCadence Job Board and Orchestrator."""

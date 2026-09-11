@@ -1,6 +1,6 @@
 # Air-Gapped Install - Zero Data Leaves Your Network
 
-BatonCadence's enterprise posture is *runs on your metal*: the Local-Only
+BitCadence's enterprise posture is *runs on your metal*: the Local-Only
 profile already needs no cloud account, no external database, and no vendor
 callback. The offline bundle closes the last gap - installing on a machine
 with **no internet access at all**.
@@ -13,13 +13,13 @@ air-gapped target (wheels are platform-specific):
 ```powershell
 # Windows
 powershell -ExecutionPolicy Bypass -File scripts\make-offline-bundle.ps1
-# -> dist\batoncadence-offline.zip
+# -> dist\bitcadence-offline.zip
 ```
 
 ```bash
 # macOS / Linux
 bash scripts/make-offline-bundle.sh
-# -> dist/batoncadence-offline.tar.gz
+# -> dist/bitcadence-offline.tar.gz
 ```
 
 The bundle contains the tracked repository plus every dependency wheel

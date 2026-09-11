@@ -1,10 +1,11 @@
-// Baton — app shell: sidebar nav, topbar, routing, tweaks.
+// BitCadence — app shell: sidebar nav, topbar, routing, tweaks.
 const { useState: useStateA, useEffect: useEffectA } = React;
 
 const NAV = [
   { id: "overview", label: "Overview", icon: "M3 3h7v7H3zM14 3h7v4h-7zM14 11h7v10h-7zM3 14h7v7H3z" },
   { id: "jobs", label: "Job Board", icon: "M4 6h16M4 12h16M4 18h10" },
   { id: "approvals", label: "Approvals", icon: "M9 12l2 2 4-5M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18z" },
+  { id: "governance", label: "Governance", icon: "M12 3l8 4v5c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V7l8-4zM9 12l2 2 4-5" },
   { id: "workflows", label: "Workflows", icon: "M5 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM19 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM7 5h10M7 19h10M19 12H7" },
   { id: "agents", label: "Agent Fleet", icon: "M12 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM5 22a7 7 0 0 1 14 0M19 8a2.5 2.5 0 1 0-4 0M9 8a2.5 2.5 0 1 1-4 0" },
   { id: "memory", label: "Memory", icon: "M21 5c0 1.66-4.03 3-9 3S3 6.66 3 5s4.03-3 9-3 9 1.34 9 3zM3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" },
@@ -21,7 +22,7 @@ function NavIcon({ d }) {
 }
 
 const BRANDS = {
-  BatonCadence: { tag: "batoncadence.com", mark: "sticks" },
+  BitCadence: { tag: "bitcadence.ai", mark: "sticks" },
   Cadence: { tag: "Agent Orchestration", mark: "sticks" },
   DrumTight: { tag: "Tight-Ship Ops", mark: "drum" },
   Echelon: { tag: "Decentralized Command", mark: "chevrons" },
@@ -65,24 +66,24 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 const PAGE_TITLES = {
-  expert: { overview: "Overview", jobs: "Job Board", approvals: "Approval Queue", workflows: "Workflows", agents: "Agent Fleet", memory: "Drumline Memory", activity: "Audit Trail", settings: "Settings" },
-  plain: { overview: "Overview", jobs: "All work", approvals: "Needs your OK", workflows: "Flows", agents: "Your agents", memory: "Shared memory", activity: "What happened", settings: "Settings" },
+  expert: { overview: "Overview", jobs: "Job Board", approvals: "Approval Queue", governance: "Governance", workflows: "Workflows", agents: "Agent Fleet", memory: "Drumline Memory", activity: "Audit Trail", settings: "Settings" },
+  plain: { overview: "Overview", jobs: "All work", approvals: "Needs your OK", governance: "Governance", workflows: "Flows", agents: "Your agents", memory: "Shared memory", activity: "What happened", settings: "Settings" },
 };
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [page, setPage] = useStateA(localStorage.getItem("baton_page") || "overview");
-  const [advanced, setAdvanced] = useStateA(localStorage.getItem("baton_adv") === "1");
+  const [page, setPage] = useStateA(localStorage.getItem("bitcadence_page") || localStorage.getItem("baton_page") || "overview");
+  const [advanced, setAdvanced] = useStateA((localStorage.getItem("bitcadence_adv") ?? localStorage.getItem("baton_adv")) === "1");
   const [openJob, setOpenJob] = useStateA(null);
   const [composing, setComposing] = useStateA(false);
   const [, force] = useStateA(0);
 
-  useEffectA(() => window.BatonStore.subscribe(() => force((x) => x + 1)), []);
-  useEffectA(() => { localStorage.setItem("baton_page", page); }, [page]);
-  useEffectA(() => { localStorage.setItem("baton_adv", advanced ? "1" : "0"); }, [advanced]);
+  useEffectA(() => window.BitCadenceStore.subscribe(() => force((x) => x + 1)), []);
+  useEffectA(() => { localStorage.setItem("bitcadence_page", page); }, [page]);
+  useEffectA(() => { localStorage.setItem("bitcadence_adv", advanced ? "1" : "0"); }, [advanced]);
   useEffectA(() => {
-    if (t.simulate) window.BatonStore.startSim(); else window.BatonStore.stopSim();
-    return () => window.BatonStore.stopSim();
+    if (t.simulate) window.BitCadenceStore.startSim(); else window.BitCadenceStore.stopSim();
+    return () => window.BitCadenceStore.stopSim();
   }, [t.simulate]);
   useEffectA(() => {
     const r = document.documentElement.style;
@@ -96,8 +97,8 @@ function App() {
   // Refresh "time ago" labels even when nothing changes
   useEffectA(() => { const i = setInterval(() => force((x) => x + 1), 10000); return () => clearInterval(i); }, []);
 
-  const jobs = window.BatonStore.getJobs();
-  const agents = window.BatonStore.getAgents();
+  const jobs = window.BitCadenceStore.getJobs();
+  const agents = window.BitCadenceStore.getAgents();
   const tone = t.tone;
   const gates = jobs.filter((j) => j.status === "needs_approval").length;
 
@@ -105,6 +106,7 @@ function App() {
     overview: <Overview jobs={jobs} agents={agents} tone={tone} advanced={advanced} onNav={setPage} onOpen={setOpenJob} />,
     jobs: <JobBoard jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} onCompose={() => setComposing(true)} />,
     approvals: <Approvals jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
+    governance: <Governance jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
     workflows: <WorkflowBuilder jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
     agents: <AgentFleet agents={agents} jobs={jobs} tone={tone} advanced={advanced} />,
     memory: <DrumlineMemory tone={tone} advanced={advanced} />,
@@ -120,9 +122,9 @@ function App() {
         display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 16px 14px" }}>
-          <BrandMark brand="BatonCadence" />
+          <BrandMark brand="BitCadence" />
           <div>
-            <div style={{ fontWeight: 700, fontSize: 14.5, letterSpacing: "-0.01em" }}>Baton<span style={{ color: "var(--accent-text)" }}>Cadence</span></div>
+            <div style={{ fontWeight: 700, fontSize: 14.5, letterSpacing: "-0.01em" }}>Bit<span style={{ color: "var(--accent-text)" }}>Cadence</span></div>
             <div style={{ fontSize: 10.5, color: "var(--text-3)", letterSpacing: "0.06em", textTransform: "uppercase" }}>Agent Orchestration</div>
           </div>
         </div>
@@ -150,13 +152,13 @@ function App() {
         <div style={{ flex: 1 }}></div>
         <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)", fontSize: 12, color: "var(--text-3)", display: "flex", alignItems: "center", gap: 8 }}>
           {(() => {
-            const mode = window.BatonStore.mode ? window.BatonStore.mode() : "demo";
-            const host = (window.BatonStore.config ? (window.BatonStore.config().url || "") : "").replace(/^https?:\/\//, "");
+            const mode = window.BitCadenceStore.mode ? window.BitCadenceStore.mode() : "demo";
+            const host = (window.BitCadenceStore.config ? (window.BitCadenceStore.config().url || "") : "").replace(/^https?:\/\//, "");
             return (
               <React.Fragment>
-                <span style={{ width: 7, height: 7, borderRadius: 99, flex: "none", background: mode === "live" ? "var(--st-done-dot)" : "var(--st-approval-dot)", animation: "baton-pulse 2.2s infinite" }}></span>
+                <span style={{ width: 7, height: 7, borderRadius: 99, flex: "none", background: mode === "live" ? "var(--st-done-dot)" : "var(--st-approval-dot)", animation: "cadence-pulse 2.2s infinite" }}></span>
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {mode === "live" ? "Live \u00B7 " + host : mode === "connecting" ? "Connecting\u2026" : "Demo \u00B7 simulated data"}
+                  {mode === "live" ? "Live \u00B7 " + host : mode === "connecting" ? "Connecting\u2026" : mode === "offline" ? "Offline \u00B7 connection failed" : "Demo \u00B7 simulated data"}
                 </span>
               </React.Fragment>
             );
@@ -182,10 +184,10 @@ function App() {
             <span style={{
               width: 28, height: 28, borderRadius: 99, background: "var(--accent-soft)", color: "var(--accent-text)",
               display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12.5,
-            }}>J</span>
+            }}>BC</span>
             <div style={{ lineHeight: 1.2 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600 }}>joe-laptop</div>
-              <div style={{ fontSize: 10.5, color: "var(--text-3)" }}>approver · human</div>
+              <div style={{ fontSize: 12.5, fontWeight: 600 }}>Operator console</div>
+              <div style={{ fontSize: 10.5, color: "var(--text-3)" }}>BitCadence</div>
             </div>
           </div>
         </header>

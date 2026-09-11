@@ -1,5 +1,5 @@
 """
-BatonCadence Typer CLI & Setup Wizard
+BitCadence Typer CLI & Setup Wizard
 ===================================
 Provides user onboarding, credentials encryption, FastAPI serving,
 and background daemon listener.
@@ -15,6 +15,7 @@ import hashlib
 import hmac
 import json
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -31,19 +32,29 @@ from rich.table import Table
 
 from mco.config import get_config
 from mco.security import get_secret_store
-from mco.orchestrator.routes import router as jobs_router, agents_router, events_router, register_broadcast_callback
+from mco.orchestrator.routes import (
+    router as jobs_router,
+    agents_router,
+    events_router,
+    version_router,
+    register_broadcast_callback,
+)
+from mco.orchestrator.utils import get_approver_roles
 from mco.orchestrator.listener import AgentListener
 from mco.notifiers.ntfy import notify, notify_agent_online, notify_agent_offline, get_ntfy_config, notify_gateway_startup
 
 # Initialize typer app and console
-app = typer.Typer(help="BatonCadence: Multi-Client Agent Orchestrator.")
+app = typer.Typer(help="BitCadence: Multi-Client Agent Orchestrator.")
 console = Console()
 
 
 def get_version() -> str:
     """Installed distribution version (single source of truth: pyproject)."""
     from importlib.metadata import version as _dist_version
-    for dist in ("batoncadence", "mco"):  # 'mco' = pre-0.2 editable installs
+    # Every name this project has shipped under: 'batoncadence' = pre-rename
+    # installs, 'mco' = pre-0.2 editable installs. An install that predates a
+    # rename still carries the old dist metadata until it is reinstalled.
+    for dist in ("bitcadence", "batoncadence", "mco"):
         try:
             return _dist_version(dist)
         except Exception:
@@ -53,7 +64,7 @@ def get_version() -> str:
 
 def _version_callback(value: bool):
     if value:
-        console.print(f"BatonCadence {get_version()}")
+        console.print(f"BitCadence {get_version()}")
         raise typer.Exit()
 
 
@@ -63,7 +74,7 @@ def _main(
         False, "--version", "-V", callback=_version_callback, is_eager=True,
         help="Show the version and exit."),
 ):
-    """BatonCadence: Multi-Client Agent Orchestrator."""
+    """BitCadence: Multi-Client Agent Orchestrator."""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Onboarding Setup Wizard
@@ -73,7 +84,7 @@ def setup_wizard(
     guided: bool = typer.Option(False, "--guided", help="Run the full guided walkthrough."),
     menu: bool = typer.Option(False, "--menu", help="Jump straight to the settings menu."),
 ):
-    """Configure BatonCadence - a guided walkthrough or a jump-anywhere settings menu."""
+    """Configure BitCadence - a guided walkthrough or a jump-anywhere settings menu."""
     from mco.setup_wizard import run_setup
     run_setup(guided=guided, menu=menu)
 
@@ -81,31 +92,69 @@ def setup_wizard(
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Serve Command (FastAPI HTTP + WebSocket server)
 # ─────────────────────────────────────────────────────────────────────────────
+@dataclass
+class ConnectionIdentity:
+    role: str = ""
+    instance_id: str = ""
+    is_admin: bool = False
+
+
+@dataclass
+class ManagedConnection:
+    websocket: WebSocket
+    identity: ConnectionIdentity
+
+
 class ConnectionManager:
     """Manages active WebSocket subscription channels."""
 
     def __init__(self):
-        self.active_connections: list[WebSocket] = []
+        self.active_connections: list[ManagedConnection] = []
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket, identity: ConnectionIdentity):
         await websocket.accept()
-        self.active_connections.append(websocket)
+        self.register(websocket, identity)
+
+    def register(self, websocket: WebSocket, identity: ConnectionIdentity):
+        self.active_connections.append(ManagedConnection(websocket, identity))
 
     def disconnect(self, websocket: WebSocket):
-        try:
-            self.active_connections.remove(websocket)
-        except ValueError:
-            pass  # already removed by a concurrent disconnect
+        self.active_connections = [
+            connection
+            for connection in self.active_connections
+            if connection.websocket is not websocket
+        ]
 
-    async def broadcast(self, message: dict):
+    async def broadcast(self, message: dict, job: Optional[dict] = None):
+        if job is None:
+            payload = message.get("payload") or {}
+            job = payload.get("job")
         for connection in self.active_connections:
+            if not self._can_receive(connection.identity, job):
+                continue
             try:
-                await connection.send_json(message)
+                await connection.websocket.send_json(message)
             except Exception:
                 pass
 
+    @staticmethod
+    def _can_receive(identity: ConnectionIdentity, job: Optional[dict]) -> bool:
+        if identity.is_admin:
+            return True
+        if not job:
+            return False
+        target_role = str(job.get("target_agent_role") or "")
+        if target_role.lower() != (identity.role or "").lower():
+            return False
+        target_id = job.get("target_agent_id")
+        return not target_id or target_id == identity.instance_id
+
 
 ws_manager = ConnectionManager()
+
+
+def _is_admin_scope_role(role: Any) -> bool:
+    return str(role or "").lower() in get_approver_roles()
 
 
 async def server_broadcast_callback(event: str, job: dict) -> None:
@@ -117,19 +166,49 @@ async def server_broadcast_callback(event: str, job: dict) -> None:
             "job": job
         }
     }
-    await ws_manager.broadcast(payload)
+    await ws_manager.broadcast(payload, job)
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application server."""
+    from mco.orchestrator.health import lifespan, readyz
     app_server = FastAPI(
-        title="BatonCadence Gateway Server",
+        lifespan=lifespan,
+        title="BitCadence Gateway Server",
         description="FastAPI WebSocket and REST Hub for Agent Job Coordination."
     )
+
+    # Authlib keeps OIDC state/PKCE material in the database cache; this
+    # signed cookie contains only the transaction marker needed for CSRF
+    # correlation. Hosted deployments must provide a stable secret.
+    session_secret = get_config().get("MCO_SESSION_SECRET")
+    if session_secret:
+        if len(str(session_secret)) < 32:
+            raise RuntimeError("MCO_SESSION_SECRET must be at least 32 characters")
+        from starlette.middleware.sessions import SessionMiddleware
+        secure_cookie = str(
+            get_config().get("MCO_SESSION_COOKIE_SECURE", "true") or "true"
+        ).lower() in {"1", "true", "yes", "on"}
+        app_server.add_middleware(
+            SessionMiddleware,
+            secret_key=str(session_secret),
+            session_cookie="mco_oidc_state",
+            max_age=600,
+            same_site="lax",
+            https_only=secure_cookie,
+        )
+
+    # Per-token (fallback per-IP) rate limiting - exempts /healthz, configured
+    # via MCO_RATE_LIMIT (requests/min, default 120; set to 0 to disable).
+    from mco.ratelimit import build_rate_limit_store, RateLimitMiddleware
+    _rl_store = build_rate_limit_store()
+    if _rl_store is not None:
+        app_server.add_middleware(RateLimitMiddleware, store=_rl_store)
 
     # Mount REST routing
     app_server.include_router(jobs_router)
     app_server.include_router(agents_router)
     app_server.include_router(events_router)
+    app_server.include_router(version_router)
 
     # Enterprise integrations (ServiceNow, Dynatrace, webhooks)
     from mco.orchestrator.integration_routes import integrations_router
@@ -142,12 +221,21 @@ def create_app() -> FastAPI:
     # Admin API: agent management, settings, workflow submission (Control Panel)
     from mco.orchestrator.admin_routes import (
         agents_admin_router,
+        governance_router,
+        llm_connections_router,
         settings_router,
         workflows_router,
     )
     app_server.include_router(agents_admin_router)
+    app_server.include_router(governance_router)
     app_server.include_router(settings_router)
     app_server.include_router(workflows_router)
+    app_server.include_router(llm_connections_router)
+
+    # Human identity federation and server-managed browser sessions.
+    from mco.orchestrator.identity_routes import auth_router, identity_admin_router
+    app_server.include_router(identity_admin_router)
+    app_server.include_router(auth_router)
 
     # Prometheus metrics (/metrics)
     from mco.orchestrator.metrics_routes import metrics_router
@@ -157,14 +245,9 @@ def create_app() -> FastAPI:
     # orchestrators (K8s, ECS, Cloud Run). Reports DB wiring, never secrets.
     @app_server.get("/healthz", include_in_schema=False)
     async def healthz() -> dict:
-        from mco.orchestrator.routes import get_db_client, kill_switch_active
-        client = get_db_client()
-        return {
-            "status": "ok",
-            "database": client is not None,
-            "backend": getattr(client, "backend", "supabase") if client is not None else None,
-            "paused": kill_switch_active(),
-        }
+        return {"status": "ok"}
+
+    app_server.add_api_route("/readyz", readyz, methods=["GET"], include_in_schema=False)
 
     # Control-plane dashboard (static single page; auth happens via the API token)
     from fastapi.responses import HTMLResponse
@@ -174,12 +257,20 @@ def create_app() -> FastAPI:
     async def dashboard() -> str:
         return DASHBOARD_HTML
 
-    # BatonCadence Console (full control-plane GUI; auth via API bearer token)
+    # BitCadence Console (full control-plane GUI; auth via API bearer token)
     from mco.console import get_console_html
 
     @app_server.get("/console", response_class=HTMLResponse, include_in_schema=False)
     async def console_ui() -> str:
         return get_console_html()
+
+    # Flow Control - the live DAG of the board: design intent, run state,
+    # approval gates, and the audit trail on one canvas.
+    from mco.console import get_flow_html
+
+    @app_server.get("/flow", response_class=HTMLResponse, include_in_schema=False)
+    async def flow_ui() -> str:
+        return get_flow_html()
 
     # Register broadcast callback
     register_broadcast_callback(server_broadcast_callback)
@@ -192,6 +283,7 @@ def create_app() -> FastAPI:
         # Wait up to 5 seconds for authentication frame
         authenticated = False
         authenticated_instance_id = None
+        authenticated_role = None
         
         from mco.orchestrator.routes import get_db_client
         db_client = get_db_client()
@@ -221,7 +313,11 @@ def create_app() -> FastAPI:
                         pass
                     return
                 authenticated = True
-                ws_manager.active_connections.append(websocket)
+                authenticated_role = "admin"
+                ws_manager.register(
+                    websocket,
+                    ConnectionIdentity(role="admin", instance_id="", is_admin=True),
+                )
                 # Ack success so clients (console, `mco watch`) know they're in
                 # without waiting for the first broadcast.
                 try:
@@ -233,7 +329,11 @@ def create_app() -> FastAPI:
                 # No token configured: zero-config local use (loopback default).
                 logger.warning("No MCO_LOCAL_TOKEN set — accepting local WebSocket without auth.")
                 authenticated = True
-                ws_manager.active_connections.append(websocket)
+                authenticated_role = "admin"
+                ws_manager.register(
+                    websocket,
+                    ConnectionIdentity(role="admin", instance_id="", is_admin=True),
+                )
         else:
             try:
                 # 1. Read first message (should be authenticate)
@@ -263,10 +363,14 @@ def create_app() -> FastAPI:
 
                         if res.data:
                             row = res.data[0]
+                            if row.get("status") == "disabled":
+                                await websocket.close(code=1008)
+                                return
                             instance_id = row.get("instance_id") or instance_id
                             role = row.get("role") or role
                             authenticated = True
                             authenticated_instance_id = instance_id
+                            authenticated_role = role
 
                             # Update status to online in database
                             from datetime import datetime, timezone
@@ -276,7 +380,14 @@ def create_app() -> FastAPI:
                             }).eq("instance_id", instance_id).execute()
 
                             # Register in ws_manager for broadcast receiving
-                            ws_manager.active_connections.append(websocket)
+                            ws_manager.register(
+                                websocket,
+                                ConnectionIdentity(
+                                    role=role or "",
+                                    instance_id=instance_id or "",
+                                    is_admin=_is_admin_scope_role(role),
+                                ),
+                            )
 
                             # Send success frame
                             await websocket.send_json({
@@ -303,8 +414,10 @@ def create_app() -> FastAPI:
                 logger.warning("WebSocket authentication timeout (no authentication frame received in 5s).")
                 try:
                     await websocket.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.error(f"WebSocket request failed: {type(exc).__name__}")
+                    await websocket.send_json({"type": "error", "payload": {
+                        "error": "Request could not be committed; retry with the same lease proof", "status": 500}})
                 return
             except Exception as e:
                 logger.error(f"WebSocket authentication error: {e}")
@@ -324,23 +437,35 @@ def create_app() -> FastAPI:
                     msg_type = msg.get("type")
                     payload = msg.get("payload") or {}
 
-                    if msg_type == "job_update":
-                        # Forward/broadcast the update to all connected agents
-                        task_id = payload.get("task_id")
-                        status = payload.get("status")
-                        if task_id and status:
-                            await ws_manager.broadcast({
-                                "type": "event",
-                                "payload": {
-                                    "event": "job_pending" if status == "pending" else "job_updated",
-                                    "job": {"id": task_id, "status": status, **payload}
-                                }
-                            })
+                    if msg_type in {"job_update", "job_lease", "job_create"}:
+                        # Use the same authorization and mutation path as HTTP.
+                        # Never broadcast an unverified client-supplied status.
+                        from mco.orchestrator import routes
+                        from fastapi import HTTPException
+                        if not authenticated_instance_id or not db_client:
+                            await websocket.send_json({"type": "error", "payload": {"error": "Registered identity required"}})
+                            continue
+                        rows = db_client.table("agent_registry").select("*").eq("instance_id", authenticated_instance_id).execute().data
+                        actor = rows[0] if rows else None
+                        if not actor or actor.get("status") == "disabled":
+                            await websocket.close(code=1008)
+                            return
+                        from mco.orchestrator.auth import require_scopes
+                        try:
+                            await require_scopes("jobs:write")(actor)
+                            if msg_type == "job_update":
+                                result = await routes.update_job_status(payload.get("task_id", ""), payload, actor)
+                            elif msg_type == "job_lease":
+                                result = await routes.lease_job(payload, actor)
+                            else:
+                                result = await routes.create_job(payload, actor)
+                            await websocket.send_json({"type": "ack", "payload": result})
+                        except HTTPException as exc:
+                            await websocket.send_json({"type": "error", "payload": {"error": exc.detail, "status": exc.status_code}})
                 except Exception:
                     pass
         except WebSocketDisconnect:
-            if websocket in ws_manager.active_connections:
-                ws_manager.disconnect(websocket)
+            ws_manager.disconnect(websocket)
             
             # Set agent to offline on disconnect + ntfy notification
             if authenticated_instance_id and db_client:
@@ -352,8 +477,7 @@ def create_app() -> FastAPI:
                     
                     # NTFY addon: notify agent offline
                     try:
-                        # We don't have the role easily here, so use a generic notification
-                        notify_agent_offline("unknown", authenticated_instance_id)
+                        notify_agent_offline(authenticated_role or "unknown", authenticated_instance_id)
                     except Exception:
                         pass
                 except Exception as db_err:
@@ -402,7 +526,7 @@ def serve(
     host: str = typer.Option("127.0.0.1", help="The host to bind to."),
     port: int = typer.Option(18789, help="The port to bind to.")
 ):
-    """Start the BatonCadence FastAPI WebSocket/REST API Server."""
+    """Start the BitCadence FastAPI WebSocket/REST API Server."""
     from mco.logging_setup import configure_logging
     configure_logging()
 
@@ -411,7 +535,7 @@ def serve(
     _assert_safe_bind(host, config)
 
     console.print(Panel.fit(
-        f"[bold green]Starting BatonCadence Server[/bold green]\n"
+        f"[bold green]Starting BitCadence Server[/bold green]\n"
         f"Host: http://{host}:{port}\n"
         f"Console: http://{host}:{port}/console\n"
         f"WebSocket: ws://{host}:{port}/ws/broadcast",
@@ -485,7 +609,7 @@ def serve(
                     }
                     notify(
                         json.dumps(snapshot, indent=2),
-                        title="BatonCadence Process Snapshot",
+                        title="BitCadence Process Snapshot",
                         priority=1,
                         tags=["mco", "process-snapshot", "leak-detection"],
                     )
@@ -542,7 +666,7 @@ def start(
     """Start the gateway in the background (the pair of 'mco stop').
 
     Unlike 'mco serve' (foreground, for terminals/systemd/Docker), this
-    detaches: your terminal stays free, output goes to ~/.mco/gateway.log,
+    detaches: your terminal stays free, output goes to ~/.mco/logs/gateway.log,
     and 'mco stop' shuts it down.
     """
     import subprocess
@@ -564,7 +688,8 @@ def start(
                           f"Stop it with: [cyan]mco stop --port {port}[/cyan]")
             raise typer.Exit(code=1)
 
-    log_path = Path.home() / ".mco" / "gateway.log"
+    from mco.service import gateway_log_path
+    log_path = gateway_log_path()
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_file = open(log_path, "a", encoding="utf-8", errors="replace")
 
@@ -600,7 +725,7 @@ def start(
         raise typer.Exit(code=1)
 
     console.print(Panel.fit(
-        f"[bold green]BatonCadence is running[/bold green]\n"
+        f"[bold green]BitCadence is running[/bold green]\n"
         f"Console:   http://{host}:{port}/console\n"
         f"Dashboard: http://{host}:{port}/dashboard\n"
         f"Log:       {log_path}\n\n"
@@ -623,8 +748,444 @@ def restart(
     start(host=host, port=port)
 
 
-service_app = typer.Typer(help="Run the gateway as a boot-persistent OS service.")
+service_app = typer.Typer(help="Run BitCadence processes as boot-persistent OS services.")
 app.add_typer(service_app, name="service")
+
+fleet_app = typer.Typer(help="Apply declarative per-worker service run modes.")
+app.add_typer(fleet_app, name="fleet")
+
+schedule_app = typer.Typer(help="Schedules and loops: what work gets created, and when.")
+app.add_typer(schedule_app, name="schedule")
+
+
+def _print_schedules_missing(path):
+    from mco import scheduler
+    console.print(f"[yellow]No schedules config found at {path}.[/yellow]")
+    console.print("[dim]Create one with:[/dim] [bold]mco schedule init[/bold]")
+    console.print(f"[dim]Or write it yourself:[/dim]\n{scheduler.sample_config()}")
+
+
+def _load_schedules_or_exit(path=None):
+    """Load schedules.yaml, printing the friendly guidance on failure."""
+    from mco import scheduler
+    path = path or scheduler.SCHEDULES_CONFIG_PATH
+    try:
+        return scheduler.load_config(path)
+    except scheduler.ScheduleConfigMissing as exc:
+        _print_schedules_missing(exc)
+        raise typer.Exit(code=0)
+    except scheduler.ScheduleConfigError as exc:
+        console.print(f"[red][X] Invalid schedules config:[/red] {exc}")
+        raise typer.Exit(code=1)
+
+
+@schedule_app.command("init")
+def schedule_init(
+    force: bool = typer.Option(False, "--force", help="Overwrite an existing config."),
+):
+    """Write a starter ~/.mco/schedules.yaml."""
+    from mco import scheduler
+    path = scheduler.SCHEDULES_CONFIG_PATH
+    if path.exists() and not force:
+        console.print(f"[yellow]{path} already exists.[/yellow] Use --force to overwrite.")
+        raise typer.Exit(code=1)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(scheduler.sample_config(), encoding="utf-8")
+    console.print(f"[green][OK][/green] Wrote {path}")
+    console.print("[dim]Edit it, then run:[/dim] [bold]mco schedule list[/bold]")
+
+
+@schedule_app.command("list")
+def schedule_list():
+    """Show every schedule and loop with its next fire time."""
+    from mco import launcher as launcher_mod
+    from mco import scheduler
+    launchers, schedules = _load_schedules_or_exit()
+    if not schedules:
+        console.print("[yellow]No schedules or loops defined.[/yellow]")
+        return
+
+    states = launcher_mod.load_state()
+    now = datetime.now(timezone.utc)
+    table = Table(title="BitCadence Schedules")
+    for column in ("Name", "Kind", "Trigger", "Launches", "Next run", "Runs", "Bound"):
+        table.add_column(column)
+
+    for name in sorted(schedules):
+        schedule = schedules[name]
+        state = states.get(name)
+        next_run = scheduler.next_run_at(schedule, state, now)
+        if not schedule.enabled:
+            next_text = "[dim]disabled[/dim]"
+        elif next_run is None:
+            reason = scheduler.exhaustion_reason(schedule, state, now) or "finished"
+            next_text = f"[dim]{reason}[/dim]"
+        elif next_run <= now:
+            next_text = "[green]due now[/green]"
+        else:
+            next_text = next_run.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        runs = str(state.iterations) if state else "0"
+        table.add_row(
+            name,
+            "loop" if schedule.is_loop else "schedule",
+            schedule.describe_trigger(),
+            launchers[schedule.launcher].describe(),
+            next_text,
+            runs,
+            schedule.describe_bound(),
+        )
+    console.print(table)
+
+
+def _set_schedule_enabled(name: str, enabled: bool) -> None:
+    """Flip `enabled` on one schedule/loop, preserving the rest of the file byte-for-byte.
+
+    Deliberately a surgical text edit rather than parse-and-redump: PyYAML's
+    safe_dump discards every comment, so a one-word toggle would silently
+    destroy the explanatory config the user (or `schedule init`) wrote.
+    """
+    from mco import scheduler
+    path = scheduler.SCHEDULES_CONFIG_PATH
+    _, schedules = _load_schedules_or_exit(path)  # validate + friendly errors first
+    if name not in schedules:
+        console.print(f"[red][X] No schedule or loop named '{name}'.[/red]")
+        if schedules:
+            console.print(f"[dim]Defined:[/dim] {', '.join(sorted(schedules))}")
+        raise typer.Exit(code=1)
+
+    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    section, entry_indent, entry_line = None, None, None
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent == 0:
+            section = stripped.rstrip(":") if stripped.endswith(":") else None
+            continue
+        if section in ("schedules", "loops") and stripped.rstrip(":") == name and stripped.endswith(":"):
+            entry_indent, entry_line = indent, index
+            break
+
+    if entry_line is None:  # validated above, so this means an unusual layout
+        console.print(f"[red][X] Could not locate '{name}' in {path}.[/red]")
+        console.print("[dim]Edit the file directly to set 'enabled'.[/dim]")
+        raise typer.Exit(code=1)
+
+    value = "true" if enabled else "false"
+    field_indent = entry_indent + 2
+    # Walk the entry's own block looking for an existing `enabled:` to replace.
+    cursor = entry_line + 1
+    while cursor < len(lines):
+        line = lines[cursor]
+        if line.strip() and (len(line) - len(line.lstrip())) <= entry_indent:
+            break  # left this entry's block
+        if line.strip().startswith("enabled:"):
+            lines[cursor] = f"{' ' * (len(line) - len(line.lstrip()))}enabled: {value}\n"
+            break
+        if line.strip():
+            field_indent = len(line) - len(line.lstrip())
+        cursor += 1
+    else:
+        cursor = len(lines)
+    if cursor >= len(lines) or not lines[cursor].strip().startswith("enabled:"):
+        lines.insert(entry_line + 1, f"{' ' * field_indent}enabled: {value}\n")
+
+    path.write_text("".join(lines), encoding="utf-8")
+    kind = "loop" if schedules[name].is_loop else "schedule"
+    console.print(f"[green][OK][/green] {kind} '{name}' is now {'enabled' if enabled else 'disabled'}.")
+
+
+@schedule_app.command("enable")
+def schedule_enable(name: str = typer.Argument(..., help="Schedule or loop name.")):
+    """Enable a schedule or loop (without hand-editing YAML)."""
+    _set_schedule_enabled(name, True)
+
+
+@schedule_app.command("disable")
+def schedule_disable(name: str = typer.Argument(..., help="Schedule or loop name.")):
+    """Disable a schedule or loop, leaving its definition and history intact."""
+    _set_schedule_enabled(name, False)
+
+
+@schedule_app.command("reset")
+def schedule_reset(
+    name: str = typer.Argument(..., help="Schedule or loop name."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip the confirmation prompt."),
+):
+    """Clear a schedule's run history so a finished loop can run again.
+
+    Completion is sticky by design - a loop that ended because its queue
+    drained must not resurrect when the queue refills. This is the deliberate
+    undo.
+    """
+    from mco import launcher as launcher_mod
+    _, schedules = _load_schedules_or_exit()
+    if name not in schedules:
+        console.print(f"[red][X] No schedule or loop named '{name}'.[/red]")
+        raise typer.Exit(code=1)
+
+    states = launcher_mod.load_state()
+    state = states.get(name)
+    if not state or (not state.iterations and not state.exhausted_reason):
+        console.print(f"[yellow]'{name}' has no run history to clear.[/yellow]")
+        return
+    if not yes:
+        console.print(
+            f"[yellow]'{name}' has run {state.iterations} time(s)"
+            + (f" and is marked finished ({state.exhausted_reason})" if state.exhausted_reason else "")
+            + ".[/yellow]"
+        )
+        if not typer.confirm("Clear its history so it can run again?"):
+            console.print("[dim]Left unchanged.[/dim]")
+            return
+    states.pop(name, None)
+    launcher_mod.save_state(states)
+    console.print(f"[green][OK][/green] Cleared run history for '{name}'.")
+
+
+@schedule_app.command("tick")
+def schedule_tick(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would fire without creating jobs."),
+):
+    """Run one scheduler pass (what `mco schedule run` does on a timer).
+
+    Use this to drive BitCadence from an existing cron/Task Scheduler entry
+    instead of running the daemon.
+    """
+    from mco import launcher as launcher_mod
+    _load_schedules_or_exit()  # validate + friendly errors before touching the gateway
+    try:
+        report = launcher_mod.tick(_gateway_client(), dry_run=dry_run)
+    except Exception as exc:
+        console.print(f"[red][X] Scheduler tick failed:[/red] {exc}")
+        raise typer.Exit(code=1)
+    _print_tick_report(report)
+
+
+def _print_tick_report(report: list) -> None:
+    if not report:
+        console.print("[dim]Nothing due.[/dim]")
+        return
+    styles = {
+        "fired": "green", "would-fire": "cyan",
+        "skipped-overlap": "yellow", "error": "red",
+    }
+    for row in report:
+        action = str(row["action"])
+        colour = styles.get(action, "white")
+        jobs = f" -> {', '.join(row['job_ids'])}" if row.get("job_ids") else ""
+        console.print(f"[{colour}]{action:<16}[/{colour}] {row['schedule']}: {row['detail']}{jobs}")
+
+
+@schedule_app.command("run")
+def schedule_run(
+    interval: float = typer.Option(30.0, "--interval", help="Seconds between scheduler passes."),
+):
+    """Run the scheduler in the foreground, ticking until interrupted."""
+    from mco import launcher as launcher_mod
+    _load_schedules_or_exit()
+    console.print(f"[cyan]Scheduler running[/cyan] (tick every {interval:g}s). Ctrl+C to stop.")
+    try:
+        launcher_mod.run_forever(
+            _gateway_client(), interval=interval, on_report=_print_tick_report
+        )
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Scheduler stopped.[/yellow]")
+
+
+def _port_is_open(base_url: str, timeout: float = 2.0) -> bool:
+    """Can we open a TCP connection to this base URL's host:port?"""
+    import socket
+    from urllib.parse import urlparse
+    parsed = urlparse(base_url)
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+@app.command("gui")
+def open_gui(
+    flow: bool = typer.Option(False, "--flow", help="Open Flow Control (the live job-dependency canvas)."),
+    dashboard: bool = typer.Option(False, "--dashboard", help="Open the minimal dashboard instead of the full console."),
+    print_only: bool = typer.Option(False, "--print", help="Print the URL instead of opening a browser."),
+):
+    """Open the BitCadence console in your browser.
+
+    Until now the CLI only printed the URL and left you to copy it - this is
+    the one-step version.
+    """
+    import webbrowser
+    config = get_config()
+    base = (config.get("MCO_GATEWAY_URL") or "http://127.0.0.1:18789").rstrip("/")
+    page = "flow" if flow else ("dashboard" if dashboard else "console")
+    url = f"{base}/{page}"
+
+    # Say plainly when nothing is listening, rather than opening a dead tab.
+    # A TCP probe rather than an HTTP GET: it needs no particular endpoint to
+    # exist and no auth, so it can't be wrong about a healthy gateway.
+    reachable = _port_is_open(base)
+
+    if print_only:
+        console.print(url)
+        return
+    if not reachable:
+        console.print(f"[yellow]Nothing is listening at {base}.[/yellow]")
+        console.print("[dim]Start it with:[/dim] [bold]mco start[/bold]  [dim](or `mco serve` in the foreground)[/dim]")
+        console.print(f"[dim]The console will be at:[/dim] {url}")
+        raise typer.Exit(code=1)
+    if webbrowser.open(url):
+        console.print(f"[green][OK][/green] Opened {url}")
+    else:
+        console.print(f"[yellow]Could not open a browser.[/yellow] Visit: {url}")
+
+
+@app.command("tray")
+def tray():
+    """Status light and a door into the console (Windows tray / macOS menu bar / Linux AppIndicator)."""
+    from mco.tray.app import main as tray_main
+    tray_main()
+
+
+@app.command("launch")
+def launch_now(
+    name: str = typer.Argument(..., help="Launcher name from ~/.mco/schedules.yaml."),
+    approve: bool = typer.Option(
+        None, "--approve/--no-approve",
+        help="Override the launcher's approval gate for this run.",
+    ),
+):
+    """Fire a launcher right now, by name.
+
+    Identical to what a schedule does at 3am - same code path, same governance -
+    so testing a launcher by hand proves the scheduled run too.
+    """
+    from mco import launcher as launcher_mod
+    launchers, _ = _load_schedules_or_exit()
+    if name not in launchers:
+        console.print(f"[red][X] Unknown launcher '{name}'.[/red]")
+        if launchers:
+            console.print(f"[dim]Defined:[/dim] {', '.join(sorted(launchers))}")
+        raise typer.Exit(code=1)
+
+    try:
+        job_ids = launcher_mod.launch(
+            launchers[name], _gateway_client(),
+            trigger="manual", requires_approval_override=approve,
+        )
+    except Exception as exc:
+        console.print(f"[red][X] Launch failed:[/red] {exc}")
+        raise typer.Exit(code=1)
+    launcher = launchers[name]
+    if launcher.is_local:
+        # app/url launchers start something here; they queue nothing.
+        console.print(f"[green][OK][/green] Launched '{name}' - {launcher.describe()}")
+        return
+    plural = "s" if len(job_ids) != 1 else ""
+    console.print(f"[green][OK][/green] Launched '{name}' -> {len(job_ids)} job{plural}")
+    for job_id in job_ids:
+        console.print(f"  [dim]{job_id}[/dim]")
+
+
+def _print_fleet_missing(path):
+    from mco import fleet
+    console.print(f"[yellow]No fleet config found at {path}.[/yellow]")
+    console.print("[dim]Create one like:[/dim]")
+    console.print(fleet.sample_config())
+
+
+@fleet_app.command("apply")
+def fleet_apply():
+    """Reconcile OS services to ~/.mco/fleet.toml."""
+    from mco import fleet
+    try:
+        summaries = fleet.apply_fleet()
+    except fleet.FleetConfigMissing as exc:
+        _print_fleet_missing(exc)
+        raise typer.Exit(code=0)
+    except fleet.FleetConfigError as exc:
+        console.print(f"[red][X] Fleet apply failed:[/red] {exc}")
+        raise typer.Exit(code=1)
+    if not summaries:
+        console.print("[green][OK][/green] Fleet config is empty; no worker services declared.")
+        return
+    for summary in summaries:
+        console.print(summary)
+
+
+@fleet_app.command("status")
+def fleet_status():
+    """Show configured workers and their installed/running state."""
+    from mco import fleet
+    try:
+        rows = fleet.fleet_status()
+    except fleet.FleetConfigMissing as exc:
+        _print_fleet_missing(exc)
+        raise typer.Exit(code=0)
+    except fleet.FleetConfigError as exc:
+        console.print(f"[red][X] Fleet status failed:[/red] {exc}")
+        raise typer.Exit(code=1)
+    if not rows:
+        console.print("[yellow]Fleet config has no workers.[/yellow]")
+        return
+    table = Table(title="BitCadence Fleet")
+    for column in ("Worker", "Role", "Instance", "Mode", "Installed", "Running", "Service"):
+        table.add_column(column)
+    for row in rows:
+        installed = "yes" if row["installed"] else "no"
+        running = "yes" if row["running"] else "no"
+        table.add_row(
+            str(row["worker"]),
+            str(row["role"]),
+            str(row["instance"] or ""),
+            str(row["mode"]),
+            installed,
+            running,
+            str(row["service"]),
+        )
+    console.print(table)
+
+
+@fleet_app.command("set")
+def fleet_set(
+    worker: str = typer.Argument(..., help="Worker table name under [workers]."),
+    assignment: str = typer.Argument(..., help="KEY=VALUE assignment, for example mode=waker."),
+):
+    """Update one worker field in ~/.mco/fleet.toml."""
+    from mco import fleet
+    try:
+        message = fleet.set_worker_value(worker, assignment)
+    except fleet.FleetConfigMissing as exc:
+        _print_fleet_missing(exc)
+        raise typer.Exit(code=1)
+    except (fleet.FleetConfigError, ValueError) as exc:
+        console.print(f"[red][X] Fleet set failed:[/red] {exc}")
+        raise typer.Exit(code=1)
+    console.print(f"[green][OK][/green] {message}")
+
+
+@service_app.command("install-scheduler")
+def service_install_scheduler(
+    interval: float = typer.Option(30.0, "--interval", help="Seconds between scheduler passes."),
+):
+    """Install the schedule/loop scheduler as a boot-persistent OS service.
+
+    Without this the scheduler only runs while a terminal is open - and a
+    scheduler that quietly died on reboot is the failure nobody notices until
+    the nightly job hasn't run for a week.
+    """
+    from mco import service
+    ok, message = service.install_scheduler(interval=interval)
+    if ok:
+        console.print(f"[green][OK][/green] {message}")
+        console.print("[dim]Check it with:[/dim] mco service status BitCadence-scheduler")
+    else:
+        console.print(f"[red][X] {message}[/red]")
+        raise typer.Exit(code=1)
 
 
 @service_app.command("install")
@@ -645,22 +1206,107 @@ def service_install(
         raise typer.Exit(code=1)
 
 
+@service_app.command("install-waker")
+def service_install_waker(
+    role: str = typer.Argument(..., help="Agent role this waker should watch."),
+    exec_command: Optional[str] = typer.Argument(None, help="Shell command to run when jobs are pending."),
+    exec_option: Optional[str] = typer.Option(None, "--exec", help="Shell command to run when jobs are pending."),
+    instance: Optional[str] = typer.Option(None, "--instance", help="Optional agent instance ID this waker should watch."),
+    min_interval: float = typer.Option(10.0, "--min-interval", help="Minimum seconds between spawn starts."),
+):
+    """Install a self-restarting waker service for one role/instance."""
+    from mco import service
+    resolved_exec = exec_command or exec_option
+    if not resolved_exec:
+        console.print("[red][X] Waker service install failed:[/red] missing exec command")
+        raise typer.Exit(code=1)
+    console.print(f"[cyan]Installing waker via {service.backend_name()}...[/cyan]")
+    ok_flag, detail = service.install_waker(role, resolved_exec, instance=instance, min_interval=min_interval)
+    if ok_flag:
+        console.print(f"[green][OK][/green] {detail}")
+    else:
+        console.print(f"[red][X] Waker service install failed:[/red] {detail}")
+        raise typer.Exit(code=1)
+
+
 @service_app.command("uninstall")
-def service_uninstall():
+def service_uninstall(
+    selector: Optional[str] = typer.Argument(None, help="Service name or waker role. Defaults to the gateway."),
+):
     """Remove the boot-persistent service (does not stop a running gateway)."""
     from mco import service
-    ok_flag, detail = service.uninstall()
-    color = "green" if ok_flag else "yellow"
-    console.print(f"[{color}][OK][/{color}] {detail}")
+    ok_flag, detail = service.uninstall(selector or service.SERVICE_NAME)
+    if ok_flag:
+        console.print(f"[green][OK][/green] {detail}")
+    else:
+        console.print(f"[red][X] Service uninstall failed:[/red] {detail}")
+        raise typer.Exit(code=1)
 
 
 @service_app.command("status")
-def service_status():
-    """Show whether the boot-persistent service is installed."""
+def service_status(
+    selector: Optional[str] = typer.Argument(None, help="Optional service name or waker role to inspect."),
+):
+    """Show installed BitCadence services, or one selected service."""
     from mco import service
-    state = service.status()
-    color = "green" if state == "installed" else "yellow"
-    console.print(f"Service ({service.backend_name()}): [{color}]{state}[/{color}]")
+    if selector is None:
+        states = service.status(None)
+        if not states:
+            console.print(f"[yellow]No BitCadence services found via {service.backend_name()}.[/yellow]")
+            raise typer.Exit(code=0)
+        for state in states:
+            _print_service_status(service.backend_name(), state)
+        return
+    state = service.status(selector)
+    _print_service_status(service.backend_name(), state)
+
+
+def _print_service_status(backend: str, state: dict[str, object]):
+    installed = bool(state.get("installed"))
+    running = bool(state.get("running"))
+    color = "green" if installed and running else "yellow" if installed else "red"
+    console.print(Panel.fit(
+        f"[bold]{backend}[/bold]\n"
+        f"Name:      {state.get('name', 'BitCadence-gateway')}\n"
+        f"Installed: [{color}]{'yes' if installed else 'no'}[/{color}]\n"
+        f"Running:   [{color}]{'yes' if running else 'no'}[/{color}]\n"
+        f"Last exit: {state.get('last_exit', 'unknown')}",
+        border_style=color,
+    ))
+
+
+@service_app.command("restart")
+def service_restart(
+    selector: Optional[str] = typer.Argument(None, help="Service name or waker role. Defaults to the gateway."),
+):
+    """Restart the boot-persistent gateway service."""
+    from mco import service
+    ok_flag, detail = service.restart(selector or service.SERVICE_NAME)
+    if ok_flag:
+        console.print(f"[green][OK][/green] {detail}")
+    else:
+        console.print(f"[red][X] Service restart failed:[/red] {detail}")
+        raise typer.Exit(code=1)
+
+
+@service_app.command("logs")
+def service_logs(
+    selector: Optional[str] = typer.Argument(None, help="Service name or waker role. Defaults to the gateway."),
+    lines: int = typer.Option(80, "--lines", "-n", help="Number of recent log lines to print."),
+    follow: bool = typer.Option(False, "--follow", "-f", help="Keep streaming new log lines."),
+):
+    """Tail a service log file."""
+    from mco import service
+    log_path = service.log_path(selector or service.SERVICE_NAME)
+    if not log_path.exists():
+        console.print(f"[yellow]No service log found at {log_path}.[/yellow]")
+        raise typer.Exit(code=0)
+    console.print(f"[dim]Log: {log_path}[/dim]")
+    try:
+        for line in service.tail_log(selector or service.SERVICE_NAME, lines=lines, follow=follow):
+            console.print(line)
+    except KeyboardInterrupt:
+        console.print("\n[dim]Stopped.[/dim]")
 
 
 @app.command("stop")
@@ -668,7 +1314,7 @@ def stop(
     port: int = typer.Option(18789, help="Port the gateway is running on."),
     force: bool = typer.Option(False, "--force", "-f", help="Send SIGKILL immediately instead of graceful SIGTERM."),
 ):
-    """Stop a running BatonCadence gateway (by port)."""
+    """Stop a running BitCadence gateway (by port)."""
     import signal
     import time
 
@@ -687,7 +1333,7 @@ def stop(
                 pass
 
     if not targets:
-        console.print(f"[yellow]No BatonCadence process found listening on port {port}.[/yellow]")
+        console.print(f"[yellow]No BitCadence process found listening on port {port}.[/yellow]")
         raise typer.Exit(code=0)
 
     for proc in targets:
@@ -735,7 +1381,7 @@ def listen(
 ):
     """Spawn the background daemon client that polls and executes Job Board tasks."""
     console.print(Panel.fit(
-        f"[bold blue]Spawning BatonCadence Background Daemon[/bold blue]\n"
+        f"[bold blue]Spawning BitCadence Background Daemon[/bold blue]\n"
         f"Role: [green]{role}[/green]\n"
         f"Instance ID: [green]{instance}[/green]",
         border_style="blue"
@@ -779,12 +1425,18 @@ def listen(
 # 4. Status and Diagnostics
 # ─────────────────────────────────────────────────────────────────────────────
 @app.command("status")
-def status():
-    """Print BatonCadence health check and diagnostics."""
+def status(
+    show_all: bool = typer.Option(
+        False,
+        "--all",
+        help="Show all resolved configuration keys, including unrelated process environment.",
+    ),
+):
+    """Print BitCadence health check and diagnostics."""
     config = get_config()
     store = get_secret_store()
 
-    console.print("[bold cyan]=== BatonCadence Status Diagnostics ===[/bold cyan]\n")
+    console.print("[bold cyan]=== BitCadence Status Diagnostics ===[/bold cyan]\n")
 
     # 1. Store state
     store_init = store.is_initialized()
@@ -807,6 +1459,9 @@ def status():
     table.add_column("Value", style="green")
     
     masked = config.get_masked_config()
+    if not show_all:
+        allowed_prefixes = ("MCO_", "OPERATOR_", "SUPABASE_")
+        masked = {k: v for k, v in masked.items() if k.startswith(allowed_prefixes)}
     for k, v in masked.items():
         table.add_row(k, v)
 
@@ -826,7 +1481,7 @@ def upgrade(
     from mco import migrations_runner as mig
 
     all_migs = [n for n, _ in mig.discover()]
-    console.print(f"[bold cyan]=== BatonCadence Upgrade ===[/bold cyan]")
+    console.print(f"[bold cyan]=== BitCadence Upgrade ===[/bold cyan]")
     console.print(f"Migrations found: {len(all_migs)}\n")
 
     kind = mig.backend_kind()
@@ -901,7 +1556,7 @@ def doctor(
         if remedy:
             console.print(f"     [dim]{remedy}[/dim]")
 
-    console.print("[bold cyan]=== BatonCadence Doctor ===[/bold cyan]\n")
+    console.print("[bold cyan]=== BitCadence Doctor ===[/bold cyan]\n")
 
     # 1. Python
     v = sys.version_info
@@ -1104,7 +1759,7 @@ def show_edition():
 
     summary = edition_summary()
     console.print(
-        f"\n[bold cyan]BatonCadence edition:[/bold cyan] [bold white]{summary['edition']}[/bold white] "
+        f"\n[bold cyan]BitCadence edition:[/bold cyan] [bold white]{summary['edition']}[/bold white] "
         f"[dim]({summary['source']}; set MCO_EDITION to pin)[/dim]\n"
     )
     table = Table(show_header=True, header_style="bold cyan")
@@ -1120,7 +1775,7 @@ def show_edition():
 @app.command("agents")
 def list_agents():
     """List all registered agents and their current online presence status."""
-    console.print("[bold cyan]=== BatonCadence Registered Agents ===[/bold cyan]\n")
+    console.print("[bold cyan]=== BitCadence Registered Agents ===[/bold cyan]\n")
     
     from mco.orchestrator.routes import get_db_client
     db_client = get_db_client()
@@ -1219,6 +1874,7 @@ def send_job(
     approve: bool = typer.Option(False, "--approve", help="Pause at the human approval gate before execution."),
     retries: int = typer.Option(0, "--retries", help="Retry budget on failure."),
     escalate: str = typer.Option("", "--escalate", help="Role to escalate to after retries are exhausted."),
+    priority: int = typer.Option(0, "--priority", help="Higher runs first (default 0). Workers take the first job in their inbox, so this is what jumps the queue."),
 ):
     """Drop a job into an agent's dropbox from the terminal."""
     try:
@@ -1230,12 +1886,14 @@ def send_job(
             requires_approval=approve,
             max_retries=retries,
             escalate_to_role=escalate or None,
+            priority=priority,
         )
         job = (res or {}).get("job") or {}
         if res.get("success") and job.get("id"):
             console.print(f"[green][OK][/green] Job [bold]{job['id']}[/bold] -> {to_role}"
                           f"{' / ' + instance if instance else ''} "
-                          f"(status: {job.get('status')})")
+                          f"(status: {job.get('status')}"
+                          f"{', priority ' + str(priority) if priority else ''})")
             if job.get("status") == "needs_approval":
                 console.print(f"[dim]Approve it with: mco approve {job['id']}[/dim]")
         else:
@@ -1258,7 +1916,7 @@ def run_workflow(
     from mco.orchestrator.workflows import load_workflow, topo_order, submit_workflow, WorkflowError
 
     try:
-        workflow = load_workflow(file)
+        workflow = load_workflow(file, allow_path=True)
     except WorkflowError as e:
         console.print(f"[red][ERROR] Invalid workflow: {e}[/red]")
         raise typer.Exit(code=1)
@@ -1294,9 +1952,59 @@ def run_workflow(
         console.print(f"  {step_id} -> {job_id}")
 
 
+def _audit_verify(job_id: str, checkpoint_path: Optional[Path] = None) -> None:
+    """Walk a job's audit hash chain locally and print the verdict.
+
+    Verification reads the data plane directly (LocalStore or Supabase) rather
+    than going through the gateway, because integrity is a property of the
+    stored chain itself, not of any single API response.
+    """
+    from mco.orchestrator.audit import verify_chain
+    from mco.orchestrator.routes import get_db_client
+
+    db_client = get_db_client()
+    if db_client is None:
+        console.print("[red][ERROR] No data plane configured; cannot verify audit chain.[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        checkpoint = json.loads(checkpoint_path.read_text(encoding='utf-8')) if checkpoint_path else None
+        report = verify_chain(db_client, job_id, checkpoint=checkpoint)
+    except Exception as e:
+        console.print(f"[red][ERROR] Failed to verify audit chain: {e}[/red]")
+        raise typer.Exit(code=1)
+
+    signed = " (HMAC-signed)" if report.get("signed") else ""
+    if report["ok"]:
+        console.print(
+            f"[bold green][OK][/bold green] Audit chain for job {job_id} is intact: "
+            f"{report['count']} event(s) verified{signed}."
+        )
+        return
+
+    console.print(
+        f"[bold red][TAMPERED][/bold red] Audit chain for job {job_id} is BROKEN "
+        f"at event #{report['broken_at']} of {report['count']}{signed}."
+    )
+    if report.get("reason"):
+        console.print(f"[red]  {report['reason']}[/red]")
+    raise typer.Exit(code=1)
+
+
 @app.command("audit")
-def audit_trail(job_id: str = typer.Argument(..., help="Job ID to inspect.")):
-    """Print a job's immutable audit trail (oldest event first)."""
+def audit_trail(
+    job_id: str = typer.Argument(..., help="Job ID to inspect."),
+    verify: bool = typer.Option(
+        False, "--verify",
+        help="Walk the hash chain and report OK or the first broken link.",
+    ),
+    checkpoint: Optional[Path] = typer.Option(None, "--checkpoint", help="Verify against a previously exported signed checkpoint."),
+):
+    """Print a job's tamper-evident audit trail (oldest event first)."""
+    if verify or checkpoint:
+        _audit_verify(job_id, checkpoint)
+        return
+
     try:
         events = _gateway_client().events(job_id)
     except Exception as e:
@@ -1323,6 +2031,44 @@ def audit_trail(job_id: str = typer.Argument(..., help="Job ID to inspect.")):
             json.dumps(ev.get("detail") or {}),
         )
     console.print(table)
+
+
+@app.command("audit-checkpoint")
+def audit_checkpoint(job_id: str, output: Path):
+    """Export a signed checkpoint. Keep it outside the database/backup volume."""
+    from mco.orchestrator.routes import get_db_client
+    from mco.orchestrator.audit import drain_outbox, make_checkpoint
+    try:
+        db = get_db_client()
+        drain_outbox(db, job_id=job_id)
+        checkpoint = make_checkpoint(db, job_id)
+        with output.open('x', encoding='utf-8') as stream:
+            json.dump(checkpoint, stream, indent=2)
+        console.print(f"Signed checkpoint written to {output.resolve()}")
+    except Exception as exc:
+        console.print(f"[red]Checkpoint export failed: {exc}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command("restore-fence")
+def restore_fence():
+    """After a DB restore, pause work and invalidate every pre-restore claim.
+
+Run before reconnecting workers. Review halted jobs, turn off Stop work in
+Settings, then retry selected jobs explicitly.
+"""
+    from mco.orchestrator.routes import get_db_client
+    from mco.orchestrator.leases import set_paused, rotate_incarnation
+    from mco.orchestrator.audit import record_event
+    db = get_db_client()
+    if db is None:
+        raise typer.Exit(1)
+    halted = set_paused(db, True)
+    incarnation = rotate_incarnation(db)
+    get_config().set('MCO_KILL_SWITCH','true')
+    record_event(db, 'system:restore', 'restore_fenced', 'operator', 'admin',
+                 {'incarnation':incarnation,'halted_jobs':len(halted)})
+    console.print(f"Restored store fenced; {len(halted)} active jobs halted. Work remains paused.")
 
 
 @app.command("approve")
@@ -1358,6 +2104,82 @@ def retry(job_id: str = typer.Argument(..., help="Failed/rejected job ID to re-q
         console.print(f"[bold green][OK] Job {job_id} re-queued -> {res['job']['status']}[/bold green]")
     except Exception as e:
         console.print(f"[red][ERROR] Retry failed: {e}[/red]")
+        raise typer.Exit(code=1)
+
+
+@app.command("cancel")
+def cancel(
+    job_id: str = typer.Argument(..., help="Non-terminal job ID to call off."),
+    reason: str = typer.Option("", "--reason", help="Why the job was cancelled."),
+):
+    """Call off a job that hasn't finished yet (approver-role token)."""
+    try:
+        res = _gateway_client().cancel(job_id, reason)
+        console.print(f"[bold yellow][OK] Job {job_id} cancelled -> {res['job']['status']}[/bold yellow]")
+    except Exception as e:
+        console.print(f"[red][ERROR] Cancel failed: {e}[/red]")
+        raise typer.Exit(code=1)
+
+
+@app.command("archive")
+def archive(job_id: str = typer.Argument(..., help="Terminal job ID to hide from the default board view.")):
+    """Archive a completed/failed/rejected/cancelled job (reversible)."""
+    try:
+        res = _gateway_client().archive(job_id)
+        console.print(f"[bold green][OK] Job {job_id} archived[/bold green]")
+    except Exception as e:
+        console.print(f"[red][ERROR] Archive failed: {e}[/red]")
+        raise typer.Exit(code=1)
+
+
+@app.command("unarchive")
+def unarchive(job_id: str = typer.Argument(..., help="Archived job ID to restore to the default board view.")):
+    """Undo archive."""
+    try:
+        res = _gateway_client().unarchive(job_id)
+        console.print(f"[bold green][OK] Job {job_id} unarchived[/bold green]")
+    except Exception as e:
+        console.print(f"[red][ERROR] Unarchive failed: {e}[/red]")
+        raise typer.Exit(code=1)
+
+
+@app.command("duplicates")
+def duplicates(job_id: str = typer.Argument(..., help="Job ID to check for look-alike or linked jobs.")):
+    """List other jobs that look like the same work as this one."""
+    try:
+        dups = _gateway_client().duplicates(job_id)
+    except Exception as e:
+        console.print(f"[red][ERROR] Duplicate check failed: {e}[/red]")
+        raise typer.Exit(code=1)
+    if not dups:
+        console.print("[dim]No look-alike or linked jobs found.[/dim]")
+        return
+    table = Table(title=f"Possible duplicates of {job_id}", show_header=True, header_style="bold magenta")
+    table.add_column("ID", style="cyan")
+    table.add_column("Title", style="white")
+    table.add_column("Status", style="green")
+    table.add_column("Relation", style="dim")
+    for d in dups:
+        table.add_row(str(d.get("id")), str(d.get("title")), str(d.get("status")), str(d.get("relation")))
+    console.print(table)
+
+
+@app.command("reassign")
+def reassign(
+    job_id: str = typer.Argument(..., help="Failed/rejected/cancelled job ID to redo elsewhere."),
+    to_role: str = typer.Option(..., "--to-role", help="Target agent role for the new job."),
+    to_instance: str = typer.Option("", "--to-instance", help="Target agent instance (optional)."),
+    instructions: str = typer.Option("", "--instructions", help="Override instructions (default: reuse the original)."),
+):
+    """Clone a failed job onto a new target, link both rows, and archive the
+    old one (approver-role token)."""
+    try:
+        res = _gateway_client().reassign(job_id, to_role, target_agent_id=to_instance or None,
+                                          instructions=instructions or None)
+        new_id = res["job"]["id"]
+        console.print(f"[bold green][OK] Job {job_id} reassigned -> new job {new_id} ({to_role})[/bold green]")
+    except Exception as e:
+        console.print(f"[red][ERROR] Reassign failed: {e}[/red]")
         raise typer.Exit(code=1)
 
 
@@ -1521,8 +2343,16 @@ def list_orgs_cmd():
 
 
 @app.command("reset-token")
-def reset_token_cmd(instance_id: str = typer.Argument(..., help="Instance ID of the agent to rotate.")):
+def reset_token_cmd(
+    instance_id: str = typer.Argument(..., help="Instance ID of the agent to rotate."),
+    save: bool = typer.Option(
+        True, "--save/--no-save",
+        help="Write the new token to ~/.mco/tokens/<instance>.token so this machine's waker picks it up.",
+    ),
+):
     """Rotate an agent's access token. The old token stops working immediately."""
+    from mco.waker import agent_token_path
+
     try:
         res = _gateway_client().reset_token(instance_id)
     except Exception as e:
@@ -1531,12 +2361,34 @@ def reset_token_cmd(instance_id: str = typer.Argument(..., help="Instance ID of 
         raise typer.Exit(code=1)
 
     token = res.get("token", "")
+    saved_note = ""
+    if save and token:
+        # Rotation that doesn't update the consumer is how a fleet ends up
+        # "online" but unable to authenticate - so write it by default.
+        path = agent_token_path(instance_id)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(token, encoding="utf-8")
+            try:
+                os.chmod(path, 0o600)  # best-effort; a no-op on some filesystems
+            except OSError:
+                pass
+            saved_note = f"\n\n[dim]Saved to {path}[/dim]"
+        except OSError as e:
+            saved_note = f"\n\n[yellow]Could not write {path}: {e}[/yellow]"
+
     console.print(Panel.fit(
         f"[bold green][OK] Token rotated for '{instance_id}'.[/bold green]\n\n"
         f"[bold yellow]Save this Access Token securely. It will not be shown again:[/bold yellow]\n"
-        f"[bold white]{token}[/bold white]",
+        f"[bold white]{token}[/bold white]"
+        + saved_note,
         border_style="green"
     ))
+    if save and token:
+        console.print(
+            "[dim]Note: any MCP client config that embeds this token "
+            "(e.g. ~/.codex/config.toml) must be updated separately.[/dim]"
+        )
 
 
 @app.command("deregister")
@@ -1626,6 +2478,156 @@ def watch(
 # ─────────────────────────────────────────────────────────────────────────────
 # 6. Enterprise integrations
 # ─────────────────────────────────────────────────────────────────────────────
+def _tail_channel_matches(job: dict, role: str, instance_id: str) -> bool:
+    if role:
+        target_role = str(job.get("target_agent_role") or "")
+        if target_role.lower() != role.lower():
+            return False
+    if instance_id:
+        target_id = job.get("target_agent_id")
+        if target_id and target_id != instance_id:
+            return False
+    return True
+
+
+def _tail_channel_label(role: str, instance_id: str) -> str:
+    if role and instance_id:
+        return f"{role}/{instance_id}"
+    if role:
+        return f"{role}/*"
+    if instance_id:
+        return f"*/{instance_id}"
+    return "all channels"
+
+
+def _tail_event_line(event: str, job: dict) -> str:
+    ts = datetime.now().strftime("%H:%M:%S")
+    title = job.get("title") or str(job.get("id") or "")
+    source = job.get("source_agent_role") or "-"
+    target_role = job.get("target_agent_role") or "-"
+    target_id = job.get("target_agent_id") or "*"
+    return (
+        f"[dim]{ts}[/dim] [cyan]{event or '?'}[/cyan] "
+        f"[bold]{title}[/bold] [dim]{source} -> {target_role}/{target_id}[/dim]"
+    )
+
+
+@app.command("tail")
+def tail(
+    role: Optional[str] = typer.Option(None, "--role", help="Agent role mailbox to tail."),
+    instance: Optional[str] = typer.Option(None, "--instance", help="Agent instance mailbox to tail."),
+    gateway: Optional[str] = typer.Option(None, "--gateway", help="Gateway HTTP URL."),
+    token: Optional[str] = typer.Option(None, "--token", help="Agent or operator bearer token."),
+):
+    """Live-tail a filtered mailbox feed from the gateway broadcast socket."""
+    from mco.waker import websocket_url_from_gateway
+
+    config = get_config()
+    resolved_role = role or config.get("AGENT_ROLE") or os.environ.get("AGENT_ROLE") or ""
+    resolved_instance = instance or config.get("AGENT_INSTANCE_ID") or os.environ.get("AGENT_INSTANCE_ID") or ""
+    resolved_gateway = gateway or config.get("MCO_GATEWAY_URL") or os.environ.get("MCO_GATEWAY_URL") or None
+    resolved_token = (
+        token
+        or config.get("MCO_AGENT_TOKEN")
+        or os.environ.get("MCO_AGENT_TOKEN")
+        or config.get("MCO_LOCAL_TOKEN")
+        or os.environ.get("MCO_LOCAL_TOKEN")
+        or ""
+    )
+    ws_url = websocket_url_from_gateway(resolved_gateway)
+    channel = _tail_channel_label(resolved_role, resolved_instance)
+
+    async def _tail():
+        import websockets
+
+        backoff = 1.0
+        while True:
+            try:
+                async with websockets.connect(ws_url) as ws:
+                    await ws.send(json.dumps({
+                        "type": "authenticate",
+                        "payload": {"token": resolved_token},
+                    }))
+                    console.print(
+                        f"[green]Tailing {channel} at {ws_url}[/green] "
+                        f"[dim](Ctrl-C to stop)[/dim]"
+                    )
+                    backoff = 1.0
+                    async for frame in ws:
+                        try:
+                            msg = json.loads(frame)
+                        except (TypeError, ValueError):
+                            continue
+                        mtype = msg.get("type")
+                        payload = msg.get("payload") or {}
+                        if mtype == "authenticated":
+                            if payload.get("success") is False:
+                                console.print("[red][ERROR] WebSocket auth failed - "
+                                              "check MCO_AGENT_TOKEN / MCO_LOCAL_TOKEN.[/red]")
+                                return
+                            continue
+                        if mtype != "event":
+                            continue
+                        job = payload.get("job") or {}
+                        if not _tail_channel_matches(job, resolved_role, resolved_instance):
+                            continue
+                        console.print(_tail_event_line(payload.get("event", "?"), job))
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                console.print(f"[yellow]Disconnected: {e} - retrying in {int(backoff)}s...[/yellow]")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 30.0)
+
+    try:
+        asyncio.run(_tail())
+    except KeyboardInterrupt:
+        console.print("\n[dim]Stopped.[/dim]")
+
+
+@app.command("wake")
+def wake(
+    exec_command: str = typer.Option(..., "--exec", help="Shell command to run when this worker has pending jobs."),
+    role: Optional[str] = typer.Option(None, "--role", help="Agent role to watch for."),
+    instance: Optional[str] = typer.Option(None, "--instance", help="Agent instance ID to watch for."),
+    gateway: Optional[str] = typer.Option(None, "--gateway", help="Gateway HTTP URL."),
+    token: Optional[str] = typer.Option(None, "--token", help="Agent bearer token."),
+    min_interval: float = typer.Option(10.0, "--min-interval", help="Minimum seconds between spawn starts."),
+):
+    """Wake a local worker command when this agent's inbox has pending jobs."""
+    from mco.waker import Waker, WakerAuthError, WakerTokenError, resolve_agent_token
+
+    config = get_config()
+    resolved_role = role or config.get("AGENT_ROLE") or os.environ.get("AGENT_ROLE") or ""
+    resolved_instance = instance or config.get("AGENT_INSTANCE_ID") or os.environ.get("AGENT_INSTANCE_ID") or ""
+    resolved_gateway = gateway or config.get("MCO_GATEWAY_URL") or os.environ.get("MCO_GATEWAY_URL") or None
+    # Resolves per-instance so several agents can run on one machine; fails
+    # loudly and by name rather than silently borrowing the operator token.
+    try:
+        resolved_token = resolve_agent_token(resolved_instance, explicit=token, config=config)
+    except WakerTokenError as e:
+        console.print(f"[red][ERROR][/red] {e}")
+        raise typer.Exit(code=1)
+
+    waker = Waker(
+        exec_command=exec_command,
+        role=resolved_role,
+        instance_id=resolved_instance,
+        gateway_url=resolved_gateway,
+        token=resolved_token,
+        min_interval=min_interval,
+    )
+    console.print(f"[green]Waking {resolved_role}/{resolved_instance} from {waker.ws_url}[/green] "
+                  "[dim](Ctrl-C to stop)[/dim]")
+    try:
+        asyncio.run(waker.run_forever())
+    except WakerAuthError as e:
+        console.print(f"[red][ERROR] {e}[/red]")
+        raise typer.Exit(code=1)
+    except KeyboardInterrupt:
+        console.print("\n[dim]Stopped.[/dim]")
+
+
 @app.command("connectors")
 def list_connectors_cmd():
     """List configured enterprise connectors and their health (via the gateway)."""

@@ -2,7 +2,7 @@
 
 import pytest
 
-from mco.sdk import BatonAgent
+from mco.sdk import BitCadenceAgent
 
 
 class FakeClient:
@@ -47,8 +47,8 @@ class FakeClient:
         return {"success": True}
 
 
-def _agent(client) -> BatonAgent:
-    return BatonAgent(role="codex", instance_id="w1", client=client)
+def _agent(client) -> BitCadenceAgent:
+    return BitCadenceAgent(role="codex", instance_id="w1", client=client)
 
 
 JOB = {"id": "j1", "title": "Fix the build",

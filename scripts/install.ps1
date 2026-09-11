@@ -1,14 +1,14 @@
 # ============================================================================
-# BatonCadence Setup Script (Windows)
+# BitCadence Setup Script (Windows)
 # ============================================================================
 # One-shot install, modeled on hermes' setup-hermes.sh:
 #   1. Locates Python 3.9+ (offers to install it via winget if missing)
 #   2. Creates a virtual environment (.venv)
-#   3. Installs BatonCadence in editable mode
+#   3. Installs BitCadence in editable mode
 #   4. Creates a safe Local-Only .env (if none exists)
-#   5. Creates a "BatonCadence" Desktop shortcut that starts the server
+#   5. Creates a "BitCadence" Desktop shortcut that starts the server
 #      and opens the console GUI in the default browser
-#   6. Offers to launch BatonCadence right away
+#   6. Offers to launch BitCadence right away
 #
 # Usage (or just double-click install.bat in the repo root):
 #   powershell -ExecutionPolicy Bypass -File scripts\install.ps1
@@ -30,7 +30,7 @@ function Warn($m) { Write-Host "[!]  $m" -ForegroundColor Yellow }
 function Fail($m) { Write-Host "[X]  $m" -ForegroundColor Red; exit 1 }
 
 Write-Host ""
-Write-Host "  BatonCadence Setup" -ForegroundColor Cyan
+Write-Host "  BitCadence Setup" -ForegroundColor Cyan
 Write-Host "  ==================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -43,14 +43,14 @@ $gitCmd = Get-Command git -ErrorAction SilentlyContinue
 if (-not $gitCmd) {
     Write-Host "     git not found - skipping update check." -ForegroundColor DarkGray
     Write-Host "     To get updates, download the latest ZIP from:" -ForegroundColor DarkGray
-    Write-Host "     https://github.com/mastalink/Batoncadence" -ForegroundColor DarkGray
+    Write-Host "     https://github.com/mastalink/BitCadence" -ForegroundColor DarkGray
 } else {
     # Is this folder a git repo?
     $gitDir = git -C $root rev-parse --git-dir 2>$null
     if (-not $gitDir) {
         Write-Host "     This folder is not a git repo (probably a ZIP download)." -ForegroundColor DarkGray
         Write-Host "     To get updates, download the latest ZIP from:" -ForegroundColor DarkGray
-        Write-Host "     https://github.com/mastalink/Batoncadence" -ForegroundColor DarkGray
+        Write-Host "     https://github.com/mastalink/BitCadence" -ForegroundColor DarkGray
     } else {
         # Fetch quietly so we can compare local vs remote
         git -C $root fetch --quiet origin 2>$null
@@ -161,9 +161,9 @@ if (-not (Test-Path (Join-Path $root ".venv\Scripts\python.exe"))) {
 $py = Join-Path $root ".venv\Scripts\python.exe"
 
 # ----------------------------------------------------------------------------
-# 3. Install BatonCadence
+# 3. Install BitCadence
 # ----------------------------------------------------------------------------
-Step "Installing BatonCadence and its dependencies (this can take a minute)..."
+Step "Installing BitCadence and its dependencies (this can take a minute)..."
 
 # Air-gapped install: an offline\wheels folder (created by
 # scripts\make-offline-bundle.ps1 on a connected machine) means we install
@@ -179,7 +179,7 @@ if (Test-Path $wheelDir) {
     & $py -m pip install -e "$root" --quiet
     if ($LASTEXITCODE -ne 0) { Fail "Dependency installation failed. Check your internet connection and retry." }
 }
-Ok "BatonCadence installed"
+Ok "BitCadence installed"
 
 # ----------------------------------------------------------------------------
 # 4. Configuration - global home (~\.mco\.env) so mco works from ANY directory
@@ -199,7 +199,7 @@ if (-not (Test-Path $envPath)) {
     # Generate a secure local access token (used in place of a database token).
     $localToken = "mco_tok_" + (& $py -c "import secrets; print(secrets.token_hex(24))")
     Set-Content -Path $envPath -Encoding ascii -Value @(
-        "# BatonCadence configuration (created by install.ps1)",
+        "# BitCadence configuration (created by install.ps1)",
         "# Local-Only profile: everything runs on this computer, no database",
         "# or cloud account needed. Run 'mco setup' later to change anything.",
         "MCO_PROFILE=Local-Only",
@@ -224,7 +224,7 @@ if (-not (Test-Path $envPath)) {
 # ----------------------------------------------------------------------------
 Step "Making the 'mco' command available everywhere..."
 
-$binDir = Join-Path $env:LOCALAPPDATA "BatonCadence\bin"
+$binDir = Join-Path $env:LOCALAPPDATA "BitCadence\bin"
 if (-not (Test-Path $binDir)) { New-Item -ItemType Directory -Path $binDir -Force | Out-Null }
 $mcoExe = Join-Path $root ".venv\Scripts\mco.exe"
 Set-Content -Path (Join-Path $binDir "mco.cmd") -Encoding ascii -Value @(
@@ -232,7 +232,7 @@ Set-Content -Path (Join-Path $binDir "mco.cmd") -Encoding ascii -Value @(
     "`"$mcoExe`" %*"
 )
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if ($userPath -notlike "*BatonCadence\bin*") {
+if ($userPath -notlike "*BitCadence\bin*") {
     [Environment]::SetEnvironmentVariable("Path", "$userPath;$binDir", "User")
     Ok "'mco' added to your PATH (open a NEW terminal to use it)"
 } else {
@@ -248,18 +248,18 @@ if ($LASTEXITCODE -ne 0) { Fail "The mco CLI failed its self-check." }
 Ok "CLI self-check passed"
 
 # ----------------------------------------------------------------------------
-# 6. Desktop shortcut -> "Start BatonCadence.bat"
+# 6. Desktop shortcut -> "Start BitCadence.bat"
 # ----------------------------------------------------------------------------
 Step "Creating the Desktop shortcut..."
 
 $desktop = [Environment]::GetFolderPath("Desktop")
 $shell = New-Object -ComObject WScript.Shell
-$shortcut = $shell.CreateShortcut((Join-Path $desktop "BatonCadence.lnk"))
-$shortcut.TargetPath = Join-Path $root "Start BatonCadence.bat"
+$shortcut = $shell.CreateShortcut((Join-Path $desktop "BitCadence.lnk"))
+$shortcut.TargetPath = Join-Path $root "Start BitCadence.bat"
 $shortcut.WorkingDirectory = $root
-$shortcut.Description = "Start BatonCadence and open the console GUI"
+$shortcut.Description = "Start BitCadence and open the console GUI"
 $shortcut.Save()
-Ok "Shortcut 'BatonCadence' added to the Desktop"
+Ok "Shortcut 'BitCadence' added to the Desktop"
 
 # ----------------------------------------------------------------------------
 # Done - choose your starting mode
@@ -269,7 +269,7 @@ Ok "Setup complete!"
 Write-Host ""
 
 if ($NoPrompt) {
-    Write-Host "Run 'Start BatonCadence.bat' to launch." -ForegroundColor Cyan
+    Write-Host "Run 'Start BitCadence.bat' to launch." -ForegroundColor Cyan
     exit 0
 }
 
@@ -323,10 +323,10 @@ if ($modeChoice -eq "2") {
     Write-Host "    .venv\Scripts\python.exe -m mco.cli setup" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "============================================================" -ForegroundColor Green
-    Write-Host "  Starting BatonCadence and opening your browser..." -ForegroundColor Green
+    Write-Host "  Starting BitCadence and opening your browser..." -ForegroundColor Green
     Write-Host "============================================================"
     Write-Host ""
-    Start-Process -FilePath (Join-Path $root "Start BatonCadence.bat") -WorkingDirectory $root
+    Start-Process -FilePath (Join-Path $root "Start BitCadence.bat") -WorkingDirectory $root
 
 } else {
     # ---- DEMO MODE path ----
@@ -339,7 +339,7 @@ if ($modeChoice -eq "2") {
     Write-Host ""
     Write-Host "  When you're ready to switch to real data:" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "    1. Double-click the BatonCadence icon on your Desktop."
+    Write-Host "    1. Double-click the BitCadence icon on your Desktop."
     Write-Host "    2. Your browser opens -- look for the Settings panel."
     Write-Host "    3. Leave Gateway URL as http://127.0.0.1:18789"
     Write-Host "    4. Paste your access token in the 'Agent token' box:"
@@ -347,7 +347,7 @@ if ($modeChoice -eq "2") {
     if ($localToken) {
         Write-Host "         $localToken" -ForegroundColor White
         Write-Host ""
-        Write-Host "       (Also saved in .env in the BatonCadence folder.)" -ForegroundColor DarkGray
+        Write-Host "       (Also saved in .env in the BitCadence folder.)" -ForegroundColor DarkGray
     } else {
         Write-Host "       Run install again - no token was generated." -ForegroundColor Yellow
     }
@@ -355,11 +355,11 @@ if ($modeChoice -eq "2") {
     Write-Host "    5. Click Connect." -ForegroundColor Cyan
     Write-Host ""
     Write-Host "============================================================" -ForegroundColor Yellow
-    $launch = Read-Host "Open BatonCadence in demo mode now? [Y/n]"
+    $launch = Read-Host "Open BitCadence in demo mode now? [Y/n]"
     if ($launch -eq "" -or $launch -match "^[Yy]") {
-        Start-Process -FilePath (Join-Path $root "Start BatonCadence.bat") -WorkingDirectory $root
+        Start-Process -FilePath (Join-Path $root "Start BitCadence.bat") -WorkingDirectory $root
     } else {
         Write-Host ""
-        Write-Host "When you're ready, double-click the BatonCadence icon on your Desktop." -ForegroundColor Cyan
+        Write-Host "When you're ready, double-click the BitCadence icon on your Desktop." -ForegroundColor Cyan
     }
 }

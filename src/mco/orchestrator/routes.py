@@ -1,11 +1,26 @@
 """FastAPI routes for the Job Board API, serving GET and POST requests."""
 
 import os
+import hashlib
+import hmac
+import json
 import logging
+import importlib.metadata as importlib_metadata
+import re
+import subprocess
+from uuid import UUID
+from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends
-from mco.orchestrator.contracts import JobStatus
-from mco.orchestrator.auth import require_agent, require_scopes
+from mco.orchestrator.contracts import (
+    ARCHIVABLE_STATUSES,
+    CANCELLABLE_STATUSES,
+    JobStatus,
+    REASSIGNABLE_STATUSES,
+)
+from mco.orchestrator.auth import has_scope, require_agent, require_scopes
 from mco.orchestrator.audit import record_event, get_events
+from mco.orchestrator.leases import acquire_lease, renew_lease, Lease, expire_lease, is_expired
 from mco.config import get_config
 from mco.notifiers.ntfy import (
     notify_job_created,
@@ -19,6 +34,10 @@ from mco.orchestrator import utils as utils_mod
 # Re-exported for back-compat: these used to live here (now in utils to
 # break the routes <-> auth import cycle).
 from mco.orchestrator.utils import DEFAULT_APPROVER_ROLES, get_approver_roles  # noqa: F401
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def agent_org(agent: dict) -> str:
@@ -44,7 +63,7 @@ def get_gated_roles() -> set:
 def kill_switch_active() -> bool:
     """Global pause (MCO_KILL_SWITCH): no new jobs created, no leases granted.
 
-    In-flight work may finish and report; humans can still approve/audit.
+    Active attempts are halted and fenced; humans can still inspect and audit.
     """
     return str(get_config().get("MCO_KILL_SWITCH") or "").lower() in ("1", "true", "on", "yes")
 
@@ -58,14 +77,50 @@ def get_offline_after_seconds() -> int:
         return 300
 
 
+def get_lease_ttl_seconds() -> int:
+    """How long a job may sit LEASED before it's considered abandoned and
+    reclaimed to PENDING (MCO_LEASE_TTL_SECONDS). 0 (or negative) disables
+    reclamation entirely. Default 900s / 15m."""
+    try:
+        return int(get_config().get("MCO_LEASE_TTL_SECONDS") or 900)
+    except (TypeError, ValueError):
+        return 900
+
+
+def reclaim_stale_leases(db_client) -> int:
+    """Timer and poll callers may race; only a successful CAS emits evidence."""
+    ttl = get_lease_ttl_seconds()
+    if ttl <= 0:
+        return 0
+    rows = db_client.table("agent_jobs").select("*").in_("status", ["leased", "in_progress"]).execute().data
+    reclaimed = 0
+    for job in rows or []:
+        if is_expired(job, ttl_seconds=ttl) and expire_lease(db_client, job, ttl_seconds=ttl):
+            record_event(db_client, job["id"], "lease_expired", "system", "reaper",
+                         {"lease_ttl_seconds": ttl, "leased_by": job.get("leased_by_instance_id")})
+            reclaimed += 1
+    return reclaimed
+
+
 def decorate_presence(row: dict, threshold: int) -> dict:
     """Add derived liveness to a registry row.
 
     - last_seen_seconds: age of the last heartbeat (None if never seen)
     - effective_status: the stored status, demoted to 'offline' when an
-      'online' agent has been silent past the threshold. The stored status
-      is never rewritten - liveness is derived at read time, so there is
-      no background sweeper to run or to fail.
+      'online' agent has been silent past the threshold.
+
+    The **response** `status` is overwritten with the derived value too, so a
+    consumer that reads `status` cannot get a stale 'online'. This is the whole
+    fix for "the board says online but the agent died days ago": the stored
+    status flips to 'online' on the last heartbeat and never flips back on its
+    own, so any surface reading the raw field (the MCP `mco_agents` tool other
+    agents call, the console, ad-hoc API clients) reported a corpse as live.
+    `effective_status` had the truth, but nothing forced consumers onto it.
+
+    `row` is a per-read dict copy, so this changes only the response, never the
+    stored row - the design's "derive liveness at read time, no background
+    sweeper" property is preserved. Demotion only ever turns a stale 'online'
+    into 'offline'; 'disabled' and never-seen states pass through untouched.
     """
     from datetime import datetime, timezone
 
@@ -84,6 +139,8 @@ def decorate_presence(row: dict, threshold: int) -> dict:
         effective = "offline"
     row["last_seen_seconds"] = secs
     row["effective_status"] = effective
+    # Collapse the footgun: the response's status IS the derived truth.
+    row["status"] = effective
     return row
 
 
@@ -108,6 +165,7 @@ logger = logging.getLogger("mco.orchestrator.routes")
 router = APIRouter(prefix="/api/jobs")
 agents_router = APIRouter(prefix="/api/agents")
 events_router = APIRouter(prefix="/api/events")
+version_router = APIRouter(prefix="/api")
 
 # Dynamic callback hook for gateway websocket notifications
 # Callable signature: async def callback(event: str, job: dict)
@@ -126,10 +184,46 @@ def register_broadcast_callback(callback) -> None:
 _db_client = None
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _package_version() -> str:
+    try:
+        return importlib_metadata.version("bitcadence")
+    except importlib_metadata.PackageNotFoundError:
+        pass
+
+    pyproject = _repo_root() / "pyproject.toml"
+    text = pyproject.read_text(encoding="utf-8")
+    match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', text)
+    if not match:
+        raise RuntimeError("project version not found in pyproject.toml")
+    return match.group(1)
+
+
+def _git_commit() -> str | None:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(_repo_root()),
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=1,
+        ).strip() or None
+    except Exception:
+        return None
+
+
+@version_router.get("/version")
+async def get_version():
+    return {"version": _package_version(), "git_commit": _git_commit()}
+
+
 def get_db_client(force_new: bool = False):
     """Return the cached data-plane client (created on first use).
 
-    Supabase when credentials are configured; otherwise BatonCadence's
+    Supabase when credentials are configured; otherwise BitCadence's
     embedded LocalStore (SQLite) so the Local-Only profile gets real
     persistence - jobs, audit trail, agent registry, and Drumline shared
     context all work with zero cloud dependencies. Set MCO_DISABLE_LOCAL_DB
@@ -162,8 +256,13 @@ def get_db_client(force_new: bool = False):
 
 
 @router.get("")
-async def get_jobs(agent: dict = Depends(require_scopes("jobs:read"))):
-    """Retrieve job list from the Supabase database."""
+async def get_jobs(include_archived: bool = False, agent: dict = Depends(require_scopes("jobs:read"))):
+    """Retrieve job list from the Supabase database.
+
+    Archived jobs (soft-hidden terminal jobs - see POST /{job_id}/archive) are
+    excluded by default so a long-running board doesn't drown in old Done/
+    Problems rows; pass ?include_archived=true to see everything.
+    """
     db_client = get_db_client()
     if not db_client:
         return []
@@ -173,10 +272,68 @@ async def get_jobs(agent: dict = Depends(require_scopes("jobs:read"))):
             .eq("org_id", agent_org(agent))
             .order("created_at", desc=True).limit(100).execute()
         )
-        return res.data or []
+        jobs = res.data or []
+        if not include_archived:
+            jobs = [j for j in jobs if not j.get("archived")]
+        return jobs
     except Exception as e:
         logger.error(f"Error fetching jobs: {e}")
         return []
+
+
+@router.get("/capabilities")
+async def get_job_capabilities(agent: dict = Depends(require_scopes("jobs:read"))):
+    """Advertise retry-safe job creation before a caller sends any work."""
+    return {"create_with_id": 1}
+
+
+def _canonical_explicit_job_id(value) -> str:
+    """Accept only the canonical UUID text PostgreSQL will return unchanged."""
+    if not isinstance(value, str):
+        raise HTTPException(status_code=400, detail="id must be a canonical UUID")
+    try:
+        canonical = str(UUID(value))
+    except (ValueError, TypeError, AttributeError):
+        raise HTTPException(status_code=400, detail="id must be a canonical UUID")
+    if value != canonical:
+        raise HTTPException(status_code=400, detail="id must be a canonical UUID")
+    return canonical
+
+
+def _create_intent_hash(agent: dict, intent: dict) -> str:
+    """Bind an explicit ID to its authenticated caller and immutable request."""
+    document = {
+        "protocol": 1,
+        "org_id": agent_org(agent),
+        "source_agent_id": agent["instance_id"],
+        "source_agent_role": agent["role"],
+        **intent,
+    }
+    encoded = json.dumps(
+        document, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _read_job_by_id(db_client, job_id: str) -> dict | None:
+    rows = (
+        db_client.table("agent_jobs").select("*").eq("id", job_id).limit(1).execute().data
+        or []
+    )
+    return rows[0] if rows else None
+
+
+def _can_read_job(agent: dict, job: dict) -> bool:
+    if job_org(job) != agent_org(agent):
+        return False
+    if has_scope(agent, "admin"):
+        return True
+    if job.get("source_agent_id") == agent.get("instance_id"):
+        return True
+    if (job.get("target_agent_role") or "").lower() != (agent.get("role") or "").lower():
+        return False
+    target_id = job.get("target_agent_id")
+    return not target_id or target_id == agent.get("instance_id")
 
 
 @router.post("")
@@ -197,6 +354,11 @@ async def create_job(payload: dict, agent: dict = Depends(require_scopes("jobs:w
         requires_approval = bool(payload.get("requires_approval"))
         max_retries = int(payload.get("max_retries") or 0)
         escalate_to_role = payload.get("escalate_to_role")
+        # Higher runs first. Default 0 keeps every existing caller unchanged.
+        try:
+            priority = int(payload.get("priority") or 0)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="priority must be an integer")
 
         if not title or not target_agent_role:
             raise HTTPException(status_code=400, detail="title and target_agent_role are required")
@@ -230,8 +392,42 @@ async def create_job(payload: dict, agent: dict = Depends(require_scopes("jobs:w
             data["max_retries"] = max_retries
         if escalate_to_role:
             data["escalate_to_role"] = escalate_to_role
+        if priority:
+            data["priority"] = priority
 
-        res = db_client.table("agent_jobs").insert(data).execute()
+        explicit_id = payload.get("id")
+        intent_hash = None
+        if explicit_id is not None:
+            explicit_id = _canonical_explicit_job_id(explicit_id)
+            intent_hash = _create_intent_hash(agent, {
+                "title": title,
+                "description": description,
+                "target_agent_role": target_agent_role,
+                "target_agent_id": target_agent_id,
+                "depends_on": depends_on,
+                "input_payload": input_payload,
+                "requires_approval": bool(payload.get("requires_approval")),
+                "max_retries": max_retries,
+                "escalate_to_role": escalate_to_role,
+                "priority": priority,
+            })
+            data["id"] = explicit_id
+            data["create_intent_hash"] = intent_hash
+
+        try:
+            res = db_client.table("agent_jobs").insert(data).execute()
+        except Exception:
+            # Insert first: the UUID primary key, not a racy preflight SELECT,
+            # chooses the sole creator. A matching row also recovers the case
+            # where the database committed but its response was lost.
+            if explicit_id is not None:
+                existing = _read_job_by_id(db_client, explicit_id)
+                stored_hash = str((existing or {}).get("create_intent_hash") or "")
+                if existing and hmac.compare_digest(stored_hash, intent_hash or ""):
+                    return {"success": True, "job": existing}
+                if existing:
+                    raise HTTPException(status_code=409, detail="Job ID is already in use")
+            raise
         if res.data:
             new_job = res.data[0]
             record_event(db_client, new_job.get("id"), "created",
@@ -268,9 +464,44 @@ async def create_job(payload: dict, agent: dict = Depends(require_scopes("jobs:w
 
             return {"success": True, "job": new_job}
         return {"success": False, "error": "Insert failed"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating job: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _job_priority(job: dict) -> int:
+    """Job priority as an int; absent/garbage sorts as 0 (normal)."""
+    try:
+        return int(job.get("priority") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _pending_for_agent(db_client, role: str, instance_id, agent: dict) -> list:
+    """The agent's inbox, in the order work should actually be taken.
+
+    Shared by /pending and /lease_next deliberately. If the list a worker reads
+    and the job the server hands out were produced by two different pieces of
+    code they would eventually disagree, and the scheduling policy would
+    silently depend on which path a worker happened to use.
+
+    Highest priority first, then oldest within a band - so raising one job's
+    priority cannot starve equally-urgent older work.
+    """
+    res = db_client.table("agent_jobs")        .select("*")        .eq("status", "pending")        .eq("target_agent_role", role)        .execute()
+
+    filtered = []
+    for job in res.data or []:
+        if job_org(job) != agent_org(agent):
+            continue
+        target_id = job.get("target_agent_id")
+        if target_id and target_id != instance_id:
+            continue
+        filtered.append(job)
+    filtered.sort(key=lambda j: (-_job_priority(j), j.get("created_at") or ""))
+    return filtered
 
 
 @router.get("/pending")
@@ -284,26 +515,104 @@ async def get_pending_jobs(role: str, instance_id: str = None, agent: dict = Dep
     if not db_client:
         return []
     touch_agent_presence(db_client, agent)
+    # Recover jobs abandoned by crashed/killed workers (F-01) before we hand
+    # this poller its work. Best-effort; never blocks the poll on failure.
+    reclaim_stale_leases(db_client)
     try:
-        res = db_client.table("agent_jobs")\
-            .select("*")\
-            .eq("status", "pending")\
-            .eq("target_agent_role", role)\
-            .execute()
-
-        jobs = res.data or []
-        filtered = []
-        for job in jobs:
-            if job_org(job) != agent_org(agent):
-                continue
-            target_id = job.get("target_agent_id")
-            if target_id and target_id != instance_id:
-                continue
-            filtered.append(job)
-        return filtered
+        return _pending_for_agent(db_client, role, instance_id, agent)
     except Exception as e:
         logger.error(f"Error fetching pending jobs: {e}")
         return []
+
+
+@router.get("/{job_id}")
+async def get_job(job_id: str, agent: dict = Depends(require_scopes("jobs:read"))):
+    """Return one job to its creator, addressee, target role, or an admin."""
+    db_client = get_db_client()
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Job not found")
+    try:
+        job = _read_job_by_id(db_client, job_id)
+    except Exception as e:
+        logger.error("Error fetching job %s: %s", job_id, e)
+        raise HTTPException(status_code=500, detail="Failed to fetch job")
+    if not job or not _can_read_job(agent, job):
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+
+@router.post("/lease_next")
+async def lease_next_job(payload: dict = None, agent: dict = Depends(require_scopes("jobs:write"))):
+    """Atomically lease the highest-priority job addressed to this agent.
+
+    Ordering alone could not make priority stick. A worker reads its inbox and
+    is *told* to take the first entry, but the choice is still the worker's, so
+    a run could read straight past an urgent job and lease an old one - observed
+    live on 2026-09-09, where a worker took a P0 escalation with a P100 job
+    sitting at position 1. This endpoint removes the choice: the server picks,
+    so priority is enforced rather than advised.
+
+    It also closes a race the read-then-lease pattern always had: two workers on
+    one role both see the same job at position 1 and fight over it, with the
+    loser getting a bare 403. Here a lost race just falls through to the next
+    candidate, because acquire_lease is the atomic arbiter either way.
+    """
+    db_client = get_db_client()
+    if not db_client:
+        raise HTTPException(status_code=400, detail="Database not configured")
+    if kill_switch_active():
+        raise HTTPException(status_code=503, detail="MCO_KILL_SWITCH is active: leasing is paused")
+
+    instance_id = agent["instance_id"]
+    role = agent["role"]
+    if payload:
+        claimed = payload.get("agent_instance_id")
+        if claimed and claimed != instance_id:
+            raise HTTPException(status_code=403, detail="Cannot lease on behalf of another agent")
+
+    touch_agent_presence(db_client, agent)
+    reclaim_stale_leases(db_client)
+
+    try:
+        candidates = _pending_for_agent(db_client, role, instance_id, agent)
+        for job in candidates:
+            task_id = job.get("id")
+            if not task_id:
+                continue
+            lease = acquire_lease(db_client, task_id, instance_id,
+                                  ttl_seconds=max(1, get_lease_ttl_seconds()))
+            if lease is None:
+                # Someone else took it between the read and the write. Not an
+                # error - try the next one down rather than failing the call.
+                continue
+
+            record_event(db_client, task_id, "leased", instance_id, role)
+            try:
+                notify_job_leased(task_id, instance_id, role)
+            except Exception as ntfy_err:
+                logger.debug(f"ntfy lease hook skipped: {ntfy_err}")
+
+            fresh = db_client.table("agent_jobs").select("*").eq("id", task_id).execute()
+            leased_job = fresh.data[0] if fresh.data else job
+            if _broadcast_callback:
+                try:
+                    await _broadcast_callback("job_leased", leased_job)
+                except Exception as e:
+                    logger.warning(f"Error executing broadcast callback after lease_next: {e}")
+
+            return {"success": True, "job": leased_job,
+                    "lease": lease.as_claim(),
+                    "renew_after_seconds": max(1, get_lease_ttl_seconds() // 3)}
+
+        # Empty inbox and "every candidate was taken by someone else" are the
+        # same outcome for the caller: there is nothing for you right now.
+        return {"success": False, "job": None, "lease": None,
+                "reason": "no pending jobs addressed to you"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error leasing next job: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/lease")
@@ -327,12 +636,28 @@ async def lease_job(payload: dict, agent: dict = Depends(require_scopes("jobs:wr
         if pre.data and job_org(pre.data[0]) != agent_org(agent):
             raise HTTPException(status_code=404, detail="Job not found")
 
-        res = db_client.rpc("lease_task", {
-            "p_agent_instance_id": agent_instance_id,
-            "p_task_id": task_id
-        }).execute()
-        
-        success = res.data if hasattr(res, "data") else False
+        # Dropbox rule: you may only lease mail addressed to you. This mirrors
+        # the inbox filter (get_pending_jobs) exactly - a role match is required,
+        # and an instance-targeted job is reserved for that instance - so an
+        # agent can lease precisely what its inbox shows and nothing else. The
+        # org check above stays first, so cross-org probes get 404 (not 403) and
+        # never learn a job exists. Without this, any authenticated agent could
+        # lease another agent's job (completion is still blocked downstream, so
+        # the job would strand in leased-limbo and mis-attribute the audit trail).
+        if pre.data:
+            j = pre.data[0]
+            target_role = (j.get("target_agent_role") or "").lower()
+            target_id = j.get("target_agent_id")
+            if target_role != (agent.get("role") or "").lower() or \
+               (target_id and target_id != agent.get("instance_id")):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Cannot lease a job not addressed to you",
+                )
+
+        lease = acquire_lease(db_client, task_id, agent_instance_id,
+                              ttl_seconds=max(1, get_lease_ttl_seconds()))
+        success = lease is not None
         
         if success:
             record_event(db_client, task_id, "leased", agent_instance_id, agent["role"])
@@ -349,7 +674,8 @@ async def lease_job(payload: dict, agent: dict = Depends(require_scopes("jobs:wr
             except Exception as e:
                 logger.warning(f"Error executing broadcast callback after lease: {e}")
                 
-        return {"success": success}
+        return {"success": success, "lease": lease.as_claim() if lease else None,
+                "renew_after_seconds": max(1, get_lease_ttl_seconds() // 3)}
     except HTTPException:
         raise
     except Exception as e:
@@ -404,6 +730,7 @@ async def update_job_status(job_id: str, payload: dict, agent: dict = Depends(re
         await handle_job_update(
             db_client=db_client,
             payload={
+                **{k: payload.get(k) for k in ("lease_id", "lease_epoch", "lease_incarnation")},
                 "task_id": job_id,
                 "status": status,
                 "output_payload": output_payload,
@@ -417,7 +744,8 @@ async def update_job_status(job_id: str, payload: dict, agent: dict = Depends(re
         )
         
         if error_occurred:
-            raise HTTPException(status_code=400, detail=error_occurred)
+            code = 409 if error_occurred.startswith("FENCED:") else (503 if error_occurred.startswith("JOB_UPDATE failed:") else 400)
+            raise HTTPException(status_code=code, detail=error_occurred)
 
         # NTFY addon hooks for completion/failure
         try:
@@ -546,7 +874,7 @@ async def _decide_approval(job_id: str, agent: dict, approve: bool, reason: str 
         }
         event, event_name = "rejected", "job_updated"
 
-    res = db_client.table("agent_jobs").update(update_data).eq("id", job_id).execute()
+    res = db_client.table("agent_jobs").update(update_data).eq("id", job_id).eq("status", "needs_approval").execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Approval decision failed to persist")
     decided_job = res.data[0]
@@ -588,14 +916,19 @@ async def retry_job(job_id: str, agent: dict = Depends(require_scopes("jobs:appr
     job = job_res.data[0]
     if job_org(job) != agent_org(agent):
         raise HTTPException(status_code=404, detail="Job not found")
-    if job.get("status") not in (JobStatus.FAILED.value, JobStatus.REJECTED.value):
+    if job.get("status") not in (JobStatus.FAILED.value, JobStatus.REJECTED.value, "halted"):
         raise HTTPException(status_code=400, detail=f"Only failed/rejected jobs can be retried (status: {job.get('status')})")
 
     res = db_client.table("agent_jobs").update({
         "status": JobStatus.PENDING.value,
         "leased_by_instance_id": None,
         "error_message": None,
-    }).eq("id", job_id).execute()
+        "lease_id": None,
+        "lease_expires_at": None,
+        "started_at": None,
+        "completed_at": None,
+        "output_payload": None,
+    }).eq("id", job_id).eq("status", job.get("status")).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Retry failed to persist")
     requeued_job = res.data[0]
@@ -617,6 +950,269 @@ async def reject_job(job_id: str, payload: dict = None, agent: dict = Depends(re
     """Reject a NEEDS_APPROVAL job. Terminal: the job moves to REJECTED."""
     reason = (payload or {}).get("reason", "")
     return await _decide_approval(job_id, agent, approve=False, reason=reason)
+
+
+def _load_job_in_org(db_client, job_id: str, agent: dict) -> dict:
+    """Fetch a job, 404-ing (not leaking existence) across org boundaries."""
+    job_res = db_client.table("agent_jobs").select("*").eq("id", job_id).execute()
+    if not job_res.data:
+        raise HTTPException(status_code=404, detail="Job not found")
+    job = job_res.data[0]
+    if job_org(job) != agent_org(agent):
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+
+@router.post("/{job_id}/cancel")
+async def cancel_job(job_id: str, payload: dict = None, agent: dict = Depends(require_scopes("jobs:approve"))):
+    """Call off a job that hasn't finished yet (waiting/needs_approval/pending/
+    leased/in_progress -> cancelled). Distinct from reject: reject is only for
+    jobs paused at the approval gate; cancel works on any non-terminal job,
+    e.g. one you posted to the wrong role or that's no longer needed.
+    Approver roles only, same as retry/reject."""
+    db_client = get_db_client()
+    if not db_client:
+        raise HTTPException(status_code=400, detail="Database not configured")
+    if (agent.get("role") or "").lower() not in utils_mod.get_approver_roles():
+        raise HTTPException(status_code=403, detail="Your role is not permitted to cancel jobs")
+
+    job = _load_job_in_org(db_client, job_id, agent)
+    if job.get("status") not in CANCELLABLE_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Job is already terminal (status: {job.get('status')})")
+
+    reason = (payload or {}).get("reason", "")
+    res = db_client.table("agent_jobs").update({
+        "status": JobStatus.CANCELLED.value,
+        "leased_by_instance_id": None,
+        "error_message": f"Cancelled by {agent['instance_id']}" + (f": {reason}" if reason else ""),
+    }).eq("id", job_id).eq("status", job.get("status")).execute()
+    if not res.data:
+        raise HTTPException(
+            status_code=409,
+            detail="Job changed state before cancellation; refresh and retry",
+        )
+    cancelled_job = res.data[0]
+
+    record_event(db_client, job_id, "cancelled", agent["instance_id"], agent["role"],
+                 {"reason": reason, "previous_status": job.get("status")} if reason else {"previous_status": job.get("status")})
+
+    if _broadcast_callback:
+        try:
+            await _broadcast_callback("job_updated", cancelled_job)
+        except Exception as e:
+            logger.warning(f"Error executing broadcast callback after cancel: {e}")
+
+    return {"success": True, "job": cancelled_job}
+
+
+@router.post("/{job_id}/archive")
+async def archive_job(job_id: str, agent: dict = Depends(require_scopes("jobs:write"))):
+    """Hide a terminal job (completed/failed/rejected/cancelled) from the
+    default board view. Non-destructive and reversible (see /unarchive) - the
+    job keeps its status and full audit trail, it just stops cluttering
+    'All'/'Done'/'Problems'. Any authenticated agent may archive (it's tidying,
+    not a decision), but only terminal jobs qualify so in-flight work can
+    never be hidden by mistake."""
+    db_client = get_db_client()
+    if not db_client:
+        raise HTTPException(status_code=400, detail="Database not configured")
+
+    job = _load_job_in_org(db_client, job_id, agent)
+    if job.get("status") not in ARCHIVABLE_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Only terminal jobs can be archived (status: {job.get('status')})")
+    if job.get("archived"):
+        return {"success": True, "job": job}
+
+    res = db_client.table("agent_jobs").update({
+        "archived": True,
+        "archived_at": _utc_now_iso(),
+        "archived_by": agent["instance_id"],
+    }).eq("id", job_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Archive failed to persist")
+    archived_job = res.data[0]
+
+    record_event(db_client, job_id, "archived", agent["instance_id"], agent["role"])
+
+    if _broadcast_callback:
+        try:
+            await _broadcast_callback("job_updated", archived_job)
+        except Exception as e:
+            logger.warning(f"Error executing broadcast callback after archive: {e}")
+
+    return {"success": True, "job": archived_job}
+
+
+@router.post("/{job_id}/unarchive")
+async def unarchive_job(job_id: str, agent: dict = Depends(require_scopes("jobs:write"))):
+    """Undo /archive - brings a job back into the default board view."""
+    db_client = get_db_client()
+    if not db_client:
+        raise HTTPException(status_code=400, detail="Database not configured")
+
+    job = _load_job_in_org(db_client, job_id, agent)
+    if not job.get("archived"):
+        return {"success": True, "job": job}
+
+    res = db_client.table("agent_jobs").update({
+        "archived": False,
+        "archived_at": None,
+        "archived_by": None,
+    }).eq("id", job_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Unarchive failed to persist")
+    unarchived_job = res.data[0]
+
+    record_event(db_client, job_id, "unarchived", agent["instance_id"], agent["role"])
+
+    if _broadcast_callback:
+        try:
+            await _broadcast_callback("job_updated", unarchived_job)
+        except Exception as e:
+            logger.warning(f"Error executing broadcast callback after unarchive: {e}")
+
+    return {"success": True, "job": unarchived_job}
+
+
+@router.get("/{job_id}/duplicates")
+async def get_job_duplicates(job_id: str, agent: dict = Depends(require_scopes("jobs:read"))):
+    """Best-effort duplicate check: other jobs with the same title and target
+    role, plus anything already linked via reassignment. Use before manually
+    reposting a failed job's work, or to answer 'did someone already redo
+    this?' Heuristic (exact-title match) - not a substitute for reading the
+    jobs, just a pointer to look closer."""
+    db_client = get_db_client()
+    if not db_client:
+        return []
+    job = _load_job_in_org(db_client, job_id, agent)
+
+    res = db_client.table("agent_jobs").select("*").order("created_at", desc=True).limit(500).execute()
+    all_jobs = [j for j in (res.data or []) if job_org(j) == agent_org(agent)]
+
+    linked_ids = {job.get("reassigned_from_job_id"), job.get("reassigned_to_job_id")} - {None}
+    title = (job.get("title") or "").strip().lower()
+
+    out = []
+    for j in all_jobs:
+        if j.get("id") == job_id:
+            continue
+        same_title = title and (j.get("title") or "").strip().lower() == title \
+            and j.get("target_agent_role") == job.get("target_agent_role")
+        linked = j.get("id") in linked_ids
+        if same_title or linked:
+            out.append({
+                "id": j.get("id"),
+                "title": j.get("title"),
+                "status": j.get("status"),
+                "created_at": j.get("created_at"),
+                "target_agent_role": j.get("target_agent_role"),
+                "relation": "reassignment_link" if linked else "same_title",
+            })
+    return out
+
+
+@router.post("/{job_id}/reassign")
+async def reassign_job(job_id: str, payload: dict, agent: dict = Depends(require_scopes("jobs:approve"))):
+    """Redo a failed/rejected/cancelled job with a different target (or the
+    same target, for a plain retry-elsewhere). Unlike /retry, which re-queues
+    the SAME job row in place, this clones a NEW job so the failed attempt's
+    history stays intact, links the two rows both directions
+    (reassigned_from_job_id / reassigned_to_job_id), and auto-archives the old
+    one - so 'did a new one get done in its place?' has a direct answer:
+    follow reassigned_to_job_id, or call GET /{job_id}/duplicates.
+    Approver roles only, same as retry."""
+    db_client = get_db_client()
+    if not db_client:
+        raise HTTPException(status_code=400, detail="Database not configured")
+    if (agent.get("role") or "").lower() not in utils_mod.get_approver_roles():
+        raise HTTPException(status_code=403, detail="Your role is not permitted to reassign jobs")
+
+    job = _load_job_in_org(db_client, job_id, agent)
+    if job.get("status") not in REASSIGNABLE_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Only failed/rejected/cancelled jobs can be reassigned (status: {job.get('status')})")
+
+    target_agent_role = payload.get("target_agent_role") or job.get("target_agent_role")
+    target_agent_id = payload.get("target_agent_id")
+    instructions = payload.get("instructions")
+    if not target_agent_role:
+        raise HTTPException(status_code=400, detail="target_agent_role is required")
+    requires_approval = bool(job.get("requires_approval")) or target_agent_role.lower() in get_gated_roles()
+    status = (
+        JobStatus.NEEDS_APPROVAL.value
+        if requires_approval
+        else JobStatus.PENDING.value
+    )
+
+    new_data = {
+        "title": payload.get("title") or job.get("title"),
+        "description": instructions if instructions is not None else job.get("description"),
+        "source_agent_id": agent["instance_id"],
+        "source_agent_role": agent["role"],
+        "target_agent_role": target_agent_role,
+        "target_agent_id": target_agent_id,
+        "status": status,
+        "depends_on": [],
+        "input_payload": (
+            {**job.get("input_payload", {}), "prompt": instructions}
+            if instructions is not None else job.get("input_payload") or {}
+        ),
+        "reassigned_from_job_id": job_id,
+    }
+    if agent_org(agent) != "default":
+        new_data["org_id"] = agent_org(agent)
+    if job.get("max_retries") is not None:
+        new_data["max_retries"] = job.get("max_retries")
+    if job.get("escalate_to_role"):
+        new_data["escalate_to_role"] = job.get("escalate_to_role")
+    if requires_approval:
+        new_data["requires_approval"] = True
+
+    ins = db_client.table("agent_jobs").insert(new_data).execute()
+    if not ins.data:
+        raise HTTPException(status_code=500, detail="Reassign failed to create the new job")
+    new_job = ins.data[0]
+
+    record_event(db_client, new_job.get("id"), "created", agent["instance_id"], agent["role"],
+                 {"status": status, "target_agent_role": target_agent_role,
+                  "reassigned_from_job_id": job_id})
+
+    upd = db_client.table("agent_jobs").update({
+        "reassigned_to_job_id": new_job.get("id"),
+        "archived": True,
+        "archived_at": _utc_now_iso(),
+        "archived_by": agent["instance_id"],
+    }).eq("id", job_id).execute()
+    old_job = upd.data[0] if upd.data else job
+
+    record_event(db_client, job_id, "reassigned", agent["instance_id"], agent["role"],
+                 {"reassigned_to_job_id": new_job.get("id")})
+
+    if _broadcast_callback:
+        try:
+            await _broadcast_callback(
+                "job_needs_approval" if requires_approval else "job_pending",
+                new_job,
+            )
+            await _broadcast_callback("job_updated", old_job)
+        except Exception as e:
+            logger.warning(f"Error executing broadcast callback after reassign: {e}")
+    try:
+        if requires_approval:
+            notify_job_needs_approval(
+                job_id=new_job.get("id", "unknown"),
+                title=new_job.get("title", "Untitled job"),
+                to_role=target_agent_role,
+            )
+        else:
+            notify_job_created(
+                job_id=new_job.get("id", "unknown"),
+                title=new_job.get("title", "Untitled job"),
+                to_role=target_agent_role,
+            )
+    except Exception as ntfy_err:
+        logger.debug(f"ntfy addon skipped: {ntfy_err}")
+
+    return {"success": True, "job": new_job, "superseded_job": old_job}
 
 
 @agents_router.get("")
@@ -647,3 +1243,38 @@ async def get_agents(agent: dict = Depends(require_scopes("agents:read"))):
     except Exception as e:
         logger.error(f"Error fetching registered agents: {e}")
         return []
+
+
+@router.post("/{job_id}/renew")
+async def renew_job(job_id: str, payload: dict, agent: dict = Depends(require_scopes("jobs:write"))):
+    db = get_db_client()
+    _load_job_in_org(db, job_id, agent)
+    try:
+        lease = Lease(job_id, payload["lease_id"], int(payload["lease_epoch"]),
+                      payload["lease_incarnation"], agent["instance_id"])
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Full lease claim required")
+    if kill_switch_active() or not renew_lease(db, lease, ttl_seconds=max(1, get_lease_ttl_seconds())):
+        raise HTTPException(status_code=409, detail="FENCED: lease expired, halted, or no longer owned")
+    touch_agent_presence(db, agent)
+    return {"success": True, "renew_after_seconds": max(1, get_lease_ttl_seconds() // 3)}
+
+
+@router.get("/{job_id}/checkpoint")
+async def export_checkpoint(job_id: str, agent: dict = Depends(require_scopes("jobs:read"))):
+    from mco.orchestrator.audit import make_checkpoint, drain_outbox
+    db = get_db_client()
+    _load_job_in_org(db, job_id, agent)
+    drain_outbox(db)
+    try:
+        return make_checkpoint(db, job_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.post("/{job_id}/verify")
+async def verify_job_evidence(job_id: str, payload: dict = None, agent: dict = Depends(require_scopes("jobs:read"))):
+    from mco.orchestrator.audit import verify_chain
+    db = get_db_client()
+    _load_job_in_org(db, job_id, agent)
+    return verify_chain(db, job_id, (payload or {}).get("checkpoint"))
