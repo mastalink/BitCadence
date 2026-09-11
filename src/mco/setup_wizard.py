@@ -1,5 +1,5 @@
 """
-BatonCadence setup - guided wizard + settings menu.
+BitCadence setup - guided wizard + settings menu.
 
 Two ways in, same steps underneath:
 
@@ -36,12 +36,23 @@ console = Console()
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _save(config, key: str, value: str) -> None:
-    """Persist a value; sensitive keys ride the encrypted store when available."""
-    from mco.security import get_secret_store
-    if key in SENSITIVE_KEYS and get_secret_store().is_unlocked:
-        config.set(key, value, encrypt=True)
-    else:
+    """Persist a value; sensitive keys ride the encrypted store when available.
+
+    config.set() now refuses to silently write credentials to plaintext .env.
+    In the wizard we are talking to a human, so when the store genuinely can't
+    take the value (no OS keychain, no master password yet) we say so out loud
+    and store it plainly as a *deliberate*, visible choice - the operator can
+    enable encryption in the Security step and re-save.
+    """
+    try:
         config.set(key, value)
+    except RuntimeError as exc:
+        console.print(f"[yellow]{exc}[/yellow]")
+        console.print(
+            f"[yellow]Storing {key} in plain .env for now - "
+            "enable encryption in the Security step to protect it.[/yellow]"
+        )
+        config.set(key, value, encrypt=False)
 
 
 def _current(config, key: str) -> str:
@@ -83,7 +94,7 @@ def step_operator(config) -> None:
 
 
 def step_profile(config) -> None:
-    _header("Where should BatonCadence keep its data?",
+    _header("Where should BitCadence keep its data?",
             "Local-Only is the right answer unless you know you need a cloud database.")
     console.print("  [1] [bold]On this computer[/bold] (Local-Only)  - no accounts, no setup, works now  [green]<- recommended[/green]")
     console.print("  [2] In the cloud (Cloud-Heavy)      - a Supabase database you provide")
@@ -129,7 +140,11 @@ def step_local_token(config) -> None:
                 console.print("[green][OK][/green] Copied to your clipboard - paste it in the console with Ctrl+V.")
             return
     token = "mco_tok_" + _secrets.token_hex(24)
-    config.set("MCO_LOCAL_TOKEN", token)
+    # Deliberately plaintext: this is the local operator bootstrap token. The
+    # wizard prints it, tells the user "it also lives in the .env file", and
+    # operator tooling greps it from .env - encrypting it would break that
+    # documented contract. It authenticates only against the local gateway.
+    config.set("MCO_LOCAL_TOKEN", token, encrypt=False)
     console.print(f"  Your token: [bold white]{token}[/bold white]")
     if _copy_to_clipboard(token):
         console.print("[green][OK][/green] Saved and copied to your clipboard (paste with Ctrl+V).")
@@ -314,7 +329,7 @@ def _reencrypt_sensitive(config) -> None:
 
 def show_summary(config) -> None:
     from mco.security import get_secret_store
-    table = Table(title="Your BatonCadence setup", show_header=False, border_style="dim")
+    table = Table(title="Your BitCadence setup", show_header=False, border_style="dim")
     table.add_column(style="bold", width=26)
     table.add_column()
     profile = _current(config, "MCO_PROFILE") or "[dim]not set[/dim]"
@@ -336,7 +351,7 @@ def show_summary(config) -> None:
 def _next_steps() -> None:
     console.print(Panel.fit(
         "[bold green]You're set up![/bold green]\n\n"
-        "  1. Double-click the [bold]BatonCadence[/bold] icon on your Desktop\n"
+        "  1. Double-click the [bold]BitCadence[/bold] icon on your Desktop\n"
         "     (or run: [bold]mco serve[/bold])\n"
         "  2. Your browser opens the console\n"
         "  3. Paste your access token (it's in your clipboard) and click Connect\n\n"
@@ -424,7 +439,7 @@ def run_setup(guided: bool = False, menu: bool = False) -> None:
     """Entry point for `mco setup` (and `mco setup --guided` / `--menu`)."""
     config = get_config()
     console.print(Panel.fit(
-        "[bold cyan]BatonCadence Setup[/bold cyan]\n"
+        "[bold cyan]BitCadence Setup[/bold cyan]\n"
         "Configure your orchestrator - guided, or straight to one setting.",
         border_style="cyan"))
     if guided:

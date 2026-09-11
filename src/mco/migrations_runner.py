@@ -115,7 +115,7 @@ def write_combined_script(applied_names: Optional[set] = None) -> Tuple[Path, Li
     if pending:
         body = "\n\n".join(f"-- ==== {n} ====\n{s}" for n, s in pending)
         out.write_text(
-            "-- BatonCadence pending migrations (idempotent; safe to re-run).\n"
+            "-- BitCadence pending migrations (idempotent; safe to re-run).\n"
             "-- Paste into the Supabase SQL editor, or set DATABASE_URL and\n"
             "-- re-run 'mco upgrade' to apply automatically.\n\n" + body,
             encoding="utf-8")

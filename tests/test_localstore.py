@@ -165,9 +165,10 @@ def test_full_lifecycle_on_local_store(tmp_path, monkeypatch):
                      json={"task_id": job_id, "agent_instance_id": "local-operator"})
     assert resp.status_code == 200 and resp.json()["success"] is True
 
+    claim = resp.json()["lease"]
     # Complete with output -> triggers Drumline distillation
     resp = http.put(f"/api/jobs/{job_id}", headers=auth, json={
-        "status": "completed",
+        **claim, "status": "completed",
         "output_payload": {"result": "Root cause: disk full on web-01."},
     })
     assert resp.status_code == 200

@@ -27,7 +27,7 @@ steps:
 
   - id: console-verify
     role: antigravity
-    title: Verify the BatonCadence console end to end
+    title: Verify the BitCadence console end to end
     instructions: |
       Open http://127.0.0.1:18789/console. Verify: demo mode renders all five
       views; Settings -> Connection with your MCO token flips to live mode;

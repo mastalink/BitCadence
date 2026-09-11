@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Email **security@batoncadence.com**. Please do not open a public issue for
+Email **security@bitcadence.ai**. Please do not open a public issue for
 anything exploitable. You will get an acknowledgment within 48 hours and a
 fix or mitigation plan within 7 days for confirmed issues.
 

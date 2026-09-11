@@ -17,15 +17,26 @@ Design rules:
   its own org.
 """
 
+import base64
 import hashlib
+import json
 import logging
 import re
 import secrets as _secrets
+import uuid
+from datetime import datetime, time, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from mco.config import get_config
 from mco.editions import edition_summary
+from mco.orchestrator import llm_connections
+from mco.secret_vault import (
+    SecretNotFoundError,
+    SecretRef,
+    VaultError,
+    build_secret_vault,
+)
 from mco.orchestrator.auth import KNOWN_SCOPES, normalize_scopes, require_scopes
 
 logger = logging.getLogger("mco.orchestrator.admin")
@@ -38,6 +49,8 @@ _IDENT_RE = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")
 agents_admin_router = APIRouter(prefix="/api/agents")
 settings_router = APIRouter(prefix="/api/settings")
 workflows_router = APIRouter(prefix="/api/workflows")
+governance_router = APIRouter(prefix="/api/governance")
+llm_connections_router = APIRouter(prefix="/api/llm-connections")
 
 
 def _db():
@@ -241,7 +254,7 @@ async def delete_agent(instance_id: str, caller: dict = Depends(require_scopes("
 
 SETTING_GROUPS = {
     "governance": {
-        "MCO_KILL_SWITCH": {"type": "bool", "label": "Kill switch (pause all new jobs and leases)"},
+        "MCO_KILL_SWITCH": {"type": "bool", "label": "Stop work (halt active jobs and pause intake)"},
         "MCO_APPROVER_ROLES": {"type": "text", "label": "Approver roles (comma-separated)",
                                "placeholder": "human,admin,operator"},
         "MCO_POLICY_GATED_ROLES": {"type": "text", "label": "Always-gated roles (jobs to these pause for a human)",
@@ -348,12 +361,28 @@ async def put_settings(payload: dict, caller: dict = Depends(require_scopes("adm
     if unknown:
         raise HTTPException(status_code=400,
                             detail=f"Not settable via API: {', '.join(unknown)}")
-    from mco.config import SENSITIVE_KEYS
-    from mco.security import get_secret_store
     config = get_config()
-    store_unlocked = get_secret_store().is_unlocked
+    from mco.orchestrator.audit import record_event
+    from mco.orchestrator.leases import set_paused
+    import uuid
+    db = _db()
+    correlation_id = uuid.uuid4().hex
+    stream = "system:settings:" + _caller_org(caller)
+    # Validate the entire request before making any changes.
+    for key, value in payload.items():
+        meta = _ALL_SETTINGS[key][1]
+        if meta["type"] == "choice" and str(value) not in meta["choices"]:
+            raise HTTPException(status_code=400, detail=f"{key}: invalid choice")
     applied = {}
     touched_connector = False
+    # Emergency stop must not wait on the off-box sink. Commit the local intent
+    # and fence first; mirror acknowledgement may fail afterward, but work stops.
+    pre_halted = None
+    if str(payload.get("MCO_KILL_SWITCH", "")).lower() in _TRUTHY:
+        from mco.orchestrator.audit import _record_event
+        _record_event(db, stream, "stop_requested", caller.get("instance_id"), caller.get("role"),
+                      {"correlation_id": correlation_id})
+        pre_halted = set_paused(db, True, caller)
     for key, value in payload.items():
         meta = _ALL_SETTINGS[key][1]
         if meta["type"] == "bool":
@@ -365,15 +394,39 @@ async def put_settings(payload: dict, caller: dict = Depends(require_scopes("adm
             value = str(value)
         else:
             value = str(value or "")
+        old = config.get(key)
+        detail = {"key": key, "old": bool(old) if meta["type"] == "secret" else old,
+                  "new": bool(value) if meta["type"] == "secret" else value,
+                  "correlation_id": correlation_id, "outcome": "requested"}
+        record_event(db, stream, "setting_change_requested", caller.get("instance_id"), caller.get("role"), detail)
+        if key == "MCO_KILL_SWITCH" and value == "true":
+            halted = pre_halted if pre_halted is not None else set_paused(db, True, caller)
+            for job in halted:
+                record_event(db, job["id"], "halted", caller.get("instance_id"), caller.get("role"),
+                             {"correlation_id": correlation_id})
         if value == "":
             config.delete(key)
             applied[key] = None
         else:
-            # Secrets ride the encrypted store when it's unlocked, mirroring the
-            # terminal wizard; otherwise they land in ~/.mco/.env like any value.
-            encrypt = key in SENSITIVE_KEYS and store_unlocked
-            config.set(key, value, encrypt=encrypt)
+            # A setting labelled secret must never silently downgrade to
+            # plaintext because the local vault happens to be locked.
+            try:
+                config.set(key, value, encrypt=meta["type"] == "secret")
+            except RuntimeError as exc:
+                record_event(db, stream, "setting_change_failed", caller.get("instance_id"), caller.get("role"),
+                             {**detail, "outcome": "failed", "error": type(exc).__name__})
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "The encrypted secret store is locked. Unlock it in "
+                        "`mco setup --menu` before saving credentials."
+                    ),
+                ) from exc
             applied[key] = True if meta["type"] == "secret" else value
+        if key == "MCO_KILL_SWITCH" and value != "true":
+            set_paused(db, False, caller)
+        record_event(db, stream, "setting_changed", caller.get("instance_id"), caller.get("role"),
+                     {**detail, "outcome": "applied"})
         if key in _CONNECTOR_KEYS:
             touched_connector = True
         logger.info(f"Setting {key} changed via API by {caller.get('instance_id')}")
@@ -404,7 +457,254 @@ async def test_connector(payload: dict, caller: dict = Depends(require_scopes("a
     return {"ok": bool(health.get("ok")), "detail": health.get("detail", "")}
 
 
+DEMO_WORKFLOW_NAME = "jde-demo-live-pipeline"
+
+DEMO_PIPELINE_STEPS = [
+    {
+        "id": "plan",
+        "role": "claude",
+        "title": "Demo pipeline: plan the customer change",
+        "instructions": (
+            "Read the pilot brief, identify the fastest credible implementation "
+            "path, and hand Codex a scoped build plan."
+        ),
+        "depends_on": [],
+    },
+    {
+        "id": "build",
+        "role": "codex",
+        "title": "Demo pipeline: build the approved slice",
+        "instructions": (
+            "Implement the planned change, keep the blast radius small, and "
+            "return files changed plus verification output."
+        ),
+        "depends_on": ["plan"],
+    },
+    {
+        "id": "review",
+        "role": "reviewer",
+        "title": "Demo pipeline: test and sign off",
+        "instructions": (
+            "Review the branch, run the requested tests, and approve or return "
+            "findings with concrete reproduction notes."
+        ),
+        "depends_on": ["build"],
+    },
+]
+
+
+@workflows_router.post("/demo-pipeline")
+async def seed_demo_pipeline(caller: dict = Depends(require_scopes("jobs:write"))):
+    """Seed the three-step live sales demo pipeline."""
+    from mco.orchestrator.routes import create_job
+
+    run_id = uuid.uuid4().hex[:12]
+    job_ids = {}
+    for step in DEMO_PIPELINE_STEPS:
+        deps = [job_ids[d] for d in step["depends_on"]]
+        payload = {
+            "title": step["title"],
+            "description": step["instructions"],
+            "target_agent_role": step["role"],
+            "depends_on": deps,
+            "input_payload": {
+                "prompt": step["instructions"],
+                "workflow": {
+                    "name": DEMO_WORKFLOW_NAME,
+                    "run": run_id,
+                    "step": step["id"],
+                },
+                "demo": {
+                    "kind": "pilot-sales-demo",
+                    "sequence": ["claude plans", "codex builds", "reviewer tests"],
+                },
+            },
+            "max_retries": 1 if step["id"] == "build" else 0,
+        }
+        res = await create_job(payload, caller)
+        job = (res or {}).get("job") or {}
+        if not res.get("success") or not job.get("id"):
+            raise HTTPException(
+                status_code=500,
+                detail=f"Demo step '{step['id']}' failed to submit (created so far: {job_ids})",
+            )
+        job_ids[step["id"]] = job["id"]
+    return {
+        "success": True,
+        "workflow": DEMO_WORKFLOW_NAME,
+        "run": run_id,
+        "jobs": job_ids,
+        "message": "Seeded claude plans -> codex builds -> reviewer tests.",
+    }
+
+
 # ── Workflows (mco workflow parity) ──────────────────────────────────────────
+
+def _parse_iso(value, *, end_of_day: bool = False):
+    if not value:
+        return None
+    try:
+        text = str(value).strip()
+        if len(text) == 10:
+            if end_of_day:
+                return datetime.combine(datetime.fromisoformat(text), time.max, tzinfo=timezone.utc)
+            text += "T00:00:00+00:00"
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail=f"Invalid ISO date/time: {value}")
+
+
+def _event_time(ev: dict):
+    return _parse_iso(ev.get("created_at")) if ev.get("created_at") else None
+
+
+def _pdf_escape(text: str) -> str:
+    return str(text).replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _make_cover_pdf(lines: list[str]) -> bytes:
+    content_lines = ["BT", "/F1 12 Tf", "72 760 Td"]
+    for i, line in enumerate(lines[:28]):
+        if i:
+            content_lines.append("0 -18 Td")
+        content_lines.append(f"({_pdf_escape(line)}) Tj")
+    content_lines.append("ET")
+    stream = "\n".join(content_lines)
+    objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+        "/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        f"<< /Length {len(stream.encode('utf-8'))} >>\nstream\n{stream}\nendstream",
+    ]
+    parts = [b"%PDF-1.4\n"]
+    offsets = [0]
+    for idx, obj in enumerate(objects, start=1):
+        offsets.append(sum(len(p) for p in parts))
+        parts.append(f"{idx} 0 obj\n{obj}\nendobj\n".encode("utf-8"))
+    xref_at = sum(len(p) for p in parts)
+    xref = ["xref", f"0 {len(objects) + 1}", "0000000000 65535 f "]
+    xref.extend(f"{off:010d} 00000 n " for off in offsets[1:])
+    trailer = [
+        *xref,
+        "trailer",
+        f"<< /Size {len(objects) + 1} /Root 1 0 R >>",
+        "startxref",
+        str(xref_at),
+        "%%EOF",
+    ]
+    parts.append(("\n".join(trailer) + "\n").encode("utf-8"))
+    return b"".join(parts)
+
+
+@governance_router.post("/evidence-pack")
+async def export_evidence_pack(payload: dict = None,
+                               caller: dict = Depends(require_scopes("jobs:read"))):
+    """Return a PDF/JSON evidence bundle for approval and audit history."""
+    from mco.orchestrator.routes import agent_org, job_org, get_db_client
+
+    body = payload or {}
+    start = _parse_iso(body.get("start_date") or body.get("start"))
+    end = _parse_iso(body.get("end_date") or body.get("end"), end_of_day=True)
+    if start and end and start > end:
+        raise HTTPException(status_code=400, detail="start_date must be before end_date")
+
+    db = get_db_client()
+    if not db:
+        raise HTTPException(status_code=400, detail="Database not configured")
+
+    events = db.table("agent_job_events").select("*").order("created_at", desc=False).execute().data or []
+    jobs = db.table("agent_jobs").select("*").order("created_at", desc=True).limit(500).execute().data or []
+    jobs_by_id = {j.get("id"): j for j in jobs}
+    caller_org = agent_org(caller)
+
+    filtered = []
+    for ev in events:
+        job = jobs_by_id.get(ev.get("job_id"))
+        if caller_org != "default" and (not job or job_org(job) != caller_org):
+            continue
+        ts = _event_time(ev)
+        if start and ts and ts < start:
+            continue
+        if end and ts and ts > end:
+            continue
+        row = dict(ev)
+        if job:
+            row["job_title"] = job.get("title")
+            row["job_status"] = job.get("status")
+            row["target_agent_role"] = job.get("target_agent_role")
+        filtered.append(row)
+
+    pending_approvals = [
+        {
+            "id": j.get("id"),
+            "title": j.get("title"),
+            "target_agent_role": j.get("target_agent_role"),
+            "created_at": j.get("created_at"),
+        }
+        for j in jobs
+        if (caller_org == "default" or job_org(j) == caller_org) and j.get("status") == "needs_approval"
+    ]
+    decisions = [e for e in filtered if e.get("event") in ("approved", "rejected")]
+    exported_at = datetime.now(timezone.utc).isoformat()
+    audit_json = {
+        "exported_at": exported_at,
+        "requested_by": caller.get("instance_id"),
+        "org_id": caller_org,
+        "range": {
+            "start": start.isoformat() if start else None,
+            "end": end.isoformat() if end else None,
+        },
+        "regulatory_basis": {
+            "eu_ai_act_article_12": "Record-keeping: preserve system event logs and job lifecycle audit data.",
+            "eu_ai_act_article_14": "Human oversight: preserve approval requests and operator decisions.",
+        },
+        "summary": {
+            "audit_events": len(filtered),
+            "pending_approvals": len(pending_approvals),
+            "decisions": len(decisions),
+        },
+        "pending_approvals": pending_approvals,
+        "decision_history": decisions,
+        "audit_events": filtered,
+    }
+    cover_pdf = _make_cover_pdf([
+        "BitCadence Compliance Evidence Pack",
+        f"Exported at: {exported_at}",
+        f"Requested by: {caller.get('instance_id')} ({caller.get('role')})",
+        f"Org: {caller_org}",
+        f"Range start: {audit_json['range']['start'] or 'beginning of record'}",
+        f"Range end: {audit_json['range']['end'] or 'latest event'}",
+        "",
+        "EU AI Act Article 12 - record-keeping",
+        "This pack preserves job lifecycle and audit event records.",
+        "",
+        "EU AI Act Article 14 - human oversight",
+        "This pack preserves pending approvals and human decisions.",
+        "",
+        f"Audit events: {audit_json['summary']['audit_events']}",
+        f"Pending approvals: {audit_json['summary']['pending_approvals']}",
+        f"Approval decisions: {audit_json['summary']['decisions']}",
+    ])
+    return {
+        "success": True,
+        "generated_at": exported_at,
+        "summary": audit_json["summary"],
+        "files": [
+            {
+                "filename": "cover.pdf",
+                "mime": "application/pdf",
+                "base64": base64.b64encode(cover_pdf).decode("ascii"),
+            },
+            {
+                "filename": "audit-trail.json",
+                "mime": "application/json",
+                "text": json.dumps(audit_json, indent=2, default=str),
+            },
+        ],
+    }
+
 
 @workflows_router.post("")
 async def submit_workflow_api(payload: dict, caller: dict = Depends(require_scopes("jobs:write"))):
@@ -414,7 +714,6 @@ async def submit_workflow_api(payload: dict, caller: dict = Depends(require_scop
     create_job path the REST API uses - governance, audit, broadcast, and
     Context Exchange run-stamping all included. Returns {step_id: job_id}.
     """
-    import uuid
     from mco.orchestrator.workflows import WorkflowError, load_workflow, topo_order
     from mco.orchestrator.routes import create_job
 
@@ -453,3 +752,182 @@ async def submit_workflow_api(payload: dict, caller: dict = Depends(require_scop
                                 detail=f"Step '{step_id}' failed to submit (created so far: {job_ids})")
         job_ids[step_id] = job["id"]
     return {"success": True, "workflow": name, "run": run_id, "jobs": job_ids}
+# ── LLM Provider Connections ("Model Connections" in the Control Panel) ──────
+#
+# Named, testable connections to LLM providers. See llm_connections.py for
+# why the API key is never stored in the llm_connections table itself.
+
+def _llm_public(row: dict, key_set: bool) -> dict:
+    return {
+        "id": row.get("id"),
+        "name": row.get("name"),
+        "provider": row.get("provider"),
+        "base_url": row.get("base_url"),
+        "model": row.get("model"),
+        "org_id": row.get("org_id") or "default",
+        "created_at": row.get("created_at"),
+        "key_set": key_set,
+    }
+
+
+def _get_llm_row(db, conn_id: str, caller: dict) -> dict:
+    res = db.table("llm_connections").select("*").eq("id", conn_id).execute()
+    rows = res.data or []
+    if not rows or (rows[0].get("org_id") or "default") != _caller_org(caller):
+        raise HTTPException(status_code=404, detail=f"Connection '{conn_id}' not found")
+    return rows[0]
+
+
+def _llm_secret_ref(conn_id: str, caller: dict) -> SecretRef:
+    return SecretRef(
+        org_id=_caller_org(caller),
+        scope=conn_id,
+        name="api_key",
+        legacy_config_key=llm_connections.config_key_for(conn_id),
+    )
+
+
+def _llm_vault(db):
+    return build_secret_vault(get_config(), db)
+
+
+def _vault_http_error(exc: VaultError) -> HTTPException:
+    return HTTPException(status_code=503, detail=str(exc))
+
+
+@llm_connections_router.get("/providers")
+async def list_llm_providers(caller: dict = Depends(require_scopes("admin"))):
+    """Provider metadata for the Add Connection form."""
+    return {p: {"label": m["label"], "base_url_editable": m["base_url"] is None}
+            for p, m in llm_connections.PROVIDERS.items()}
+
+
+@llm_connections_router.get("")
+async def list_llm_connections(caller: dict = Depends(require_scopes("admin"))):
+    db = _db()
+    res = db.table("llm_connections").select("*").execute()
+    rows = [r for r in (res.data or []) if (r.get("org_id") or "default") == _caller_org(caller)]
+    try:
+        vault = _llm_vault(db)
+        return [_llm_public(r, vault.exists(_llm_secret_ref(r["id"], caller)))
+                for r in rows]
+    except VaultError as exc:
+        raise _vault_http_error(exc)
+
+
+@llm_connections_router.post("")
+async def create_llm_connection(payload: dict, caller: dict = Depends(require_scopes("admin"))):
+    name = (payload.get("name") or "").strip()
+    provider = (payload.get("provider") or "").strip().lower()
+    base_url = (payload.get("base_url") or "").strip() or None
+    model = (payload.get("model") or "").strip() or None
+    api_key = (payload.get("api_key") or "").strip()
+
+    if not name or not provider:
+        raise HTTPException(status_code=400, detail="name and provider are required")
+    if not _IDENT_RE.match(name):
+        raise HTTPException(status_code=400,
+                            detail="name may contain only letters, digits, and . _ : - (max 64 chars)")
+    if provider not in llm_connections.PROVIDERS:
+        raise HTTPException(status_code=400,
+                            detail=f"Unknown provider '{provider}'. Valid: {', '.join(sorted(llm_connections.PROVIDERS))}")
+    if provider == "custom" and not base_url:
+        raise HTTPException(status_code=400, detail="base_url is required for a custom connection")
+    if provider != "custom":
+        # Built-in providers use a fixed URL - never let the client steer an
+        # outbound request an operator didn't intend (SSRF guard).
+        base_url = None
+
+    db = _db()
+    row = {"name": name, "provider": provider, "base_url": base_url, "model": model}
+    if _caller_org(caller) != "default":
+        row["org_id"] = _caller_org(caller)
+    res = db.table("llm_connections").insert(row).execute()
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Failed to persist connection")
+    saved = res.data[0]
+
+    if api_key:
+        try:
+            _llm_vault(db).put(_llm_secret_ref(saved["id"], caller), api_key)
+        except VaultError as exc:
+            # Do not leave metadata claiming a usable connection when secret
+            # custody failed (for example because the local vault is locked).
+            db.table("llm_connections").delete().eq("id", saved["id"]).execute()
+            raise _vault_http_error(exc)
+
+    logger.info(f"LLM connection '{name}' ({provider}) created by {caller.get('instance_id')}")
+    return {"success": True, "connection": _llm_public(saved, bool(api_key))}
+
+
+@llm_connections_router.patch("/{conn_id}")
+async def update_llm_connection(conn_id: str, payload: dict,
+                                caller: dict = Depends(require_scopes("admin"))):
+    """Edit name/model/base_url, and optionally rotate the API key. A blank
+    api_key leaves the stored key untouched (mirrors the Settings pattern)."""
+    db = _db()
+    row = _get_llm_row(db, conn_id, caller)
+    update = {}
+    if "name" in payload:
+        name = str(payload["name"]).strip()
+        if not _IDENT_RE.match(name):
+            raise HTTPException(status_code=400,
+                                detail="name may contain only letters, digits, and . _ : - (max 64 chars)")
+        update["name"] = name
+    if "model" in payload:
+        update["model"] = str(payload["model"]).strip() or None
+    if row.get("provider") == "custom" and "base_url" in payload:
+        base_url = str(payload["base_url"]).strip()
+        if not base_url:
+            raise HTTPException(status_code=400, detail="base_url is required for a custom connection")
+        update["base_url"] = base_url
+
+    api_key = str(payload.get("api_key") or "").strip()
+    if api_key:
+        try:
+            _llm_vault(db).put(_llm_secret_ref(conn_id, caller), api_key)
+        except VaultError as exc:
+            raise _vault_http_error(exc)
+
+    if not update and not api_key:
+        raise HTTPException(status_code=400, detail="Nothing to update")
+
+    if update:
+        res = db.table("llm_connections").update(update).eq("id", conn_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=500, detail="Update failed to persist")
+        row = res.data[0]
+
+    try:
+        key_set = _llm_vault(db).exists(_llm_secret_ref(conn_id, caller))
+    except VaultError as exc:
+        raise _vault_http_error(exc)
+    return {"success": True, "connection": _llm_public(row, key_set)}
+
+
+@llm_connections_router.delete("/{conn_id}")
+async def delete_llm_connection(conn_id: str, caller: dict = Depends(require_scopes("admin"))):
+    db = _db()
+    _get_llm_row(db, conn_id, caller)
+    try:
+        _llm_vault(db).delete(_llm_secret_ref(conn_id, caller))
+    except VaultError as exc:
+        raise _vault_http_error(exc)
+    db.table("llm_connections").delete().eq("id", conn_id).execute()
+    logger.info(f"LLM connection '{conn_id}' deleted by {caller.get('instance_id')}")
+    return {"success": True, "id": conn_id}
+
+
+@llm_connections_router.post("/{conn_id}/test")
+async def test_llm_connection(conn_id: str, caller: dict = Depends(require_scopes("admin"))):
+    """Make one cheap, real call to the provider to prove the key/base_url
+    actually authenticate. Never returns the key itself."""
+    db = _db()
+    row = _get_llm_row(db, conn_id, caller)
+    try:
+        api_key = _llm_vault(db).get(_llm_secret_ref(conn_id, caller))
+    except SecretNotFoundError:
+        api_key = ""
+    except VaultError as exc:
+        raise _vault_http_error(exc)
+    return llm_connections.test_connection(row.get("provider"), api_key, row.get("base_url"))

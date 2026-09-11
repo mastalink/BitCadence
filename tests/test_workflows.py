@@ -131,3 +131,38 @@ class TestSubmitWorkflow:
         client = FakeClient(fail_on_title="Build")
         with pytest.raises(WorkflowError, match="build"):
             submit_workflow(client, load_workflow(VALID_YAML))
+
+
+# ── Path injection (CodeQL py/path-injection, alerts #8/#9) ──────────────────
+# load_workflow() reads `source` off disk only when explicitly told to
+# (allow_path=True) - the CLI opts in (a trusted operator's local path);
+# the REST API (admin_routes.submit_workflow_api) never does, so a network
+# caller can never make the gateway read an arbitrary local file.
+
+class TestPathInjectionGuard:
+    def test_default_does_not_read_local_file(self, tmp_path):
+        target = tmp_path / "workflow.yaml"
+        target.write_text(VALID_YAML, encoding="utf-8")
+        # No allow_path: a bare path string is treated as inline YAML text
+        # (which fails to parse), never as a filesystem read.
+        with pytest.raises(WorkflowError):
+            load_workflow(str(target))
+
+    def test_allow_path_false_explicit_does_not_read_local_file(self, tmp_path):
+        target = tmp_path / "workflow.yaml"
+        target.write_text(VALID_YAML, encoding="utf-8")
+        with pytest.raises(WorkflowError):
+            load_workflow(str(target), allow_path=False)
+
+    def test_allow_path_true_reads_local_file(self, tmp_path):
+        target = tmp_path / "workflow.yaml"
+        target.write_text(VALID_YAML, encoding="utf-8")
+        wf = load_workflow(str(target), allow_path=True)
+        assert wf["name"] == "release-pipeline"
+
+    def test_nonexistent_path_with_allow_path_falls_through_to_yaml_parse(self):
+        # Mirrors load_workflow's existing behavior: a non-newline string that
+        # isn't a real path is parsed as YAML text (and fails, since it's not
+        # a valid workflow mapping), not silently swallowed either way.
+        with pytest.raises(WorkflowError):
+            load_workflow("/definitely/not/a/real/path/on/this/machine", allow_path=True)

@@ -1,5 +1,5 @@
 """
-BatonCadence Configuration Management
+BitCadence Configuration Management
 ====================================
 Handles environment profile selections and loading/writing settings
 from local .env files and the encrypted SecretStore.
@@ -33,8 +33,44 @@ SENSITIVE_KEYS = {
     "SERVICENOW_PASSWORD",
     "SERVICENOW_TOKEN",
     "DYNATRACE_API_TOKEN",
+    "MCO_AGENT_TOKEN",
+    "MCO_LOCAL_TOKEN",
+    "MCO_METRICS_TOKEN",
+    "MCO_SESSION_SECRET",
+    "MCO_TRUSTED_HEADER_SECRET",
+    "MCO_VAULT_MASTER_KEY",
     "MCO_WEBHOOK_SECRET",
 }
+
+# Secrets whose names are generated at runtime can never appear in a static
+# set. LLM provider credentials, for instance, are stored per connection as
+# LLM_CONN_<id>_API_KEY. Treat anything that *looks* like a credential as one.
+# Suffix-anchored on purpose: a bare substring match would flag names like
+# MAX_TOKENS_LIMIT. Kept as a module constant because tests assert against it.
+SENSITIVE_KEY_MARKERS = ("_API_KEY", "_PASSWORD", "_SECRET", "_TOKEN", "_PRIVATE_KEY")
+
+
+def is_sensitive_key(key: str) -> bool:
+    """Should this configuration key be treated as a credential?
+
+    ONE predicate for masking, storage, and retrieval. They used to disagree:
+    `get_masked_config` matched on name patterns while `set()` consulted only
+    the static set, so a runtime-named secret such as `LLM_CONN_x_API_KEY` was
+    masked in the UI *and written to .env in clear text*. Dynamic names (model
+    connections, MCO_SECRET_* vault refs) can never be enumerated statically,
+    so well-known suffixes are treated as sensitive too.
+
+    NOTE: this function was briefly defined twice - two branches each added
+    their own copy, and Python's silent last-def-wins meant one shadowed the
+    other with slightly different coverage. If you're adding a rule, extend
+    THIS definition; do not add another.
+    """
+    upper = str(key or "").upper()
+    return (
+        upper in SENSITIVE_KEYS
+        or upper.startswith("MCO_SECRET_")
+        or upper.endswith(SENSITIVE_KEY_MARKERS)
+    )
 
 
 # The global config home: works from any directory, any terminal. Lives next
@@ -109,7 +145,7 @@ class ConfigManager:
     def get(self, key: str, default: Any = None) -> Any:
         """Retrieve a configuration value."""
         # Check if the secret store is unlocked and has the key
-        if key in SENSITIVE_KEYS and self._store.is_unlocked:
+        if is_sensitive_key(key) and self._store.is_unlocked:
             secret_val = self._store.get(key)
             # Skip the sentinel so a poisoned store can't mask the real .env value.
             if secret_val is not None and secret_val != "encrypted_in_secret_store":
@@ -117,22 +153,87 @@ class ConfigManager:
 
         return self._cached_config.get(key, default)
 
-    def set(self, key: str, value: str, encrypt: bool = False) -> None:
+    def set(self, key: str, value: str, encrypt: Optional[bool] = None) -> None:
         """Set a configuration parameter.
 
-        If encrypt is True, stores it in the encrypted SecretStore.
-        Otherwise, writes it as a plaintext entry in the local .env.
+        Credentials are encrypted by default. `encrypt=None` (the default)
+        means "encrypt if this looks like a secret and the store can take it";
+        pass True to require encryption, or False to force plaintext.
+
+        Callers previously had to opt in with `encrypt=True`, so any code path
+        that forgot wrote a credential to .env in clear text - which is exactly
+        how LLM provider API keys ended up there. Defaulting the other way
+        makes forgetting safe.
         """
+        sensitive = is_sensitive_key(key)
+        if encrypt is None:
+            encrypt = sensitive
+
         if encrypt:
-            if not self._store.is_unlocked:
-                raise RuntimeError("Secret store must be unlocked to set encrypted values.")
+            self._ensure_store_ready(key)
             self._store.set(key, value)
             # Remove any plaintext entry in local .env to prevent leaks
             self._update_dotenv_file(key, "encrypted_in_secret_store")
             self._cached_config[key] = "encrypted_in_secret_store"
-        else:
-            self._update_dotenv_file(key, value)
-            self._cached_config[key] = value
+            return
+
+        self._update_dotenv_file(key, value)
+        self._cached_config[key] = value
+
+    def _ensure_store_ready(self, key: str) -> None:
+        """Make the secret store usable, or refuse the write with instructions.
+
+        Credentials are never written to plaintext .env. There used to be a
+        warned fallback, but a warning in a log nobody reads is not a control -
+        the credential still landed on disk in the clear, and the security
+        scanner rightly kept flagging it.
+
+        On Windows the store can be provisioned automatically: generate a
+        random master key, persist it to Credential Manager FIRST (so an
+        interrupt can never orphan the store - the failure mode the setup
+        wizard explicitly guards against), then initialize. A fresh Windows
+        install therefore keeps working with zero prompts. Elsewhere there is
+        no OS keychain provider, so we refuse with the exact commands to fix
+        it rather than choosing between an orphaned store and a plaintext
+        secret on the operator's behalf.
+        """
+        if self._store.is_unlocked:
+            return
+        if self._store.is_initialized():
+            # Store exists but no key source unlocked it - do not stack a new
+            # store on top of an orphaned one; that loses data quietly.
+            raise RuntimeError(
+                f"Cannot store credential {key!r}: the encrypted secret store exists "
+                f"but is locked. Unlock it (set MCO_MASTER_PASSWORD, or run "
+                f"'mco setup --menu' -> Security), then retry."
+            )
+        if os.name == "nt":
+            import secrets as _secrets
+            from mco.security import WindowsCredentialProvider
+            master_key = _secrets.token_bytes(32)
+            try:
+                # Persist the key BEFORE the store exists: an interrupt between
+                # these two calls must leave "no store", never "store, no key".
+                WindowsCredentialProvider.store_key(master_key)
+                self._store.initialize(master_key)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Cannot store credential {key!r}: automatic secret-store setup "
+                    f"failed ({exc}). Run 'mco setup --menu' -> Security to set it "
+                    f"up with a master password."
+                ) from exc
+            logger.info(
+                "Encrypted secret store provisioned automatically "
+                "(key held by Windows Credential Manager)."
+            )
+            return
+        raise RuntimeError(
+            f"Cannot store credential {key!r}: no encrypted secret store is set up "
+            f"and this platform has no OS keychain to hold a key automatically. "
+            f"Either set MCO_MASTER_PASSWORD and run 'mco setup --menu' -> Security "
+            f"to create the store, or pass encrypt=False to store this value in "
+            f"plaintext .env deliberately."
+        )
 
     def delete(self, key: str) -> None:
         """Delete a configuration parameter."""
@@ -144,6 +245,10 @@ class ConfigManager:
 
     def _update_dotenv_file(self, key: str, value: Optional[str]) -> None:
         """Write or remove a key in the local .env file atomically."""
+        if any(ch in str(key) for ch in ("\r", "\n", "=")):
+            raise ValueError("Configuration keys may not contain newlines or '='")
+        if value is not None and any(ch in str(value) for ch in ("\r", "\n")):
+            raise ValueError("Configuration values may not contain newlines")
         lines = []
         if self._env_path.is_file():
             lines = self._env_path.read_text(encoding="utf-8").splitlines()
@@ -184,7 +289,7 @@ class ConfigManager:
             val = self.get(k)
             if not val:
                 continue
-            if k in SENSITIVE_KEYS or "API_KEY" in k or "PASSWORD" in k or "SECRET" in k:
+            if is_sensitive_key(k):
                 if val == "encrypted_in_secret_store":
                     masked[k] = "[ENCRYPTED]"
                 elif len(val) <= 4:

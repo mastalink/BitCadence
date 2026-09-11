@@ -1,0 +1,10 @@
+@echo off
+REM Antigravity (antigravity-beast) worker run - invoked by `mco wake`.
+REM Drives the Antigravity IDE desktop app. The previous gemini-CLI executor is
+REM dead: it now refuses to start with IneligibleTierError and tells you to
+REM migrate to the Antigravity suite. Prior version kept as .bak-gemini.
+REM
+REM No `>> log` redirect here on purpose: it pins the log open for the whole
+REM run, and one stale handle then killed every later run before it dispatched.
+REM The runner appends to the log itself, with a per-process fallback.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Users\masta\.mco\bin\antigravity-worker-run.ps1" -Instance antigravity-beast

@@ -1,1 +1,1 @@
-"""Unit tests for the BatonCadence package."""
+"""Unit tests for the BitCadence package."""

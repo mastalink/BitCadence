@@ -1,0 +1,10 @@
+The stop control
+
+[00s]
+This shorter recording introduces the stop control in the live console. The operator enables Stop work and saves the setting.
+
+[15s]
+The setting pauses intake and governs active attempts. This clip shows the control being saved; our separate active kill switch demo shows a running job being halted.
+
+[29s]
+Turning the control off allows new work again. It does not automatically retry halted jobs, and it does not shut down the AWS machines.

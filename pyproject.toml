@@ -1,7 +1,7 @@
 [project]
-name = "batoncadence"
+name = "bitcadence"
 version = "0.3.0"
-description = "BatonCadence: a governed job board for AI agents - approval gates, immutable audit, and Drumline shared memory. Every agent. One baton."
+description = "BitCadence: a governed job board for AI agents - approval gates, immutable audit, and Drumline shared memory. Every agent. One beat."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -23,33 +23,53 @@ dependencies = [
     "uvicorn>=0.20.0",
     "supabase>=1.0.0,<3.0.0",
     "httpx>=0.24.0",
+    "authlib>=1.3.2,<2.0.0",
+    "itsdangerous>=2.1.2,<3.0.0",
     "cryptography>=41.0.0",
     "rich>=13.0.0",
     "typer>=0.9.0",
     "loguru>=0.7.0",
     "python-dotenv>=1.0.0",
     "websockets>=11.0",
-    "mcp>=1.2.0",
+    # Upper bound is deliberate: mcp 2.0.0 (the 2026-07-28 spec) removed
+    # mcp.server.fastmcp entirely. mcp_server.py supports both majors via a
+    # compat import, but an unbounded pin would let a future 3.x break a fresh
+    # install silently - which is exactly what >=1.2.0 alone did the day 2.0.0
+    # shipped.
+    "mcp>=1.2.0,<3.0.0",
     "pyyaml>=6.0",
     "requests>=2.28.0",
     "psutil>=5.9.0",
+    "tomli>=2.0.0; python_version < '3.11'",
+    # Windows ships no IANA timezone database, so stdlib zoneinfo cannot resolve
+    # names like "America/New_York" - which every timezone-aware schedule needs.
+    "tzdata; sys_platform == 'win32'",
 ]
 
 [project.urls]
-Homepage = "https://batoncadence.com"
-Repository = "https://github.com/mastalink/Batoncadence"
-Documentation = "https://github.com/mastalink/Batoncadence/tree/main/docs"
-Changelog = "https://github.com/mastalink/Batoncadence/blob/main/CHANGELOG.md"
+Homepage = "https://bitcadence.ai"
+Repository = "https://github.com/mastalink/BitCadence"
+Documentation = "https://github.com/mastalink/BitCadence/tree/main/docs"
+Changelog = "https://github.com/mastalink/BitCadence/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
+desktop = ["pystray>=0.19.5", "Pillow>=10.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
 ]
+# Optional desktop status light. Headless servers must not need this.
+tray = [
+    "pystray>=0.19.5",
+    "pillow>=10.0.0",
+]
 
 [project.scripts]
 mco = "mco.cli:main"
+
+[project.gui-scripts]
+bitcadence-desktop = "mco.desktop.app:main"
 
 [build-system]
 requires = ["setuptools>=61.0.0", "wheel"]

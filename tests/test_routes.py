@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 import mco.orchestrator.routes as routes_mod
 from mco.orchestrator.auth import hash_token, require_agent
-from mco.orchestrator.routes import router, agents_router, events_router
+from mco.orchestrator.routes import router, agents_router, events_router, version_router
 
 
 # ── App factory ──────────────────────────────────────────────────────────────
@@ -16,6 +16,7 @@ def _build_app() -> FastAPI:
     app.include_router(router)
     app.include_router(agents_router)
     app.include_router(events_router)
+    app.include_router(version_router)
     return app
 
 
@@ -26,6 +27,7 @@ class FakeDB:
 
     def __init__(self):
         self._jobs: dict = {}
+        self._extra = {}
         self._agents: list = []
         self._events: list = []
         self._context: list = []
@@ -93,6 +95,11 @@ class FakeDB:
         self._q_insert_data = dict(data)
         return self
 
+    def upsert(self, data):
+        self._q_op = "upsert"
+        self._q_insert_data = dict(data)
+        return self
+
     def update(self, data):
         self._q_op = "update"
         self._q_update_data = dict(data)
@@ -121,6 +128,15 @@ class FakeDB:
         t = self._q_table
         op = self._q_op
 
+        if t.startswith("mco_"):
+            rows = self._extra.setdefault(t, [])
+            if op in ("insert", "upsert"):
+                data = dict(self._q_insert_data)
+                if op == "upsert":
+                    rows[:] = [r for r in rows if r.get("id") != data.get("id")]
+                rows.append(data)
+                return R([data])
+            return R([r for r in rows if all(r.get(k) == v for k,v in self._q_conds.items())])
         if t == "agent_registry":
             if op == "insert":
                 data = dict(self._q_insert_data)
@@ -200,6 +216,24 @@ class FakeDB:
 
 TOKEN = "test-token-abc"
 AGENT = {"instance_id": "agent-1", "role": "codex", "status": "online"}
+
+
+class TestVersionRoute:
+    def test_version_route_returns_package_version_and_git_commit_key(self):
+        resp = TestClient(_build_app()).get("/api/version")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["version"] == "0.3.0"
+        assert set(body) == {"version", "git_commit"}
+
+    def test_version_route_uses_package_metadata_without_pyproject(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(routes_mod.importlib_metadata, "version", lambda name: "1.2.3")
+        monkeypatch.setattr(routes_mod, "_repo_root", lambda: tmp_path)
+
+        resp = TestClient(_build_app()).get("/api/version")
+
+        assert resp.status_code == 200
+        assert resp.json()["version"] == "1.2.3"
 
 
 # ── Auth-enforcement tests (real require_agent, no dependency override) ───────
@@ -291,6 +325,41 @@ class TestDropboxPolicy:
         )
         resp = self.http.put("/api/jobs/j99", json={"status": "completed"})
         assert resp.status_code == 403
+
+    def test_lease_403_wrong_role(self):
+        # AGENT is role "codex"; a job addressed to "claude" must not be leasable.
+        self.db.add_job(id="claude-job", target_agent_role="claude", status="pending")
+        resp = self.http.post("/api/jobs/lease", json={
+            "task_id": "claude-job",
+            "agent_instance_id": "agent-1",
+        })
+        assert resp.status_code == 403
+
+    def test_lease_403_sibling_instance_of_same_role(self):
+        # Same role (codex) but the job is reserved for a *specific* other
+        # instance. The inbox hides it from agent-1, so lease must 403 too -
+        # this is the case a naive check (role-match only) would wrongly allow.
+        self.db.add_job(
+            id="sibling-job",
+            target_agent_role="codex",
+            target_agent_id="codex-sibling",
+            status="pending",
+        )
+        resp = self.http.post("/api/jobs/lease", json={
+            "task_id": "sibling-job",
+            "agent_instance_id": "agent-1",
+        })
+        assert resp.status_code == 403
+
+    def test_lease_200_correctly_addressed(self):
+        # A job addressed to the caller's role (no specific instance) leases fine.
+        self.db.add_job(id="mine", target_agent_role="codex", status="pending")
+        resp = self.http.post("/api/jobs/lease", json={
+            "task_id": "mine",
+            "agent_instance_id": "agent-1",
+        })
+        assert resp.status_code == 200
+        assert resp.json().get("success") is True
 
 
 # ── Success and validation tests ──────────────────────────────────────────────

@@ -112,16 +112,24 @@ def remember(
     # Dedup: identical title|content|role returns the existing row instead of
     # inserting a duplicate. Falls back to a plain insert on DBs that predate
     # the content_hash migration.
+    #
+    # The match must be tenant-scoped, or one org's entry would be handed back
+    # to another org that remembered the same text. org_id is compared in
+    # Python rather than filtered in the query because the default org is
+    # stored as an ABSENT column (see the tenant stamp above), which no
+    # .eq("org_id", ...) can express.
+    effective_org = org_id or "default"
     h = content_hash(data["title"], data["content"], role=role or None)
     try:
         existing = (
             db_client.table(CONTEXT_TABLE)
-            .select("id")
+            .select("id,org_id")
             .eq("content_hash", h)
             .execute()
         )
-        if existing.data:
-            return existing.data[0]
+        for row in (existing.data or []):
+            if (row.get("org_id") or "default") == effective_org:
+                return row
         data["content_hash"] = h
     except Exception:
         logger.debug("content_hash dedup unavailable (missing migration?) — inserting without hash")

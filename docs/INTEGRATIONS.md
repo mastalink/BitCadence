@@ -1,6 +1,6 @@
-# BatonCadence Enterprise Integrations
+# BitCadence Enterprise Integrations
 
-How to connect BatonCadence to the agent surfaces of enterprise platforms -
+How to connect BitCadence to the agent surfaces of enterprise platforms -
 **ServiceNow** (ITSM control tower), **Dynatrace** (observability/AIOps), and
 any other system via the **generic webhook contract**. This is the
 "centralized orchestration and monitoring of multiple AI agents across
