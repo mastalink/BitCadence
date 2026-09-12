@@ -25,7 +25,7 @@ jobs:
       BC_TEST_POSTGREST_URL: http://localhost:53000
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: pip install -e '.[dev]' 'psycopg[binary]' boto3
