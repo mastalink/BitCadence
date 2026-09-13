@@ -24,14 +24,18 @@ stand it up.
 2. **IAM Identity Center** enabled (Managed Grafana uses it for sign-in).
 3. Optional pavilions: a **ServiceNow** instance (a free Personal Developer Instance works) and/or a **Dynatrace** tenant (trial works) with a token scoped `problems.read`, `problems.write`, `metrics.ingest`.
 4. `terraform >= 1.6`, `aws` CLI v2, Docker.
+5. A deployment-capable AWS profile, an issued ACM certificate in the deployment region, and a DNS hostname covered by that certificate. The public listener requires HTTPS; HTTP redirects without accepting console requests.
 
 ## Apply
 
 ```bash
 cd infra/aws
-cp terraform.tfvars.example terraform.tfvars   # edit: alert_email, bedrock_model_id, tenants
+cp terraform.tfvars.example terraform.tfvars   # fill alert email, model, hostname, certificate ARN, image tag
 terraform init
-terraform apply
+terraform validate
+# First deployment only: create repositories before services refer to images.
+terraform plan -target=aws_ecr_repository.gateway -target=aws_ecr_repository.worker -target=aws_ecr_repository.conductor -out=ecr.plan
+terraform apply ecr.plan
 ```
 
 Then build and push the three images (ECR URLs are in `terraform output ecr`):
@@ -39,14 +43,22 @@ Then build and push the three images (ECR URLs are in `terraform output ecr`):
 ```bash
 ACCT=$(aws sts get-caller-identity --query Account --output text)
 REG=$(terraform output -raw region 2>/dev/null || echo us-east-1)
+TAG=$(git rev-parse HEAD) # Set image_tag in terraform.tfvars to this exact value.
 aws ecr get-login-password --region $REG | docker login --username AWS --password-stdin $ACCT.dkr.ecr.$REG.amazonaws.com
 cd ../..   # repo root - the Dockerfiles copy src/ from here
 for c in gateway worker conductor; do
-  docker build -f infra/aws/$c/Dockerfile -t $(cd infra/aws && terraform output -json ecr | jq -r .$c):latest . && \
-  docker push $(cd infra/aws && terraform output -json ecr | jq -r .$c):latest
+  REPO=$(cd infra/aws && terraform output -json ecr | jq -r .$c)
+  docker build -f infra/aws/$c/Dockerfile -t "$REPO:$TAG" . && docker push "$REPO:$TAG"
 done
-cd infra/aws && aws ecs update-service --cluster $(terraform output -raw cluster 2>/dev/null || echo bitcadence-epcot) --service gateway --force-new-deployment --region $REG
+cd infra/aws
+terraform plan -out=rollout.plan
+terraform show rollout.plan   # Review actual resources and persistent retention.
+terraform apply rollout.plan
 ```
+
+Create the DNS CNAME from `console_hostname` to `terraform output -raw console_dns_target`.
+Wait for `/readyz` and verify the console over HTTPS before triggering chaos.
+Build from a clean commit; immutable ECR tags prevent replacing a previously reviewed image.
 
 Confirm the two SNS subscription emails. Then run the conductor once without waiting for the schedule:
 
@@ -60,9 +72,10 @@ Open `terraform output console_url`, sign in with `MCO_LOCAL_TOKEN` from `terraf
 
 ## First-apply risks — read before you `apply`
 
-These are the seams I could not exercise against a live AWS account from here. Each is small; each is real.
+These are the first-apply seams. The PostgREST path below is locally exercised;
+the remaining AWS-managed integrations still need a live-account rehearsal.
 
-1. **PostgREST ⇄ Supabase client.** The gateway's Supabase client is pointed at nginx→PostgREST with a JWT minted by the entrypoint (`role: bitcadence`). Two things to verify on first boot: PostgREST accepts the JWT (`PGRST_JWT_SECRET` matches `JWT_SECRET`), and the SQL migrations apply cleanly to a bare Postgres — they were written against Supabase and may reference `auth.` schema objects. If they do, the fix is to strip those references in a `migrations/` overlay, not to install Supabase. **Escape hatch:** `store_backend = "local"` removes this seam entirely.
+1. **PostgREST ⇄ Supabase client.** This seam is exercised locally against PostgreSQL 16, `postgrest/postgrest:v12.2.3`, and `nginx:1.27-alpine`. The gateway mints a JWT with `role: bitcadence`; `PGRST_JWT_SECRET` must match `JWT_SECRET`. A bare RDS database does not have the three core objects that the additive project migrations assume, so the gateway first applies the idempotent SQL in `gateway/migrations-overlay/`, then runs the normal migrations, seeds the `epcot-operator` registry row from `MCO_LOCAL_TOKEN`, and reloads PostgREST's schema cache. Keep that overlay in the gateway image. **Escape hatch:** `store_backend = "local"` removes this seam entirely.
 2. **Migration entry point.** The entrypoint calls `mco.migrations_runner.apply_postgres(DATABASE_URL)`. If that signature has moved, the gateway task exits at boot with the traceback in CloudWatch under `/ecs/<name>`.
 3. **Events table columns.** The ledger shipper orders `agent_job_events` by `(created_at, id)`. If `id` is not text-castable or `created_at` is named differently, the shipper logs `shipper.error` and the gateway keeps serving — the vault just stays empty until the query is corrected.
 4. **Agent registration.** The conductor registers workers via `POST /api/agents` and expects the token in the response. If the field name differs, the conductor logs it and the workers stay unauthenticated.

@@ -1,0 +1,13 @@
+Approval before execution
+
+[00s]
+This is Bit Cadence running in our AWS test environment. The important question is simple: who decides when an automated worker is allowed to act?
+
+[18s]
+Here, we create a harmless job and require human approval. The job waits. Being assigned to a worker does not give that worker permission to skip the approval step.
+
+[43s]
+The operator can inspect the request before releasing it. Once approved, the cloud worker picks up the job and performs a checksum calculation.
+
+[62s]
+The job completes, and its history records approval and execution. This demonstrates human control over real cloud work. It is a control demonstration, not a claim about artificial intelligence reasoning.

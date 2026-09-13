@@ -6,18 +6,18 @@ const STATUS_COPY = {
   expert: {
     waiting: "Waiting", needs_approval: "Needs approval", pending: "Pending",
     leased: "Leased", in_progress: "In progress", completed: "Completed",
-    failed: "Failed", rejected: "Rejected", online: "Online", offline: "Offline",
+    halted: "Halted", cancelled: "Cancelled", failed: "Failed", rejected: "Rejected", online: "Online", offline: "Offline",
   },
   plain: {
     waiting: "Waiting its turn", needs_approval: "Needs your OK", pending: "Ready to start",
     leased: "Picked up", in_progress: "Working…", completed: "Done",
-    failed: "Hit a problem", rejected: "Declined", online: "Online", offline: "Away",
+    halted: "Stopped by operator", cancelled: "Called off", failed: "Hit a problem", rejected: "Declined", online: "Online", offline: "Away",
   },
 };
 const STATUS_KIND = {
   waiting: "waiting", needs_approval: "approval", pending: "pending",
   leased: "active", in_progress: "active", completed: "done",
-  failed: "failed", rejected: "rejected", online: "done", offline: "rejected",
+  halted: "failed", cancelled: "rejected", failed: "failed", rejected: "rejected", online: "done", offline: "rejected",
 };
 
 function StatusBadge({ status, tone = "expert", pulse }) {

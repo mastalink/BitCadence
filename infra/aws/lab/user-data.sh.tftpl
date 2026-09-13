@@ -1,0 +1,61 @@
+#!/bin/bash
+set -euo pipefail
+# Independent local timer backs up the external EventBridge stop schedule.
+shutdown -h +120
+cat >/etc/systemd/system/bitcadence-autostop.service <<'UNIT'
+[Unit]
+Description=Stop the bounded BitCadence test session
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/shutdown -h now
+UNIT
+cat >/etc/systemd/system/bitcadence-autostop.timer <<'UNIT'
+[Unit]
+Description=Two-hour ceiling on every BitCadence lab boot
+[Timer]
+OnBootSec=120min
+Unit=bitcadence-autostop.service
+[Install]
+WantedBy=timers.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now bitcadence-autostop.timer
+dnf install -y docker
+systemctl enable --now docker
+%{ if role == "hub" ~}
+DATA_SERIAL=$(echo '${data_volume}' | tr -d '-')
+DATA_DEVICE=''
+for i in $(seq 1 90); do
+  DATA_DEVICE=$(lsblk -nr -o NAME,SERIAL | awk -v serial="$DATA_SERIAL" '$2 == serial {print "/dev/" $1; exit}')
+  [ -n "$DATA_DEVICE" ] && break
+  sleep 2
+done
+[ -n "$DATA_DEVICE" ] || { echo 'Hub data volume was not attached'; exit 1; }
+if ! blkid "$DATA_DEVICE" >/dev/null 2>&1; then
+  [ -z "$(wipefs -n --noheadings "$DATA_DEVICE")" ] || exit 1
+  mkfs.ext4 "$DATA_DEVICE"
+fi
+mkdir -p /opt/bitcadence
+echo "UUID=$(blkid -s UUID -o value "$DATA_DEVICE") /opt/bitcadence ext4 defaults,nofail 0 2" >>/etc/fstab
+mount /opt/bitcadence
+%{ endif ~}
+install -d -m 700 -o 1000 -g 1000 /opt/bitcadence/data
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${account}.dkr.ecr.us-east-1.amazonaws.com
+docker pull ${image}
+cat >/etc/systemd/system/bitcadence.service <<'UNIT'
+[Unit]
+Description=BitCadence cloud lab ${role}
+After=docker.service network-online.target
+Requires=docker.service
+[Service]
+Restart=on-failure
+RestartSec=15
+ExecStartPre=-/usr/bin/docker rm -f bitcadence
+ExecStart=/usr/bin/docker run --name bitcadence --network host --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=64m --memory ${role == "hub" ? "1400m" : "650m"} --log-opt max-size=10m --log-opt max-file=2 -v /opt/bitcadence/data:/mco -e HOME=/mco -e AWS_REGION=us-east-1 -e LAB_ROLE=${role} -e MCO_EVIDENCE_BUCKET=${evidence} -e LAB_MAX_SECONDS=600 ${image}
+ExecStop=/usr/bin/docker stop -t 20 bitcadence
+TimeoutStopSec=30
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now bitcadence

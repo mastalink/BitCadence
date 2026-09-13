@@ -1,0 +1,13 @@
+Where everything lives
+
+[00s]
+Think of this cloud lab as a small supervised team. Your computer is the operator's desk. A private tunnel connects your browser to the hub in AWS.
+
+[17s]
+The hub assigns work and checks permission. Two separate cloud machines act as workers. They connect to the hub privately, using separate identities.
+
+[32s]
+Audit evidence is stored separately in Amazon S three. Deployments use temporary credentials, and the lab has timed shutdown safeguards.
+
+[44s]
+This diagram explains the architecture. It is not a live status display, and this small test environment is not yet a highly available production service.

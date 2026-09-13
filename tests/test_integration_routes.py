@@ -189,7 +189,7 @@ class TestEscalationBridge:
         monkeypatch.setattr(connectors_pkg, "get_connector",
                             lambda name: _ctx().stub if name == "stub" else None)
 
-        _ctx().db.add_job(id="es1", title="Broken job", status="in_progress",
+        _ctx().db.add_job(id="es1", title="Broken job", status="in_progress", leased_by_instance_id="agent-1",
                           target_agent_role="codex", max_retries=0,
                           escalate_to_role="human")
         resp = _ctx().http.put("/api/jobs/es1", json={"status": "failed", "error_message": "kaput"})
@@ -211,7 +211,7 @@ class TestEscalationBridge:
                             lambda *a, **k: FakeConfig(MCO_ESCALATION_CONNECTOR="stub"))
         monkeypatch.setattr(connectors_pkg, "get_connector", lambda name: ExplodingConnector())
 
-        _ctx().db.add_job(id="es2", title="Broken", status="in_progress",
+        _ctx().db.add_job(id="es2", title="Broken", status="in_progress", leased_by_instance_id="agent-1",
                           target_agent_role="codex")
         resp = _ctx().http.put("/api/jobs/es2", json={"status": "failed", "error_message": "x"})
         assert resp.status_code == 200

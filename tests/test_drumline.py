@@ -266,7 +266,7 @@ class TestContextRoutes:
     def test_completed_job_flows_into_shared_context(self):
         """The full loop: job completes -> distilled into Drumline -> recallable,
         with a context_distilled audit event."""
-        self.db.add_job(id="loop1", title="Patch nginx CVE", status="in_progress",
+        self.db.add_job(id="loop1", title="Patch nginx CVE", status="in_progress", leased_by_instance_id="agent-1",
                         target_agent_role="codex",
                         input_payload={"prompt": "patch CVE-2026-1234"})
         resp = self.http.put("/api/jobs/loop1", json={

@@ -130,7 +130,7 @@ class TestAuditTrail(_GovernanceBase):
         assert "leased" in self._events("jl1")
 
     def test_status_change_is_audited_with_actor(self):
-        self.db.add_job(id="ju1", status="in_progress", target_agent_role="codex")
+        self.db.add_job(id="ju1", status="in_progress", leased_by_instance_id="agent-1", target_agent_role="codex")
         self.http.put("/api/jobs/ju1", json={"status": "completed"})
         events = self.http.get("/api/jobs/ju1/events").json()
         assert any(e["event"] == "status:completed" and e["actor_id"] == "agent-1" for e in events)
@@ -168,7 +168,7 @@ class TestManualRetry(_GovernanceBase):
         assert resp.status_code == 403
 
     def test_non_terminal_job_400(self):
-        self.db.add_job(id="mr4", status="in_progress", target_agent_role="codex")
+        self.db.add_job(id="mr4", status="in_progress", leased_by_instance_id="agent-1", target_agent_role="codex")
         self._as(HUMAN_AGENT)
         resp = self.http.post("/api/jobs/mr4/retry")
         assert resp.status_code == 400
@@ -216,7 +216,7 @@ class TestCancel(_GovernanceBase):
         assert resp.status_code == 404
 
     def test_state_change_during_cancel_returns_conflict(self, monkeypatch):
-        self.db.add_job(id="c5", status="in_progress", target_agent_role="codex")
+        self.db.add_job(id="c5", status="in_progress", leased_by_instance_id="agent-1", target_agent_role="codex")
         self._as(HUMAN_AGENT)
         original_load = routes_mod._load_job_in_org
 
@@ -248,7 +248,7 @@ class TestArchive(_GovernanceBase):
         assert any(j["id"] == "a1" for j in listed_all)
 
     def test_cannot_archive_non_terminal_job(self):
-        self.db.add_job(id="a2", status="in_progress", target_agent_role="codex")
+        self.db.add_job(id="a2", status="in_progress", leased_by_instance_id="agent-1", target_agent_role="codex")
         resp = self.http.post("/api/jobs/a2/archive")
         assert resp.status_code == 400
 
@@ -378,7 +378,7 @@ class TestEscalation(_GovernanceBase):
         assert "retried" in events
 
     def test_exhausted_retries_escalates_to_role(self):
-        self.db.add_job(id="es1", title="Flaky task", status="in_progress",
+        self.db.add_job(id="es1", title="Flaky task", status="in_progress", leased_by_instance_id="agent-1",
                         target_agent_role="codex", max_retries=1, retry_count=1,
                         escalate_to_role="human", description="orig instructions")
         self.http.put("/api/jobs/es1", json={"status": "failed", "error_message": "still broken"})
@@ -392,13 +392,13 @@ class TestEscalation(_GovernanceBase):
         assert "escalated" in events
 
     def test_failed_job_without_policy_stays_failed(self):
-        self.db.add_job(id="pl1", status="in_progress", target_agent_role="codex")
+        self.db.add_job(id="pl1", status="in_progress", leased_by_instance_id="agent-1", target_agent_role="codex")
         self.http.put("/api/jobs/pl1", json={"status": "failed", "error_message": "x"})
         assert self.db._jobs["pl1"]["status"] == "failed"
         assert len(self.db._jobs) == 1
 
     def test_dependency_unlock_respects_approval_gate(self):
-        self.db.add_job(id="up1", status="in_progress", target_agent_role="codex")
+        self.db.add_job(id="up1", status="in_progress", leased_by_instance_id="agent-1", target_agent_role="codex")
         self.db.add_job(id="dn1", status="waiting", target_agent_role="claude",
                         depends_on=["up1"], requires_approval=True)
         self.db.add_job(id="dn2", status="waiting", target_agent_role="claude",

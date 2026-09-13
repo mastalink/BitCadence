@@ -10,6 +10,7 @@ COPY src ./src
 RUN pip install --no-cache-dir . "psycopg[binary]>=3.1" boto3
 
 COPY infra/aws/gateway/entrypoint.py /app/entrypoint.py
+COPY infra/aws/gateway/migrations-overlay /app/migrations-overlay
 
 RUN useradd --create-home --uid 1000 mco
 USER mco

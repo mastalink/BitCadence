@@ -42,40 +42,6 @@ agent = BitCadenceAgent(role=ROLE, instance_id=INSTANCE, token=TOKEN, gateway=GA
 agent.poll_interval = POLL
 
 
-class StopRequested(Exception):
-    """Raised mid-job when the gateway says this attempt is no longer ours."""
-
-
-def _still_mine(job_id: str) -> bool:
-    """Ask the gateway whether this job is still leased to us.
-
-    Returns True on any error: a transient network blip must not abort real
-    work. A partitioned worker therefore keeps going - which is exactly the
-    stale-writer scenario WS1 fences at completion time, not here.
-    """
-    try:
-        # There is no single-job GET; the board is listed and filtered.
-        r = httpx.get(
-            f"{GATEWAY}/api/jobs",
-            headers={"Authorization": f"Bearer {TOKEN}"},
-            timeout=5,
-        )
-        if r.status_code != 200:
-            return True
-        job = next((j for j in r.json() if j.get("id") == job_id), None)
-        if job is None:
-            return True
-        status = job.get("status")
-        owner = job.get("leased_by_instance_id") or job.get("leased_by")
-        if status in ("cancelled", "rejected", "failed", "completed"):
-            return False
-        if owner and owner != INSTANCE:
-            return False
-        return True
-    except Exception:
-        return True
-
-
 @agent.handler
 def handle(job: dict, prompt: str):
     job_id = job["id"]
@@ -83,6 +49,7 @@ def handle(job: dict, prompt: str):
 
     # Stream so there are interruption points. A single blocking call would
     # make the kill-switch pavilion untestable by construction.
+    agent.checkpoint()
     text_parts: list[str] = []
     resp = bedrock.converse_stream(
         modelId=MODEL,
@@ -96,20 +63,17 @@ def handle(job: dict, prompt: str):
         inferenceConfig={"maxTokens": 1200, "temperature": 0.2},
     )
 
-    chunks_since_check = 0
-    for event in resp["stream"]:
-        if "contentBlockDelta" in event:
-            delta = event["contentBlockDelta"]["delta"]
-            if "text" in delta:
-                text_parts.append(delta["text"])
-                chunks_since_check += 1
-                if chunks_since_check >= 20:
-                    chunks_since_check = 0
-                    if not _still_mine(job_id):
-                        logger.warning({"event": "job.stop_requested", "job_id": job_id})
-                        raise StopRequested(f"job {job_id} is no longer leased to {INSTANCE}")
-        elif "messageStop" in event:
-            break
+    try:
+        for event in resp["stream"]:
+            agent.checkpoint()
+            if "contentBlockDelta" in event:
+                delta = event["contentBlockDelta"]["delta"]
+                if "text" in delta:
+                    text_parts.append(delta["text"])
+            elif "messageStop" in event:
+                break
+    finally:
+        resp["stream"].close()
 
     result = "".join(text_parts).strip()
     logger.info({"event": "job.done", "job_id": job_id, "chars": len(result)})

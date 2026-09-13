@@ -1,0 +1,27 @@
+{
+  "environment": "AWS us-east-1 through authenticated SSM tunnel",
+  "delegation": {
+    "parent": "ba74ad6c-51ff-452f-ba52-03ccb8ba2d94",
+    "child": "f121e706-4afc-4070-8f5c-85ca5f83650e",
+    "source": "worker-lab",
+    "target": "reviewer-lab",
+    "parent_status": "completed",
+    "child_status": "completed",
+    "approved_by": "local-operator"
+  },
+  "kill_switch": {
+    "job": "453df50b-ed82-41c9-b0c4-bd4033ede7cf",
+    "status": "halted",
+    "late_completion_http": 409,
+    "output_accepted": false,
+    "probe": "Operator replayed the old worker claim after halt to verify rejection",
+    "worker_log": "Job 453df50b-ed82-41c9-b0c4-bd4033ede7cf halted; result withheld",
+    "worker_log_ssm_command": "cac88aad-1b3d-495a-804e-884ee1cbd6f5"
+  },
+  "recorded_date": "2026-09-06",
+  "acceptance": {
+    "ssm_command": "40f06b0b-46e2-47e7-bce5-323237cdcad3",
+    "status": "Success",
+    "note": "Full lab probe passed after restarting existing nodes. Earlier workflow rerun failed waiting for reviewer startup."
+  }
+}

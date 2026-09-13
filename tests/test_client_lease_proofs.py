@@ -1,6 +1,5 @@
-"""Regression coverage for fenced lease proofs at the HTTP/MCP seam."""
+"""Regression coverage for durable fenced lease proofs at the HTTP/MCP seam."""
 
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 import json
 import os
 from pathlib import Path
@@ -8,7 +7,6 @@ import stat
 import subprocess
 import sys
 import textwrap
-import threading
 
 import httpx
 import pytest
@@ -40,25 +38,34 @@ class FenceGateway:
         self.legacy = legacy
         self.current_lease_id = None
         self.reports = []
+        self.renewals = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
-        if request.url.path == "/api/jobs/lease":
+        if request.url.path in {"/api/jobs/lease", "/api/jobs/lease_next"}:
             claim = next(self.leases)
             self.current_lease_id = claim.get("lease_id")
             payload = {"success": True}
+            if request.url.path.endswith("lease_next"):
+                payload["job"] = {"id": "job-1"}
             if not self.legacy:
                 payload["lease"] = claim
             return httpx.Response(200, json=payload)
 
-        report = json.loads(request.content)
-        self.reports.append(report)
-        if self.legacy or report.get("lease_id") == self.current_lease_id:
+        body = json.loads(request.content)
+        if request.url.path.endswith("/renew"):
+            self.renewals.append(body)
+            if self.legacy or body.get("lease_id") == self.current_lease_id:
+                return httpx.Response(200, json={"success": True})
+            return httpx.Response(409, json={"detail": "FENCED: stale or missing lease"})
+
+        self.reports.append(body)
+        if self.legacy or body.get("lease_id") == self.current_lease_id:
             return httpx.Response(200, json={"success": True})
         return httpx.Response(409, json={"detail": "FENCED: stale or missing lease"})
 
 
 def _client(handler, lease_store_dir, *, token="token-a", role="codex",
-            instance_id="codex-1", owner_id=None):
+            instance_id="codex-1"):
     return GatewayClient(
         base_url=BASE_URL,
         token=token,
@@ -66,18 +73,18 @@ def _client(handler, lease_store_dir, *, token="token-a", role="codex",
         instance_id=instance_id,
         transport=httpx.MockTransport(handler),
         lease_store_dir=lease_store_dir,
-        lease_owner_id=owner_id,
     )
 
 
 def test_reopened_client_forwards_persisted_lease_proof(tmp_path):
-    """Dropping process memory must not turn a valid completion into a 409."""
     gateway = FenceGateway([LEASE_A])
 
     _client(gateway, tmp_path).lease("job-1")
     proof_path = next(tmp_path.rglob("*.json"))
-    assert stat.S_IMODE(proof_path.stat().st_mode) == 0o600
-    assert stat.S_IMODE(proof_path.parent.stat().st_mode) == 0o700
+    if os.name != "nt":
+        assert stat.S_IMODE(proof_path.stat().st_mode) == 0o600
+        assert stat.S_IMODE(proof_path.parent.stat().st_mode) == 0o700
+
     _client(gateway, tmp_path).complete("job-1", "finished")
 
     assert gateway.reports == [{
@@ -88,35 +95,118 @@ def test_reopened_client_forwards_persisted_lease_proof(tmp_path):
     assert list(tmp_path.rglob("*.json")) == []
 
 
-def test_separate_mcp_calls_forward_proof_with_fresh_clients(tmp_path, monkeypatch):
-    """mco_lease and mco_complete each construct a new GatewayClient today."""
+def test_lease_next_persists_proof_for_reconstructed_client(tmp_path):
     gateway = FenceGateway([LEASE_A])
-    clients = []
 
-    def factory():
-        client = _client(gateway, tmp_path)
-        clients.append(client)
-        return client
+    _client(gateway, tmp_path).lease_next()
+    _client(gateway, tmp_path).complete("job-1", "finished")
 
-    monkeypatch.setattr(mcp_mod, "GatewayClient", factory)
-    mcp_mod.mco_lease("job-1")
-    mcp_mod.mco_complete("job-1", "finished")
-
-    assert len(clients) == 2
     assert gateway.reports[0]["lease_id"] == "lease-a"
 
 
-def test_reopened_client_keeps_legacy_gateway_compatible(tmp_path):
-    """A gateway that returns no claim must continue receiving proofless writes."""
-    gateway = FenceGateway([{}], legacy=True)
+def test_separate_mcp_calls_survive_client_cache_reconstruction(
+    tmp_path, monkeypatch
+):
+    gateway = FenceGateway([LEASE_A])
 
+    def factory():
+        return _client(gateway, tmp_path)
+
+    monkeypatch.setattr(mcp_mod, "GatewayClient", factory)
+    monkeypatch.setattr(mcp_mod, "_clients", {})
+    mcp_mod.mco_lease_next()
+    mcp_mod._clients.clear()  # Model a new MCP process/call boundary.
+    mcp_mod.mco_complete("job-1", "finished")
+
+    assert gateway.reports[0]["lease_id"] == "lease-a"
+
+
+def test_in_process_cached_claim_survives_missing_disk_record(tmp_path):
+    gateway = FenceGateway([LEASE_A])
+    client = _client(gateway, tmp_path)
+    client.lease("job-1")
+    next(tmp_path.rglob("*.json")).unlink()
+
+    client.complete("job-1", "finished")
+
+    assert gateway.reports[0]["lease_id"] == "lease-a"
+
+
+def test_process_reopen_loads_claim_from_disk(tmp_path):
+    script = textwrap.dedent(
+        f"""
+        import httpx
+        from mco.orchestrator.client import GatewayClient
+
+        claim = {LEASE_A!r}
+        def handler(request):
+            return httpx.Response(200, json={{"success": True, "lease": claim}})
+
+        GatewayClient(
+            base_url={BASE_URL!r}, token="token-a", role="codex",
+            instance_id="codex-1", transport=httpx.MockTransport(handler),
+            lease_store_dir={str(tmp_path)!r},
+        ).lease("job-1")
+        """
+    )
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(Path(__file__).resolve().parents[1] / "src")
+    subprocess.run([sys.executable, "-c", script], env=environment, check=True)
+
+    gateway = FenceGateway([])
+    gateway.current_lease_id = "lease-a"
+    _client(gateway, tmp_path).complete("job-1", "recovered result")
+
+    assert gateway.reports[0]["lease_id"] == "lease-a"
+
+
+def test_stale_claimant_compare_and_delete_preserves_replacement(tmp_path):
+    gateway = FenceGateway([LEASE_A, LEASE_B])
+    stale = _client(gateway, tmp_path)
+    stale.lease("job-1")
+    replacement = _client(gateway, tmp_path)
+    replacement.lease("job-1")
+
+    with pytest.raises(httpx.HTTPStatusError) as exc:
+        stale.complete("job-1", "stale result")
+    assert exc.value.response.status_code == 409
+
+    _client(gateway, tmp_path).complete("job-1", "replacement result")
+    assert [report["lease_id"] for report in gateway.reports] == [
+        "lease-a",
+        "lease-b",
+    ]
+
+
+def test_new_lease_supersedes_old_durable_claim(tmp_path):
+    gateway = FenceGateway([LEASE_A, LEASE_B])
     _client(gateway, tmp_path).lease("job-1")
-    _client(gateway, tmp_path).complete("job-1", "legacy result")
+    _client(gateway, tmp_path).lease("job-1")
 
-    assert gateway.reports == [{
-        "status": "completed",
-        "output_payload": {"result": "legacy result"},
-    }]
+    _client(gateway, tmp_path).complete("job-1", "replacement result")
+
+    assert gateway.reports[0]["lease_id"] == "lease-b"
+    assert len(list(tmp_path.rglob("*.superseded"))) == 1
+
+
+def test_fenced_409_is_final_for_rejected_attempt(tmp_path, monkeypatch):
+    result_spool = tmp_path / "results"
+    monkeypatch.setenv("MCO_RESULT_SPOOL_DIR", str(result_spool))
+    gateway = FenceGateway([LEASE_A])
+    client = _client(gateway, tmp_path / "leases")
+    client.lease("job-1")
+    gateway.current_lease_id = "replacement"
+
+    with pytest.raises(httpx.HTTPStatusError) as exc:
+        client.complete("job-1", "late result")
+
+    assert exc.value.response.status_code == 409
+    assert len(gateway.reports) == 1
+    assert not list((tmp_path / "leases").rglob("*.json"))
+    assert len(list((tmp_path / "leases").rglob("*.rejected"))) == 1
+    assert len(list(result_spool.rglob("*.rejected"))) == 1
+    assert _client(gateway, tmp_path / "leases").flush_reports() == 0
+    assert len(gateway.reports) == 1
 
 
 @pytest.mark.parametrize(
@@ -130,7 +220,6 @@ def test_reopened_client_keeps_legacy_gateway_compatible(tmp_path):
 def test_identity_change_cannot_reuse_another_identity_proof(
     tmp_path, token, role, instance_id
 ):
-    """Token, role, and instance changes must select a separate namespace."""
     gateway = FenceGateway([LEASE_A])
     _client(gateway, tmp_path).lease("job-1")
 
@@ -145,157 +234,25 @@ def test_identity_change_cannot_reuse_another_identity_proof(
 
     assert exc.value.response.status_code == 409
     assert "lease_id" not in gateway.reports[0]
+    assert len(list(tmp_path.rglob("*.json"))) == 1
 
 
-def test_stale_client_cannot_erase_replacement_proof(tmp_path):
-    """Retiring fenced attempt A must leave live replacement B intact."""
-    gateway = FenceGateway([LEASE_A, LEASE_B])
-    stale = _client(gateway, tmp_path, owner_id="process-a")
-    stale.lease("job-1")
-    replacement = _client(gateway, tmp_path, owner_id="process-b")
-    replacement.lease("job-1")
-
-    with pytest.raises(httpx.HTTPStatusError) as exc:
-        stale.complete("job-1", "stale result")
-    assert exc.value.response.status_code == 409
-
-    replacement.complete("job-1", "replacement result")
-    assert [report["lease_id"] for report in gateway.reports] == [
-        "lease-a",
-        "lease-b",
-    ]
-
-
-def test_reopened_process_refuses_ambiguous_replacement_proofs(tmp_path):
-    """Without process memory, output cannot safely choose attempt A or B."""
-    gateway = FenceGateway([LEASE_A, LEASE_B])
-    _client(gateway, tmp_path, owner_id="process-a").lease("job-1")
-    _client(gateway, tmp_path, owner_id="process-b").lease("job-1")
-
-    with pytest.raises(RuntimeError, match="Multiple lease proofs"):
-        _client(gateway, tmp_path, owner_id="reopened").complete(
-            "job-1", "ambiguous result"
-        )
-
-    assert gateway.reports == []
-
-
-def test_fenced_attempt_is_not_replayed_after_reopen(tmp_path):
-    """A 409 is final for the rejected attempt, even after a restart."""
-    gateway = FenceGateway([LEASE_A])
-    client = _client(gateway, tmp_path, owner_id="process-a")
-    client.lease("job-1")
-    gateway.current_lease_id = "replacement"
-
-    with pytest.raises(httpx.HTTPStatusError):
-        client.complete("job-1", "late result")
-    with pytest.raises(RuntimeError, match="retired lease proof"):
-        _client(gateway, tmp_path, owner_id="reopened").complete(
-            "job-1", "late replay"
-        )
-
-    assert len(gateway.reports) == 1
-    assert gateway.reports[0]["lease_id"] == "lease-a"
-
-
-def test_failure_report_uses_the_same_persisted_proof(tmp_path):
-    """mco_fail is fenced by the same attempt claim as mco_complete."""
+def test_reopened_renew_forwards_persisted_proof(tmp_path):
     gateway = FenceGateway([LEASE_A])
     _client(gateway, tmp_path).lease("job-1")
 
-    _client(gateway, tmp_path).fail("job-1", "blocked")
+    _client(gateway, tmp_path).renew("job-1")
+
+    assert gateway.renewals == [LEASE_A]
+
+
+def test_reopened_client_keeps_legacy_gateway_compatible(tmp_path):
+    gateway = FenceGateway([{}], legacy=True)
+
+    _client(gateway, tmp_path).lease("job-1")
+    _client(gateway, tmp_path).complete("job-1", "legacy result")
 
     assert gateway.reports == [{
-        "status": "failed",
-        "error_message": "blocked",
-        **LEASE_A,
+        "status": "completed",
+        "output_payload": {"result": "legacy result"},
     }]
-
-
-def test_fresh_mcp_calls_complete_replacement_after_prior_attempt_is_fenced(
-    tmp_path,
-):
-    """A's tombstone must not strand B in the process that acquired B."""
-    gateway = FenceGateway([LEASE_A, LEASE_B])
-    stale = _client(gateway, tmp_path, owner_id="process-a")
-    stale.lease("job-1")
-    gateway.current_lease_id = "replacement"
-    with pytest.raises(httpx.HTTPStatusError):
-        stale.complete("job-1", "stale result")
-
-    _client(gateway, tmp_path, owner_id="process-b").lease("job-1")
-    _client(gateway, tmp_path, owner_id="process-b").complete(
-        "job-1", "replacement result"
-    )
-
-    assert [report.get("lease_id") for report in gateway.reports] == [
-        "lease-a",
-        "lease-b",
-    ]
-
-
-def test_selection_is_serialized_against_concurrent_stale_retirement(tmp_path):
-    """A reopened reporter must not adopt B while A is being retired."""
-    gateway = FenceGateway([LEASE_A, LEASE_B])
-    stale = _client(gateway, tmp_path, owner_id="process-a")
-    stale.lease("job-1")
-    _client(gateway, tmp_path, owner_id="process-b").lease("job-1")
-
-    reopened = _client(gateway, tmp_path, owner_id="reopened")
-    checked_retired = threading.Event()
-    resume_selection = threading.Event()
-    original_retired_paths = reopened._retired_paths
-
-    def pause_after_retired_check(task_id):
-        paths = original_retired_paths(task_id)
-        checked_retired.set()
-        assert resume_selection.wait(timeout=3)
-        return paths
-
-    reopened._retired_paths = pause_after_retired_check
-
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        selecting = pool.submit(reopened.complete, "job-1", "stale reopened output")
-        assert checked_retired.wait(timeout=3)
-        retiring = pool.submit(stale.complete, "job-1", "stale live output")
-        with pytest.raises(FutureTimeout):
-            retiring.result(timeout=0.25)
-        resume_selection.set()
-        with pytest.raises(RuntimeError, match="Multiple lease proofs"):
-            selecting.result(timeout=3)
-        with pytest.raises(httpx.HTTPStatusError):
-            retiring.result(timeout=3)
-
-    assert [report.get("lease_id") for report in gateway.reports] == ["lease-a"]
-
-
-def test_process_reopen_loads_claim_from_disk(tmp_path):
-    """A different interpreter can recover the sole persisted attempt."""
-    script = textwrap.dedent(
-        f"""
-        import httpx
-        from mco.orchestrator.client import GatewayClient
-
-        claim = {LEASE_A!r}
-        def handler(request):
-            return httpx.Response(200, json={{"success": True, "lease": claim}})
-
-        GatewayClient(
-            base_url={BASE_URL!r}, token="token-a", role="codex",
-            instance_id="codex-1", transport=httpx.MockTransport(handler),
-            lease_store_dir={str(tmp_path)!r}, lease_owner_id="child-process",
-        ).lease("job-1")
-        """
-    )
-    environment = dict(os.environ)
-    source_root = str(Path(__file__).resolve().parents[1] / "src")
-    environment["PYTHONPATH"] = source_root
-    subprocess.run([sys.executable, "-c", script], env=environment, check=True)
-
-    gateway = FenceGateway([])
-    gateway.current_lease_id = "lease-a"
-    _client(gateway, tmp_path, owner_id="reopened-parent").complete(
-        "job-1", "recovered result"
-    )
-
-    assert gateway.reports[0]["lease_id"] == "lease-a"

@@ -139,7 +139,7 @@ resource "aws_scheduler_schedule" "conductor" {
 
       network_configuration {
         subnets          = aws_subnet.private[*].id
-        security_groups  = [aws_security_group.workers.id]
+        security_groups  = [aws_security_group.conductor.id]
         assign_public_ip = false
       }
     }

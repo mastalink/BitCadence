@@ -25,8 +25,12 @@ Optionally, when an audit HMAC key is configured in the encrypted secret store
 a holder of the key, defending against an attacker who recomputes a consistent
 chain from scratch.
 
-Audit writes must never break the orchestration path - failures are logged and
-swallowed.
+The vault is authoritative. Containers without a vault may explicitly enable
+MCO_ALLOW_ENV_AUDIT_KEY=1 to use an environment key; this emits a warning and
+does not override a vault key or bypass a vault that cannot be unlocked.
+
+Audit failures propagate. Job mutations also persist an outbox row in the
+same database transaction, so a failed rich event cannot erase state evidence.
 """
 
 import hashlib
@@ -34,6 +38,8 @@ import hmac
 import json
 import logging
 import threading
+from datetime import datetime, timezone
+from mco.orchestrator.store_context import transaction, is_postgres
 from typing import Any, Optional
 
 logger = logging.getLogger("mco.orchestrator.audit")
@@ -70,11 +76,23 @@ def _canonical(content: dict) -> str:
 
 def _content_of(row: dict) -> dict:
     """Project a stored row down to the fields the hash is computed over."""
-    return {f: row.get(f) for f in _CONTENT_FIELDS}
+    content = {f: row.get(f) for f in _CONTENT_FIELDS}
+    content['created_at'] = _canonical_timestamp(content['created_at'])
+    return content
+
+
+def _canonical_timestamp(value: Any) -> str:
+    """Match PostgreSQL's UTC, six-fractional-digit audit timestamp format."""
+    stamp = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+    if stamp.tzinfo is None:
+        raise ValueError('Audit timestamps must include a timezone')
+    return stamp.astimezone(timezone.utc).isoformat(timespec='microseconds')
 
 
 def compute_hash(prev_hash: str, content: dict) -> str:
     """Hash one event: sha256(prev_hash + '\\n' + canonical(content))."""
+    if 'created_at' in content:
+        content = {**content, 'created_at': _canonical_timestamp(content['created_at'])}
     material = f"{prev_hash or ''}\n{_canonical(content)}".encode("utf-8")
     return hashlib.sha256(material).hexdigest()
 
@@ -86,17 +104,20 @@ def _resolve_audit_hmac_key() -> Optional[bytes]:
     which keeps hash-chaining working on installs without a configured vault.
     """
     try:
+        import os
         from mco.security import get_secret_store
 
         store = get_secret_store()
-        if not store.is_initialized():
-            return None
-        if not store.is_unlocked and not store.auto_unlock():
-            return None
-        raw = store.get(HMAC_SECRET_NAME)
-        if not raw:
-            return None
-        return raw.encode("utf-8")
+        if store.is_initialized():
+            if not store.is_unlocked and not store.auto_unlock():
+                return None
+            raw = store.get(HMAC_SECRET_NAME)
+            if raw:
+                return raw.encode("utf-8")
+        if os.environ.get('MCO_ALLOW_ENV_AUDIT_KEY') == '1' and os.environ.get(HMAC_SECRET_NAME):
+            logger.warning('Using explicitly enabled environment audit key; prefer the encrypted vault')
+            return os.environ[HMAC_SECRET_NAME].encode('utf-8')
+        return None
     except Exception as e:  # pragma: no cover - defensive
         logger.debug(f"Audit HMAC key unavailable: {type(e).__name__}")
         return None
@@ -119,19 +140,10 @@ def _sign(row_hash: str, key: Optional[bytes]) -> Optional[str]:
 
 def _last_event(db_client: Any, job_id: str) -> Optional[dict]:
     """Most recent event for a job (by created_at), or None for a fresh chain."""
-    try:
-        res = (
-            db_client.table(EVENTS_TABLE)
-            .select("*")
-            .eq("job_id", str(job_id))
-            .order("created_at", desc=False)
-            .execute()
-        )
-        rows = res.data or []
-        return rows[-1] if rows else None
-    except Exception as e:
-        logger.warning(f"Could not read prior audit event for job {job_id}: {type(e).__name__}")
-        return None
+    res = (db_client.table(EVENTS_TABLE).select("*").eq("job_id", str(job_id))
+           .order("created_at", desc=False).execute())
+    rows = res.data or []
+    return rows[-1] if rows else None
 
 
 # Read-prev-then-append must be atomic per job, or two concurrent writers can
@@ -154,19 +166,34 @@ def _chain_lock(job_id: str) -> threading.Lock:
         return lock
 
 
-def record_event(
+def _record_event(
     db_client: Any,
     job_id: str,
     event: str,
     actor_id: Optional[str] = None,
     actor_role: Optional[str] = None,
     detail: Optional[dict] = None,
+    *, outbox_id: Optional[str] = None,
 ) -> bool:
-    """Append one hash-chained event to the audit trail. Never raises."""
+    """Append evidence; storage failure is a failed operation, never success."""
     if db_client is None or not job_id:
         return False
     try:
-        with _chain_lock(str(job_id)):
+        with transaction(db_client), _chain_lock(str(job_id)):
+            if is_postgres(db_client):
+                # PostgreSQL serializes the append and finalizes the previous
+                # hash under a database lock. Canonical content travels as text
+                # so Python and PostgreSQL hash exactly the same bytes.
+                from mco.localstore import _now_iso
+                content = {"job_id": str(job_id), "event": event, "actor_id": actor_id,
+                           "actor_role": actor_role, "detail": detail or {}, "created_at": _canonical_timestamp(_now_iso())}
+                key = _audit_hmac_key()
+                db_client.rpc("mco_append_event", {"p_content": _canonical(content),
+                    "p_key": key.decode("utf-8") if key else None,
+                    "p_outbox_id": outbox_id}).execute()
+                return True
+            if outbox_id and db_client.table(EVENTS_TABLE).select("*").eq("outbox_id", outbox_id).execute().data:
+                return True
             prev = _last_event(db_client, str(job_id))
             prev_hash = (prev or {}).get("hash") or GENESIS_HASH
 
@@ -181,7 +208,7 @@ def record_event(
                 "actor_id": actor_id,
                 "actor_role": actor_role,
                 "detail": detail or {},
-                "created_at": _now_iso(),
+                "created_at": _canonical_timestamp(_now_iso()),
             }
             row_hash = compute_hash(prev_hash, content)
             signature = _sign(row_hash, _audit_hmac_key())
@@ -192,11 +219,20 @@ def record_event(
             if signature is not None:
                 record["signature"] = signature
 
+            if outbox_id:
+                record["outbox_id"] = outbox_id
+            # Keep per-job timestamps ordered even if the system clock moves back.
+            if prev and content["created_at"] <= prev["created_at"]:
+                from datetime import datetime, timedelta
+                record["created_at"] = (datetime.fromisoformat(prev["created_at"]) + timedelta(microseconds=1)).isoformat(timespec='microseconds')
+                record["hash"] = compute_hash(prev_hash, _content_of(record))
+                if signature is not None:
+                    record["signature"] = _sign(record["hash"], _audit_hmac_key())
             db_client.table(EVENTS_TABLE).insert(record).execute()
         return True
     except Exception as e:
-        logger.warning(f"Audit write skipped for job {job_id} ({event}): {type(e).__name__}")
-        return False
+        logger.error(f"Audit write failed for job {job_id} ({event}): {type(e).__name__}")
+        raise
 
 
 def get_events(db_client: Any, job_id: str) -> list:
@@ -214,10 +250,10 @@ def get_events(db_client: Any, job_id: str) -> list:
         return res.data or []
     except Exception as e:
         logger.error(f"Error fetching audit events for job {job_id}: {type(e).__name__}")
-        return []
+        raise
 
 
-def verify_chain(db_client: Any, job_id: str) -> dict:
+def verify_chain(db_client: Any, job_id: str, checkpoint: Optional[dict] = None, *, events: Optional[list] = None) -> dict:
     """Walk a job's hash chain and report integrity.
 
     Returns a dict::
@@ -235,7 +271,7 @@ def verify_chain(db_client: Any, job_id: str) -> dict:
     prev_hash linkage, or HMAC signature does not match is reported as the
     broken link; verification stops there.
     """
-    events = get_events(db_client, str(job_id))
+    events = get_events(db_client, str(job_id)) if events is None else events
     key = _audit_hmac_key()
     result = {
         "job_id": str(job_id),
@@ -256,8 +292,23 @@ def verify_chain(db_client: Any, job_id: str) -> dict:
                                  f"got {stored_prev or '<genesis>'})")
             return result
 
-        recomputed = compute_hash(stored_prev, _content_of(row))
+        try:
+            recomputed = compute_hash(stored_prev, _content_of(row))
+        except (ValueError, TypeError):
+            result.update(ok=False, broken_at=idx, reason=f'invalid audit timestamp at event {idx}')
+            return result
         stored_hash = row.get("hash") or ""
+        # Older Python writers omitted fractions exactly on a whole second.
+        # Accept that one deterministic legacy encoding, independently derived
+        # from the row timestamp. Never use canonical_content as verification input.
+        if not hmac.compare_digest(recomputed, stored_hash):
+            legacy = _content_of(row)
+            stamp = datetime.fromisoformat(legacy['created_at'])
+            if stamp.microsecond == 0:
+                legacy['created_at'] = stamp.isoformat(timespec='seconds')
+                candidate = hashlib.sha256(f"{stored_prev}\n{_canonical(legacy)}".encode('utf-8')).hexdigest()
+                if hmac.compare_digest(candidate, stored_hash):
+                    recomputed = candidate
         if not hmac.compare_digest(recomputed, stored_hash):
             result.update(ok=False, broken_at=idx,
                           reason=f"content hash mismatch at event {idx} "
@@ -278,4 +329,51 @@ def verify_chain(db_client: Any, job_id: str) -> dict:
 
         expected_prev = stored_hash
 
+    if checkpoint is not None:
+        signed = {k: checkpoint.get(k) for k in ("job_id", "count", "head_hash")}
+        signature = _sign(_canonical(signed), key)
+        if not key or not hmac.compare_digest(checkpoint.get("signature") or "", signature or ""):
+            result.update(ok=False, reason="checkpoint signature does not verify")
+        elif str(checkpoint.get("job_id")) != str(job_id) or len(events) < checkpoint.get("count", 0):
+            result.update(ok=False, reason="checkpoint detects a deleted audit tail")
+        elif checkpoint.get("count", 0) and events[checkpoint["count"] - 1].get("hash") != checkpoint.get("head_hash"):
+            result.update(ok=False, reason="checkpoint head differs from audit history")
     return result
+
+
+
+def make_checkpoint(db_client, job_id):
+    """Export a signed head; retain it outside the database being verified."""
+    key = _audit_hmac_key()
+    if not key:
+        raise RuntimeError("Configure MCO_AUDIT_HMAC_KEY before exporting signed checkpoints")
+    events = get_events(db_client, str(job_id))
+    result = {"job_id": str(job_id), "count": len(events),
+              "head_hash": events[-1]["hash"] if events else ""}
+    result["signature"] = _sign(_canonical(result), key)
+    return result
+
+
+def record_event(db_client, job_id, *args, **kwargs):
+    result = _record_event(db_client, job_id, *args, **kwargs)
+    if result:
+        from mco.orchestrator.evidence import publish_events
+        publish_events(db_client, job_id)
+    return result
+
+
+def drain_outbox(db_client, job_id=None):
+    """Idempotently materialize committed state evidence into the audit chain."""
+    query = db_client.table("mco_audit_outbox").select("*").order("created_at")
+    if job_id is not None:
+        query = query.eq("job_id", str(job_id))
+    rows = query.execute().data or []
+    count = 0
+    for row in rows:
+        oid = str(row["id"])
+        if db_client.table(EVENTS_TABLE).select("*").eq("outbox_id", oid).execute().data:
+            continue
+        record_event(db_client, row["job_id"], row["event"], "system", "store",
+                     row.get("detail") or {}, outbox_id=oid)
+        count += 1
+    return count

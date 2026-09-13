@@ -278,7 +278,7 @@
 const STATUS_COLOR = {
   waiting: "--waiting", needs_approval: "--approval", pending: "--pending",
   leased: "--running", in_progress: "--running", completed: "--done",
-  failed: "--failed", rejected: "--stopped", cancelled: "--stopped",
+  halted: "--stopped", failed: "--failed", rejected: "--stopped", cancelled: "--stopped",
 };
 const ACTIVE = new Set(["waiting","needs_approval","pending","leased","in_progress"]);
 const NODE_W = 210, NODE_H = 62, GAP_X = 90, GAP_Y = 26, PAD = 34;
@@ -429,7 +429,7 @@ async function select(id) {
   $("p-desc").textContent = job.description || "—";
   $("a-approve").disabled = job.status !== "needs_approval";
   $("a-reject").disabled = job.status !== "needs_approval";
-  $("a-retry").disabled = !["failed", "rejected", "cancelled"].includes(job.status);
+  $("a-retry").disabled = !["failed", "rejected", "halted"].includes(job.status);
   $("a-cancel").disabled = !ACTIVE.has(job.status);
   render();
 

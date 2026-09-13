@@ -254,7 +254,7 @@ async def delete_agent(instance_id: str, caller: dict = Depends(require_scopes("
 
 SETTING_GROUPS = {
     "governance": {
-        "MCO_KILL_SWITCH": {"type": "bool", "label": "Kill switch (pause all new jobs and leases)"},
+        "MCO_KILL_SWITCH": {"type": "bool", "label": "Stop work (halt active jobs and pause intake)"},
         "MCO_APPROVER_ROLES": {"type": "text", "label": "Approver roles (comma-separated)",
                                "placeholder": "human,admin,operator"},
         "MCO_POLICY_GATED_ROLES": {"type": "text", "label": "Always-gated roles (jobs to these pause for a human)",
@@ -362,8 +362,27 @@ async def put_settings(payload: dict, caller: dict = Depends(require_scopes("adm
         raise HTTPException(status_code=400,
                             detail=f"Not settable via API: {', '.join(unknown)}")
     config = get_config()
+    from mco.orchestrator.audit import record_event
+    from mco.orchestrator.leases import set_paused
+    import uuid
+    db = _db()
+    correlation_id = uuid.uuid4().hex
+    stream = "system:settings:" + _caller_org(caller)
+    # Validate the entire request before making any changes.
+    for key, value in payload.items():
+        meta = _ALL_SETTINGS[key][1]
+        if meta["type"] == "choice" and str(value) not in meta["choices"]:
+            raise HTTPException(status_code=400, detail=f"{key}: invalid choice")
     applied = {}
     touched_connector = False
+    # Emergency stop must not wait on the off-box sink. Commit the local intent
+    # and fence first; mirror acknowledgement may fail afterward, but work stops.
+    pre_halted = None
+    if str(payload.get("MCO_KILL_SWITCH", "")).lower() in _TRUTHY:
+        from mco.orchestrator.audit import _record_event
+        _record_event(db, stream, "stop_requested", caller.get("instance_id"), caller.get("role"),
+                      {"correlation_id": correlation_id})
+        pre_halted = set_paused(db, True, caller)
     for key, value in payload.items():
         meta = _ALL_SETTINGS[key][1]
         if meta["type"] == "bool":
@@ -375,6 +394,16 @@ async def put_settings(payload: dict, caller: dict = Depends(require_scopes("adm
             value = str(value)
         else:
             value = str(value or "")
+        old = config.get(key)
+        detail = {"key": key, "old": bool(old) if meta["type"] == "secret" else old,
+                  "new": bool(value) if meta["type"] == "secret" else value,
+                  "correlation_id": correlation_id, "outcome": "requested"}
+        record_event(db, stream, "setting_change_requested", caller.get("instance_id"), caller.get("role"), detail)
+        if key == "MCO_KILL_SWITCH" and value == "true":
+            halted = pre_halted if pre_halted is not None else set_paused(db, True, caller)
+            for job in halted:
+                record_event(db, job["id"], "halted", caller.get("instance_id"), caller.get("role"),
+                             {"correlation_id": correlation_id})
         if value == "":
             config.delete(key)
             applied[key] = None
@@ -384,6 +413,8 @@ async def put_settings(payload: dict, caller: dict = Depends(require_scopes("adm
             try:
                 config.set(key, value, encrypt=meta["type"] == "secret")
             except RuntimeError as exc:
+                record_event(db, stream, "setting_change_failed", caller.get("instance_id"), caller.get("role"),
+                             {**detail, "outcome": "failed", "error": type(exc).__name__})
                 raise HTTPException(
                     status_code=503,
                     detail=(
@@ -392,6 +423,10 @@ async def put_settings(payload: dict, caller: dict = Depends(require_scopes("adm
                     ),
                 ) from exc
             applied[key] = True if meta["type"] == "secret" else value
+        if key == "MCO_KILL_SWITCH" and value != "true":
+            set_paused(db, False, caller)
+        record_event(db, stream, "setting_changed", caller.get("instance_id"), caller.get("role"),
+                     {**detail, "outcome": "applied"})
         if key in _CONNECTOR_KEYS:
             touched_connector = True
         logger.info(f"Setting {key} changed via API by {caller.get('instance_id')}")

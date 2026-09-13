@@ -86,4 +86,5 @@ class TestReclaim:
                 raise RuntimeError("db down")
         # config default applies; must swallow the error and return 0
         import mco.orchestrator.routes as r
-        assert r.reclaim_stale_leases(BrokenDB()) == 0
+        with pytest.raises(RuntimeError, match="db down"):
+            r.reclaim_stale_leases(BrokenDB())

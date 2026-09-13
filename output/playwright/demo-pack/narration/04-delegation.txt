@@ -1,0 +1,13 @@
+One task, two cloud workers
+
+[00s]
+This is a real delegation demonstration in our AWS lab. The operator gives one task to the first worker. That worker calculates a checksum and creates a follow-up task for a separate reviewer.
+
+[24s]
+Notice who requested the follow-up: worker lab. The operator did not create this second job. The handoff carries the original job identifier and the worker's result.
+
+[46s]
+Delegation does not bypass human control. The review is waiting for approval. We inspect the handoff and release it, allowing the reviewer on the second cloud machine to continue.
+
+[67s]
+The reviewer completes the delegated job. The history connects the request, approval, and execution. We have demonstrated controlled delegation across machines, using deterministic work rather than simulated AI reasoning.
