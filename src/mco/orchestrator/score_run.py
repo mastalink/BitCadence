@@ -57,12 +57,17 @@ def main():
     parser.add_argument("command",choices=["init","tick","audit","status"])
     parser.add_argument("--root",type=Path,required=True)
     parser.add_argument("--conductor-token",type=Path,required=True)
+    parser.add_argument("--run",default=RUN,
+                        help="New run identifier; never reuse an accepted run for fresh evidence.")
+    parser.add_argument("--identity-root",type=Path,
+                        help="Existing approved identity root. Tokens are referenced in place, never copied or rotated.")
     args=parser.parse_args()
     root=args.root.resolve()
+    run_id=args.run
     root.mkdir(parents=True,exist_ok=True)
-    private=root/"private"
+    private=(args.identity_root.resolve() if args.identity_root else root)/"private"
     private.mkdir(exist_ok=True)
-    if os.name=="nt":
+    if args.command=="init" and os.name=="nt":
         principal=subprocess.run(["whoami"],capture_output=True,text=True,check=True).stdout.strip()
         subprocess.run(["icacls",str(private),"/inheritance:r","/grant:r",principal+":(OI)(CI)F"],capture_output=True,check=True)
     os.environ["MCO_RESULT_SPOOL_DIR"]=str(private/"reports")
@@ -71,20 +76,20 @@ def main():
     if args.command=="init":
         register(board,private,AUDITOR,"score-auditor")
         register(board,private,REVIEWER,"score-review")
-        bridge.initialize(RUN,audit_score(),principal="codex-beast",org="default",targets={"score-auditor":AUDITOR,"score-review":REVIEWER},credential_hash=board.identity)
+        bridge.initialize(run_id,audit_score(),principal="codex-beast",org="default",targets={"score-auditor":AUDITOR,"score-review":REVIEWER},credential_hash=board.identity)
     elif args.command=="tick":
-        bridge.poll(RUN,board)
-        bridge.plan(RUN)
-        bridge.dispatch(RUN,board)
+        bridge.poll(run_id,board)
+        bridge.plan(run_id)
+        bridge.dispatch(run_id,board)
     elif args.command=="audit":
         from mco.orchestrator.via_readonly_audit import run_audit
-        rows=[r for r in bridge.status(RUN)["dispatches"] if r["phase"]=="work"]
+        rows=[r for r in bridge.status(run_id)["dispatches"] if r["phase"]=="work"]
         if len(rows)!=1:
             raise ScoreError("Expected exactly one persisted audit job")
         job_id=rows[0]["job_id"]
         job=board.get(job_id)
         if job.get("status")!="completed":
-            if job.get("target_agent_id")!=AUDITOR or job.get("input_payload",{}).get("score",{}).get("run_id")!=RUN:
+            if job.get("target_agent_id")!=AUDITOR or job.get("input_payload",{}).get("score",{}).get("run_id")!=run_id:
                 raise ScoreError("Wrong audit assignment")
             worker=client(private/(AUDITOR+".token"),"score-auditor",AUDITOR)
             claim_file=private/"audit-lease.json"
@@ -100,10 +105,10 @@ def main():
             artifact=run_audit(bridge.root,include_ssm_diagnostic=False)
             result={"artifacts":{"audit_report":{"path":artifact.name,"sha256":hashlib.sha256(artifact.read_bytes()).hexdigest()}}}
             worker.complete(job_id,json.dumps(result))
-        bridge.poll(RUN,board)
-        bridge.plan(RUN)
-        bridge.dispatch(RUN,board)
-    print(json.dumps(bridge.status(RUN),indent=2))
+        bridge.poll(run_id,board)
+        bridge.plan(run_id)
+        bridge.dispatch(run_id,board)
+    print(json.dumps(bridge.status(run_id),indent=2))
 
 
 if __name__=="__main__":

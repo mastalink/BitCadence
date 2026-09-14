@@ -32,5 +32,13 @@
     "public_api": "healthy_24_churches_4_confession_occurrences_2_churches",
     "independent_review": "passed_artifact_integrity_and_honest_limitations"
   },
+  "cloud_audit_checkpoint": {
+    "run_id": "via-g01-cloud-20260914",
+    "status": "accepted_read_only_audit_not_product_launch",
+    "artifact_sha256": "8e98e16f6a31d75c79547c05c20fa2b61d587977591d7343ae312ff0464e77a1",
+    "aws_inventory": "complete",
+    "root_principal": "flagged_not_suitable_for_autonomous_execution",
+    "remaining_g01_evidence": ["host_release_and_migration_state", "restore_drill", "least_privilege_runner", "cloud_collection_path", "android_acceptance"]
+  },
   "remaining": ["durable score store", "transactional dispatch bridge", "authenticated principals and grants", "real evidence validation and independent authorship", "checkpoint UI", "bounded deployment/recovery adapters", "fine-grained VIA decomposition", "cloud canary"]
 }
