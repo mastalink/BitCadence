@@ -31,13 +31,20 @@ terraform fmt -check
 terraform validate
 terraform plan -out=via-score-audit.tfplan `
   -var='via_instance_id=THE_EXISTING_VIA_INSTANCE' `
-  -var='evidence_bucket=THE_EXISTING_EVIDENCE_BUCKET'
+  -var='evidence_bucket=THE_EXISTING_EVIDENCE_BUCKET' `
+  -var='score_digest=THE_EXACT_VIA_SCORE_SHA256'
 terraform show via-score-audit.tfplan
 terraform apply via-score-audit.tfplan
 ```
 
 Immediately invoke the function once and verify an artifact is written under the output prefix.  A successful invocation proves only the audit lane.  It does not prove a release, restore, ingestion, extraction, reconciliation, publishing, notification, or APK path.
 
-## What comes next
+## Signed release adapter
 
-The next Score adapter must be a separately reviewed, narrowly allowlisted deployment lane.  It should be introduced only alongside an immutable build artifact, an explicit release wrapper, rollback behavior, exact-head evidence, and a new accepted policy grant.  Do not add deployment rights to this audit role.
+The same stack now includes an inert-by-default `via-score-deploy-runner`. It has a different IAM role from the audit runner. It can only read a pending approval manifest, verify its KMS signature and exact Score digest, execute the one version-pinned SSM document that invokes `/opt/via/activate-release.sh activate`, and write a sanitized deployment receipt.
+
+The host's existing activation script requires an immutable local image ID, serializes releases, checks container and public API health, and restores the prior release after a failed candidate. The deployment adapter does not accept a shell command, arbitrary SSM document, target instance, role, URL, secret, rollback request, or mutable image tag.
+
+No invocation path is deployed for this function yet. A future authenticated Score conductor must create a KMS-signed manifest under `score-deploy-approvals/pending/<approval-id>.json` after its independent evidence/review adapter accepts the exact build. The manifest is valid only for a short expiry window and must contain the exact Score digest plus build, test, and review hashes. This is the meaningful release gate; it is not a human data-entry workflow.
+
+The deploy role has one unavoidable AWS limitation: `ssm:GetCommandInvocation` does not support resource-level authorization. Its code retains only SSM status and response code, never command output, and it has no list/session/command-cancel privilege. AWS documents that the API has no resource type, while `SendCommand` supports document and target resource authorization. [AWS Systems Manager authorization reference](https://docs.aws.amazon.com/service-authorization/latest/reference/list_ssm.html)

@@ -49,3 +49,12 @@ variable "log_retention_days" {
   type        = number
   default     = 30
 }
+
+variable "score_digest" {
+  description = "SHA-256 digest of the exact VIA Score revision allowed to submit release approvals. A changed Score invalidates old approvals."
+  type        = string
+  validation {
+    condition     = can(regex("^[a-f0-9]{64}$", var.score_digest))
+    error_message = "score_digest must be a lowercase SHA-256 hex digest."
+  }
+}

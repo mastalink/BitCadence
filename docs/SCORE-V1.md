@@ -23,6 +23,8 @@ These are inspected code capabilities, not assertions of the deployed gateway re
 
 `infra/aws/via_runner/` deploys an EventBridge-scheduled Lambda that executes the fixed G01 read-only VIA inventory and appends a sanitized artifact. It has a dedicated least-privilege role and cloud-backed Terraform state. It cannot consume a model-supplied shell command, URL, credential, deployment request, or source-data change. This is the first production-shaped Score boundary: durable schedule -> bounded action -> evidence artifact. It remains only the audit lane; the S01-S06 work below is still required before calling Score a general autonomous conductor.
 
+`infra/aws/via_runner/deploy_handler.py` adds the next, distinct deployed adapter: a signed approval can invoke the existing fixed VIA activation script through a version-pinned SSM document. It is not scheduled or publicly invokable, has no `kms:Sign` permission, and remains dormant until an authenticated Score conductor implements S03/S04 evidence and approval issuance. See `docs/VIA-SCORE-DEPLOYMENT-ADAPTER-20260914.md`.
+
 ## New artifacts
 
 `docs/score-v1.schema.json` is the structural JSON Schema. `load_score()` additionally checks duplicate JSON keys, whitespace-only values, unique IDs, known dependencies, acyclic graphs and distinct work/review roles. It accepts JSON text or objects, never a path supplied by a remote caller. The explicit offline CLI reads a file.
