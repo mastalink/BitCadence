@@ -1,0 +1,407 @@
+{
+  "score_version": 1,
+  "id": "via-cloud-launch",
+  "revision": 1,
+  "objective": "Deliver an evidence-backed, cloud-only Lorain Android MVP, then gated regional/global expansion and recurring production operations.",
+  "constraints": [
+    "Cloud-only production; no Beast, Jetson or home-device dependency",
+    "Zero manual source/schedule entry and no mandatory human data approval",
+    "Optional user check-for-updates using campus identity, not typed facts",
+    "Independent engineering/code review and spend authorization remain",
+    "Do not fabricate missing, stale, blocked or conflicting schedules",
+    "No GitHub Actions; use an approved cloud build runner.",
+    "No production action without externally verified grants bound to this score digest.",
+    "Preserve user work; use isolated worktrees, shared migration ownership, exact-head independent review.",
+    "Checkpoint list is empty until the owner deliberately chooses human gates; missing external authority still blocks.",
+    "G14 represents operations setup and one accepted cycle, not the end of ongoing operations."
+  ],
+  "budget_cents": 0,
+  "max_parallel": 3,
+  "launch_requires": [
+    "G08"
+  ],
+  "tasks": [
+    {
+      "id": "G01",
+      "goal": "G01",
+      "title": "Establish the verified cloud baseline and reusable deployment authority",
+      "instructions": "Inputs: Existing deployment, repositories, AWS runner/profile references and current bills. Deliver: Redacted deployment inventory: API image/head, database/migrations, active collectors, cloud roles, runner, backups, cost ceiling and exact gaps. Acceptance: Read-only live API/AWS evidence; distinguish evidence-only credentials from deployment permission; identify an approved cloud build/deploy path without repeated runtime login. If blocked: Missing deployment authority needs one scoped authorization, not a home-machine workaround. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:read",
+        "cloud:inspect"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G02",
+      "goal": "G02",
+      "title": "Discover and account for every Lorain campus and its published sources",
+      "instructions": "Inputs: Official directory/jurisdiction seeds, source and identity contracts. Deliver: Automatically discovered campus/source graph, held identities, calendar feeds, current bulletin links and per-source access results. Acceptance: Every candidate has included/excluded/held reasoning and provenance; no typed parish times or user-supplied source list; count campuses rather than offices. If blocked: Blocked publishers remain explicit; pursue permitted alternate first-party sources automatically. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "grok",
+      "review_role": "claude",
+      "depends_on": [
+        "G01"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G03",
+      "goal": "G03",
+      "title": "Run the resilient ingestion foundation entirely in AWS",
+      "instructions": "Inputs: Verified existing host, scoped roles, artifact and queue contracts. Deliver: Cloud scheduler, queues, fenced workers, S3 evidence, budgets, build recipe and recovery instrumentation. Acceptance: Canary completes with home endpoints unreachable; duplicate deliveries and worker death cannot duplicate publication; no expiring interactive runtime session. If blocked: New infrastructure or IAM authority requires explicit approval; preserve existing service until controlled cutover. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [
+        "G01"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G04",
+      "goal": "G04",
+      "title": "Collect pages, feeds and real bulletins reliably and cheaply",
+      "instructions": "Inputs: Discovered sources, access policy, cloud worker contract. Deliver: HTTP/feed/publisher connectors, bounded PDF streaming, proxy quarantine and permitted browser escalation. Acceptance: Collect real 14–21 MB bulletins; distinguish destination403/proxy407/429; preserve exact artifacts; test hostile redirects and page/byte limits. If blocked: Do not bypass explicit access refusal; register an alternate source or publish collection uncertainty. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "antigravity",
+      "review_role": "grok",
+      "depends_on": [
+        "G02",
+        "G03"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G05",
+      "goal": "G05",
+      "title": "Extract evidence-bound typed schedule claims",
+      "instructions": "Inputs: Captured artifacts, identity graph, typed claim schema. Deliver: Native-text first extraction, selective OCR/model fallback, multilingual evidence spans and campus bindings. Acceptance: Held-out layouts and dates; quoted evidence resolves to artifact/page; no fabricated start/end/campus; scans and shared bulletins covered. If blocked: Uncertified extraction classes abstain and retry alternate methods within budget. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "grok",
+      "review_role": "claude",
+      "depends_on": [
+        "G02",
+        "G03"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G06",
+      "goal": "G06",
+      "title": "Automatically reconcile and publish only qualified temporal claims",
+      "instructions": "Inputs: Typed candidates, current accepted state, versioned acceptance policy. Deliver: Recurrence/exception engine, machine acceptance identity, conflict resolution, automatic holds/retries and auditable publication. Acceptance: Exact-head acceptance suite; cancellation scope, DST, relative time, omissions and correction/retraction work; no manual schedule approval endpoint or spoofed reviewer. If blocked: Conflicting or unsupported claims remain visible as uncertain; neither a majority model vote nor a confidence number substitutes for evidence. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "claude",
+      "review_role": "antigravity",
+      "depends_on": [
+        "G04",
+        "G05"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G07",
+      "goal": "G07",
+      "title": "Deliver the complete usable Android experience from cloud data",
+      "instructions": "Inputs: Published API contract and reproducible cloud APK build. Deliver: Search/ZIP/maps, provenance, freshness, saved plans, removal, offline state, refresh request and durable change alerts. Acceptance: Cloud-built APK hash/signing recorded; physical handset full journey; refresh months-stale campus without entering facts; duplicated/lost push recovery. If blocked: Device permission denial has clear UI; physical-device confirmation is product testing, not data entry. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "antigravity",
+      "review_role": "grok",
+      "depends_on": [
+        "G03",
+        "G06"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G08",
+      "goal": "G08",
+      "title": "Pass the Lorain MVP acceptance and seven-day cloud-only run",
+      "instructions": "Inputs: Release digest, discovered census, benchmark and physical-device evidence. Deliver: Signed-off acceptance report, complete coverage matrix, seven elapsed days of runtime and cost evidence. Acceptance: MASTER-PLAN and ACCEPTANCE-TESTS gates all pass at identified versions; no manual intervention or local infrastructure; full source-to-phone proof. If blocked: Do not redefine unknown as coverage or silently reset the clock; correct engineering faults and rerun affected acceptance. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "reviewer",
+      "review_role": "claude",
+      "depends_on": [
+        "G06",
+        "G07"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G09",
+      "goal": "G09",
+      "title": "Prove reusable expansion in a second region",
+      "instructions": "Inputs: Accepted Lorain release, automatically discoverable second-region directory. Deliver: Second-region campus/source graph using shared connectors; measured onboarding changes and costs. Acceptance: Two weekly publication cycles; same evidence and accuracy gates; no county-specific manual source/schedule entry; Lorain does not regress. If blocked: Region selection follows source diversity and access feasibility, not easiest counts alone. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "grok",
+      "review_role": "claude",
+      "depends_on": [
+        "G08"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G10",
+      "goal": "G10",
+      "title": "Operate 1,000 campuses across multiple dioceses",
+      "instructions": "Inputs: Regional connector registry and measured cost distribution. Deliver: Publisher-wide pacing, fair queues, capacity report, coverage and unit-economics dashboard. Acceptance: 3× publication-peak test; domain fairness; no uncontrolled proxy/model spend; baseline reliability and per-class accuracy maintained. If blocked: Expansion pauses when cost, access or queue-age gate fails. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [
+        "G09"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G11",
+      "goal": "G11",
+      "title": "Qualify multilingual and international calendar semantics",
+      "instructions": "Inputs: Two additional language/region corpora and timezone/calendar requirements. Deliver: Locale-qualified extraction classes, original-language evidence and campus/jurisdiction model extensions. Acceptance: At least two added languages tested independently; service language not inferred from bulletin language; DST and relevant local calendar conventions tested. If blocked: Do not auto-enable every language from a model capability claim. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "grok",
+      "review_role": "claude",
+      "depends_on": [
+        "G09"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G12",
+      "goal": "G12",
+      "title": "Migrate to capacity-justified managed production resilience",
+      "instructions": "Inputs: Measured load, failure budget, managed-service quote and approved spend. Deliver: Managed state/compute where justified, backup/restore and rollback, explicit RPO/RTO and service ownership. Acceptance: Demonstrate target99.9% availability design and drills, RPO15min/RTO60min readiness, migration parity and rollback; do not claim achieved SLO without observation. If blocked: May be pulled earlier if measured risk requires; no speculative rebuild or new paid resources without authority. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [
+        "G10"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G13",
+      "goal": "G13",
+      "title": "Scale globally with bounded regional failure and cost",
+      "instructions": "Inputs: Certified locale/connectors, managed platform and regional rights policies. Deliver: Regional partitions, single-writer ownership, global publisher pacing, disaster recovery and phased10k→100k rollout. Acceptance: Each cohort passes coverage/precision/cost/load gates; regional failure cannot corrupt other partitions; rights and retention checked per jurisdiction. If blocked: No claim of universal completeness or automatic permission to collect every site. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [
+        "G11",
+        "G12"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G14",
+      "goal": "G14",
+      "title": "Maintain long-term production without manual schedule operations",
+      "instructions": "Inputs: Accepted release, runbooks, SLO and budgets. Deliver: Standing automated freshness/retry monitoring, incident runbooks, drift/cost/restore reports and quarterly connector recertification. Acceptance: Recurring reports distinguish source silence from fetch failure; incidents repaired as software, not handwritten schedules; deletion/retraction/security and recovery drills pass. If blocked: Standing operating objective, not permanently complete after one good report. Consult the bundled VIA master plan, technical specification and acceptance tests. You are not alone in the codebase; do not revert others' work. Scope actual files before starting. No data entry or hidden human publication approval.",
+      "role": "operations",
+      "review_role": "reviewer",
+      "depends_on": [
+        "G08"
+      ],
+      "resources": [
+        "via-release-lane"
+      ],
+      "capabilities": [
+        "repository:write",
+        "cloud:change"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    }
+  ]
+}

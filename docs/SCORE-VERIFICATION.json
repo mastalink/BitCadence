@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-14",
+  "base_commit": "cc01c60a7a44cb522c334ba42b886f3ce37cad90",
+  "branch": "codex/score-v1",
+  "status": "isolated_prototype_with_accepted_readonly_audit_run",
+  "test_command": "python -m pytest tests/test_scores.py tests/test_workflows.py tests/test_governance.py tests/test_job_priority.py -o addopts='' -q",
+  "passed": 131,
+  "skipped": 0,
+  "warnings": ["Existing Starlette TestClient/httpx deprecation"],
+  "via_tasks_validated": 14,
+  "via_score_sha256": "77387d1a453356f6d6f3e22cabfdf31fce56fcef930a2b6991d8f2c8b24eded9",
+  "sandbox_demo": {
+    "events": 9,
+    "stale_writer_rejected": true,
+    "simulated_launch_accepted": true,
+    "actual_agents_used": false,
+    "actual_deployment": false,
+    "human_identity_authenticated": false
+  },
+  "independent_code_review": "not_performed",
+  "live_jobs_submitted": 2,
+  "services_restarted": 0,
+  "cloud_resources_changed": 0,
+  "live_run": {
+    "run_id": "via-g01-20260914",
+    "score_digest": "982b0b0ff22ef3e496098c60d1375519d6a316ce1f140fd862ca73c8b6bc68fb",
+    "scope": "read_only_audit_not_product_launch",
+    "status": "accepted",
+    "audit_complete": false,
+    "production_readiness": "not_determined",
+    "aws_reads": "failed_expired_interactive_session",
+    "public_api": "healthy_24_churches_4_confession_occurrences_2_churches",
+    "independent_review": "passed_artifact_integrity_and_honest_limitations"
+  },
+  "remaining": ["durable score store", "transactional dispatch bridge", "authenticated principals and grants", "real evidence validation and independent authorship", "checkpoint UI", "bounded deployment/recovery adapters", "fine-grained VIA decomposition", "cloud canary"]
+}
