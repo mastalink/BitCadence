@@ -1,6 +1,6 @@
 # BitCadence Score v1
 
-Status: implemented **offline contract, compiler and sandbox policy kernel**. Not an installed conductor, authenticated gateway endpoint, durable run store, or live agent dispatcher. Source base: cc01c60a7a44cb522c334ba42b886f3ce37cad90. Worktree: C:/AI/baton/wt/score-v1, branch codex/score-v1. No live jobs, database migrations, service restarts or cloud changes were performed for this prototype.
+Status: implemented **offline contract, compiler and sandbox policy kernel**, plus one deployed fixed-function cloud audit adapter. It is not yet a general installed conductor, authenticated score gateway endpoint, durable score-run store, or live agent dispatcher. Source base: cc01c60a7a44cb522c334ba42b886f3ce37cad90. Worktree: C:/AI/baton/wt/score-v1, branch codex/score-v1. The audit adapter's acceptance record is `docs/VIA-SCORE-CLOUD-RUNNER-ACCEPTANCE-20260914.md`; it does not make arbitrary Score packets executable.
 
 ## Decision
 
@@ -18,6 +18,10 @@ Reuse existing BitCadence workflows, routing, lease fencing, audit and job board
 - `audit.py`, `evidence.py`, `drumline.py`: audit/evidence and shared workflow context. These do not establish that arbitrary attached test reports are semantically valid.
 
 These are inspected code capabilities, not assertions of the deployed gateway revision or production readiness. Existing governance/cloud acceptance issues remain separate.
+
+## Deployed cloud adapter: G01 audit only
+
+`infra/aws/via_runner/` deploys an EventBridge-scheduled Lambda that executes the fixed G01 read-only VIA inventory and appends a sanitized artifact. It has a dedicated least-privilege role and cloud-backed Terraform state. It cannot consume a model-supplied shell command, URL, credential, deployment request, or source-data change. This is the first production-shaped Score boundary: durable schedule -> bounded action -> evidence artifact. It remains only the audit lane; the S01-S06 work below is still required before calling Score a general autonomous conductor.
 
 ## New artifacts
 

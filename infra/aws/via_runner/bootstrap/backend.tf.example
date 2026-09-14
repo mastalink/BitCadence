@@ -1,0 +1,5 @@
+terraform {
+  # Copy to ignored backend.tf only after the bootstrap bucket exists, then
+  # run terraform init -migrate-state with the S3 backend settings.
+  backend "s3" {}
+}
