@@ -5,6 +5,12 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 ## [Unreleased]
 
 ### Added
+- **Interactive sessions hear about their MCO work.** `python -m mco.hooks.inbox
+  --instance <id> --role <role>` is a Claude Code SessionStart/UserPromptSubmit
+  hook: it tells the session (and the user) about jobs pinned to it, or addressed
+  to its role and untaken for 5 minutes, then only new arrivals, checking the
+  gateway at most once a minute on prompts. It exits silently on any failure and
+  frames job titles as data the model should surface, not act on.
 - **Agents report what they are doing, not just when they were last heard from.**
   `/api/agents` (and `mco_agents`, `mco agents`) adds `state`: `working` (holds a
   lease), `standby` (reachable, nothing waiting), `broken` (reachable, but work
