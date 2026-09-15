@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import subprocess
 
-from mco.agentd.supervisor import Supervisor, WorkerState, backoff_delay
+from mco.agentd.supervisor import CRASHLOOP_COOLDOWN_SECONDS, Supervisor, WorkerState, backoff_delay
 from mco.fleet import WorkerConfig
 
 
@@ -130,6 +130,83 @@ def test_five_failures_in_window_crashloop_and_stop_restarting(tmp_path: Path) -
     clock.advance(600)
     supervisor.tick()
     assert len(adapter.processes) == spawn_count
+
+
+def _crashloop(supervisor: Supervisor, adapter: FakeAdapter, clock: FakeClock) -> None:
+    for failure in range(5):
+        adapter.processes[-1].returncode = 1
+        supervisor.tick()
+        if failure < 4:
+            clock.advance(backoff_delay(failure))
+            supervisor.tick()
+    assert supervisor.workers["codex-beast"].state == WorkerState.CRASHLOOPED
+
+
+def test_crashloop_retries_after_cooldown_instead_of_latching_forever(tmp_path: Path) -> None:
+    clock = FakeClock()
+    adapter = FakeAdapter()
+    supervisor = make_supervisor(adapter, clock, tmp_path)
+    supervisor.reconcile({"codex-beast": worker()})
+    _crashloop(supervisor, adapter, clock)
+    spawned = len(adapter.processes)
+
+    clock.advance(CRASHLOOP_COOLDOWN_SECONDS - 1)
+    supervisor.tick()
+    assert len(adapter.processes) == spawned
+
+    clock.advance(1)
+    supervisor.tick()
+    runtime = supervisor.workers["codex-beast"]
+    assert len(adapter.processes) == spawned + 1
+    assert runtime.state == WorkerState.RUNNING
+    assert not runtime.failure_timestamps
+    assert runtime.backoff_exponent == 0
+    assert "cooldown" in (runtime.last_error or "")
+
+
+def test_worker_that_keeps_failing_latches_again_after_cooldown(tmp_path: Path) -> None:
+    clock = FakeClock()
+    adapter = FakeAdapter()
+    supervisor = make_supervisor(adapter, clock, tmp_path)
+    supervisor.reconcile({"codex-beast": worker()})
+    _crashloop(supervisor, adapter, clock)
+    clock.advance(CRASHLOOP_COOLDOWN_SECONDS)
+    supervisor.tick()
+    _crashloop(supervisor, adapter, clock)
+    spawned = len(adapter.processes)
+    clock.advance(60)
+    supervisor.tick()
+    assert len(adapter.processes) == spawned
+
+
+def test_latch_restored_from_yesterday_retries_on_first_tick(tmp_path: Path) -> None:
+    clock = FakeClock()
+    adapter = FakeAdapter()
+    supervisor = make_supervisor(adapter, clock, tmp_path)
+    supervisor.reconcile({"codex-beast": worker()})
+    _crashloop(supervisor, adapter, clock)
+
+    clock.advance(86400)
+    restarted_adapter = FakeAdapter()
+    restarted = make_supervisor(restarted_adapter, clock, tmp_path)
+    restarted.reconcile({"codex-beast": worker()})
+    assert restarted.workers["codex-beast"].state == WorkerState.CRASHLOOPED
+    restarted.tick()
+    assert len(restarted_adapter.processes) == 1
+    assert restarted.workers["codex-beast"].state == WorkerState.RUNNING
+
+
+def test_crashlooped_worker_turned_off_is_not_retried(tmp_path: Path) -> None:
+    clock = FakeClock()
+    adapter = FakeAdapter()
+    supervisor = make_supervisor(adapter, clock, tmp_path)
+    supervisor.reconcile({"codex-beast": worker()})
+    _crashloop(supervisor, adapter, clock)
+    supervisor.reconcile({"codex-beast": worker("off")})
+    spawned = len(adapter.processes)
+    clock.advance(CRASHLOOP_COOLDOWN_SECONDS * 2)
+    supervisor.tick()
+    assert len(adapter.processes) == spawned
 
 
 def test_more_than_sixty_seconds_resets_backoff_but_not_failure_history(

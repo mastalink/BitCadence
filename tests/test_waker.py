@@ -245,6 +245,41 @@ def test_missing_or_empty_token_file_is_not_a_crash(tmp_path, monkeypatch):
     assert read_agent_token_file("") is None
 
 
+def test_unreadable_token_file_is_reported_as_permissions_not_missing(tmp_path, monkeypatch):
+    """A token file other accounts wrote can exist yet deny this user. Calling
+    that "no token" sent operators to rotate a healthy token."""
+    _clear_env(monkeypatch); _token_dir(tmp_path, monkeypatch)
+    (tmp_path / "claude-beast.token").write_text("tok", encoding="utf-8")
+    real_read_bytes = waker_mod.Path.read_bytes
+    real_read_text = waker_mod.Path.read_text
+
+    def deny(self, *a, **k):
+        if self.name == "claude-beast.token":
+            raise PermissionError(13, "Permission denied")
+        return real_read_bytes(self, *a, **k)
+
+    def deny_text(self, *a, **k):
+        if self.name == "claude-beast.token":
+            raise PermissionError(13, "Permission denied")
+        return real_read_text(self, *a, **k)
+
+    monkeypatch.setattr(waker_mod.Path, "read_bytes", deny)
+    monkeypatch.setattr(waker_mod.Path, "read_text", deny_text)
+    assert waker_mod.token_file_unreadable("claude-beast")
+    with pytest.raises(WakerTokenError) as exc:
+        resolve_agent_token("claude-beast", config=_Cfg(MCO_LOCAL_TOKEN="op"))
+    message = str(exc.value)
+    assert "cannot be read" in message
+    assert "do not rotate" in message
+    assert "reset-token" not in message
+
+
+def test_missing_token_file_is_not_reported_unreadable(tmp_path, monkeypatch):
+    _token_dir(tmp_path, monkeypatch)
+    assert not waker_mod.token_file_unreadable("nope")
+    assert not waker_mod.token_file_unreadable("../evil")
+
+
 def test_token_path_is_per_instance(tmp_path, monkeypatch):
     _token_dir(tmp_path, monkeypatch)
     assert agent_token_path("codex-beast").name == "codex-beast.token"

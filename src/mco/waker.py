@@ -111,6 +111,28 @@ def read_agent_token_file(instance_id: str) -> Optional[str]:
     return token or None
 
 
+def token_file_unreadable(instance_id: str) -> bool:
+    """True when the token file exists but this user cannot read it.
+
+    Reported as its own cause: "no token" sends an operator to rotate a token
+    that is fine, when the real fault is the file's permissions (a file written
+    by an elevated or different account).
+    """
+    try:
+        path = agent_token_path(instance_id)
+    except UnsafeInstanceId:
+        return False
+    try:
+        if not path.is_file():
+            return False
+        path.read_bytes()
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return False
+
+
 def resolve_agent_token(
     instance_id: str,
     explicit: Optional[str] = None,
@@ -171,6 +193,15 @@ def resolve_agent_token(
         return local
 
     if strict:
+        if instance_id and token_file_unreadable(instance_id):
+            path = describe_token_path(instance_id)
+            raise WakerTokenError(
+                f"Agent token file for instance '{instance_id}' exists but cannot be read.\n"
+                f"  {path}\n"
+                f"  Its permissions deny this user - usually a file written by an elevated\n"
+                f"  or different account. The token itself may be fine; do not rotate it.\n"
+                f"  Fix (elevated prompt): takeown /f \"{path}\" && icacls \"{path}\" /reset"
+            )
         raise WakerTokenError(
             f"No agent token for instance '{instance_id or '(unset)'}'.\n"
             f"  Looked for, in order:\n"

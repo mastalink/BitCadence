@@ -4,6 +4,10 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 
 ## [Unreleased]
 
+### Fixed
+- **A crash-looped worker no longer stays down forever.** The supervisor still latches a worker that fails five times in five minutes, but now retries it after a 15-minute cooldown (and on the first tick after restart when the failures are old), instead of waiting for a manual `reset` that nobody knew to run.
+- **Unreadable token files are named as such.** A waker whose `~/.mco/tokens/<instance>.token` exists but denies the current user (written by an elevated or different account) now says so and how to fix the permissions, instead of reporting "no token" and suggesting a rotation.
+
 ### Changed
 - **Breaking: audit failures now fail the triggering operation.** A failed audit
   write or required S3 acknowledgement no longer returns success. The database
