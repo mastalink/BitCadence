@@ -1218,7 +1218,9 @@ async def reassign_job(job_id: str, payload: dict, agent: dict = Depends(require
 @agents_router.get("")
 async def get_agents(agent: dict = Depends(require_scopes("agents:read"))):
     """Registered agents with derived presence (effective_status,
-    last_seen_seconds). Excludes the auth_token_hash column.
+    last_seen_seconds, connected) and what each is doing (state:
+    working/standby/broken/offline/disabled, with state_reason for broken).
+    Excludes the auth_token_hash column.
 
     Visibility: callers in the default org are the host operator and see
     every org's agents (matching `mco agents`); org-scoped callers see only
@@ -1228,18 +1230,18 @@ async def get_agents(agent: dict = Depends(require_scopes("agents:read"))):
     if not db_client:
         return []
     try:
+        from mco.orchestrator.presence import describe_fleet
+
         res = db_client.table("agent_registry").select("*").order("instance_id").execute()
         org = agent_org(agent)
-        threshold = get_offline_after_seconds()
-        out = []
+        rows = []
         for r in (res.data or []):
             # Tenant isolation (app-side so pre-migration schemas keep working).
             if org != "default" and (r.get("org_id") or "default") != org:
                 continue
             # Never expose auth_token_hash over the API.
-            row = {k: v for k, v in r.items() if k != "auth_token_hash"}
-            out.append(decorate_presence(row, threshold))
-        return out
+            rows.append({k: v for k, v in r.items() if k != "auth_token_hash"})
+        return describe_fleet(db_client, rows, threshold=get_offline_after_seconds())
     except Exception as e:
         logger.error(f"Error fetching registered agents: {e}")
         return []

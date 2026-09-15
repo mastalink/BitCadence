@@ -274,6 +274,12 @@ def create_app() -> FastAPI:
 
     # Register broadcast callback
     register_broadcast_callback(server_broadcast_callback)
+    # A waker holding this socket is reachable even though it never polls.
+    from mco.orchestrator.presence import register_connected_probe
+    register_connected_probe(lambda: {
+        c.identity.instance_id for c in ws_manager.active_connections
+        if c.identity.instance_id and not c.identity.is_admin
+    })
 
     # WebSocket Broadcast route
     @app_server.websocket("/ws/broadcast")
@@ -1791,7 +1797,8 @@ def list_agents():
             console.print("[yellow]No agents registered. Use 'mco register' to onboard an agent.[/yellow]")
             return
             
-        from mco.orchestrator.routes import decorate_presence, get_offline_after_seconds
+        from mco.orchestrator.presence import describe_fleet
+        from mco.orchestrator.routes import get_offline_after_seconds
 
         threshold = get_offline_after_seconds()
         table = Table(show_header=True, header_style="bold magenta")
@@ -1799,7 +1806,11 @@ def list_agents():
         table.add_column("Role", style="green")
         table.add_column("Org", style="white")
         table.add_column("Status", style="bold")
+        table.add_column("State", style="bold")
         table.add_column("Last Seen", style="white")
+        state_styles = {"working": "[cyan]working[/cyan]", "standby": "[green]standby[/green]",
+                        "broken": "[red]broken[/red]", "offline": "[dim]offline[/dim]",
+                        "disabled": "[yellow]disabled[/yellow]"}
 
         def _ago(secs):
             if secs is None:
@@ -1812,8 +1823,10 @@ def list_agents():
                 return f"{round(secs / 3600)}h ago"
             return f"{round(secs / 86400)}d ago"
 
-        for agent in agents:
-            agent = decorate_presence(dict(agent), threshold)
+        # This CLI reads the store directly and cannot see the gateway's live
+        # waker sockets, so a socket-only waker shows here as offline; the
+        # gateway's /api/agents (and mco_agents) includes them.
+        for agent in describe_fleet(db_client, agents, threshold=threshold, connected=set()):
             status = agent.get("effective_status", "offline")
             if status == "online":
                 status_style = "[green]online[/green]"
@@ -1827,6 +1840,8 @@ def list_agents():
                 agent.get("role", ""),
                 agent.get("org_id") or "default",
                 status_style,
+                state_styles.get(agent.get("state"), agent.get("state") or "")
+                + (f" [dim]({agent['state_reason']})[/dim]" if agent.get("state_reason") else ""),
                 _ago(agent.get("last_seen_seconds")),
             )
 

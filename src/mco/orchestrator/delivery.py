@@ -122,17 +122,15 @@ def _delivery_state(job: dict, events: list) -> tuple[Optional[datetime], set, i
 
 
 def _online_roles(db: Any, org: str) -> set:
-    from mco.orchestrator.routes import decorate_presence, get_offline_after_seconds
+    """Roles that can take rerouted work: an agent in standby or working.
 
-    threshold = get_offline_after_seconds()
+    Reachable is not enough - rerouting onto an agent that is itself `broken`
+    (awake but not taking work) just moves the stall."""
+    from mco.orchestrator.presence import available_roles, describe_fleet
+    from mco.orchestrator.routes import get_offline_after_seconds
+
     rows = db.table("agent_registry").select("*").execute().data or []
-    roles = set()
-    for row in rows:
-        if (row.get("org_id") or "default") != org:
-            continue
-        if decorate_presence(dict(row), threshold).get("effective_status") == "online":
-            roles.add(str(row.get("role") or "").lower())
-    return roles
+    return available_roles(describe_fleet(db, rows, threshold=get_offline_after_seconds()), org)
 
 
 def sweep(
