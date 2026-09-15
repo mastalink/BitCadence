@@ -200,7 +200,11 @@ def resolve_agent_token(
                 f"  {path}\n"
                 f"  Its permissions deny this user - usually a file written by an elevated\n"
                 f"  or different account. The token itself may be fine; do not rotate it.\n"
-                f"  Fix (elevated prompt): takeown /f \"{path}\" && icacls \"{path}\" /reset"
+                f"  Fix: take ownership (elevated prompt): takeown /f \"{path}\"\n"
+                f"       then grant yourself access (no elevation needed once you own it):\n"
+                f"       icacls \"{path}\" /inheritance:r /grant:r \"%USERNAME%:F\"\n"
+                f"  (icacls /reset is not enough: ~/.mco/tokens does not pass its permissions\n"
+                f"  down to files, so a reset leaves the file readable by nobody.)"
             )
         raise WakerTokenError(
             f"No agent token for instance '{instance_id or '(unset)'}'.\n"

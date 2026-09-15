@@ -17,6 +17,12 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
   steps are audit events, so restarts neither repeat nor forget them.
 
 ### Fixed
+- **A hidden error dialog no longer freezes the desktop app.** Started to the tray,
+  a failed start showed a modal popup that blocked every later action, including
+  start requests, until someone clicked it. Errors now go to the status line while
+  the window is hidden. Start-all also keeps going past a worker that fails, and
+  waits up to 30 seconds for the gateway instead of giving up after one 1-second
+  probe. Previously a single slow probe left every later worker unstarted.
 - **A crash-looped worker no longer stays down forever.** The supervisor still
   latches a worker that fails five times in five minutes, but now retries it after
   a 15-minute cooldown (and on the first tick after restart when the failures are
