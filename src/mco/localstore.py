@@ -39,10 +39,44 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Tables whose history must never be rewritten (mirrors the Postgres trigger).
-APPEND_ONLY_TABLES = {"agent_job_events", "mco_audit_outbox", "mco_attempt_receipts"}
+APPEND_ONLY_TABLES = {"agent_job_events", "mco_audit_outbox", "mco_attempt_receipts", "score_events"}
 
 # Natural primary key per table (upsert conflict target).
-PRIMARY_KEYS = {"agent_registry": "instance_id"}
+PRIMARY_KEYS = {
+    "agent_registry": "instance_id",
+    "score_documents": "digest",
+    "score_runs": "run_id",
+    "score_tasks": "id",
+    "score_events": "seq",
+    "score_outbox": "id",
+    "score_grants": "digest",
+    "score_reviews": "id",
+    "score_providers": "instance_id",
+    "score_provider_health": "instance_id",
+    "score_recovery": "approval_or_attempt_id",
+    "conductor_leases": "id",
+}
+
+# Unique constraints enforced across multi-column natural keys.
+UNIQUE_CONSTRAINTS = {
+    "score_tasks": ("org_id", "run_id", "task_id", "attempt"),
+    "score_outbox": ("org_id", "run_id", "task_id", "phase"),
+}
+
+# Dedicated Score tables mirrored in LocalStore.
+SCORE_TABLES = {
+    "score_documents",
+    "score_runs",
+    "score_tasks",
+    "score_events",
+    "score_outbox",
+    "score_grants",
+    "score_reviews",
+    "score_providers",
+    "score_provider_health",
+    "score_recovery",
+    "conductor_leases",
+}
 
 DEFAULT_DB_PATH = Path.home() / ".mco" / "local.db"
 
@@ -251,11 +285,47 @@ class LocalStore:
         pk = self._pk_field(table)
         if pk == "id" and not row.get("id"):
             row["id"] = str(uuid.uuid4())
-        if not row.get("created_at"):
+        elif pk == "seq" and not row.get("seq"):
+            row["seq"] = len(self._load_rows(table)) + 1
+        elif pk == "run_id" and not row.get("run_id"):
+            row["run_id"] = str(uuid.uuid4())
+
+        if table == "score_events":
+            if not row.get("at"):
+                row["at"] = _now_iso()
+        elif not row.get("created_at"):
             row["created_at"] = _now_iso()
+
         # Tenant column defaults to the single-tenant org, matching the
         # cloud migration's backfill, so org-scoped queries always match.
         row.setdefault("org_id", "default")
+
+        # Sensible defaults for Score tables
+        if table == "score_tasks":
+            row.setdefault("attempt", 1)
+            row.setdefault("status", "pending")
+            row.setdefault("checkpoint_approved", False)
+        elif table == "score_outbox":
+            row.setdefault("attempt", 1)
+            row.setdefault("status", "planned")
+            row.setdefault("phase", "work")
+            row.setdefault("payload", {})
+        elif table == "score_recovery":
+            row.setdefault("decision", "pending")
+            row.setdefault("uncertain_effect", {})
+        elif table == "score_runs":
+            row.setdefault("status", "pending")
+            row.setdefault("authorized_budget_cents", 0)
+            row.setdefault("grants", [])
+            row.setdefault("policy_snapshot", {})
+        elif table == "score_documents":
+            row.setdefault("revision", 1)
+        elif table == "score_providers":
+            row.setdefault("independence_class", "default")
+            row.setdefault("cost_weight", 1.0)
+            row.setdefault("capabilities", [])
+            row.setdefault("approved_digests", [])
+            row.setdefault("authority_scopes", [])
         return row
 
     # ── query execution ──────────────────────────────────────────────────
@@ -278,6 +348,11 @@ class LocalStore:
                 if any(r.get(self._pk_field(q._table)) == row.get(self._pk_field(q._table))
                        for r in self._load_rows(q._table)):
                     raise ValueError("Duplicate primary key")
+                if q._table in UNIQUE_CONSTRAINTS:
+                    cols = UNIQUE_CONSTRAINTS[q._table]
+                    key_tuple = tuple(row.get(c) for c in cols)
+                    if any(tuple(r.get(c) for c in cols) == key_tuple for r in self._load_rows(q._table)):
+                        raise ValueError(f"Duplicate unique constraint {cols} on {q._table}")
                 self._write_row(q._table, row)
                 self._commit()
                 return APIResult([dict(row)])
@@ -293,6 +368,12 @@ class LocalStore:
                             existing = r
                             break
                 row = {**existing, **payload} if existing else self._apply_defaults(q._table, payload)
+                if q._table in UNIQUE_CONSTRAINTS:
+                    cols = UNIQUE_CONSTRAINTS[q._table]
+                    key_tuple = tuple(row.get(c) for c in cols)
+                    for r in self._load_rows(q._table):
+                        if str(r.get(pk)) != str(row.get(pk)) and tuple(r.get(c) for c in cols) == key_tuple:
+                            raise ValueError(f"Duplicate unique constraint {cols} on {q._table}")
                 self._write_row(q._table, row)
                 self._commit()
                 return APIResult([dict(row)])
@@ -300,9 +381,17 @@ class LocalStore:
             if q._op == "update":
                 if q._table in APPEND_ONLY_TABLES:
                     raise PermissionError(f"{q._table} is append-only: UPDATE is not allowed")
+                pk = self._pk_field(q._table)
                 updated = []
                 for r in self._load_rows(q._table):
                     if self._matches(r, q._filters):
+                        candidate = {**r, **(q._payload or {})}
+                        if q._table in UNIQUE_CONSTRAINTS:
+                            cols = UNIQUE_CONSTRAINTS[q._table]
+                            cand_tuple = tuple(candidate.get(c) for c in cols)
+                            for other in self._load_rows(q._table):
+                                if str(other.get(pk)) != str(r.get(pk)) and tuple(other.get(c) for c in cols) == cand_tuple:
+                                    raise ValueError(f"Duplicate unique constraint {cols} on {q._table}")
                         r.update(q._payload or {})
                         # Mirror the cloud trigger that stamps completed_at server-side.
                         if q._table == "agent_jobs" and r.get("status") == "completed" and not r.get("completed_at"):

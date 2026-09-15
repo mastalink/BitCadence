@@ -274,7 +274,7 @@ class TestSettings:
         resp = _ctx().http.get("/api/settings")
         assert resp.status_code == 200
         body = resp.json()
-        assert set(body["groups"]) == {"governance", "memory", "presence", "tenancy",
+        assert set(body["groups"]) == {"governance", "memory", "presence", "delivery", "tenancy",
                                        "observability", "edition", "security", "notifications",
                                        "connectors"}
         assert body["edition"]["edition"] == "community"

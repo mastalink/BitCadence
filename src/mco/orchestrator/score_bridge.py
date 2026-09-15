@@ -7,10 +7,10 @@ import hashlib
 import json
 import sqlite3
 import time
-import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
+from mco.orchestrator.score_dispatcher import score_job_id
 from mco.orchestrator.scores import ScoreError, digest, load_score
 
 
@@ -131,9 +131,9 @@ class ScoreBridge:
                 else:
                     continue
                 role = t["role"] if phase == "work" else t["review_role"]
-                job_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"score-v1:{run['org']}:{run_id}:{run['digest']}:{key}:{phase}"))
+                job_id = score_job_id(run["org"], run_id, run["digest"], key, phase)
                 review_of = json.loads(work["evidence"]) if phase == "review" else None
-                contract = dict(run_id=run_id, digest=run["digest"], task=key, phase=phase, artifact_root=str(self.root), required_evidence=t["evidence"], review_of=review_of, constraints=score["constraints"])
+                contract = dict(protocol="score-v1", score_id=score["id"], run_id=run_id, digest=run["digest"], task=key, attempt=1, phase=phase, artifact_root=str(self.root), required_evidence=t["evidence"], review_of=review_of, constraints=score["constraints"])
                 prompt = t["instructions"] if phase == "work" else "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}."
                 if phase == "work":
                     prompt += " Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets."

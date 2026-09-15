@@ -14,6 +14,14 @@ output "audit_artifact_prefix" {
   value = "s3://${var.evidence_bucket}/score-audits/"
 }
 
+output "conductor_tick_function_name" {
+  value = aws_lambda_function.tick.function_name
+}
+
+output "conductor_tick_role_arn" {
+  value = aws_iam_role.tick.arn
+}
+
 output "deploy_runner_function_name" {
   value = aws_lambda_function.deploy.function_name
 }

@@ -16,15 +16,15 @@ jobs:
       AWS_REGION: us-east-1
       TF_IN_AUTOMATION: 'true'
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Obtain temporary deployment credentials
         id: aws_credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c
         with:
           role-to-assume: arn:aws:iam::314086896527:role/bitcadence-lab-deploy
           aws-region: us-east-1
           role-session-name: bitcadence-lab-${{ github.run_id }}
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
         with:
           terraform_version: 1.12.2
           terraform_wrapper: false

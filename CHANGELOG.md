@@ -4,6 +4,48 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 
 ## [Unreleased]
 
+### Added
+- **Interactive sessions hear about their MCO work.** `python -m mco.hooks.inbox
+  --instance <id> --role <role>` is a Claude Code SessionStart/UserPromptSubmit
+  hook: it tells the session (and the user) about jobs pinned to it, or addressed
+  to its role and untaken for 5 minutes, then only new arrivals, checking the
+  gateway at most once a minute on prompts. It exits silently on any failure and
+  frames job titles as data the model should surface, not act on.
+- **Agents report what they are doing, not just when they were last heard from.**
+  `/api/agents` (and `mco_agents`, `mco agents`) adds `state`: `working` (holds a
+  lease), `standby` (reachable, nothing waiting), `broken` (reachable, but work
+  addressed to it has stalled past the delivery window or was rerouted away in the
+  last hour, with `state_reason`), `offline`, or `disabled`. A waker holding the
+  broadcast socket now counts as online (`connected: true`) even though it never
+  polls. The delivery watchdog only reroutes to roles with a `standby` or `working`
+  agent, and `/readyz` lists `broken_workers`. Derived at read time; no schema change.
+- **Delivery watchdog.** The gateway now makes sure pending work reaches a worker
+  without a person telling an agent to look. A job left PENDING for
+  `MCO_DELIVERY_STALL_SECONDS` (default 600; `0` disables) is re-broadcast to wake
+  its role again; if still untaken after another window it is rerouted in place to
+  the first `MCO_ROUTE_FALLBACKS` role with an online agent (e.g.
+  `codex:claude, antigravity:claude|codex`), up to `MCO_DELIVERY_MAX_REROUTES`
+  (default 2). When nothing can take it, the job is escalated once: a
+  `delivery_escalated` audit event, a `job_undeliverable` broadcast, and an ntfy
+  push. Set `input_payload.no_reroute` to keep a job on its original target. All
+  steps are audit events, so restarts neither repeat nor forget them.
+
+### Fixed
+- **A hidden error dialog no longer freezes the desktop app.** Started to the tray,
+  a failed start showed a modal popup that blocked every later action, including
+  start requests, until someone clicked it. Errors now go to the status line while
+  the window is hidden. Start-all also keeps going past a worker that fails, and
+  waits up to 30 seconds for the gateway instead of giving up after one 1-second
+  probe. Previously a single slow probe left every later worker unstarted.
+- **A crash-looped worker no longer stays down forever.** The supervisor still
+  latches a worker that fails five times in five minutes, but now retries it after
+  a 15-minute cooldown (and on the first tick after restart when the failures are
+  old), instead of waiting for a manual `reset` that nobody knew to run.
+- **Unreadable token files are named as such.** A waker whose
+  `~/.mco/tokens/<instance>.token` exists but denies the current user (written by
+  an elevated or different account) now says so and how to fix the permissions,
+  instead of reporting "no token" and suggesting a rotation.
+
 ### Changed
 - **Breaking: audit failures now fail the triggering operation.** A failed audit
   write or required S3 acknowledgement no longer returns success. The database

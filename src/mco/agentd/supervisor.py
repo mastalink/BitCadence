@@ -24,6 +24,11 @@ CRASH_LIMIT = 5
 CRASH_WINDOW_SECONDS = 300.0
 STABLE_RESET_SECONDS = 60.0
 MAX_BACKOFF_SECONDS = 60.0
+# A crash-loop latch used to be permanent: one bad five minutes (a token that
+# could not be read, a gateway restarting) took a worker off the fleet until a
+# person noticed and reset it, and nobody did for days. The latch still stops
+# a hot loop, but after this cooldown the worker gets a fresh set of attempts.
+CRASHLOOP_COOLDOWN_SECONDS = 900.0
 
 
 class WorkerState(str, Enum):
@@ -207,6 +212,10 @@ class Supervisor:
                 self._handle_exit(runtime, returncode, now)
             return
 
+        if runtime.state == WorkerState.CRASHLOOPED:
+            self._maybe_leave_crashloop(runtime, now)
+            return
+
         if (
             runtime.desired_running
             and runtime.state in {WorkerState.BACKOFF, WorkerState.STARTING, WorkerState.STOPPED}
@@ -215,6 +224,23 @@ class Supervisor:
         ):
             runtime.state = WorkerState.STARTING
             self._spawn(runtime)
+
+    def _maybe_leave_crashloop(self, runtime: WorkerRuntime, now: float) -> None:
+        if not runtime.desired_running or runtime.config.mode == "off":
+            return
+        last_failure = max(runtime.failure_timestamps, default=None)
+        if last_failure is not None and self.wall_clock() - last_failure < CRASHLOOP_COOLDOWN_SECONDS:
+            return
+        runtime.failure_timestamps.clear()
+        runtime.backoff_exponent = 0
+        runtime.last_error = (
+            f"retrying after a {int(CRASHLOOP_COOLDOWN_SECONDS)}s crash-loop cooldown"
+            + (f" (was: {runtime.last_error})" if runtime.last_error else "")
+        )
+        runtime.state = WorkerState.STARTING
+        runtime.next_start_at = now
+        self._persist_runtime(runtime)
+        self._spawn(runtime)
 
     def _spawn(self, runtime: WorkerRuntime) -> None:
         if not runtime.desired_running or runtime.state == WorkerState.CRASHLOOPED:

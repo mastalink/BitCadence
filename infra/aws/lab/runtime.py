@@ -9,10 +9,18 @@ import time
 
 import boto3
 from botocore.config import Config
+from cryptography import x509
+from cryptography.hazmat.primitives.serialization import Encoding
 
 REGION = "us-east-1"
 PREFIX = "bitcadence-lab"
 ROOT = Path("/mco")
+
+
+def write_public_ca(value, destination):
+    """Write only an X.509 public certificate, never the original secret value."""
+    certificate = x509.load_pem_x509_certificate(value.encode('utf-8'))
+    destination.write_bytes(certificate.public_bytes(Encoding.PEM))
 
 
 def secret(client, name, generate=False):
@@ -74,7 +82,7 @@ def spoke(client, role):
                 raise RuntimeError("Hub did not initialize credentials in time")
             time.sleep(5)
     ca = Path("/tmp/hub-ca.pem")
-    ca.write_text(certificate)
+    write_public_ca(certificate, ca)
     os.environ["SSL_CERT_FILE"] = str(ca)
     from mco.sdk import BitCadenceAgent
     agent = BitCadenceAgent(role=role, instance_id=f"{role}-lab", token=token, gateway="https://10.43.1.10:18790")

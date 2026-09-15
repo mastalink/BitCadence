@@ -24,10 +24,10 @@ jobs:
       BC_TEST_DATABASE_URL: postgresql://postgres:acceptance-only@localhost:5432/bitcadence_test
       BC_TEST_POSTGREST_URL: http://localhost:53000
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: pip install -e '.[dev]' 'psycopg[binary]' boto3
       - run: python scripts/check_postgres.py
-      - run: pytest tests/test_release_acceptance.py tests/test_cloud_tamper.py tests/test_evidence_acknowledgement.py -q
+      - run: pytest tests/test_release_acceptance.py tests/test_cloud_tamper.py tests/test_evidence_acknowledgement.py tests/test_job_creation_postgres.py -q
