@@ -190,7 +190,11 @@ class DesktopApp:
                     button.state(["!disabled"])
                 if kind == "error":
                     self.status.set(value)
-                    messagebox.showerror("BitCadence", value, parent=self.root)
+                    # A modal dialog blocks this pump - start requests, tray
+                    # actions, everything - until clicked. Hidden in the tray,
+                    # nobody clicks it, so the fleet silently stops recovering.
+                    if self.root.state() != "withdrawn":
+                        messagebox.showerror("BitCadence", value, parent=self.root)
             elif kind == "rows":
                 rows, ready = value
                 for obsolete in set(self.table.get_children()) - {r[0] for r in rows}:

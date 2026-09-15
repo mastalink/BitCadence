@@ -44,6 +44,56 @@ def test_discovery_excludes_mcp_other_roles_and_other_ports():
     assert not matches_component(["python", "-m", "mco.cli", "serve", "--port", "18890"], "gateway", cfg, 18789)
 
 
+class _Runtime:
+    def __init__(self, running=False):
+        self.process = type("P", (), {"poll": lambda self: None, "pid": 1})() if running else None
+
+
+def _bare_controller(workers, ready_results):
+    """A controller with no real supervisor, gateway or scheduled tasks."""
+    controller = DesktopController.__new__(DesktopController)
+    controller.supervisor = type("S", (), {"workers": {n: _Runtime(n == "gateway") for n in workers}})()
+    probes = iter(ready_results)
+    controller.ready = lambda: next(probes, True)
+    return controller
+
+
+def test_start_all_starts_every_worker_even_when_one_fails(monkeypatch):
+    import mco.desktop.controller as controller_mod
+    monkeypatch.setattr(controller_mod.time, "sleep", lambda _s: None)
+    controller = _bare_controller(["gateway", "scheduler", "codex", "chief", "claude"], [])
+    started = []
+
+    def start(name):
+        started.append(name)
+        if name == "chief":
+            raise RuntimeError("boom")
+
+    controller.start = start
+    with pytest.raises(RuntimeError, match="chief: boom"):
+        controller.start_all()
+    assert started == ["scheduler", "codex", "chief", "claude"]
+
+
+def test_worker_start_waits_out_a_slow_readiness_probe(monkeypatch):
+    """The failure that stranded claude-beast: one probe missed its 1s budget
+    under load and start() gave up instead of waiting."""
+    import mco.desktop.controller as controller_mod
+    monkeypatch.setattr(controller_mod.time, "sleep", lambda _s: None)
+    controller = _bare_controller(["gateway"], [False, False, True])
+    assert controller.wait_ready(timeout=5)
+
+
+def test_wait_ready_gives_up_after_timeout(monkeypatch):
+    import mco.desktop.controller as controller_mod
+    clock = iter(range(0, 1000, 10))
+    monkeypatch.setattr(controller_mod.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(controller_mod.time, "sleep", lambda _s: None)
+    controller = DesktopController.__new__(DesktopController)
+    controller.ready = lambda: False
+    assert not controller.wait_ready(timeout=30)
+
+
 def test_poll_keeps_executor_command():
     from mco import service
     supervisor = StackSupervisor(None)

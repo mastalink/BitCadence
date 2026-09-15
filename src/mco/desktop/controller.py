@@ -17,6 +17,8 @@ from mco.agentd.logs import LogAggregator
 from mco.agentd.supervisor import Supervisor, WorkerRuntime
 from mco.fleet import FLEET_CONFIG_PATH, WorkerConfig, load_fleet
 
+READY_WAIT_SECONDS = 30
+
 
 def matches_component(argv: list[str], name: str, config: WorkerConfig, port: int) -> bool:
     """Only recognize exact CLI commands, never arbitrary Python/MCP processes."""
@@ -189,6 +191,16 @@ class DesktopController:
         except (httpx.HTTPError, ValueError):
             return False
 
+    def wait_ready(self, timeout=READY_WAIT_SECONDS):
+        """One readiness probe has a 1s budget; a gateway busy with a sweep or a
+        burst of reconnecting wakers can miss it while perfectly healthy."""
+        deadline = time.monotonic() + timeout
+        while not self.ready():
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(.25)
+        return True
+
     def start(self, name):
         runtime = self.supervisor.workers[name]
         if runtime.config.mode == "off" or (runtime.process and runtime.process.poll() is None):
@@ -202,7 +214,7 @@ class DesktopController:
             with socket.socket() as probe:
                 if probe.connect_ex(("127.0.0.1", self.port)) == 0:
                     raise RuntimeError(f"Port {self.port} is occupied; refusing to start a duplicate gateway")
-        elif not self.ready():
+        elif not self.wait_ready():
             raise RuntimeError("Start the gateway and wait for it to become ready first")
         self.supervisor.reset(name)
 
@@ -224,14 +236,21 @@ class DesktopController:
         runtime = self.supervisor.workers["gateway"]
         if not (runtime.process and runtime.process.poll() is None) and not self.ready():
             self.start("gateway")
-        deadline = time.monotonic() + 30
-        while not self.ready():
-            if time.monotonic() >= deadline:
-                raise RuntimeError("Gateway did not become ready in 30 seconds. See gateway logs.")
-            time.sleep(.25)
+        if not self.wait_ready():
+            raise RuntimeError(f"Gateway did not become ready in {READY_WAIT_SECONDS} seconds. See gateway logs.")
+        # One worker's failure must not strand the ones after it: the fleet file
+        # order is arbitrary, and a single slow probe used to leave every later
+        # worker unstarted until someone noticed.
+        errors = []
         for name in self.supervisor.workers:
-            if name != "gateway":
+            if name == "gateway":
+                continue
+            try:
                 self.start(name)
+            except Exception as exc:
+                errors.append(f"{name}: {exc}")
+        if errors:
+            raise RuntimeError("; ".join(errors))
 
     def stop_all(self):
         errors = []
