@@ -4,6 +4,18 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 
 ## [Unreleased]
 
+### Added
+- **Delivery watchdog.** The gateway now makes sure pending work reaches a worker
+  without a person telling an agent to look. A job left PENDING for
+  `MCO_DELIVERY_STALL_SECONDS` (default 600; `0` disables) is re-broadcast to wake
+  its role again; if still untaken after another window it is rerouted in place to
+  the first `MCO_ROUTE_FALLBACKS` role with an online agent (e.g.
+  `codex:claude, antigravity:claude|codex`), up to `MCO_DELIVERY_MAX_REROUTES`
+  (default 2). When nothing can take it, the job is escalated once: a
+  `delivery_escalated` audit event, a `job_undeliverable` broadcast, and an ntfy
+  push. Set `input_payload.no_reroute` to keep a job on its original target. All
+  steps are audit events, so restarts neither repeat nor forget them.
+
 ### Changed
 - **Breaking: audit failures now fail the triggering operation.** A failed audit
   write or required S3 acknowledgement no longer returns success. The database
