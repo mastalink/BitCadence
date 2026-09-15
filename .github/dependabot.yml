@@ -10,4 +10,9 @@ updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly
+    # One PR for all Actions bumps: separate PRs touching adjacent
+    # workflow lines conflict with each other as soon as one merges.
+    groups:
+      github-actions:
+        patterns: ["*"]
