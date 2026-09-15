@@ -12,6 +12,12 @@ data "archive_file" "deploy_runner" {
   output_path = "${path.module}/build/via_score_deploy_runner.zip"
 }
 
+data "archive_file" "tick_runner" {
+  type        = "zip"
+  source_file = "${path.module}/tick_handler.py"
+  output_path = "${path.module}/build/via_score_tick_runner.zip"
+}
+
 data "aws_iam_policy_document" "assume_lambda" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -133,6 +139,70 @@ resource "aws_lambda_permission" "audit_eventbridge" {
   function_name = aws_lambda_function.audit.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.audit.arn
+}
+
+# ── Conductor tick adapter ────────────────────────────────────────────────
+# This is a fixed one-minute control-loop skeleton. It has no model, network
+# target, KMS, SSM, deployment, or generic invocation permission. A later
+# reviewed conductor store/outbox supplies the durable implementations.
+resource "aws_iam_role" "tick" {
+  name               = "${var.name}-conductor-tick"
+  assume_role_policy = data.aws_iam_policy_document.assume_lambda.json
+}
+
+resource "aws_cloudwatch_log_group" "tick" {
+  name              = "/aws/lambda/${var.name}-conductor-tick"
+  retention_in_days = var.log_retention_days
+}
+
+data "aws_iam_policy_document" "tick" {
+  statement {
+    sid       = "WriteOwnLogsOnly"
+    actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+    resources = ["${aws_cloudwatch_log_group.tick.arn}:*"]
+  }
+}
+
+resource "aws_iam_role_policy" "tick" {
+  name   = "${var.name}-conductor-tick-policy"
+  role   = aws_iam_role.tick.id
+  policy = data.aws_iam_policy_document.tick.json
+}
+
+resource "aws_lambda_function" "tick" {
+  function_name    = "${var.name}-conductor-tick"
+  description      = "Fixed no-LLM Score conductor tick adapter; durable operations are not installed."
+  role             = aws_iam_role.tick.arn
+  handler          = "tick_handler.handler"
+  runtime          = "python3.12"
+  filename         = data.archive_file.tick_runner.output_path
+  source_code_hash = data.archive_file.tick_runner.output_base64sha256
+  timeout          = 30
+  memory_size      = 128
+  depends_on       = [aws_cloudwatch_log_group.tick]
+}
+
+resource "aws_cloudwatch_event_rule" "tick" {
+  name                = "${var.name}-conductor-tick-schedule"
+  description         = "Runs the fixed no-LLM Score conductor tick adapter once per minute."
+  schedule_expression = "rate(1 minute)"
+}
+
+resource "aws_cloudwatch_event_target" "tick" {
+  rule = aws_cloudwatch_event_rule.tick.name
+  arn  = aws_lambda_function.tick.arn
+  input = jsonencode({
+    lane = "score-conductor-tick"
+    mode = "fixed_no_llm"
+  })
+}
+
+resource "aws_lambda_permission" "tick_eventbridge" {
+  statement_id  = "AllowEventBridgeScheduledTick"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.tick.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.tick.arn
 }
 
 # ── Release lane ───────────────────────────────────────────────────────────
