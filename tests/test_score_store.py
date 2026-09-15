@@ -155,6 +155,10 @@ def test_sql_contains_all_12_required_score_tables_and_specs():
 
     # Verify score_outbox statuses
     assert "CHECK (status IN ('planned', 'sending', 'submitted', 'reconciled'))" in sql
+    assert "score_id    TEXT NOT NULL" in sql
+    assert "digest      TEXT NOT NULL" in sql
+    assert "attempt     INTEGER NOT NULL DEFAULT 1" in sql
+    assert "uq_score_outbox_dispatch UNIQUE (org_id, run_id, task_id, phase)" in sql
 
     # Verify score_recovery decisions
     assert "CHECK (decision IN ('pending', 'inspected', 'compensated'))" in sql
@@ -220,6 +224,7 @@ def test_localstore_primary_keys_and_registrations():
 
     assert "score_events" in APPEND_ONLY_TABLES
     assert UNIQUE_CONSTRAINTS["score_tasks"] == ("org_id", "run_id", "task_id", "attempt")
+    assert UNIQUE_CONSTRAINTS["score_outbox"] == ("org_id", "run_id", "task_id", "phase")
 
 
 # ── 5. LocalStore CRUD Across All Score Tables ──────────────────────────────
@@ -397,6 +402,33 @@ def test_localstore_score_tasks_unique_attempt_constraint(store):
     # Updating an existing row to collide with another row's unique tuple must fail
     with pytest.raises(ValueError, match="Duplicate unique constraint"):
         store.table("score_tasks").update({"attempt": 1}).eq("id", res_att2.data[0]["id"]).execute()
+
+
+def test_localstore_score_outbox_unique_dispatch_constraint(store):
+    first = {
+        "org_id": "default",
+        "score_id": "score-a",
+        "run_id": "run-1",
+        "digest": "digest-a",
+        "task_id": "task-build",
+        "attempt": 3,
+        "phase": "work",
+        "job_id": "job-a",
+        "payload": {"id": "job-a"},
+    }
+    stored = store.table("score_outbox").insert(first).execute().data[0]
+    assert stored["attempt"] == 3
+    assert stored["digest"] == "digest-a"
+
+    with pytest.raises(ValueError, match="Duplicate unique constraint"):
+        store.table("score_outbox").insert(
+            {**first, "id": "another-row", "job_id": "another-job", "attempt": 4}
+        ).execute()
+
+    review = store.table("score_outbox").insert(
+        {**first, "id": "review-row", "job_id": "review-job", "phase": "review"}
+    ).execute().data[0]
+    assert review["phase"] == "review"
 
 
 # ── 7. Acceptance: Events Append-Only Immutability on LocalStore ─────────────

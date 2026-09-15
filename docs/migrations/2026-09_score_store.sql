@@ -107,14 +107,19 @@ CREATE TRIGGER trg_score_events_immutable
 CREATE TABLE IF NOT EXISTS score_outbox (
   id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   org_id      TEXT NOT NULL DEFAULT 'default',
+  score_id    TEXT NOT NULL,
   run_id      TEXT NOT NULL,
+  digest      TEXT NOT NULL,
   task_id     TEXT NOT NULL,
+  attempt     INTEGER NOT NULL DEFAULT 1,
   phase       TEXT NOT NULL DEFAULT 'work',
-  job_id      TEXT,
+  job_id      TEXT NOT NULL,
   payload     JSONB NOT NULL DEFAULT '{}'::jsonb,
   status      TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'sending', 'submitted', 'reconciled')),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_score_outbox_dispatch UNIQUE (org_id, run_id, task_id, phase),
+  CONSTRAINT uq_score_outbox_job UNIQUE (job_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_score_outbox_run_status

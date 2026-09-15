@@ -60,6 +60,7 @@ PRIMARY_KEYS = {
 # Unique constraints enforced across multi-column natural keys.
 UNIQUE_CONSTRAINTS = {
     "score_tasks": ("org_id", "run_id", "task_id", "attempt"),
+    "score_outbox": ("org_id", "run_id", "task_id", "phase"),
 }
 
 # Dedicated Score tables mirrored in LocalStore.
@@ -305,6 +306,7 @@ class LocalStore:
             row.setdefault("status", "pending")
             row.setdefault("checkpoint_approved", False)
         elif table == "score_outbox":
+            row.setdefault("attempt", 1)
             row.setdefault("status", "planned")
             row.setdefault("phase", "work")
             row.setdefault("payload", {})
