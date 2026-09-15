@@ -1,0 +1,56 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - button "Via home" [ref=e6] [cursor=pointer]:
+      - generic [ref=e15]: Via
+      - generic [ref=e16]: Make room for grace
+    - generic [ref=e17]:
+      - button "Find a church" [ref=e18] [cursor=pointer]
+      - button "My routine" [ref=e20] [cursor=pointer]
+      - button "Calendar" [ref=e22] [cursor=pointer]
+      - button "Prepare" [ref=e24] [cursor=pointer]
+      - button "About Via" [ref=e26] [cursor=pointer]
+  - generic [ref=e29]:
+    - generic [ref=e31]:
+      - generic [ref=e32]: There is a place for you here.
+      - generic [ref=e33]: Find confession and Mass. Make a little space. Take the next step.
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - button "Confession" [ref=e43] [cursor=pointer]
+            - button "Mass" [ref=e45] [cursor=pointer]
+            - button "Adoration" [ref=e47] [cursor=pointer]
+          - generic [ref=e50]:
+            - textbox "Search ZIP code, address, city, county, or church" [ref=e51]:
+              - /placeholder: ZIP, address, city, county, or church
+              - text: Columbus
+            - button "Search" [ref=e52] [cursor=pointer]
+          - generic [ref=e54]: "Search area: Columbus"
+          - generic [ref=e55]:
+            - button "Use my location" [ref=e56] [cursor=pointer]
+            - generic [ref=e58]:
+              - generic [ref=e59]: Fits my routine
+              - switch "Show times that fit my routine" [ref=e63] [cursor=pointer]
+        - generic [ref=e64]:
+          - generic [ref=e65]: Confession near Columbus
+          - generic [ref=e66]: Checking parish listings…
+          - generic [ref=e67]:
+            - button "Today" [ref=e68] [cursor=pointer]
+            - button "7 days" [ref=e70] [cursor=pointer]
+            - button "14 days" [ref=e72] [cursor=pointer]
+        - progressbar [ref=e74]
+        - generic [ref=e79]:
+          - generic [ref=e80]: A time should come with a source.
+          - generic [ref=e81]: “Listed by parish” means we read its published schedule. It does not guarantee a priest is available or that an unpublished change hasn’t occurred.
+      - generic [ref=e82]:
+        - generic [ref=e83]: A little room for grace.
+        - generic [ref=e84]: Choose a rhythm that fits your life. We’ll help you find the next opportunity.
+        - generic [ref=e86]: Your confession rhythm
+        - generic [ref=e87]: Every 30 days
+        - generic [ref=e88]: Your next visit starts with a simple plan.
+        - button "Build my routine" [ref=e89] [cursor=pointer]
+        - generic [ref=e91]: Private by design. Personal dates stay on this device.
+    - generic [ref=e92]:
+      - generic [ref=e93]: Via
+      - generic [ref=e103]: God is greater than your ups and downs.
+      - generic [ref=e104]: An early build. Parish sources remain a tap away.
