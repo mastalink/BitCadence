@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from mco.orchestrator.scores import ScoreError, SandboxRun, compile_score, digest, load_score
+from mco.orchestrator.score_evidence import EvidenceBinding, VerifiedEvidence
 
 
 def task(key, deps=(), checkpoint=None):
@@ -27,7 +28,13 @@ def finish(r, key, now):
 
 
 def accept(r, key, token, now):
-    r.review(key, token, actor="independent", role="reviewer", passed=True, verified_evidence=True, now=now)
+    binding = EvidenceBinding("default", r.fingerprint, r.run_id, key, r.state[key]["attempt"], "head", "build", "deployment")
+    events = (
+        {"event_type": "test_receipt_ingested", "receipt": {"event_type": "test_receipt"}},
+        {"event_type": "code_review_ingested", "receipt": {"event_type": "code_review"}},
+    )
+    verification = VerifiedEvidence(binding, {}, events, "independent")
+    r.review(key, token, actor="independent", role="reviewer", passed=True, verification=verification, now=now)
 
 
 def test_full_flow_failure_retry_review_human_gate_launch():
@@ -151,7 +158,7 @@ def test_evidence_is_complete_and_bound_to_author():
 def test_review_rejection_retries_and_review_expiry_is_bounded():
     r = run()
     token = finish(r, "build", 0)
-    r.review("build", token, actor="independent", role="reviewer", passed=False, verified_evidence=False, now=2)
+    r.review("build", token, actor="independent", role="reviewer", passed=False, now=2)
     finish(r, "build", 3)
     r.expire(now=14)
     assert r.state["build"]["status"] == "blocked"

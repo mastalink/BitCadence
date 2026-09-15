@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from mco.orchestrator.scores import ScoreError, SandboxRun, compile_score, digest, load_score
+from mco.orchestrator.score_evidence import EvidenceBinding, VerifiedEvidence
 from mco.orchestrator.score_canary import (
     CANARY_SCORE_ID,
     CANARY_TASK_ID,
@@ -238,17 +239,33 @@ def test_canary_e2e_sandbox_lifecycle_and_acceptance(canary_score_dict, tmp_path
     assert valid_review["verified_evidence"] is True
 
     # 6. Submit valid review
+    binding = EvidenceBinding("default", sandbox.fingerprint, run_id, "C01", 1, "head", "build", "deployment")
+    verification = VerifiedEvidence(
+        binding,
+        {},
+        (
+            {"event_type": "test_receipt_ingested", "receipt": {"event_type": "test_receipt"}},
+            {"event_type": "code_review_ingested", "receipt": {"event_type": "code_review"}},
+        ),
+        "reviewer-grok",
+    )
     sandbox.review(
         CANARY_TASK_ID,
         token,
         actor="reviewer-grok",
         role=CANARY_ROLE_REVIEW,
         passed=valid_review["passed"],
-        verified_evidence=valid_review["verified_evidence"],
+        verification=verification,
         now=13,
     )
 
     assert sandbox.state[CANARY_TASK_ID]["status"] == "accepted"
     report = sandbox.report()
     assert report["launch_accepted"] is True
-    assert len(report["events"]) == 3  # started, work_completed, accepted
+    assert [event["kind"] for event in report["events"]] == [
+        "started",
+        "work_completed",
+        "test_receipt_ingested",
+        "code_review_ingested",
+        "accepted",
+    ]

@@ -232,15 +232,29 @@ class SandboxRun:
         state.update(status="review", evidence=copy.deepcopy(evidence), deadline=now + self.tasks[task_id]["timeout_seconds"])
         self._event("work_completed", task_id, actor=actor, evidence=copy.deepcopy(evidence))
 
-    def review(self, task_id, token, *, actor, role, passed, verified_evidence, now):
+    def review(self, task_id, token, *, actor, role, passed, verification=None, verified_evidence=None, now):
         state = self._claim(task_id, token, "review", now)
         _string(actor)
         if actor == state["author"] or role != self.tasks[task_id]["review_role"]:
             raise ScoreError("Independent reviewer required")
-        if type(passed) is not bool or type(verified_evidence) is not bool:
-            raise ScoreError("Boolean review decisions required")
-        if passed and not verified_evidence:
-            raise ScoreError("Evidence not verified")
+        if type(passed) is not bool:
+            raise ScoreError("Boolean review decision required")
+        # Compatibility argument is deliberately never authoritative.  A
+        # worker or reviewer saying verified_evidence=true proves nothing.
+        if verified_evidence is not None:
+            raise ScoreError("Worker-claimed evidence verification is not authoritative")
+        if passed:
+            from mco.orchestrator.score_evidence import VerifiedEvidence
+
+            if not isinstance(verification, VerifiedEvidence):
+                raise ScoreError("Server evidence verification required")
+            binding = verification.binding
+            if binding.run_id != self.run_id or binding.task_id != task_id or binding.attempt != state["attempt"] or binding.score_digest != self.fingerprint:
+                raise ScoreError("Evidence verification is stale or for another task")
+            if verification.reviewer_id != actor:
+                raise ScoreError("Review actor does not match server-selected reviewer")
+            for event in verification.events:
+                self._event(event["event_type"], task_id, actor=actor, receipt=copy.deepcopy(event["receipt"]))
         if passed:
             state["status"] = "accepted"
             self._event("accepted", task_id, actor=actor, evidence=copy.deepcopy(state["evidence"]))
