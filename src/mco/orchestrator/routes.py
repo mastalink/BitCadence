@@ -1,10 +1,14 @@
 """FastAPI routes for the Job Board API, serving GET and POST requests."""
 
 import os
+import hashlib
+import hmac
+import json
 import logging
 import importlib.metadata as importlib_metadata
 import re
 import subprocess
+from uuid import UUID
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends
@@ -14,7 +18,7 @@ from mco.orchestrator.contracts import (
     JobStatus,
     REASSIGNABLE_STATUSES,
 )
-from mco.orchestrator.auth import require_agent, require_scopes
+from mco.orchestrator.auth import has_scope, require_agent, require_scopes
 from mco.orchestrator.audit import record_event, get_events
 from mco.orchestrator.leases import acquire_lease, renew_lease, Lease, expire_lease, is_expired
 from mco.config import get_config
@@ -277,6 +281,61 @@ async def get_jobs(include_archived: bool = False, agent: dict = Depends(require
         return []
 
 
+@router.get("/capabilities")
+async def get_job_capabilities(agent: dict = Depends(require_scopes("jobs:read"))):
+    """Advertise retry-safe job creation before a caller sends any work."""
+    return {"create_with_id": 1}
+
+
+def _canonical_explicit_job_id(value) -> str:
+    """Accept only the canonical UUID text PostgreSQL will return unchanged."""
+    if not isinstance(value, str):
+        raise HTTPException(status_code=400, detail="id must be a canonical UUID")
+    try:
+        canonical = str(UUID(value))
+    except (ValueError, TypeError, AttributeError):
+        raise HTTPException(status_code=400, detail="id must be a canonical UUID")
+    if value != canonical:
+        raise HTTPException(status_code=400, detail="id must be a canonical UUID")
+    return canonical
+
+
+def _create_intent_hash(agent: dict, intent: dict) -> str:
+    """Bind an explicit ID to its authenticated caller and immutable request."""
+    document = {
+        "protocol": 1,
+        "org_id": agent_org(agent),
+        "source_agent_id": agent["instance_id"],
+        "source_agent_role": agent["role"],
+        **intent,
+    }
+    encoded = json.dumps(
+        document, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _read_job_by_id(db_client, job_id: str) -> dict | None:
+    rows = (
+        db_client.table("agent_jobs").select("*").eq("id", job_id).limit(1).execute().data
+        or []
+    )
+    return rows[0] if rows else None
+
+
+def _can_read_job(agent: dict, job: dict) -> bool:
+    if job_org(job) != agent_org(agent):
+        return False
+    if has_scope(agent, "admin"):
+        return True
+    if job.get("source_agent_id") == agent.get("instance_id"):
+        return True
+    if (job.get("target_agent_role") or "").lower() != (agent.get("role") or "").lower():
+        return False
+    target_id = job.get("target_agent_id")
+    return not target_id or target_id == agent.get("instance_id")
+
+
 @router.post("")
 async def create_job(payload: dict, agent: dict = Depends(require_scopes("jobs:write"))):
     """Create a job. Any authenticated agent may send to any target ('drop mail')."""
@@ -336,7 +395,39 @@ async def create_job(payload: dict, agent: dict = Depends(require_scopes("jobs:w
         if priority:
             data["priority"] = priority
 
-        res = db_client.table("agent_jobs").insert(data).execute()
+        explicit_id = payload.get("id")
+        intent_hash = None
+        if explicit_id is not None:
+            explicit_id = _canonical_explicit_job_id(explicit_id)
+            intent_hash = _create_intent_hash(agent, {
+                "title": title,
+                "description": description,
+                "target_agent_role": target_agent_role,
+                "target_agent_id": target_agent_id,
+                "depends_on": depends_on,
+                "input_payload": input_payload,
+                "requires_approval": bool(payload.get("requires_approval")),
+                "max_retries": max_retries,
+                "escalate_to_role": escalate_to_role,
+                "priority": priority,
+            })
+            data["id"] = explicit_id
+            data["create_intent_hash"] = intent_hash
+
+        try:
+            res = db_client.table("agent_jobs").insert(data).execute()
+        except Exception:
+            # Insert first: the UUID primary key, not a racy preflight SELECT,
+            # chooses the sole creator. A matching row also recovers the case
+            # where the database committed but its response was lost.
+            if explicit_id is not None:
+                existing = _read_job_by_id(db_client, explicit_id)
+                stored_hash = str((existing or {}).get("create_intent_hash") or "")
+                if existing and hmac.compare_digest(stored_hash, intent_hash or ""):
+                    return {"success": True, "job": existing}
+                if existing:
+                    raise HTTPException(status_code=409, detail="Job ID is already in use")
+            raise
         if res.data:
             new_job = res.data[0]
             record_event(db_client, new_job.get("id"), "created",
@@ -373,6 +464,8 @@ async def create_job(payload: dict, agent: dict = Depends(require_scopes("jobs:w
 
             return {"success": True, "job": new_job}
         return {"success": False, "error": "Insert failed"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating job: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -430,6 +523,22 @@ async def get_pending_jobs(role: str, instance_id: str = None, agent: dict = Dep
     except Exception as e:
         logger.error(f"Error fetching pending jobs: {e}")
         return []
+
+
+@router.get("/{job_id}")
+async def get_job(job_id: str, agent: dict = Depends(require_scopes("jobs:read"))):
+    """Return one job to its creator, addressee, target role, or an admin."""
+    db_client = get_db_client()
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Job not found")
+    try:
+        job = _read_job_by_id(db_client, job_id)
+    except Exception as e:
+        logger.error("Error fetching job %s: %s", job_id, e)
+        raise HTTPException(status_code=500, detail="Failed to fetch job")
+    if not job or not _can_read_job(agent, job):
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
 
 
 @router.post("/lease_next")
