@@ -271,6 +271,17 @@ SETTING_GROUPS = {
                                     "label": "Mark an agent offline after no contact for (seconds)",
                                     "placeholder": "300"},
     },
+    "delivery": {
+        "MCO_DELIVERY_STALL_SECONDS": {"type": "text",
+                                       "label": "Re-wake a pending job nobody took after (seconds; 0 = off)",
+                                       "placeholder": "600"},
+        "MCO_ROUTE_FALLBACKS": {"type": "text",
+                                "label": "Reroute stalled work to (role:fallback|fallback, comma-separated)",
+                                "placeholder": "codex:claude, antigravity:claude|codex"},
+        "MCO_DELIVERY_MAX_REROUTES": {"type": "text",
+                                      "label": "Maximum reroutes per job before escalating to a human",
+                                      "placeholder": "2"},
+    },
     "observability": {
         "MCO_METRICS_TOKEN": {"type": "secret",
                               "label": "Protect /metrics with a bearer token (blank = open, like /healthz)"},

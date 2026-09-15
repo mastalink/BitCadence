@@ -39,15 +39,50 @@ async def lifespan(app):
                 app.state.maintenance_error = type(exc).__name__
                 logger.exception("Gateway maintenance failed")
             await asyncio.sleep(5)
-    task = asyncio.create_task(maintain())
+    tasks = [asyncio.create_task(maintain()), asyncio.create_task(delivery_loop())]
     try:
         yield
     finally:
-        task.cancel()
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+
+DELIVERY_SWEEP_SECONDS = 60
+
+
+async def delivery_once():
+    """One delivery-watchdog sweep: store work in a thread, sends on the loop."""
+    from mco.orchestrator import delivery, routes
+    db = routes.get_db_client()
+    if db is None:
+        return None
+    result = await asyncio.to_thread(delivery.sweep, db)
+    callback = routes._broadcast_callback
+    if callback is not None:
+        for event_name, job in result.broadcasts:
+            try:
+                await callback(event_name, job)
+            except Exception as exc:
+                logger.warning(f"Delivery broadcast failed for {job.get('id')}: {type(exc).__name__}")
+    await asyncio.to_thread(delivery.send_notifications, result)
+    if result.rekicked or result.rerouted or result.escalated:
+        logger.info("Delivery sweep: rekicked=%s rerouted=%s escalated=%s",
+                    result.rekicked, result.rerouted, result.escalated)
+    return result
+
+
+async def delivery_loop():
+    while True:
+        await asyncio.sleep(DELIVERY_SWEEP_SECONDS)
         try:
-            await task
-        except asyncio.CancelledError:
-            pass
+            await delivery_once()
+        except Exception:
+            logger.exception("Delivery sweep failed")
 
 
 async def readyz(request: Request):
