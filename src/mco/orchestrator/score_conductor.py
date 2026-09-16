@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from mco.orchestrator.score_bridge import GatewayBoard, ScoreBridge
-from mco.orchestrator.scores import ScoreError, load_score
+from mco.orchestrator.scores import ScoreError, ScoreIdentityError, load_score
 
 logger = logging.getLogger("mco.orchestrator.score_conductor")
 
@@ -122,19 +122,43 @@ class Conductor:
             # original error, and status() below reports the real state.
             logger.warning("cannot block run %s after a %s failure: %s", run_id, stage, exc)
 
-    def tick(self, run_id: str) -> TickResult:
-        """Advance the run by whatever is possible right now."""
+    def tick(self, run_id: str, *, block_on_identity_change: bool = True) -> TickResult:
+        """Advance the run by whatever is possible right now.
+
+        A credential change is the one failure here with two right answers, so
+        it is the one the caller gets to choose. Typed at a terminal it means
+        somebody reauthorized behind this run's back and the run must stop
+        durably, which is the default. Driven by the automatic sweep it means
+        only "not ours this second" - the credential can move between the
+        sweep's candidate scan and any of the identity checks inside a tick -
+        and killing a healthy run over that microsecond is exactly what an
+        unattended caller must never do. Such a caller passes
+        ``block_on_identity_change=False`` and gets `ScoreIdentityError` to skip
+        on, with the run left exactly as it was found.
+        """
         before = self._accepted(run_id)
         planned: list[str] = []
         dispatched: list[str] = []
         error: Optional[str] = None
-        stage = "plan"
+        stage = "identity"
         try:
+            # Checked here as well as inside dispatch and poll, so that no stage
+            # of a tick can run under the wrong credential. Without it a sweep
+            # that lost the race still wrote planned rows to a run it had
+            # decided not to touch, and "skipped" would not have been true.
+            with self.bridge.tx() as db:
+                self.bridge.identity(self.bridge.run(db, run_id), self.board)
+            stage = "plan"
             planned = self.bridge.plan(run_id)
             stage = "dispatch"
             dispatched = self.bridge.dispatch(run_id, self.board)
             stage = "poll"
             self.bridge.poll(run_id, self.board)
+        except ScoreIdentityError as exc:
+            if not block_on_identity_change:
+                raise
+            error = str(exc)
+            self._block(run_id, stage, error)
         except ScoreError as exc:
             # A tick reports the failure rather than crashing the loop that
             # called it - but never leaves the run advancing behind its back.

@@ -17,6 +17,18 @@ class ScoreError(ValueError):
     """Invalid contract or forbidden state transition."""
 
 
+class ScoreIdentityError(ScoreError):
+    """The board's credential is not the one this run was started under.
+
+    A subclass, because every existing `except ScoreError` must keep catching
+    it. It exists so that the one failure with two right answers can be told
+    apart from the rest by string-free means: typed at a terminal a credential
+    change means "someone reauthorized behind this run's back" and the run
+    stops durably, while for the automatic sweep it means only "not ours this
+    second" and the run must be left exactly as it was.
+    """
+
+
 def _keys(value, required, optional=()):
     if not isinstance(value, dict):
         raise ScoreError("Expected an object")
