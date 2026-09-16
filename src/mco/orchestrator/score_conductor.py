@@ -98,20 +98,48 @@ class Conductor:
 
     # ── the loop ─────────────────────────────────────────────────────────
 
+    def _block(self, run_id: str, stage: str, reason: str) -> None:
+        """Stop a run whose tick raised, durably.
+
+        `poll` blocks the run itself and records the specific
+        `validation_blocked` evidence, so by the time we get here it is already
+        out of `running` and this is a no-op - its reason is not overwritten and
+        no duplicate blocking event is written. `plan` and `dispatch` have no
+        such wrapper: without this, their failures would live only in the
+        returned `TickResult` while the database still said `running`, and the
+        next tick - or a fresh process - would march on as if nothing happened.
+        """
+        try:
+            with self.bridge.tx() as db:
+                run = self.bridge.run(db, run_id)
+                if run["status"] != "running":
+                    return
+                db.execute("UPDATE runs SET status='blocked' WHERE id=?", (run_id,))
+                self.bridge.event(db, run_id, "tick_blocked", {"stage": stage, "reason": reason})
+        except ScoreError as exc:
+            # The run itself is unreadable (unknown, or a root mismatch). There
+            # is nothing durable left to write to; the caller still sees the
+            # original error, and status() below reports the real state.
+            logger.warning("cannot block run %s after a %s failure: %s", run_id, stage, exc)
+
     def tick(self, run_id: str) -> TickResult:
         """Advance the run by whatever is possible right now."""
         before = self._accepted(run_id)
         planned: list[str] = []
         dispatched: list[str] = []
         error: Optional[str] = None
+        stage = "plan"
         try:
             planned = self.bridge.plan(run_id)
+            stage = "dispatch"
             dispatched = self.bridge.dispatch(run_id, self.board)
+            stage = "poll"
             self.bridge.poll(run_id, self.board)
         except ScoreError as exc:
-            # The bridge already recorded why and blocked the run; a tick
-            # reports it rather than crashing the loop that called it.
+            # A tick reports the failure rather than crashing the loop that
+            # called it - but never leaves the run advancing behind its back.
             error = str(exc)
+            self._block(run_id, stage, error)
         status = self.status(run_id)
         return TickResult(run_id=run_id, status=status["status"], planned=planned,
                           dispatched=dispatched,

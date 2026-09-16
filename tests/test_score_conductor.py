@@ -72,6 +72,14 @@ def _do_work(conductor, run_id, job_id, *, actor="canary-worker-1"):
     conductor.board.finish(job_id, work(job, conductor.bridge.root), actor=actor)
 
 
+def _stage_of(conductor, run_id):
+    """The stage named by the run's tick_blocked event, if a tick blocked it."""
+    for event in conductor.bridge.status(run_id)["events"]:
+        if event["event"] == "tick_blocked":
+            return json.loads(event["detail"])["stage"]
+    return None
+
+
 def _do_review(conductor, job_id, reviewer="canary-review-1"):
     job = conductor.board.get(job_id)
     conductor.board.finish(job_id, review(job, reviewer, conductor.bridge.root))
@@ -125,6 +133,40 @@ class TestTick:
         result = conductor.tick(run)
         assert result.error and "identity" in result.error.lower()
         assert conductor.status(run)["status"] == "blocked"
+
+    def test_a_dispatch_failure_blocks_the_run_rather_than_only_reporting_it(self, conductor):
+        run = _start(conductor)
+        conductor.board.capabilities = lambda: {}          # a gateway without create_with_id
+        result = conductor.tick(run)
+        assert result.error == "Retry-safe gateway protocol unavailable"
+        assert result.status == "blocked"
+        assert _stage_of(conductor, run) == "dispatch"
+        assert not conductor.board.jobs, "nothing may be submitted through a refused protocol"
+        # The block is durable: a fresh conductor over the same database agrees.
+        fresh = Conductor(open_bridge(conductor.bridge.database, conductor.bridge.root), FakeBoard())
+        assert fresh.status(run)["status"] == "blocked"
+
+    def test_a_plan_failure_blocks_the_run_too(self, conductor, monkeypatch):
+        run = _start(conductor)
+
+        def refuse(_run_id):
+            raise ScoreError("planner refused")
+
+        monkeypatch.setattr(conductor.bridge, "plan", refuse)
+        result = conductor.tick(run)
+        assert result.error == "planner refused"
+        assert result.status == "blocked"
+        assert _stage_of(conductor, run) == "plan"
+        assert not conductor.board.jobs
+
+    def test_a_poll_failure_keeps_its_own_reason_and_is_not_reported_twice(self, conductor):
+        run = _start(conductor)
+        job_id = conductor.tick(run).dispatched[0]
+        _do_work(conductor, run, job_id, actor="somebody-else")
+        assert conductor.tick(run).status == "blocked"
+        events = [e["event"] for e in conductor.bridge.status(run)["events"]]
+        assert events.count("validation_blocked") == 1
+        assert "tick_blocked" not in events, "poll already recorded the specific reason"
 
     def test_run_until_settled_stops_at_acceptance(self, conductor):
         run = _start(conductor)
