@@ -1,9 +1,4 @@
-"""Digest- and tenant-bound authority checks for Score execution.
-
-The durable schema's historical primary key on ``score_grants.digest`` is too
-coarse to be an authorization decision by itself.  This layer always checks the
-caller org, immutable document digest, and a stable grant identity.
-"""
+"""Run-, digest-, and tenant-bound authority checks for Score execution."""
 from __future__ import annotations
 
 import base64
@@ -59,7 +54,9 @@ def configured_grant_key(value: str | None = None) -> bytes:
         if len(raw) == 64:
             key = bytes.fromhex(raw)
         else:
-            key = base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4))
+            key = base64.b64decode(
+                raw + "=" * (-len(raw) % 4), altchars=b"-_", validate=True,
+            )
     except (ValueError, TypeError):
         key = raw.encode()
     if len(key) < 32:
@@ -191,6 +188,8 @@ class GrantService:
         verify_grant_signature(signed, self.key)
         existing = (
             self.db.table("score_grants").select("*")
+            .eq("org_id", signed["org_id"])
+            .eq("run_id", signed["run_id"])
             .eq("digest", signed["digest"]).execute().data or []
         )
         if existing:

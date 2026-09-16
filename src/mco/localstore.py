@@ -49,7 +49,7 @@ PRIMARY_KEYS = {
     "score_tasks": "id",
     "score_events": "seq",
     "score_outbox": "id",
-    "score_grants": "digest",
+    "score_grants": "id",
     "score_reviews": "id",
     "score_providers": "instance_id",
     "score_provider_health": "instance_id",
@@ -63,6 +63,7 @@ PRIMARY_KEYS = {
 UNIQUE_CONSTRAINTS = {
     "score_tasks": ("org_id", "run_id", "task_id", "attempt"),
     "score_outbox": ("org_id", "run_id", "task_id", "phase"),
+    "score_grants": ("org_id", "run_id", "digest"),
     "score_gate_requests": ("org_id", "run_id", "digest", "task_id", "kind"),
     "score_checkpoint_decisions": ("gate_id",),
 }

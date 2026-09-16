@@ -151,7 +151,11 @@ class EvidenceVerifier:
         require_cross_provider: bool,
         now=None,
     ) -> VerifiedEvidence:
-        """Establish evidence without trusting any worker verification claim."""
+        """Establish evidence without trusting any worker verification claim.
+
+        ``cost_cents`` is the caller-declared authorization ceiling in S04,
+        not measured spend. Later accounting must bind the actual cost.
+        """
         if not isinstance(worker_output, dict):
             raise EvidenceError("worker_output_required")
         artifacts = self._artifacts(worker_output.get("artifacts"))

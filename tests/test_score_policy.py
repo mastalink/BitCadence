@@ -79,8 +79,44 @@ def test_grant_service_persists_reads_and_rejects_tampering(store):
         service.load(org_id="acme", run_id="run-1", digest="a" * 64)
 
 
+def test_same_digest_can_be_granted_to_two_runs_in_one_org(store):
+    service = GrantService(store, verification_key=KEY)
+    first = service.issue({
+        key: value for key, value in strict_grant(run_id="run-1").items()
+        if key != "signature"
+    })
+    second = service.issue({
+        key: value for key, value in strict_grant(run_id="run-2").items()
+        if key != "signature"
+    })
+
+    assert first["id"] != second["id"]
+    assert service.load(org_id="acme", run_id="run-1", digest="a" * 64) == first
+    assert service.load(org_id="acme", run_id="run-2", digest="a" * 64) == second
+
+
+def test_same_digest_grants_are_isolated_across_orgs(store):
+    service = GrantService(store, verification_key=KEY)
+    acme = service.issue({
+        key: value for key, value in strict_grant(org_id="acme").items()
+        if key != "signature"
+    })
+    globex = service.issue({
+        key: value for key, value in strict_grant(org_id="globex").items()
+        if key != "signature"
+    })
+
+    assert acme["id"] != globex["id"]
+    assert service.load(org_id="acme", run_id="run-1", digest="a" * 64) == acme
+    assert service.load(org_id="globex", run_id="run-1", digest="a" * 64) == globex
+    with pytest.raises(AuthorityError, match="^issued_grant_not_found$"):
+        service.load(org_id="initech", run_id="run-1", digest="a" * 64)
+
+
 def test_grant_key_has_real_config_format_and_fails_closed():
     assert configured_grant_key(KEY.hex()) == KEY
+    invalid_base64 = "not-base64!" * 4
+    assert configured_grant_key(invalid_base64) == invalid_base64.encode()
     with pytest.raises(AuthorityError, match="not_configured"):
         configured_grant_key("")
 

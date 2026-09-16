@@ -130,15 +130,20 @@ CREATE INDEX IF NOT EXISTS idx_score_outbox_pending
 -- ── 6. score_grants ───────────────────────────────────────────────────
 -- Signed owner authorizations bound to score digest and resource scopes.
 CREATE TABLE IF NOT EXISTS score_grants (
-  digest          TEXT PRIMARY KEY,
+  id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   org_id          TEXT NOT NULL DEFAULT 'default',
+  run_id          TEXT NOT NULL,
+  digest          TEXT NOT NULL,
   actions         JSONB NOT NULL DEFAULT '[]'::jsonb,
   resources       JSONB NOT NULL DEFAULT '[]'::jsonb,
   env             TEXT NOT NULL DEFAULT 'production',
+  not_before      TIMESTAMPTZ NOT NULL,
   expires_at      TIMESTAMPTZ NOT NULL,
+  budget_cents    BIGINT NOT NULL DEFAULT 0,
   human_principal TEXT NOT NULL,
   signature       TEXT NOT NULL,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_score_grants_authority UNIQUE (org_id, run_id, digest)
 );
 
 CREATE INDEX IF NOT EXISTS idx_score_grants_org

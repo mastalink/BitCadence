@@ -133,8 +133,10 @@ class GateService:
                   "run_id": gate["run_id"], "digest": gate["digest"], "task_id": gate["task_id"],
                   "decision": decision, "human_principal": principal, "reason": str(reason or ""),
                   "decided_at": datetime.now(timezone.utc).isoformat()}
-        # The decision is its own immutable record. The request status is only
-        # a projection for efficient gate rendering; it is not authorization.
+        # UNIQUE(gate_id) on score_checkpoint_decisions is the race serializer:
+        # only one immutable authorization record can be inserted. The request
+        # status CAS below is a projection for efficient rendering, not the
+        # guard that prevents two decisions.
         saved = self.db.table("score_checkpoint_decisions").insert(record).execute().data[0]
         updated = self.db.table("score_gate_requests").update({"status": decision}).eq("id", gate_id).eq("status", "pending").execute().data or []
         if not updated:
