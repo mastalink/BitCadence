@@ -20,6 +20,8 @@ class Recorder:
             return httpx.Response(200, json=[{"id": "j1", "title": "do thing"}])
         if path == "/api/jobs/lease":
             return httpx.Response(200, json={"success": True})
+        if path == "/api/jobs/lease_next":
+            return httpx.Response(200, json={"success": True, "job": None})
         if path.startswith("/api/jobs/") and request.method == "PUT":
             return httpx.Response(200, json={"success": True})
         if path == "/api/jobs" and request.method == "POST":
@@ -70,6 +72,26 @@ def test_lease_posts_self_as_instance():
     assert _client(rec).lease("j1") == {"success": True}
     body = json.loads(rec.last.content)
     assert body == {"task_id": "j1", "agent_instance_id": "coding-beast-codex"}
+
+
+def test_lease_omits_estimated_seconds_when_not_given():
+    rec = Recorder()
+    _client(rec).lease("j1")
+    assert "estimated_seconds" not in json.loads(rec.last.content)
+
+
+def test_lease_sends_a_given_estimate():
+    rec = Recorder()
+    _client(rec).lease("j1", estimated_seconds=1800)
+    body = json.loads(rec.last.content)
+    assert body["estimated_seconds"] == 1800
+
+
+def test_lease_next_sends_a_given_estimate():
+    rec = Recorder()
+    _client(rec).lease_next(estimated_seconds=900)
+    body = json.loads(rec.last.content)
+    assert body["estimated_seconds"] == 900
 
 
 def test_complete_and_fail_put_status():

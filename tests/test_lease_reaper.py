@@ -68,9 +68,12 @@ class TestReclaim:
         assert routes_mod.reclaim_stale_leases(db) == 0
         assert _status(db)["status"] == "leased"
 
-    def test_default_ttl_is_900(self, monkeypatch):
+    def test_default_ttl_is_one_hour(self, monkeypatch):
+        # Raised from 15 minutes 2026-09-16: careful work (a full review, a
+        # big refactor) routinely outlived 15 minutes and lost its lease
+        # mid-task. See effective_lease_ttl() for the estimate-driven TTL.
         monkeypatch.setattr(routes_mod, "get_config", lambda: {})
-        assert routes_mod.get_lease_ttl_seconds() == 900
+        assert routes_mod.get_lease_ttl_seconds() == 3600
 
     def test_lease_without_started_at_is_skipped(self, db, monkeypatch):
         monkeypatch.setattr(routes_mod, "get_config", lambda: {"MCO_LEASE_TTL_SECONDS": "300"})

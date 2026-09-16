@@ -7,6 +7,8 @@ from mco.mcp_server import (
     mco_fail,
     mco_inbox,
     mco_lease,
+    mco_lease_next,
+    mco_renew,
     mco_send,
 )
 
@@ -28,9 +30,17 @@ class FakeGatewayClient:
         self.calls.append(("flush_reports",))
         return 0
 
-    def lease(self, task_id: str):
-        self.calls.append(("lease", task_id))
+    def lease(self, task_id: str, estimated_seconds=None):
+        self.calls.append(("lease", task_id, estimated_seconds))
         return self._responses.get("lease", {"success": True})
+
+    def lease_next(self, estimated_seconds=None):
+        self.calls.append(("lease_next", estimated_seconds))
+        return self._responses.get("lease_next", {"success": False, "job": None})
+
+    def renew(self, task_id: str, estimated_seconds=None):
+        self.calls.append(("renew", task_id, estimated_seconds))
+        return self._responses.get("renew", {"success": True})
 
     def complete(self, task_id: str, output: str, handoff=None):
         self.calls.append(("complete", task_id, output, handoff))
@@ -89,7 +99,34 @@ def test_mco_lease_delegates_task_id(monkeypatch):
     fake = _fake(monkeypatch, lease={"success": True})
     result = mco_lease("task-123")
     assert result == {"success": True}
-    assert fake.calls == [("lease", "task-123")]
+    assert fake.calls == [("lease", "task-123", None)]
+
+def test_mco_lease_omitted_estimate_passes_none_not_zero(monkeypatch):
+    """0 is the tool's sentinel for "no estimate"; the client must see None,
+    never a literal 0-second TTL request."""
+    fake = _fake(monkeypatch)
+    mco_lease("task-123")
+    assert fake.calls[0] == ("lease", "task-123", None)
+
+def test_mco_lease_forwards_a_stated_estimate(monkeypatch):
+    fake = _fake(monkeypatch)
+    mco_lease("task-123", estimated_seconds=1800)
+    assert fake.calls[0] == ("lease", "task-123", 1800)
+
+def test_mco_lease_next_forwards_a_stated_estimate(monkeypatch):
+    fake = _fake(monkeypatch)
+    mco_lease_next(estimated_seconds=600)
+    assert ("lease_next", 600) in fake.calls
+
+def test_mco_renew_forwards_how_much_more_time_is_needed(monkeypatch):
+    fake = _fake(monkeypatch)
+    mco_renew("task-123", estimated_seconds=900)
+    assert fake.calls == [("renew", "task-123", 900)]
+
+def test_mco_renew_omitted_estimate_passes_none(monkeypatch):
+    fake = _fake(monkeypatch)
+    mco_renew("task-123")
+    assert fake.calls == [("renew", "task-123", None)]
 
 def test_mco_complete_delegates_task_and_output(monkeypatch):
     fake = _fake(monkeypatch, complete={"success": True})

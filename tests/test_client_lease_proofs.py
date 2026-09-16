@@ -246,6 +246,19 @@ def test_reopened_renew_forwards_persisted_proof(tmp_path):
     assert gateway.renewals == [LEASE_A]
 
 
+def test_renew_can_carry_a_fresh_time_estimate_without_disturbing_the_persisted_proof(tmp_path):
+    gateway = FenceGateway([LEASE_A])
+    client = _client(gateway, tmp_path)
+    client.lease("job-1")
+
+    client.renew("job-1", estimated_seconds=1200)
+    assert gateway.renewals[-1] == {**LEASE_A, "estimated_seconds": 1200}
+
+    # The persisted claim itself is untouched by the estimate on one call.
+    client.renew("job-1")
+    assert gateway.renewals[-1] == LEASE_A
+
+
 def test_reopened_client_keeps_legacy_gateway_compatible(tmp_path):
     gateway = FenceGateway([{}], legacy=True)
 

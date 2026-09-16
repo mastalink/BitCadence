@@ -8,6 +8,7 @@ import logging
 import importlib.metadata as importlib_metadata
 import re
 import subprocess
+from typing import Any
 from uuid import UUID
 from datetime import datetime, timezone
 from pathlib import Path
@@ -78,13 +79,77 @@ def get_offline_after_seconds() -> int:
 
 
 def get_lease_ttl_seconds() -> int:
-    """How long a job may sit LEASED before it's considered abandoned and
-    reclaimed to PENDING (MCO_LEASE_TTL_SECONDS). 0 (or negative) disables
-    reclamation entirely. Default 900s / 15m."""
+    """The lease TTL when nothing states an estimate (MCO_LEASE_TTL_SECONDS).
+    0 (or negative) disables reclamation entirely.
+
+    Default raised from 15 minutes to one hour on 2026-09-16: a job asking for
+    careful work (a full review, a big refactor) routinely outlived 15
+    minutes, so its lease silently expired mid-work, the job flipped back to
+    pending under a bumped epoch, and the worker's own completion 409'd on a
+    fence it had no way to see coming. See effective_lease_ttl() for the
+    estimate-driven TTL a lease/renew call can ask for instead of this flat
+    default."""
     try:
-        return int(get_config().get("MCO_LEASE_TTL_SECONDS") or 900)
+        return int(get_config().get("MCO_LEASE_TTL_SECONDS") or 3600)
     except (TypeError, ValueError):
-        return 900
+        return 3600
+
+
+def get_lease_ttl_bounds() -> tuple[int, int]:
+    """(min, max) seconds a lease's TTL may span, whichever way it was set
+    (MCO_LEASE_MIN_TTL_SECONDS / MCO_LEASE_MAX_TTL_SECONDS).
+
+    The ceiling is what keeps an estimate-driven TTL from becoming a loophole:
+    without one, a worker's bad estimate - or a hostile one - could buy a
+    lease long enough that a genuinely dead worker's job sits unreclaimed for
+    a very long time. A job that truly needs longer than the ceiling renews
+    with a fresh estimate instead; reclaim_stale_leases still reads whatever
+    lease_expires_at a lease or renewal actually wrote, so the guarantee that
+    an abandoned job always comes back to pending holds at every TTL this can
+    produce."""
+    config = get_config()
+    def _int(key, default):
+        try:
+            return int(config.get(key) or default)
+        except (TypeError, ValueError):
+            return default
+    lo = max(1, _int("MCO_LEASE_MIN_TTL_SECONDS", 300))
+    hi = max(lo, _int("MCO_LEASE_MAX_TTL_SECONDS", 4 * 3600))
+    return lo, hi
+
+
+def effective_lease_ttl(estimated_seconds: Any = None) -> int:
+    """How long a lease or renewal should last.
+
+    Without an estimate: the flat get_lease_ttl_seconds() default.
+
+    With one - the worker's own sense of how long its work will take, given at
+    lease time, or how much MORE time it needs, given at renew time - the TTL
+    is estimate + a buffer (the greater of MCO_LEASE_BUFFER_FLOOR_SECONDS and
+    MCO_LEASE_BUFFER_FRACTION of the estimate), clamped to
+    get_lease_ttl_bounds(). A missing, non-numeric, or non-positive estimate
+    is treated as no estimate - a caller not stating one must never end up
+    with a shorter lease than the plain default would have given it.
+    """
+    default = max(1, get_lease_ttl_seconds())
+    try:
+        estimate = int(estimated_seconds) if estimated_seconds is not None else None
+    except (TypeError, ValueError):
+        estimate = None
+    if estimate is None or estimate <= 0:
+        return default
+    config = get_config()
+    try:
+        buffer_floor = max(0, int(config.get("MCO_LEASE_BUFFER_FLOOR_SECONDS") or 300))
+    except (TypeError, ValueError):
+        buffer_floor = 300
+    try:
+        buffer_fraction = float(config.get("MCO_LEASE_BUFFER_FRACTION") or 0.5)
+    except (TypeError, ValueError):
+        buffer_fraction = 0.5
+    buffer = max(buffer_floor, int(estimate * max(0.0, buffer_fraction)))
+    lo, hi = get_lease_ttl_bounds()
+    return min(hi, max(lo, estimate + buffer))
 
 
 def reclaim_stale_leases(db_client) -> int:
@@ -565,28 +630,31 @@ async def lease_next_job(payload: dict = None, agent: dict = Depends(require_sco
 
     instance_id = agent["instance_id"]
     role = agent["role"]
+    estimated_seconds = None
     if payload:
         claimed = payload.get("agent_instance_id")
         if claimed and claimed != instance_id:
             raise HTTPException(status_code=403, detail="Cannot lease on behalf of another agent")
+        estimated_seconds = payload.get("estimated_seconds")
 
     touch_agent_presence(db_client, agent)
     reclaim_stale_leases(db_client)
 
     try:
         candidates = _pending_for_agent(db_client, role, instance_id, agent)
+        ttl = effective_lease_ttl(estimated_seconds)
         for job in candidates:
             task_id = job.get("id")
             if not task_id:
                 continue
-            lease = acquire_lease(db_client, task_id, instance_id,
-                                  ttl_seconds=max(1, get_lease_ttl_seconds()))
+            lease = acquire_lease(db_client, task_id, instance_id, ttl_seconds=ttl)
             if lease is None:
                 # Someone else took it between the read and the write. Not an
                 # error - try the next one down rather than failing the call.
                 continue
 
-            record_event(db_client, task_id, "leased", instance_id, role)
+            record_event(db_client, task_id, "leased", instance_id, role,
+                         {"estimated_seconds": estimated_seconds, "lease_ttl_seconds": ttl})
             try:
                 notify_job_leased(task_id, instance_id, role)
             except Exception as ntfy_err:
@@ -602,7 +670,7 @@ async def lease_next_job(payload: dict = None, agent: dict = Depends(require_sco
 
             return {"success": True, "job": leased_job,
                     "lease": lease.as_claim(),
-                    "renew_after_seconds": max(1, get_lease_ttl_seconds() // 3)}
+                    "renew_after_seconds": max(1, ttl // 3)}
 
         # Empty inbox and "every candidate was taken by someone else" are the
         # same outcome for the caller: there is nothing for you right now.
@@ -655,17 +723,18 @@ async def lease_job(payload: dict, agent: dict = Depends(require_scopes("jobs:wr
                     detail="Cannot lease a job not addressed to you",
                 )
 
-        lease = acquire_lease(db_client, task_id, agent_instance_id,
-                              ttl_seconds=max(1, get_lease_ttl_seconds()))
+        ttl = effective_lease_ttl(payload.get("estimated_seconds"))
+        lease = acquire_lease(db_client, task_id, agent_instance_id, ttl_seconds=ttl)
         success = lease is not None
-        
+
         if success:
-            record_event(db_client, task_id, "leased", agent_instance_id, agent["role"])
+            record_event(db_client, task_id, "leased", agent_instance_id, agent["role"],
+                         {"estimated_seconds": payload.get("estimated_seconds"), "lease_ttl_seconds": ttl})
             try:
                 notify_job_leased(task_id, agent_instance_id, agent["role"])
             except Exception as ntfy_err:
                 logger.debug(f"ntfy lease hook skipped: {ntfy_err}")
-        
+
         if success and _broadcast_callback:
             try:
                 job_res = db_client.table("agent_jobs").select("*").eq("id", task_id).execute()
@@ -673,9 +742,9 @@ async def lease_job(payload: dict, agent: dict = Depends(require_scopes("jobs:wr
                     await _broadcast_callback("job_leased", job_res.data[0])
             except Exception as e:
                 logger.warning(f"Error executing broadcast callback after lease: {e}")
-                
+
         return {"success": success, "lease": lease.as_claim() if lease else None,
-                "renew_after_seconds": max(1, get_lease_ttl_seconds() // 3)}
+                "renew_after_seconds": max(1, ttl // 3)}
     except HTTPException:
         raise
     except Exception as e:
@@ -1249,6 +1318,9 @@ async def get_agents(agent: dict = Depends(require_scopes("agents:read"))):
 
 @router.post("/{job_id}/renew")
 async def renew_job(job_id: str, payload: dict, agent: dict = Depends(require_scopes("jobs:write"))):
+    """Extend a held lease. `estimated_seconds`, if given, is how much MORE
+    time the caller now thinks it needs - not the original estimate restated;
+    effective_lease_ttl() adds its own buffer on top either way."""
     db = get_db_client()
     _load_job_in_org(db, job_id, agent)
     try:
@@ -1256,10 +1328,11 @@ async def renew_job(job_id: str, payload: dict, agent: dict = Depends(require_sc
                       payload["lease_incarnation"], agent["instance_id"])
     except (KeyError, TypeError, ValueError):
         raise HTTPException(status_code=400, detail="Full lease claim required")
-    if kill_switch_active() or not renew_lease(db, lease, ttl_seconds=max(1, get_lease_ttl_seconds())):
+    ttl = effective_lease_ttl(payload.get("estimated_seconds"))
+    if kill_switch_active() or not renew_lease(db, lease, ttl_seconds=ttl):
         raise HTTPException(status_code=409, detail="FENCED: lease expired, halted, or no longer owned")
     touch_agent_presence(db, agent)
-    return {"success": True, "renew_after_seconds": max(1, get_lease_ttl_seconds() // 3)}
+    return {"success": True, "renew_after_seconds": max(1, ttl // 3)}
 
 
 @router.get("/{job_id}/checkpoint")
