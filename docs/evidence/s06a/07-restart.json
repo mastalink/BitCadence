@@ -1,0 +1,716 @@
+{
+  "board": {
+    "46f39082-cf6c-542b-a899-9734a865bf52": {
+      "events": [
+        {
+          "actor": "local-operator",
+          "at": "2026-09-16T15:21:15.711204+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "score-canary-review"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-16T15:21:18.812982+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "824ac14e360e4d815b6c865cec5ed08039b547666d3c9544c5dfebfbc55bf211",
+              "created_at": "2026-09-16T15:21:15.708896+00:00",
+              "depends_on": [],
+              "description": "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "46f39082-cf6c-542b-a899-9734a865bf52",
+              "input_payload": {
+                "prompt": "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "$S6\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+                    "Fixed non-LLM handler execution only; no LLM dispatch.",
+                    "Deterministic evidence written only under score-runs/{run_id}/.",
+                    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+                    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+                  ],
+                  "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "canary_artifact"
+                  ],
+                  "review_of": {
+                    "canary_artifact": {
+                      "path": "score-runs/s06a-07-restart/canary_artifact.json",
+                      "sha256": "507ab164a82157c1b588da7586cec6cb59bb78a467f606c206611cc237846fdd"
+                    }
+                  },
+                  "run_id": "s06a-07-restart",
+                  "score_id": "via-score-conductor-canary",
+                  "task": "C01"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "canary-review-s06a",
+              "target_agent_role": "score-canary-review",
+              "title": "Score s06a-07-restart C01 review"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "canary-review-s06a",
+          "at": "2026-09-16T15:21:25.916295+00:00",
+          "detail": {},
+          "event": "leased",
+          "role": "score-canary-review"
+        },
+        {
+          "actor": "canary-review-s06a",
+          "at": "2026-09-16T15:21:26.509827+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "score-canary-review"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-16T15:21:26.513458+00:00",
+          "detail": {
+            "context_id": "ce3ffeff-3b5d-4c61-9255-05f9685c6ed5",
+            "kind": "handoff"
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-16T15:21:28.926383+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "824ac14e360e4d815b6c865cec5ed08039b547666d3c9544c5dfebfbc55bf211",
+              "created_at": "2026-09-16T15:21:15.708896+00:00",
+              "depends_on": [],
+              "description": "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "46f39082-cf6c-542b-a899-9734a865bf52",
+              "input_payload": {
+                "prompt": "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "$S6\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+                    "Fixed non-LLM handler execution only; no LLM dispatch.",
+                    "Deterministic evidence written only under score-runs/{run_id}/.",
+                    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+                    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+                  ],
+                  "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "canary_artifact"
+                  ],
+                  "review_of": {
+                    "canary_artifact": {
+                      "path": "score-runs/s06a-07-restart/canary_artifact.json",
+                      "sha256": "507ab164a82157c1b588da7586cec6cb59bb78a467f606c206611cc237846fdd"
+                    }
+                  },
+                  "run_id": "s06a-07-restart",
+                  "score_id": "via-score-conductor-canary",
+                  "task": "C01"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-16T15:21:45.910220+00:00",
+              "lease_id": "dfb4b09fe2054205a94b7317d421baf2",
+              "lease_incarnation": "8bea2ca2745e4ce4acb1785a8ba1650f",
+              "leased_by_instance_id": "canary-review-s06a",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-16T15:21:25.910220+00:00",
+              "status": "leased",
+              "target_agent_id": "canary-review-s06a",
+              "target_agent_role": "score-canary-review",
+              "title": "Score s06a-07-restart C01 review"
+            },
+            "before": {
+              "create_intent_hash": "824ac14e360e4d815b6c865cec5ed08039b547666d3c9544c5dfebfbc55bf211",
+              "created_at": "2026-09-16T15:21:15.708896+00:00",
+              "depends_on": [],
+              "description": "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "46f39082-cf6c-542b-a899-9734a865bf52",
+              "input_payload": {
+                "prompt": "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "$S6\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+                    "Fixed non-LLM handler execution only; no LLM dispatch.",
+                    "Deterministic evidence written only under score-runs/{run_id}/.",
+                    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+                    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+                  ],
+                  "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "canary_artifact"
+                  ],
+                  "review_of": {
+                    "canary_artifact": {
+                      "path": "score-runs/s06a-07-restart/canary_artifact.json",
+                      "sha256": "507ab164a82157c1b588da7586cec6cb59bb78a467f606c206611cc237846fdd"
+                    }
+                  },
+                  "run_id": "s06a-07-restart",
+                  "score_id": "via-score-conductor-canary",
+                  "task": "C01"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "canary-review-s06a",
+              "target_agent_role": "score-canary-review",
+              "title": "Score s06a-07-restart C01 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-16T15:21:28.932680+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-16T15:21:26.505036+00:00",
+              "create_intent_hash": "824ac14e360e4d815b6c865cec5ed08039b547666d3c9544c5dfebfbc55bf211",
+              "created_at": "2026-09-16T15:21:15.708896+00:00",
+              "depends_on": [],
+              "description": "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "46f39082-cf6c-542b-a899-9734a865bf52",
+              "input_payload": {
+                "prompt": "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "$S6\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+                    "Fixed non-LLM handler execution only; no LLM dispatch.",
+                    "Deterministic evidence written only under score-runs/{run_id}/.",
+                    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+                    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+                  ],
+                  "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "canary_artifact"
+                  ],
+                  "review_of": {
+                    "canary_artifact": {
+                      "path": "score-runs/s06a-07-restart/canary_artifact.json",
+                      "sha256": "507ab164a82157c1b588da7586cec6cb59bb78a467f606c206611cc237846fdd"
+                    }
+                  },
+                  "run_id": "s06a-07-restart",
+                  "score_id": "via-score-conductor-canary",
+                  "task": "C01"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-16T15:21:45.910220+00:00",
+              "lease_id": "dfb4b09fe2054205a94b7317d421baf2",
+              "lease_incarnation": "8bea2ca2745e4ce4acb1785a8ba1650f",
+              "leased_by_instance_id": "canary-review-s06a",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"findings\": [], \"review_of\": {\"canary_artifact\": {\"path\": \"score-runs/s06a-07-restart/canary_artifact.json\", \"sha256\": \"507ab164a82157c1b588da7586cec6cb59bb78a467f606c206611cc237846fdd\"}}, \"verdict\": \"pass\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-16T15:21:25.910220+00:00",
+              "status": "completed",
+              "target_agent_id": "canary-review-s06a",
+              "target_agent_role": "score-canary-review",
+              "title": "Score s06a-07-restart C01 review"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "824ac14e360e4d815b6c865cec5ed08039b547666d3c9544c5dfebfbc55bf211",
+              "created_at": "2026-09-16T15:21:15.708896+00:00",
+              "depends_on": [],
+              "description": "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "46f39082-cf6c-542b-a899-9734a865bf52",
+              "input_payload": {
+                "prompt": "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "$S6\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+                    "Fixed non-LLM handler execution only; no LLM dispatch.",
+                    "Deterministic evidence written only under score-runs/{run_id}/.",
+                    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+                    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+                  ],
+                  "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "canary_artifact"
+                  ],
+                  "review_of": {
+                    "canary_artifact": {
+                      "path": "score-runs/s06a-07-restart/canary_artifact.json",
+                      "sha256": "507ab164a82157c1b588da7586cec6cb59bb78a467f606c206611cc237846fdd"
+                    }
+                  },
+                  "run_id": "s06a-07-restart",
+                  "score_id": "via-score-conductor-canary",
+                  "task": "C01"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-16T15:21:45.910220+00:00",
+              "lease_id": "dfb4b09fe2054205a94b7317d421baf2",
+              "lease_incarnation": "8bea2ca2745e4ce4acb1785a8ba1650f",
+              "leased_by_instance_id": "canary-review-s06a",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-16T15:21:25.910220+00:00",
+              "status": "leased",
+              "target_agent_id": "canary-review-s06a",
+              "target_agent_role": "score-canary-review",
+              "title": "Score s06a-07-restart C01 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        }
+      ],
+      "lease_epoch": 1,
+      "leased_by": "canary-review-s06a",
+      "status": "completed"
+    },
+    "910bd178-fb2a-51e3-bd16-dd5d2c5a7b88": {
+      "events": [
+        {
+          "actor": "local-operator",
+          "at": "2026-09-16T15:20:23.508003+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "score-canary-worker"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-16T15:21:03.659968+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "c95f10f315029c3136c3b53c8e06dbafe10c3a8aab54f66da04b46380be2d9e3",
+              "created_at": "2026-09-16T15:20:23.504667+00:00",
+              "depends_on": [],
+              "description": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation. Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets.",
+              "id": "910bd178-fb2a-51e3-bd16-dd5d2c5a7b88",
+              "input_payload": {
+                "prompt": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation. Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets.",
+                "score": {
+                  "artifact_root": "$S6\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+                    "Fixed non-LLM handler execution only; no LLM dispatch.",
+                    "Deterministic evidence written only under score-runs/{run_id}/.",
+                    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+                    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+                  ],
+                  "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "canary_artifact"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06a-07-restart",
+                  "score_id": "via-score-conductor-canary",
+                  "task": "C01"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "canary-worker-s06a",
+              "target_agent_role": "score-canary-worker",
+              "title": "Score s06a-07-restart C01 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "canary-worker-s06a",
+          "at": "2026-09-16T15:21:04.798303+00:00",
+          "detail": {},
+          "event": "leased",
+          "role": "score-canary-worker"
+        },
+        {
+          "actor": "canary-worker-s06a",
+          "at": "2026-09-16T15:21:05.394735+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "score-canary-worker"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-16T15:21:05.398497+00:00",
+          "detail": {
+            "context_id": "22e09986-9b06-4410-9546-4788520beebf",
+            "kind": "handoff"
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-16T15:21:08.708372+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "c95f10f315029c3136c3b53c8e06dbafe10c3a8aab54f66da04b46380be2d9e3",
+              "created_at": "2026-09-16T15:20:23.504667+00:00",
+              "depends_on": [],
+              "description": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation. Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets.",
+              "id": "910bd178-fb2a-51e3-bd16-dd5d2c5a7b88",
+              "input_payload": {
+                "prompt": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation. Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets.",
+                "score": {
+                  "artifact_root": "$S6\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+                    "Fixed non-LLM handler execution only; no LLM dispatch.",
+                    "Deterministic evidence written only under score-runs/{run_id}/.",
+                    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+                    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+                  ],
+                  "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "canary_artifact"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06a-07-restart",
+                  "score_id": "via-score-conductor-canary",
+                  "task": "C01"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-16T15:21:24.796183+00:00",
+              "lease_id": "d82e1d153b104769b43c531e282cbb8b",
+              "lease_incarnation": "8bea2ca2745e4ce4acb1785a8ba1650f",
+              "leased_by_instance_id": "canary-worker-s06a",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-16T15:21:04.796183+00:00",
+              "status": "leased",
+              "target_agent_id": "canary-worker-s06a",
+              "target_agent_role": "score-canary-worker",
+              "title": "Score s06a-07-restart C01 work"
+            },
+            "before": {
+              "create_intent_hash": "c95f10f315029c3136c3b53c8e06dbafe10c3a8aab54f66da04b46380be2d9e3",
+              "created_at": "2026-09-16T15:20:23.504667+00:00",
+              "depends_on": [],
+              "description": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation. Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets.",
+              "id": "910bd178-fb2a-51e3-bd16-dd5d2c5a7b88",
+              "input_payload": {
+                "prompt": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation. Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets.",
+                "score": {
+                  "artifact_root": "$S6\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+                    "Fixed non-LLM handler execution only; no LLM dispatch.",
+                    "Deterministic evidence written only under score-runs/{run_id}/.",
+                    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+                    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+                  ],
+                  "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "canary_artifact"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06a-07-restart",
+                  "score_id": "via-score-conductor-canary",
+                  "task": "C01"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "canary-worker-s06a",
+              "target_agent_role": "score-canary-worker",
+              "title": "Score s06a-07-restart C01 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-16T15:21:08.713897+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-16T15:21:05.390385+00:00",
+              "create_intent_hash": "c95f10f315029c3136c3b53c8e06dbafe10c3a8aab54f66da04b46380be2d9e3",
+              "created_at": "2026-09-16T15:20:23.504667+00:00",
+              "depends_on": [],
+              "description": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation. Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets.",
+              "id": "910bd178-fb2a-51e3-bd16-dd5d2c5a7b88",
+              "input_payload": {
+                "prompt": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation. Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets.",
+                "score": {
+                  "artifact_root": "$S6\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+                    "Fixed non-LLM handler execution only; no LLM dispatch.",
+                    "Deterministic evidence written only under score-runs/{run_id}/.",
+                    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+                    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+                  ],
+                  "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "canary_artifact"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06a-07-restart",
+                  "score_id": "via-score-conductor-canary",
+                  "task": "C01"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-16T15:21:24.796183+00:00",
+              "lease_id": "d82e1d153b104769b43c531e282cbb8b",
+              "lease_incarnation": "8bea2ca2745e4ce4acb1785a8ba1650f",
+              "leased_by_instance_id": "canary-worker-s06a",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"artifacts\": {\"canary_artifact\": {\"path\": \"score-runs/s06a-07-restart/canary_artifact.json\", \"sha256\": \"507ab164a82157c1b588da7586cec6cb59bb78a467f606c206611cc237846fdd\"}}}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-16T15:21:04.796183+00:00",
+              "status": "completed",
+              "target_agent_id": "canary-worker-s06a",
+              "target_agent_role": "score-canary-worker",
+              "title": "Score s06a-07-restart C01 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "c95f10f315029c3136c3b53c8e06dbafe10c3a8aab54f66da04b46380be2d9e3",
+              "created_at": "2026-09-16T15:20:23.504667+00:00",
+              "depends_on": [],
+              "description": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation. Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets.",
+              "id": "910bd178-fb2a-51e3-bd16-dd5d2c5a7b88",
+              "input_payload": {
+                "prompt": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation. Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets.",
+                "score": {
+                  "artifact_root": "$S6\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+                    "Fixed non-LLM handler execution only; no LLM dispatch.",
+                    "Deterministic evidence written only under score-runs/{run_id}/.",
+                    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+                    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+                  ],
+                  "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "canary_artifact"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06a-07-restart",
+                  "score_id": "via-score-conductor-canary",
+                  "task": "C01"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-16T15:21:24.796183+00:00",
+              "lease_id": "d82e1d153b104769b43c531e282cbb8b",
+              "lease_incarnation": "8bea2ca2745e4ce4acb1785a8ba1650f",
+              "leased_by_instance_id": "canary-worker-s06a",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-16T15:21:04.796183+00:00",
+              "status": "leased",
+              "target_agent_id": "canary-worker-s06a",
+              "target_agent_role": "score-canary-worker",
+              "title": "Score s06a-07-restart C01 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        }
+      ],
+      "lease_epoch": 1,
+      "leased_by": "canary-worker-s06a",
+      "status": "completed"
+    }
+  },
+  "conductor_events": [
+    {
+      "at": "2026-09-16T15:20:19.122Z",
+      "detail": {
+        "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe"
+      },
+      "event": "initialized",
+      "seq": 48
+    },
+    {
+      "at": "2026-09-16T15:20:22.959Z",
+      "detail": {
+        "job_id": "910bd178-fb2a-51e3-bd16-dd5d2c5a7b88",
+        "phase": "work",
+        "task": "C01"
+      },
+      "event": "planned",
+      "seq": 49
+    },
+    {
+      "at": "2026-09-16T15:20:23.512Z",
+      "detail": {
+        "job_id": "910bd178-fb2a-51e3-bd16-dd5d2c5a7b88"
+      },
+      "event": "submitted",
+      "seq": 50
+    },
+    {
+      "at": "2026-09-16T15:21:10.129Z",
+      "detail": {
+        "actor": "canary-worker-s06a",
+        "job_id": "910bd178-fb2a-51e3-bd16-dd5d2c5a7b88",
+        "result": {
+          "artifacts": {
+            "canary_artifact": {
+              "path": "score-runs/s06a-07-restart/canary_artifact.json",
+              "sha256": "507ab164a82157c1b588da7586cec6cb59bb78a467f606c206611cc237846fdd"
+            }
+          }
+        }
+      },
+      "event": "validated",
+      "seq": 51
+    },
+    {
+      "at": "2026-09-16T15:21:15.152Z",
+      "detail": {
+        "job_id": "46f39082-cf6c-542b-a899-9734a865bf52",
+        "phase": "review",
+        "task": "C01"
+      },
+      "event": "planned",
+      "seq": 52
+    },
+    {
+      "at": "2026-09-16T15:21:15.716Z",
+      "detail": {
+        "job_id": "46f39082-cf6c-542b-a899-9734a865bf52"
+      },
+      "event": "submitted",
+      "seq": 53
+    },
+    {
+      "at": "2026-09-16T15:21:27.381Z",
+      "detail": {
+        "actor": "canary-review-s06a",
+        "job_id": "46f39082-cf6c-542b-a899-9734a865bf52",
+        "result": {
+          "findings": [],
+          "review_of": {
+            "canary_artifact": {
+              "path": "score-runs/s06a-07-restart/canary_artifact.json",
+              "sha256": "507ab164a82157c1b588da7586cec6cb59bb78a467f606c206611cc237846fdd"
+            }
+          },
+          "verdict": "pass"
+        }
+      },
+      "event": "accepted",
+      "seq": 54
+    },
+    {
+      "at": "2026-09-16T15:21:27.385Z",
+      "detail": {
+        "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe"
+      },
+      "event": "score_accepted",
+      "seq": 55
+    }
+  ],
+  "dispatch": [
+    {
+      "job_id": "46f39082-cf6c-542b-a899-9734a865bf52",
+      "phase": "review",
+      "status": "accepted",
+      "task": "C01"
+    },
+    {
+      "job_id": "910bd178-fb2a-51e3-bd16-dd5d2c5a7b88",
+      "phase": "work",
+      "status": "validated",
+      "task": "C01"
+    }
+  ],
+  "run": {
+    "digest": "5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe",
+    "id": "s06a-07-restart",
+    "org": "default",
+    "principal": "local-operator",
+    "status": "accepted"
+  }
+}

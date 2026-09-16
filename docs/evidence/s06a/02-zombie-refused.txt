@@ -1,0 +1,5 @@
+THE DEAD ATTEMPT REPLAYS ITS COMPLETION WITH THE LEASE IT HELD AT CRASH TIME
+  lease_id    ce814aa1db6d4a068f12ec0e19fe661e
+  lease_epoch 1 (the board is now at epoch 2)
+  HTTP         409
+  body         {"detail":"FENCED: illegal transition pending -> completed"}

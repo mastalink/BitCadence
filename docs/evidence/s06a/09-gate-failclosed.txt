@@ -1,0 +1,13 @@
+The gated variant differs from the canary in exactly one field:
+  tasks[0].checkpoint = {"id": "g08_launch_signoff", "reason": "owner sign-off before launch"}
+  it is a valid score  : digest 05d2080e2c0a6adb...
+
+REFUSED at initialize: ScoreError: Only read-only audit authority supported
+  runs      rows for s06a-10-gated: 0
+  dispatch  rows for s06a-10-gated: 0
+  events    rows for s06a-10-gated: 0
+
+No run row, no dispatch row, no event, no board job: the SQLite conductor
+is fail-closed on human checkpoints. It does not start gated work and
+then pause it - it refuses to start it at all, because this bridge has no
+way to hold a run at a gate. That is the honest state of the wiring today.
