@@ -27,6 +27,8 @@ def maintenance_once():
 
 @asynccontextmanager
 async def lifespan(app):
+    from mco.orchestrator import score_sweep
+
     app.state.maintenance_last_ok = None
     app.state.maintenance_error = None
     async def maintain():
@@ -40,6 +42,18 @@ async def lifespan(app):
                 logger.exception("Gateway maintenance failed")
             await asyncio.sleep(5)
     tasks = [asyncio.create_task(maintain()), asyncio.create_task(delivery_loop())]
+    # The conductor sweep is the only optional task here: with
+    # MCO_SCORE_SWEEP_SECONDS unset no task is created and no score database is
+    # opened, so upgrading a gateway cannot start it driving score runs.
+    interval = score_sweep.get_sweep_seconds()
+    app.state.score_sweep_seconds = interval
+    app.state.score_sweep_started = time.monotonic()
+    app.state.score_sweep_last_ok = None
+    app.state.score_sweep_error = None
+    app.state.score_sweep_failing_runs = []
+    if interval > 0:
+        logger.info("Conductor sweep enabled: advancing score runs every %ss", interval)
+        tasks.append(asyncio.create_task(score_sweep_loop(app, interval)))
     try:
         yield
     finally:
@@ -85,6 +99,48 @@ async def delivery_loop():
             logger.exception("Delivery sweep failed")
 
 
+async def score_sweep_once(conductor):
+    """One conductor sweep. Every tick is SQLite plus board HTTP, so it runs in a
+    thread - never inline on the event loop."""
+    from mco.orchestrator import score_sweep
+    return await asyncio.to_thread(score_sweep.sweep, conductor)
+
+
+async def score_sweep_loop(app, interval):
+    """Advance score runs on a timer, the way delivery_loop retries delivery.
+
+    Two kinds of failure, kept apart on purpose. A failure of the sweep *itself*
+    (no credential, an unreadable database) clears the cached conductor, sets
+    ``score_sweep_error`` and makes /readyz say not ready - the gateway is
+    advancing nothing. A failure of one *run* is recorded in
+    ``score_sweep_failing_runs`` and logged, but leaves the sweep healthy,
+    because the other runs did advance.
+
+    ``asyncio.CancelledError`` is a BaseException and so passes through the
+    `except Exception` below untouched: shutdown stops this loop immediately.
+    The tick already running in its worker thread finishes its own transaction -
+    each stage of a tick is a committed unit - so cancellation never leaves a run
+    half advanced.
+    """
+    from mco.orchestrator import score_sweep
+    conductor = None
+    while True:
+        try:
+            if conductor is None:
+                conductor = await asyncio.to_thread(score_sweep.open_conductor)
+            result = await score_sweep_once(conductor)
+            app.state.score_sweep_last_ok = time.monotonic()
+            app.state.score_sweep_error = None
+            app.state.score_sweep_failing_runs = sorted({**result.errors, **result.blocked})
+            if not result.quiet:
+                logger.info("Conductor sweep: %s", result.describe())
+        except Exception as exc:
+            conductor = None
+            app.state.score_sweep_error = type(exc).__name__
+            logger.exception("Conductor sweep failed")
+        await asyncio.sleep(interval)
+
+
 async def readyz(request: Request):
     from mco.orchestrator.routes import get_db_client, decorate_presence, get_offline_after_seconds
     from mco.config import get_config
@@ -100,6 +156,23 @@ async def readyz(request: Request):
     if hasattr(request.app.state, "maintenance_last_ok"):
         checks["maintenance"] = {"ok": last is not None and time.monotonic() - last < 30,
                                   "error": request.app.state.maintenance_error}
+    interval = getattr(request.app.state, "score_sweep_seconds", 0) or 0
+    if interval > 0:
+        # Measured from startup, not from the first success: a sweep that never
+        # completes one pass must go stale rather than stay silently "ok".
+        swept = getattr(request.app.state, "score_sweep_last_ok", None)
+        since = swept if swept is not None else getattr(request.app.state, "score_sweep_started", None)
+        error = getattr(request.app.state, "score_sweep_error", None)
+        checks["score_sweep"] = {
+            "ok": error is None and since is not None and time.monotonic() - since < 3 * interval + 30,
+            "error": error,
+            "interval_seconds": interval,
+            # Runs the sweep could not advance. Visible, but not a reason to call
+            # the whole gateway unready: the rest of the sweep still ran.
+            "failing_runs": list(getattr(request.app.state, "score_sweep_failing_runs", [])),
+        }
+    else:
+        checks["score_sweep"] = {"ok": True, "configured": False}
     heartbeat = get_config().get("MCO_SCHEDULER_HEARTBEAT_FILE")
     if heartbeat:
         try:

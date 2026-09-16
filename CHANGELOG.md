@@ -5,6 +5,17 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 ## [Unreleased]
 
 ### Added
+- **Score runs advance without anyone typing a tick.** The gateway can now drive
+  the conductor itself: every `MCO_SCORE_SWEEP_SECONDS` it advances each
+  unsettled run by one tick, wired into the lifespan beside the delivery
+  watchdog and run in a worker thread so the SQLite and board work never touches
+  the event loop. **Off by default** (`0` or negative disables it), so upgrading
+  a gateway never silently starts driving runs. A run is only swept by the
+  conductor credential that started it - another conductor's run is skipped, not
+  blocked - and accepted, blocked, failed and launched runs are left alone. One
+  failing run is logged and named in `/readyz` (`checks.score_sweep.failing_runs`)
+  while the rest of the sweep continues; a failure of the sweep itself makes the
+  gateway report not ready.
 - **Interactive sessions hear about their MCO work.** `python -m mco.hooks.inbox
   --instance <id> --role <role>` is a Claude Code SessionStart/UserPromptSubmit
   hook: it tells the session (and the user) about jobs pinned to it, or addressed
