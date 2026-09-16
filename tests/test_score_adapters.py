@@ -1,4 +1,5 @@
 import threading
+from types import SimpleNamespace
 from datetime import datetime, timezone
 
 import pytest
@@ -79,6 +80,50 @@ def executor(store, grants, *, state, invoke, compensate=None,
 
 def receipts(store):
     return [row["payload"] for row in store.table("score_events").select("*").order("seq").execute().data]
+
+
+class _QueryOrderProbe:
+    """Simulate PostgREST returning a legal non-insertion order by default."""
+
+    def __init__(self, query, *, scramble):
+        self.query = query
+        self.scramble = scramble
+        self.ordered = False
+
+    def __getattr__(self, name):
+        attribute = getattr(self.query, name)
+        if not callable(attribute):
+            return attribute
+
+        def chained(*args, **kwargs):
+            result = attribute(*args, **kwargs)
+            if result is self.query:
+                return self
+            return result
+
+        return chained
+
+    def order(self, *args, **kwargs):
+        self.ordered = True
+        self.query.order(*args, **kwargs)
+        return self
+
+    def execute(self):
+        result = self.query.execute()
+        if self.scramble and not self.ordered and len(result.data or []) == 3:
+            rows = result.data
+            return SimpleNamespace(data=[rows[0], rows[2], rows[1]])
+        return result
+
+
+class _UnorderedEventsDB:
+    def __init__(self, store):
+        self.store = store
+
+    def table(self, name):
+        return _QueryOrderProbe(
+            self.store.table(name), scramble=name == "score_events",
+        )
 
 
 def test_s05_allowlist_covers_each_wrapper_class_and_is_dry_run_only():
@@ -281,6 +326,105 @@ def test_legacy_unmatched_before_receipt_is_promoted_to_pending_recovery(store, 
     recovery = store.table("score_recovery").select("*").execute().data[0]
     assert recovery["decision"] == "pending"
     assert recovery["uncertain_effect"]["detail"] == "unmatched adapter_before receipt"
+
+
+def test_unmatched_before_detection_orders_postgrest_events_by_sequence(store, grants):
+    state = {"version": "old", "mode": "dry-run", "submitted": True}
+    calls = []
+    op = operation()
+    base = {
+        "org_id": op.org_id, "run_id": op.run_id, "task_id": op.task_id,
+        "digest": op.digest, "actor": "score-conductor",
+    }
+    payloads = [
+        {"operation_id": op.id, "phase": "before", "status": "observed"},
+        {"operation_id": op.id, "phase": "after", "status": "retry_safe_failure"},
+        {"operation_id": op.id, "phase": "before", "status": "observed"},
+    ]
+    for payload in payloads:
+        store.table("score_events").insert({
+            **base, "kind": f"adapter_{payload['phase']}", "payload": payload,
+        }).execute()
+    run = executor(
+        _UnorderedEventsDB(store), grants, state=state,
+        invoke=lambda _op: calls.append("invoke"), compensate=lambda *_: None,
+    )
+
+    with pytest.raises(RecoveryRequired, match="inspection_or_compensation"):
+        run.execute(op)
+
+    assert calls == []
+
+
+def test_pending_effect_blocks_a_new_attempt_from_invoking(store, grants):
+    state = {"version": "old", "mode": "dry-run", "submitted": False}
+    calls = []
+
+    def invoke(op):
+        calls.append(op.attempt)
+        state["submitted"] = True
+        raise SystemExit("simulated process death")
+
+    run = executor(store, grants, state=state, invoke=invoke,
+                   compensate=lambda *_: None)
+    first = operation()
+    second = Operation(**{**first.__dict__, "attempt": 2})
+    assert first.id != second.id
+    with pytest.raises(SystemExit, match="process death"):
+        run.execute(first)
+
+    with pytest.raises(RecoveryRequired, match="inspection_or_compensation"):
+        run.execute(second)
+
+    assert calls == [1]
+
+
+def test_completed_replay_releases_orphaned_pending_claim(store, grants):
+    state = {"version": "old", "mode": "dry-run"}
+
+    def invoke(_op):
+        state["version"] = "candidate"
+        return AdapterResult(EffectStatus.SUCCEEDED, dict(state))
+
+    run = executor(store, grants, state=state, invoke=invoke,
+                   compensate=lambda *_: None)
+    op = operation()
+    assert run.execute(op)["status"] == "succeeded"
+    store.table("score_recovery").insert({
+        "approval_or_attempt_id": op.id,
+        "org_id": op.org_id,
+        "uncertain_effect": {"operation": dict(op.__dict__)},
+        "decision": "pending",
+    }).execute()
+
+    assert run.execute(op)["replayed"] is True
+    assert store.table("score_recovery").select("*").execute().data == []
+
+
+def test_uncertain_retry_preserves_prior_recovery_history(store, grants):
+    state = {"version": "old", "mode": "dry-run", "temp": False}
+    calls = []
+
+    def invoke(_op):
+        calls.append("invoke")
+        state["temp"] = True
+        return AdapterResult(
+            EffectStatus.UNCERTAIN, dict(state), "ack lost",
+            {"temporary_release": f"preview-{len(calls)}"},
+        )
+
+    def compensate(_op, _effect):
+        state["temp"] = False
+        return AdapterResult(EffectStatus.SUCCEEDED, dict(state))
+
+    run = executor(store, grants, state=state, invoke=invoke, compensate=compensate)
+    op = operation()
+    assert run.execute(op)["status"] == "uncertain"
+    assert run.compensate(op)["status"] == "compensated"
+    assert run.execute(op)["status"] == "uncertain"
+
+    effect = store.table("score_recovery").select("*").execute().data[0]["uncertain_effect"]
+    assert effect["_prior_recovery"]["decision"] == "compensated"
 
 
 def test_process_death_reconciles_deploy_when_inspection_finds_desired(store, grants):

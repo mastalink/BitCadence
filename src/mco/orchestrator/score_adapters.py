@@ -189,7 +189,7 @@ class ScoreAdapterExecutor:
         return (
             self.db.table("score_events").select("*")
             .eq("org_id", op.org_id).eq("run_id", op.run_id)
-            .eq("task_id", op.task_id).execute().data or []
+            .eq("task_id", op.task_id).order("seq").execute().data or []
         )
 
     def _receipt(self, op: Operation, *, phase: str, status: str,
@@ -247,6 +247,23 @@ class ScoreAdapterExecutor:
             .execute().data or []
         )
         return rows[0] if rows else None
+
+    def _pending_effect_recovery(self, op: Operation) -> dict | None:
+        """Find an unresolved claim for this effect, independent of attempt."""
+        rows = (
+            self.db.table("score_recovery").select("*")
+            .eq("org_id", op.org_id).eq("decision", "pending")
+            .execute().data or []
+        )
+        scope = (op.run_id, op.task_id, op.adapter, op.action, op.resource)
+        for row in rows:
+            operation = (row.get("uncertain_effect") or {}).get("operation") or {}
+            candidate = tuple(operation.get(key) for key in (
+                "run_id", "task_id", "adapter", "action", "resource",
+            ))
+            if candidate == scope:
+                return row
+        return None
 
     def _in_flight_effect(self, op: Operation, spec: AdapterSpec,
                           observed: Mapping[str, Any], *, detail: str) -> dict:
@@ -339,10 +356,15 @@ class ScoreAdapterExecutor:
         spec, wrapper, grant_identity = self._validate(op)
         completed = self._completed(op)
         if completed:
+            # A terminal receipt proves the outcome even if the process died
+            # before releasing its claim.
+            self._release_claim(op)
             return dict(completed, replayed=True)
 
-        recovery = self._recovery(op)
-        if recovery and recovery.get("decision") == "pending":
+        recovery = self._pending_effect_recovery(op)
+        if recovery and recovery.get("approval_or_attempt_id") != op.id:
+            raise RecoveryRequired("uncertain_effect_requires_inspection_or_compensation")
+        if recovery:
             return self._handle_pending(op, spec, wrapper, grant_identity)
 
         unmatched = self._unmatched_before(op)
@@ -416,6 +438,10 @@ class ScoreAdapterExecutor:
             "compensation_supported": spec.compensation_supported,
             "detail": result.detail,
         }
+        recovery = self._recovery(op)
+        prior = ((recovery or {}).get("uncertain_effect") or {}).get("_prior_recovery")
+        if prior:
+            uncertain["_prior_recovery"] = copy.deepcopy(prior)
         updated = (
             self.db.table("score_recovery").update({"uncertain_effect": uncertain})
             .eq("approval_or_attempt_id", op.id).eq("org_id", op.org_id)
