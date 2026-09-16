@@ -3,8 +3,8 @@
 ## What this proves
 
 Two canary runs of `via-score-conductor-canary` went from `initialized` to
-`accepted` without anyone typing `mco score tick`. The only command issued
-against either run was `mco score start`, which writes one row to the conductor
+`accepted` without anyone typing `mco score tick`. The only command that
+advanced either run was `mco score start`, which writes one row to the conductor
 database and exits without contacting the board at all. Every later step —
 plan, dispatch, poll, validate, accept — was performed by the conductor sweep
 inside the gateway process wired up in C03 (`0f84caa5`).
