@@ -10,6 +10,7 @@ second gateway, dying mid-tick, or failing silently.
 import asyncio
 import json
 import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -20,6 +21,7 @@ from mco.localstore import LocalStore
 from mco.orchestrator import health, routes, score_sweep
 from mco.orchestrator.score_canary_worker import review, work
 from mco.orchestrator.score_conductor import Conductor, open_bridge, start_run
+from mco.orchestrator.scores import ScoreIdentityError
 from mco.orchestrator.score_sweep import (
     SKIP_LAUNCHED,
     SKIP_OTHER_CREDENTIAL,
@@ -196,9 +198,9 @@ class TestSweepSelection:
         for run_id in ("run-a", "run-b", "run-c"):
             _start(conductor, run_id)
         real_tick = conductor.tick
-        monkeypatch.setattr(conductor, "tick", lambda run_id: (
+        monkeypatch.setattr(conductor, "tick", lambda run_id, **kw: (
             (_ for _ in ()).throw(RuntimeError("board on fire")) if run_id == "run-b"
-            else real_tick(run_id)))
+            else real_tick(run_id, **kw)))
 
         result = sweep(conductor)
 
@@ -283,6 +285,115 @@ class TestSweepSelection:
         assert conductor.status(run)["status"] == "running"
         assert _events(conductor, run) == events
         assert conductor.board.create_calls == []
+
+    def test_a_credential_change_between_scan_and_tick_skips_rather_than_kills(
+            self, tmp_path, monkeypatch):
+        """The credential check above is a snapshot; this is the one that counts.
+
+        A reauthorization that lands between the candidate scan and the tick used
+        to be fatal: `dispatch` raised "Conductor credential changed", `tick`
+        blocked the run durably, and a perfectly healthy run was dead because the
+        gateway happened to sweep it at the wrong microsecond. Skip, never kill.
+        """
+        conductor = _conductor(tmp_path)
+        run = _start(conductor)
+        events = _events(conductor, run)
+        real_status = conductor.status
+
+        def reauthorize_mid_sweep(run_id):
+            status = real_status(run_id)
+            conductor.board.identity = "reauthorized-conductor"
+            return status
+
+        monkeypatch.setattr(conductor, "status", reauthorize_mid_sweep)
+
+        result = sweep(conductor)
+
+        assert result.skipped == {run: SKIP_OTHER_CREDENTIAL}
+        assert result.ticked == [] and result.blocked == {} and result.errors == {}
+        assert real_status(run)["status"] == "running"
+        assert "tick_blocked" not in _events(conductor, run)
+        assert _events(conductor, run) == events
+        # Nothing was submitted under the new credential either.
+        assert conductor.board.create_calls == []
+
+    def test_a_credential_change_inside_a_tick_skips_rather_than_kills(self, tmp_path):
+        """The same race one stage later: dispatch sees the old credential, poll the new.
+
+        `board.create` is the only moment inside a tick where wall-clock time
+        passes between the two identity checks, so that is where the
+        reauthorization is injected. `poll` used to write `validation_blocked`
+        and stop the run from inside the bridge, before `tick` had any say.
+        """
+        conductor = _conductor(tmp_path)
+        run = _start(conductor)
+        original = conductor.board.identity
+        conductor.board.before_create = lambda _payload: setattr(
+            conductor.board, "identity", "reauthorized-conductor")
+
+        result = sweep(conductor)
+
+        conductor.board.identity = original
+        assert result.skipped == {run: SKIP_OTHER_CREDENTIAL}
+        assert result.blocked == {} and result.errors == {}
+        assert conductor.status(run)["status"] == "running"
+        events = _events(conductor, run)
+        assert "tick_blocked" not in events and "validation_blocked" not in events
+        # The dispatch that did get through is whole, not stranded mid-send.
+        assert [row["status"] for row in conductor.status(run)["dispatch"]] == ["submitted"]
+
+    def test_a_typed_tick_still_stops_a_run_whose_credential_changed(self, tmp_path):
+        """The sweep is fail-safe; a person typing `mco score tick` is not.
+
+        Only the automatic caller opts out of the durable block, so the
+        reauthorization a human drives into a run still stops it dead.
+        """
+        conductor = _conductor(tmp_path)
+        run = _start(conductor)
+        conductor.board.identity = "reauthorized-conductor"
+
+        outcome = conductor.tick(run)
+
+        assert "credential" in (outcome.error or "").lower()
+        assert conductor.status(run)["status"] == "blocked"
+        assert "tick_blocked" in _events(conductor, run)
+
+    def test_a_durably_blocked_run_is_still_named_by_a_later_sweep(self, tmp_path):
+        """Blocked is terminal, so the next pass never sees the run at all.
+
+        Readiness built out of what one pass happened to notice goes quiet at
+        exactly the moment the failure becomes permanent, which is the moment it
+        matters most. `failing` is read from the runs table instead.
+        """
+        conductor = _conductor(tmp_path)
+        run = _start(conductor, "run-a")
+        _start(conductor, "run-b")
+        sweep(conductor)
+        _do_work(conductor, _job_of(conductor, "run-a"), actor="somebody-else")
+        first = sweep(conductor)
+        # The pass that blocks it names the specific reason it was blocked for.
+        assert "run-a" in first.blocked
+        assert "identity" in first.failing["run-a"].lower()
+
+        second = sweep(conductor)
+
+        assert "run-a" not in second.blocked          # terminal: not even a candidate
+        assert second.failing == {"run-a": "blocked"}  # and still named anyway
+        assert conductor.status("run-a")["status"] == "blocked"
+        assert conductor.status("run-b")["status"] == "running"
+
+    def test_a_transient_sweep_error_is_named_alongside_the_durable_ones(self, tmp_path, monkeypatch):
+        """A run that merely exploded is not in the database as failing."""
+        conductor = _conductor(tmp_path)
+        _start(conductor, "run-a")
+        real_tick = conductor.tick
+        monkeypatch.setattr(conductor, "tick", lambda run_id, **kw: (
+            (_ for _ in ()).throw(RuntimeError("board on fire"))))
+
+        result = sweep(conductor)
+
+        assert "run-a" in result.errors
+        assert "run-a" in result.failing
 
     def test_a_candidate_settled_between_scan_and_tick_is_not_ticked(self, tmp_path, monkeypatch):
         """A terminal session can settle a run while the sweep is mid-pass.
@@ -383,44 +494,118 @@ def _app():
 
 
 class TestGatewayLoop:
-    async def test_shutdown_cancels_the_sweep_without_half_ticking_a_run(
+    async def test_shutdown_does_not_return_while_a_tick_is_in_flight(
             self, tmp_path, monkeypatch):
+        """The real shutdown boundary, not "it finished eventually".
+
+        `asyncio.to_thread` cannot be cancelled. Cancelling the loop returns at
+        once while the worker thread is still inside `board.create`, so the
+        lifespan could return with the dispatch row durably 'sending' and no job
+        on the board for it - a restart's problem, invented by shutdown. The
+        sweep is therefore asked to stop and then joined, and every assertion
+        below runs at the exact instant `__aexit__` returns.
+        """
+        db = LocalStore(tmp_path / "gateway.db")
+        monkeypatch.setattr(routes, "get_db_client", lambda: db)
         entered, release = threading.Event(), threading.Event()
-        finished = threading.Event()
         board = FakeBoard()
         board.before_create = lambda _payload: (entered.set(), release.wait(30))
         conductor = _conductor(tmp_path, board)
         run = _start(conductor)
+        monkeypatch.setattr(score_sweep, "get_config",
+                            lambda: {"MCO_SCORE_SWEEP_SECONDS": "1"})
         monkeypatch.setattr(score_sweep, "open_conductor", lambda *a, **k: conductor)
-        real_sweep = score_sweep.sweep
-        monkeypatch.setattr(score_sweep, "sweep", lambda c: _finally(real_sweep, c, finished))
-        app = _app()
+        app = SimpleNamespace(state=SimpleNamespace())
 
-        task = asyncio.create_task(health.score_sweep_loop(app, 0.01))
-        for _ in range(500):                      # wait until a tick is genuinely in flight
+        context = health.lifespan(app)
+        await context.__aenter__()
+        for _ in range(500):              # wait until a tick is genuinely in flight
+            if entered.is_set():
+                break
+            await asyncio.sleep(0.01)
+        assert entered.is_set(), "the sweep never reached the board"
+        # The timer is the only thing that frees the board, and it is the only
+        # thing that frees it - nothing after `__aexit__` may help the tick
+        # along, or the test would pass on "it finished eventually" again.
+        threading.Timer(0.3, release.set).start()
+
+        await context.__aexit__(None, None, None)
+
+        dispatch = conductor.status(run)["dispatch"]
+        assert len(dispatch) == 1 and dispatch[0]["status"] == "submitted"
+        assert len(board.jobs) == 1
+        assert conductor.status(run)["status"] == "running"
+        db.close()
+
+    async def test_shutdown_gives_up_on_a_tick_that_will_not_drain(
+            self, tmp_path, monkeypatch):
+        """Waiting for the sweep must not mean waiting for ever.
+
+        A board that never answers would otherwise hold the gateway open
+        indefinitely, so the drain is bounded and then the task is cancelled.
+        """
+        db = LocalStore(tmp_path / "gateway.db")
+        monkeypatch.setattr(routes, "get_db_client", lambda: db)
+        entered, release = threading.Event(), threading.Event()
+        board = FakeBoard()
+        board.before_create = lambda _payload: (entered.set(), release.wait(30))
+        conductor = _conductor(tmp_path, board)
+        _start(conductor)
+        monkeypatch.setattr(score_sweep, "get_config",
+                            lambda: {"MCO_SCORE_SWEEP_SECONDS": "1"})
+        monkeypatch.setattr(score_sweep, "open_conductor", lambda *a, **k: conductor)
+        monkeypatch.setattr(health, "SCORE_SWEEP_DRAIN_SECONDS", 0.1)
+        app = SimpleNamespace(state=SimpleNamespace())
+
+        context = health.lifespan(app)
+        await context.__aenter__()
+        for _ in range(500):
             if entered.is_set():
                 break
             await asyncio.sleep(0.01)
         assert entered.is_set(), "the sweep never reached the board"
 
+        started = time.monotonic()
+        await context.__aexit__(None, None, None)
+        elapsed = time.monotonic() - started
+
+        release.set()
+        db.close()
+        assert elapsed < 10, f"shutdown waited {elapsed:.1f}s on a board that never answered"
+
+    async def test_readiness_keeps_naming_a_run_that_is_durably_blocked(
+            self, tmp_path, monkeypatch):
+        """Two passes. The second cannot see the blocked run, and names it anyway.
+
+        A blocked run is terminal, so the pass after the one that blocked it
+        excludes it from the candidate scan. Readiness rebuilt from that pass
+        alone went quiet at the exact moment the failure became permanent.
+        """
+        conductor = _conductor(tmp_path)
+        _start(conductor, "run-a")
+        _start(conductor, "run-b")
+        sweep(conductor)
+        _do_work(conductor, _job_of(conductor, "run-a"), actor="somebody-else")
+        monkeypatch.setattr(score_sweep, "open_conductor", lambda *a, **k: conductor)
+        passes: list = []
+        real_sweep = score_sweep.sweep
+        monkeypatch.setattr(score_sweep, "sweep", lambda c: _record(real_sweep, c, passes))
+        app = _app()
+
+        task = asyncio.create_task(health.score_sweep_loop(app, 0.01))
+        for _ in range(500):
+            if len(passes) >= 3:
+                break
+            await asyncio.sleep(0.01)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-        assert app.state.score_sweep_last_ok is None   # cancelled, not quietly completed
 
-        release.set()
-        assert finished.wait(30), "the in-flight tick never finished"
-        # Durable state is whole: the dispatch that was in flight committed, and
-        # nothing is stranded in the sending state a restart would have to guess at.
-        dispatch = conductor.status(run)["dispatch"]
-        assert len(dispatch) == 1 and dispatch[0]["status"] == "submitted"
-        assert conductor.status(run)["status"] == "running"
-
-        # And the run still converges afterwards, with no duplicate work.
-        board.before_create = None
-        _drive_to_accepted(conductor, run)
-        assert conductor.status(run)["status"] == "accepted"
-        assert len(board.jobs) == 2
+        assert len(passes) >= 3, "the loop never got past the pass that blocks the run"
+        assert conductor.status("run-a")["status"] == "blocked"
+        assert "run-a" not in passes[-1].blocked     # terminal: never a candidate again
+        assert app.state.score_sweep_failing_runs == ["run-a"]
+        assert app.state.score_sweep_error is None   # one bad run, not a bad sweep
 
     async def test_a_broken_sweep_is_recorded_not_swallowed(self, monkeypatch):
         monkeypatch.setattr(score_sweep, "open_conductor",
@@ -445,8 +630,8 @@ class TestGatewayLoop:
         _start(conductor, "run-a")
         _start(conductor, "run-b")
         real_tick = conductor.tick
-        monkeypatch.setattr(conductor, "tick", lambda run_id: (
-            (_ for _ in ()).throw(RuntimeError("boom")) if run_id == "run-b" else real_tick(run_id)))
+        monkeypatch.setattr(conductor, "tick", lambda run_id, **kw: (
+            (_ for _ in ()).throw(RuntimeError("boom")) if run_id == "run-b" else real_tick(run_id, **kw)))
         monkeypatch.setattr(score_sweep, "open_conductor", lambda *a, **k: conductor)
         app = _app()
 
@@ -464,11 +649,11 @@ class TestGatewayLoop:
         assert conductor.status("run-a")["dispatch"]      # run-a advanced regardless
 
 
-def _finally(func, arg, event):
-    try:
-        return func(arg)
-    finally:
-        event.set()
+def _record(func, arg, passes):
+    """Run a sweep and keep its result, so a test can count completed passes."""
+    result = func(arg)
+    passes.append(result)
+    return result
 
 
 # ─── Requirement 6 seen from outside: /readyz ────────────────────────────────

@@ -11,10 +11,12 @@ Three rules shape it, and each is the reason for a specific line below:
 
   * **Only our runs.** A run records the credential hash of the conductor that
     started it, and `ScoreBridge.identity` refuses to advance a run under any
-    other credential - by raising, which `tick()` turns into a *durable block*.
-    So a sweep that ticked indiscriminately would not merely fail on a CLI-owned
-    run, it would kill it. Runs bound to another credential are skipped, never
-    touched.
+    other credential - by raising, which a *typed* `tick()` turns into a durable
+    block. So a sweep that ticked indiscriminately would not merely fail on a
+    CLI-owned run, it would kill it. Runs bound to another credential are
+    skipped, never touched - and because the credential can change between the
+    scan below and either identity check inside a tick, the sweep also ticks
+    with `block_on_identity_change=False`, so losing that race is a skip too.
   * **Only unsettled runs.** Accepted, blocked, failed and completed runs are
     finished, and a launched run has done what it was asked to do. The sweep
     filters them out before ticking rather than relying on the bridge's internal
@@ -37,6 +39,7 @@ from typing import Optional
 
 from mco.config import get_config
 from mco.orchestrator.score_conductor import TERMINAL_RUN_STATES
+from mco.orchestrator.scores import ScoreIdentityError
 
 logger = logging.getLogger("mco.orchestrator.score_sweep")
 
@@ -51,6 +54,10 @@ DEFAULT_SCORE_ROOT = Path.home() / ".mco" / "score-artifacts"
 # Why a run was passed over. Anything here means "left exactly as it was".
 SKIP_OTHER_CREDENTIAL = "other_credential"
 SKIP_LAUNCHED = "launched"
+
+# Terminal states that mean a run is stuck rather than finished. Readiness has
+# to keep naming these; see `failing_runs`.
+FAILING_RUN_STATES = ("blocked", "failed")
 
 
 def get_sweep_seconds(config: Optional[dict] = None) -> int:
@@ -87,6 +94,9 @@ class SweepResult:
     blocked: dict[str, str] = field(default_factory=dict)
     skipped: dict[str, str] = field(default_factory=dict)
     errors: dict[str, str] = field(default_factory=dict)
+    # Every run that is stuck right now, not only the ones this pass touched.
+    # `blocked` is what this pass did; `failing` is what is still true.
+    failing: dict[str, str] = field(default_factory=dict)
 
     @property
     def quiet(self) -> bool:
@@ -115,6 +125,24 @@ def candidates(bridge) -> list[tuple[str, str, str]]:
             tuple(terminal))]
 
 
+def failing_runs(bridge) -> dict[str, str]:
+    """{run_id: status} for every run that is durably stuck, read fresh each pass.
+
+    Blocked and failed are terminal, so the pass *after* the one that blocks a
+    run never sees that run again - `candidates` filters it out. Readiness built
+    from what a single pass happened to notice therefore went quiet at exactly
+    the moment the failure became permanent, which is the moment somebody needed
+    to be told. Reading the runs table instead means a stuck run keeps being
+    named until something actually moves it, and that a gateway restart does not
+    amnesty the failures it inherited.
+    """
+    placeholders = ",".join("?" for _ in FAILING_RUN_STATES)
+    with bridge.tx() as db:
+        return {row["id"]: row["status"] for row in db.execute(
+            f"SELECT id,status FROM runs WHERE status IN ({placeholders}) ORDER BY id",
+            FAILING_RUN_STATES)}
+
+
 def sweep(conductor) -> SweepResult:
     """Advance every run this conductor owns and is allowed to move, by one tick."""
     result = SweepResult()
@@ -135,7 +163,12 @@ def sweep(conductor) -> SweepResult:
             if status["launched"]:
                 result.skipped[run_id] = SKIP_LAUNCHED
                 continue
-            outcome = conductor.tick(run_id)
+            # `block_on_identity_change=False` is the whole fail-safe: the
+            # comparison above is a snapshot, and the credential can still move
+            # between it and the identity checks inside dispatch and poll. A
+            # tick that blocked on those would turn losing that race into a dead
+            # run, so an identity change raises out here and becomes a skip.
+            outcome = conductor.tick(run_id, block_on_identity_change=False)
             result.ticked.append(run_id)
             if outcome.error:
                 # tick() already blocked the run durably and wrote the
@@ -146,9 +179,21 @@ def sweep(conductor) -> SweepResult:
             elif not outcome.idle:
                 result.advanced.append(run_id)
                 logger.info("Conductor sweep advanced %s", outcome.describe())
+        except ScoreIdentityError:
+            # The credential moved under us mid-tick. Whatever the tick had
+            # already committed is a whole, idempotent step - the run is still
+            # running, still ownable, still exactly as advanceable as it was -
+            # and the thing that matters is what did *not* happen: it was not
+            # blocked. Reported as the same skip as a run that belonged to
+            # somebody else before the sweep even started.
+            result.skipped[run_id] = SKIP_OTHER_CREDENTIAL
         except Exception as exc:  # noqa: BLE001 - one run must not end the sweep
             result.errors[run_id] = f"{type(exc).__name__}: {exc}"
             logger.exception("Conductor sweep failed on run %s", run_id)
+    # Durable truth first, then what this pass saw for itself: a block the
+    # database somehow did not take, and the transient explosions that no runs
+    # table records because they never reached one.
+    result.failing = {**failing_runs(conductor.bridge), **result.blocked, **result.errors}
     return result
 
 

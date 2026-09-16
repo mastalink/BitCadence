@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from mco.orchestrator.score_dispatcher import score_job_id
-from mco.orchestrator.scores import ScoreError, digest, load_score
+from mco.orchestrator.scores import ScoreError, ScoreIdentityError, digest, load_score
 
 
 def encoded(value):
@@ -156,7 +156,8 @@ class ScoreBridge:
     @staticmethod
     def identity(run, board):
         if board.identity != run["credential_hash"]:
-            raise ScoreError("Conductor credential changed; explicit reauthorization required")
+            raise ScoreIdentityError(
+                "Conductor credential changed; explicit reauthorization required")
 
     def dispatch(self, run_id, board):
         self.check_deadlines(run_id)
@@ -206,6 +207,12 @@ class ScoreBridge:
         self.check_deadlines(run_id)
         try:
             self._poll(run_id, board)
+        except ScoreIdentityError:
+            # Not ours to advance, so not ours to block either. Whether a
+            # credential change stops a run durably is the caller's decision -
+            # a typed tick says yes, the automatic sweep says no - and blocking
+            # it here would take that decision away from both of them.
+            raise
         except ScoreError as exc:
             with self.tx() as db:
                 self.run(db, run_id)
