@@ -5,6 +5,20 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 ## [Unreleased]
 
 ### Added
+- **A chain that forgets to hand off is now caught.** The delivery watchdog only
+  saw jobs that exist, so a worker finishing its own job and never dispatching the
+  next one left an empty board that looked healthy while the mission was dead
+  (a real Score packet chain sat two hours that way). Send a chain link with
+  `mco_send(..., expects_successor=True)`: if its worker completes and no follow-up
+  job appears within the stall window, the gateway records a `chain_stalled` audit
+  event, broadcasts it, hands the stall to `MCO_CHAIN_STALL_TO_ROLE` (default
+  `chief`, blank to disable) and pushes once.
+- **Notification budget.** Every job transition pushed to ntfy, which exhausted
+  the server's rate limit (73 dropped with 429 in one day) and buried the
+  escalations. Routine pushes now share an hourly budget (`NTFY_MAX_PER_HOUR`,
+  default 20) and identical messages repeat at most every `NTFY_REPEAT_AFTER`
+  seconds (default 600); priority >= `NTFY_URGENT_PRIORITY` (default 4) ignores the
+  budget, so a stuck job or a human gate is never dropped for a job-created notice.
 - **Interactive sessions hear about their MCO work.** `python -m mco.hooks.inbox
   --instance <id> --role <role>` is a Claude Code SessionStart/UserPromptSubmit
   hook: it tells the session (and the user) about jobs pinned to it, or addressed

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 
 from mco.config import get_config
@@ -33,12 +33,15 @@ logger = logging.getLogger("mco.orchestrator.delivery")
 REKICKED = "delivery_rekicked"
 REROUTED = "delivery_rerouted"
 ESCALATED = "delivery_escalated"
+CHAIN_STALLED = "chain_stalled"
 # Events that record the watchdog's own progress; they must not restart the
 # stall clock, or a re-kick would postpone its own follow-up forever.
 _PROGRESS_EVENTS = {REKICKED, ESCALATED}
 
 DEFAULT_STALL_SECONDS = 600
 DEFAULT_MAX_REROUTES = 2
+DEFAULT_CHAIN_STALL_ROLE = "chief"
+CHAIN_LOOKBACK_SECONDS = 86400
 ACTOR_ID = "system"
 ACTOR_ROLE = "delivery"
 
@@ -51,6 +54,15 @@ def get_stall_seconds(config: Optional[dict] = None) -> int:
         return int(config.get("MCO_DELIVERY_STALL_SECONDS") or DEFAULT_STALL_SECONDS)
     except (TypeError, ValueError):
         return DEFAULT_STALL_SECONDS
+
+
+def get_chain_stall_role(config: Optional[dict] = None) -> str:
+    """Role that receives a stalled chain (MCO_CHAIN_STALL_TO_ROLE).
+
+    Blank disables hand-off, leaving the audit event, broadcast and push."""
+    config = config if config is not None else get_config()
+    value = config.get("MCO_CHAIN_STALL_TO_ROLE")
+    return (DEFAULT_CHAIN_STALL_ROLE if value is None else str(value)).strip().lower()
 
 
 def get_max_reroutes(config: Optional[dict] = None) -> int:
@@ -90,6 +102,7 @@ class SweepResult:
     rekicked: list[str] = field(default_factory=list)
     rerouted: list[str] = field(default_factory=list)
     escalated: list[str] = field(default_factory=list)
+    chain_stalled: list[str] = field(default_factory=list)
 
 
 def _parse_ts(value: Any) -> Optional[datetime]:
@@ -225,7 +238,107 @@ def sweep(
                         f"Job {job_id}"),
         })
         result.escalated.append(job_id)
+
+    _sweep_chain_stalls(db, result, now=now, config=config, grace=stall)
     return result
+
+
+def _successor_exists(jobs: list, parent: dict, completed_at: datetime) -> bool:
+    """Did the agent that finished `parent` create any job afterwards?"""
+    worker = parent.get("leased_by_instance_id")
+    parent_id = parent.get("id")
+    for job in jobs:
+        payload = job.get("input_payload") or {}
+        if isinstance(payload, dict) and payload.get("chain_parent") == parent_id:
+            return True
+        if not worker or job.get("source_agent_id") != worker:
+            continue
+        created = _parse_ts(job.get("created_at"))
+        if created is not None and created >= completed_at:
+            return True
+    return False
+
+
+def _sweep_chain_stalls(db: Any, result: SweepResult, *, now: datetime,
+                        config: dict, grace: int) -> None:
+    """Catch the failure the rest of this module cannot see: a job that was
+    never created.
+
+    A worker that finishes its own job and never hands off leaves NOTHING
+    pending, so the board looks idle and healthy while the mission is dead -
+    which is exactly how a Score packet chain sat untouched for two hours. A
+    job marked `expects_successor` must be followed by a job from the same
+    worker; if none appears within the grace window, the chain is stalled.
+    """
+    from mco.orchestrator.audit import get_events, record_event
+
+    try:
+        jobs = db.table("agent_jobs").select("*").execute().data or []
+    except Exception:
+        logger.exception("chain-stall sweep could not read jobs")
+        return
+
+    to_role = get_chain_stall_role(config)
+    cutoff = now - timedelta(seconds=CHAIN_LOOKBACK_SECONDS)
+    for job in jobs:
+        payload = job.get("input_payload") or {}
+        if job.get("status") != "completed" or not isinstance(payload, dict):
+            continue
+        if not payload.get("expects_successor"):
+            continue
+        completed_at = _parse_ts(job.get("completed_at"))
+        if completed_at is None or completed_at < cutoff:
+            continue
+        if (now - completed_at).total_seconds() < grace:
+            continue
+        if _successor_exists(jobs, job, completed_at):
+            continue
+        job_id = job.get("id")
+        if any(event.get("event") == CHAIN_STALLED for event in get_events(db, job_id)):
+            continue
+
+        worker = job.get("leased_by_instance_id") or "unknown"
+        title = job.get("title") or job_id
+        detail = {"worker": worker, "completed_at": job.get("completed_at"),
+                  "grace_seconds": grace, "handed_to_role": to_role or None}
+        record_event(db, job_id, CHAIN_STALLED, ACTOR_ID, ACTOR_ROLE, detail)
+        result.broadcasts.append(("chain_stalled", job))
+        result.chain_stalled.append(job_id)
+
+        if to_role:
+            successor = {
+                "title": f"Chain stalled: {title}"[:200],
+                "description": (
+                    f"Job {job_id} ('{title}') completed on {job.get('completed_at')} by {worker} "
+                    f"and was expected to hand work to the next agent, but created no follow-up "
+                    f"job within {grace // 60} minutes. The board went idle with the mission "
+                    f"unfinished.\n\nRead that job's result and its mission notes, then either "
+                    f"dispatch the missing next job yourself or report plainly why the chain "
+                    f"should stop here. Do not redo the completed work."
+                ),
+                "source_agent_id": ACTOR_ID,
+                "source_agent_role": ACTOR_ROLE,
+                "target_agent_role": to_role,
+                "status": "pending",
+                "priority": 95,
+                "input_payload": {"chain_parent": job_id, "stalled_worker": worker},
+            }
+            if (job.get("org_id") or "default") != "default":
+                successor["org_id"] = job["org_id"]
+            try:
+                created = db.table("agent_jobs").insert(successor).execute().data
+            except Exception:
+                logger.exception("chain-stall hand-off could not be created for %s", job_id)
+                created = None
+            if created:
+                result.broadcasts.append(("job_pending", created[0]))
+
+        result.notifications.append({
+            "title": "BitCadence chain stalled",
+            "message": (f"'{title}' finished but never handed off, and nothing is queued. "
+                        + (f"Sent to {to_role} to resume. " if to_role else "")
+                        + f"Job {job_id}"),
+        })
 
 
 def send_notifications(result: SweepResult) -> None:
@@ -237,6 +350,6 @@ def send_notifications(result: SweepResult) -> None:
     for note in result.notifications:
         try:
             notify(note["message"], title=note["title"], priority=4,
-                   tags=["mco", "delivery", "escalated"])
+                   tags=["mco", "delivery", "escalated"])   # urgent: never dropped for budget
         except Exception as exc:  # pragma: no cover - notifier already swallows
             logger.debug(f"delivery escalation push skipped: {exc}")
