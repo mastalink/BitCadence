@@ -42,8 +42,9 @@ class FakeGatewayClient:
 
     def send(self, to_role: str, title: str, instructions: str, to_instance=None,
              depends_on=None, requires_approval=False, max_retries=0, escalate_to_role=None,
-             priority=0):
+             priority=0, extra_payload=None):
         self.calls.append(("send", to_role, title, instructions, to_instance))
+        self.last_extra_payload = extra_payload
         return self._responses.get("send", {"success": True})
 
     def approve(self, task_id: str):
@@ -138,6 +139,16 @@ def test_mco_send_no_instance_arg_passes_none(monkeypatch):
     mco_send("gemini", "Analyze", "Instructions here")
     _, _, _, _, to_instance = fake.calls[0]
     assert to_instance is None
+
+def test_mco_send_marks_a_chain_link_that_owes_a_handoff(monkeypatch):
+    fake = _fake(monkeypatch)
+    mco_send("codex", "Packet S05", "build it", expects_successor=True)
+    assert fake.last_extra_payload == {"expects_successor": True}
+
+def test_mco_send_leaves_ordinary_jobs_unmarked(monkeypatch):
+    fake = _fake(monkeypatch)
+    mco_send("codex", "One-off", "do it")
+    assert fake.last_extra_payload is None
 
 def test_mco_agents_delegates_and_returns_list(monkeypatch):
     agents = [{"instance_id": "a1", "role": "codex", "status": "online"}]
