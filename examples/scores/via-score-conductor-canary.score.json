@@ -32,11 +32,10 @@
         "evidence:review"
       ],
       "evidence": [
-        "path",
-        "sha256"
+        "canary_artifact"
       ],
-      "max_attempts": 2,
-      "timeout_seconds": 60,
+      "max_attempts": 1,
+      "timeout_seconds": 300,
       "max_cost_cents": 0,
       "checkpoint": null
     }

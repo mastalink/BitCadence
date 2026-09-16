@@ -47,7 +47,14 @@ def test_canary_score_validation_and_compilation(canary_score_dict):
     assert task["resources"] == [CANARY_RESOURCE_LANE]
     assert "via-release-lane" not in task["resources"]
     assert set(task["capabilities"]).issubset({"evidence:write", "evidence:review"})
-    assert task["evidence"] == ["path", "sha256"]
+    # One ARTIFACT NAME, not the fields inside it: the bridge treats each
+    # evidence entry as an artifact it must fetch and hash, so ["path","sha256"]
+    # demanded two artifacts literally named "path" and "sha256" and the canary
+    # could never be executed. Corrected when the conductor first ran it.
+    assert task["evidence"] == ["canary_artifact"]
+    # The durable bridge executes exactly one work attempt and rejects a score
+    # that asks for more; lease recovery is the gateway's job, not the score's.
+    assert task["max_attempts"] == 1
     assert task["checkpoint"] is None
 
     # Compilation & digest acceptance criteria
@@ -193,7 +200,13 @@ def test_canary_e2e_sandbox_lifecycle_and_acceptance(canary_score_dict, tmp_path
     assert sandbox.state[CANARY_TASK_ID]["status"] == "running"
 
     # 2. Worker executes fixed hash_artifact handler
-    evidence = hash_artifact(tmp_path, run_id)
+    artifact = hash_artifact(tmp_path, run_id)
+    # Evidence is keyed by the ARTIFACT NAME the score declares. NOTE: the two
+    # layers disagree on the value - SandboxRun.finish requires a string per
+    # name, while ScoreBridge.artifacts requires {"path", "sha256"} so it can
+    # re-fetch and re-hash the bytes. The sandbox is the policy model; the
+    # bridge is what actually executes. Tracked for the next packet.
+    evidence = {"canary_artifact": artifact["sha256"]}
 
     # 3. Worker finishes task
     sandbox.finish(
@@ -227,11 +240,12 @@ def test_canary_e2e_sandbox_lifecycle_and_acceptance(canary_score_dict, tmp_path
             now=12,
         )
 
-    # 5. Independent reviewer verifies artifact
+    # 5. Independent reviewer verifies artifact (the reference itself, not the
+    # name->string map the sandbox records)
     valid_review = verify_artifact(
         tmp_path,
         run_id,
-        evidence,
+        artifact,
         author="worker-beast",
         reviewer="reviewer-grok",
     )
