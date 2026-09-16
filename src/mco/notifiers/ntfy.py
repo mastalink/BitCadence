@@ -22,6 +22,8 @@ and "force pull" signals to agents.
 from __future__ import annotations
 
 import os
+import time
+from collections import deque
 from typing import Optional, List
 
 import requests
@@ -29,6 +31,16 @@ from loguru import logger
 
 
 from mco.config import get_config
+
+# Delivery budget. Every job transition pushes, so a busy hour used to exhaust
+# ntfy.sh's limit and the escalations - the only messages meant to reach a
+# person - came back 429 and were dropped.
+REPEAT_AFTER_SECONDS = 600     # identical (title, message) is sent at most this often
+MAX_ROUTINE_PER_HOUR = 20      # budget for routine traffic; urgent messages ignore it
+URGENT_PRIORITY = 4            # >= this is urgent: failures, approvals, escalations
+_last_sent: dict[tuple, float] = {}
+_routine_sends: deque = deque()
+_last_rate_limit_log = [0.0]
 
 
 def get_ntfy_config() -> dict:
@@ -42,6 +54,44 @@ def get_ntfy_config() -> dict:
         "token": config.get("NTFY_TOKEN"),
         "levels": [x.strip().upper() for x in config.get("NTFY_LEVELS", "INFO,WARNING,ERROR,CRITICAL").split(",")],
     }
+
+
+def _throttle_config(cfg: dict) -> tuple[int, int, int]:
+    def _int(key, default):
+        try:
+            return max(0, int(cfg.get(key) or default))
+        except (TypeError, ValueError):
+            return default
+    return (_int("NTFY_REPEAT_AFTER", REPEAT_AFTER_SECONDS),
+            _int("NTFY_MAX_PER_HOUR", MAX_ROUTINE_PER_HOUR),
+            _int("NTFY_URGENT_PRIORITY", URGENT_PRIORITY))
+
+
+def _allowed(message: str, title: Optional[str], priority: int, cfg: dict, now: float) -> bool:
+    """Spend the delivery budget on the messages that matter.
+
+    Routine traffic gets an hourly budget; urgent messages (priority >=
+    NTFY_URGENT_PRIORITY) ignore that budget and are only de-duplicated, so a
+    repeated alarm cannot spam and a flood of routine events cannot bury it.
+    """
+    repeat_after, max_routine, urgent_at = _throttle_config(cfg)
+    key = (title or "", message)
+    last = _last_sent.get(key)
+    if last is not None and repeat_after and now - last < repeat_after:
+        logger.debug("ntfy suppressed a repeat of {}", title)
+        return False
+    if priority < urgent_at and max_routine:
+        while _routine_sends and now - _routine_sends[0] > 3600:
+            _routine_sends.popleft()
+        if len(_routine_sends) >= max_routine:
+            logger.debug("ntfy routine budget spent; dropping {}", title)
+            return False
+        _routine_sends.append(now)
+    _last_sent[key] = now
+    if len(_last_sent) > 512:      # bounded; drop the oldest half
+        for old in sorted(_last_sent, key=_last_sent.get)[:256]:
+            _last_sent.pop(old, None)
+    return True
 
 
 def notify(
@@ -59,6 +109,8 @@ def notify(
     """
     cfg = get_ntfy_config()
     if not cfg["topic"]:
+        return False
+    if not _allowed(message, title, priority, cfg, time.time()):
         return False
     server = cfg["server"]
     topic = cfg["topic"]  # Configuration is the sole destination authority.
@@ -82,7 +134,15 @@ def notify(
         logger.debug(f"ntfy notification sent to {topic}")
         return True
     except Exception as e:
-        logger.warning(f"Failed to send ntfy notification: {e}")
+        # A 429 means even this budget is too generous for that server; say so
+        # occasionally rather than once per dropped message.
+        if "429" in str(e):
+            if time.time() - _last_rate_limit_log[0] > 600:
+                _last_rate_limit_log[0] = time.time()
+                logger.warning("ntfy is rate-limiting this topic (429). Lower NTFY_MAX_PER_HOUR "
+                               "or host your own ntfy server; some notifications were dropped.")
+        else:
+            logger.warning(f"Failed to send ntfy notification: {e}")
         return False
 
 

@@ -94,17 +94,25 @@ def mco_fail(task_id: str, error: str) -> dict:
 @mcp.tool()
 def mco_send(to_role: str, title: str, instructions: str, to_instance: str = "",
              requires_approval: bool = False, max_retries: int = 0,
-             escalate_to_role: str = "", priority: int = 0) -> dict:
+             escalate_to_role: str = "", priority: int = 0,
+             expects_successor: bool = False) -> dict:
     """Drop a task/message into another agent's dropbox. to_instance is optional
     (omit to address the whole role). Set requires_approval=True to pause the job
     at a human approval gate; max_retries/escalate_to_role control what happens
     when the job fails. priority (higher first, default 0) jumps the queue:
     workers take the first job in their inbox, so an urgent job sent to a role
-    with an existing backlog needs one to be picked up next."""
+    with an existing backlog needs one to be picked up next.
+
+    Set expects_successor=True when this job is one link in a chain and its
+    worker owes a hand-off to the next agent. If that worker completes without
+    creating a follow-up job, the gateway records a chain_stalled event and
+    hands the stall to MCO_CHAIN_STALL_TO_ROLE - without it, a chain that
+    forgets to dispatch leaves an empty board that looks perfectly healthy."""
+    extra = {"expects_successor": True} if expects_successor else None
     return _client().send(to_role, title, instructions, to_instance or None,
                           requires_approval=requires_approval, max_retries=max_retries,
                           escalate_to_role=escalate_to_role or None,
-                          priority=priority)
+                          priority=priority, extra_payload=extra)
 
 
 @mcp.tool()
