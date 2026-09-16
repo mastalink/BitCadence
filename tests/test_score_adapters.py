@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime, timezone
 
 import pytest
@@ -221,6 +222,121 @@ def test_wrapper_exception_is_uncertain_not_retry_safe(store, grants):
     assert result["status"] == "uncertain"
     effect = store.table("score_recovery").select("*").execute().data[0]["uncertain_effect"]
     assert effect["partial_effect"] == {"exception_type": "TimeoutError"}
+
+
+def test_process_death_after_partial_effect_blocks_blind_replay(store, grants):
+    state = {"version": "old", "mode": "dry-run", "submitted": False}
+    calls = []
+
+    def invoke(_op):
+        calls.append("invoke")
+        state["submitted"] = True
+        raise SystemExit("simulated process death")
+
+    run = executor(store, grants, state=state, invoke=invoke,
+                   compensate=lambda *_: None)
+    with pytest.raises(SystemExit, match="process death"):
+        run.execute(operation())
+
+    restarted = executor(store, grants, state=state, invoke=invoke,
+                         compensate=lambda *_: None)
+    with pytest.raises(RecoveryRequired, match="inspection_or_compensation"):
+        restarted.execute(operation())
+
+    assert calls == ["invoke"]
+    assert [r["phase"] for r in receipts(store)] == ["before"]
+    recovery = store.table("score_recovery").select("*").execute().data[0]
+    assert recovery["decision"] == "pending"
+    assert recovery["uncertain_effect"]["partial_effect"] == {"in_flight": True}
+
+
+def test_legacy_unmatched_before_receipt_is_promoted_to_pending_recovery(store, grants):
+    state = {"version": "old", "mode": "dry-run", "submitted": True}
+    calls = []
+    op = operation()
+    store.table("score_events").insert({
+        "org_id": op.org_id,
+        "run_id": op.run_id,
+        "kind": "adapter_before",
+        "task_id": op.task_id,
+        "digest": op.digest,
+        "actor": "score-conductor",
+        "payload": {
+            "protocol": "score-adapter-receipt/v1",
+            "operation_id": op.id,
+            "phase": "before",
+            "status": "observed",
+            "observed_state": {"version": "old", "mode": "dry-run"},
+        },
+    }).execute()
+    run = executor(
+        store, grants, state=state,
+        invoke=lambda _op: calls.append("invoke"), compensate=lambda *_: None,
+    )
+
+    with pytest.raises(RecoveryRequired, match="inspection_or_compensation"):
+        run.execute(op)
+
+    assert calls == []
+    recovery = store.table("score_recovery").select("*").execute().data[0]
+    assert recovery["decision"] == "pending"
+    assert recovery["uncertain_effect"]["detail"] == "unmatched adapter_before receipt"
+
+
+def test_process_death_reconciles_deploy_when_inspection_finds_desired(store, grants):
+    state = {"version": "old", "mode": "dry-run"}
+    calls = []
+
+    def invoke(_op):
+        calls.append("invoke")
+        state["version"] = "candidate"
+        raise SystemExit("simulated process death")
+
+    run = executor(store, grants, state=state, invoke=invoke,
+                   compensate=lambda *_: None)
+    with pytest.raises(SystemExit):
+        run.execute(operation())
+
+    replay = run.execute(operation())
+
+    assert replay["status"] == "already_desired"
+    assert calls == ["invoke"]
+    assert [r["phase"] for r in receipts(store)] == ["before", "reconciled"]
+
+
+def test_concurrent_duplicate_cannot_invoke_while_claim_is_pending(store, grants):
+    state = {"version": "old", "mode": "dry-run"}
+    entered = threading.Event()
+    release = threading.Event()
+    calls = []
+
+    def invoke(_op):
+        calls.append("invoke")
+        entered.set()
+        assert release.wait(timeout=5)
+        state["version"] = "candidate"
+        return AdapterResult(EffectStatus.SUCCEEDED, dict(state))
+
+    run = executor(store, grants, state=state, invoke=invoke,
+                   compensate=lambda *_: None)
+    outcomes = []
+
+    def first_attempt():
+        outcomes.append(run.execute(operation()))
+
+    worker = threading.Thread(target=first_attempt)
+    worker.start()
+    assert entered.wait(timeout=5)
+    try:
+        with pytest.raises(RecoveryRequired, match="inspection_or_compensation"):
+            run.execute(operation())
+    finally:
+        release.set()
+        worker.join(timeout=5)
+
+    assert not worker.is_alive()
+    assert calls == ["invoke"]
+    assert outcomes[0]["status"] == "succeeded"
 
 
 def test_allowlist_and_s05_dry_run_boundary_fail_closed(store, grants):

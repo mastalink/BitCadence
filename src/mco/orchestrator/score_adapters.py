@@ -229,6 +229,17 @@ class ScoreAdapterExecutor:
                 return payload
         return None
 
+    def _unmatched_before(self, op: Operation) -> dict | None:
+        """Return an incomplete before receipt with no later outcome."""
+        for event in reversed(self._events(op)):
+            payload = event.get("payload") or {}
+            if payload.get("operation_id") != op.id:
+                continue
+            if payload.get("phase") == "before":
+                return payload
+            return None
+        return None
+
     def _recovery(self, op: Operation) -> dict | None:
         rows = (
             self.db.table("score_recovery").select("*")
@@ -236,6 +247,93 @@ class ScoreAdapterExecutor:
             .execute().data or []
         )
         return rows[0] if rows else None
+
+    def _in_flight_effect(self, op: Operation, spec: AdapterSpec,
+                          observed: Mapping[str, Any], *, detail: str) -> dict:
+        return {
+            "operation": copy.deepcopy(op.__dict__),
+            "adapter_kind": spec.kind,
+            # Absence of the desired state cannot prove that a crashed wrapper
+            # left no partial effect.  This marker forces a real compensation
+            # or inspection decision instead of treating the claim as empty.
+            "partial_effect": {"in_flight": True},
+            "observed_state": copy.deepcopy(dict(observed)),
+            "compensation_supported": spec.compensation_supported,
+            "detail": detail,
+        }
+
+    def _claim(self, op: Operation, effect: Mapping[str, Any]) -> bool:
+        """Atomically claim the operation by its recovery primary key."""
+        row = {
+            "approval_or_attempt_id": op.id,
+            "org_id": op.org_id,
+            "uncertain_effect": copy.deepcopy(dict(effect)),
+            "decision": "pending",
+        }
+        try:
+            self.db.table("score_recovery").insert(row).execute()
+            return True
+        except Exception:
+            existing = self._recovery(op)
+            if not existing:
+                raise
+        if existing.get("decision") not in {"inspected", "compensated"}:
+            return False
+
+        # Preserve a resolved recovery record while temporarily reusing its
+        # unique key as the next invocation claim.
+        claimed_effect = copy.deepcopy(dict(effect))
+        claimed_effect["_prior_recovery"] = {
+            "decision": existing["decision"],
+            "uncertain_effect": copy.deepcopy(existing.get("uncertain_effect") or {}),
+        }
+        updated = (
+            self.db.table("score_recovery")
+            .update({"uncertain_effect": claimed_effect, "decision": "pending"})
+            .eq("approval_or_attempt_id", op.id).eq("org_id", op.org_id)
+            .eq("decision", existing["decision"]).execute().data or []
+        )
+        return bool(updated)
+
+    def _resolve_claim(self, op: Operation, decision: str = "inspected") -> bool:
+        updated = (
+            self.db.table("score_recovery").update({"decision": decision})
+            .eq("approval_or_attempt_id", op.id).eq("org_id", op.org_id)
+            .eq("decision", "pending").execute().data or []
+        )
+        return bool(updated)
+
+    def _release_claim(self, op: Operation) -> None:
+        """Release a claim after a proved-safe outcome, preserving old history."""
+        recovery = self._recovery(op)
+        if not recovery or recovery.get("decision") != "pending":
+            return
+        prior = (recovery.get("uncertain_effect") or {}).get("_prior_recovery")
+        if prior:
+            self.db.table("score_recovery").update({
+                "decision": prior["decision"],
+                "uncertain_effect": copy.deepcopy(prior["uncertain_effect"]),
+            }).eq("approval_or_attempt_id", op.id).eq("decision", "pending").execute()
+        else:
+            self.db.table("score_recovery").delete().eq(
+                "approval_or_attempt_id", op.id,
+            ).eq("decision", "pending").execute()
+
+    def _handle_pending(self, op: Operation, spec: AdapterSpec,
+                        wrapper: AdapterWrapper, grant_identity: str) -> dict:
+        if spec.replay_requires_recheck:
+            observed = dict(wrapper.inspect(op))
+            if _desired(observed, op.desired_state):
+                # Publish the terminal receipt before releasing the claim so a
+                # crash or third concurrent caller still cannot invoke.
+                receipt = self._receipt(
+                    op, phase="reconciled", status="already_desired",
+                    grant_identity=grant_identity, observed=observed,
+                    detail="uncertain effect found in desired state; invocation not replayed",
+                )
+                self._resolve_claim(op)
+                return receipt
+        raise RecoveryRequired("uncertain_effect_requires_inspection_or_compensation")
 
     def execute(self, op: Operation) -> dict:
         spec, wrapper, grant_identity = self._validate(op)
@@ -245,17 +343,16 @@ class ScoreAdapterExecutor:
 
         recovery = self._recovery(op)
         if recovery and recovery.get("decision") == "pending":
-            observed = dict(wrapper.inspect(op))
-            if _desired(observed, op.desired_state):
-                self.db.table("score_recovery").update({"decision": "inspected"}).eq(
-                    "approval_or_attempt_id", op.id,
-                ).eq("decision", "pending").execute()
-                return self._receipt(
-                    op, phase="reconciled", status="already_desired",
-                    grant_identity=grant_identity, observed=observed,
-                    detail="uncertain effect found in desired state; invocation not replayed",
-                )
-            raise RecoveryRequired("uncertain_effect_requires_inspection_or_compensation")
+            return self._handle_pending(op, spec, wrapper, grant_identity)
+
+        unmatched = self._unmatched_before(op)
+        if unmatched:
+            effect = self._in_flight_effect(
+                op, spec, unmatched.get("observed_state") or {},
+                detail="unmatched adapter_before receipt",
+            )
+            self._claim(op, effect)
+            return self._handle_pending(op, spec, wrapper, grant_identity)
 
         observed_before = dict(wrapper.inspect(op))
         if spec.replay_requires_recheck and _desired(observed_before, op.desired_state):
@@ -264,6 +361,11 @@ class ScoreAdapterExecutor:
                 grant_identity=grant_identity, observed=observed_before,
                 detail="desired state already present; invocation skipped",
             )
+        in_flight = self._in_flight_effect(
+            op, spec, observed_before, detail="wrapper invocation in flight",
+        )
+        if not self._claim(op, in_flight):
+            return self._handle_pending(op, spec, wrapper, grant_identity)
         self._receipt(
             op, phase="before", status="observed",
             grant_identity=grant_identity, observed=observed_before,
@@ -289,12 +391,17 @@ class ScoreAdapterExecutor:
                     {"claimed_status": "succeeded"},
                 )
             else:
-                return self._receipt(
+                receipt = self._receipt(
                     op, phase="after", status="succeeded",
                     grant_identity=grant_identity, observed=after,
                     detail=result.detail,
                 )
+                self._release_claim(op)
+                return receipt
         if result.status is EffectStatus.RETRY_SAFE_FAILURE:
+            # The wrapper has explicitly proved that no effect occurred, so a
+            # concurrent retry becomes safe as soon as the claim is released.
+            self._release_claim(op)
             return self._receipt(
                 op, phase="after", status="retry_safe_failure",
                 grant_identity=grant_identity, observed=after,
@@ -309,16 +416,13 @@ class ScoreAdapterExecutor:
             "compensation_supported": spec.compensation_supported,
             "detail": result.detail,
         }
-        try:
-            self.db.table("score_recovery").insert({
-                "approval_or_attempt_id": op.id, "org_id": op.org_id,
-                "uncertain_effect": uncertain, "decision": "pending",
-            }).execute()
-        except Exception:
-            # A concurrent replay may have persisted the same recovery row.
-            existing = self._recovery(op)
-            if not existing or existing.get("uncertain_effect") != uncertain:
-                raise
+        updated = (
+            self.db.table("score_recovery").update({"uncertain_effect": uncertain})
+            .eq("approval_or_attempt_id", op.id).eq("org_id", op.org_id)
+            .eq("decision", "pending").execute().data or []
+        )
+        if not updated and not self._completed(op):
+            raise RecoveryRequired("uncertain_effect_lost_concurrent_race")
         return self._receipt(
             op, phase="after", status="uncertain",
             grant_identity=grant_identity, observed=after,
@@ -327,6 +431,8 @@ class ScoreAdapterExecutor:
 
     def compensate(self, op: Operation) -> dict:
         spec, wrapper, grant_identity = self._validate(op)
+        if self._completed(op):
+            raise RecoveryRequired("operation_already_completed")
         recovery = self._recovery(op)
         if not recovery or recovery.get("decision") != "pending":
             raise RecoveryRequired("pending_uncertain_effect_not_found")
