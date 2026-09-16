@@ -401,7 +401,27 @@ the only base on which this packet makes sense — the gateway sweep it exercise
 is C03's, and the unattended run it stresses is C04's.
 
 **Tests.** `PYTHONPATH="<worktree>\src;...\.codex\desktopdeps" python -m pytest -q
---ignore=tests/test_install_sh_tty.py` — exit 0, no failures or errors, against
-this branch. `tests/test_install_sh_tty.py::test_pipe_no_prompt_survives` is the
-declared Windows-only exclusion. No product code changed in this packet, so the
-suite is the S05/C04 baseline unchanged.
+--ignore=tests/test_install_sh_tty.py` on this branch:
+
+**1216 collected, 1203 passed, 13 skipped, exit 0.**
+`tests/test_install_sh_tty.py::test_pipe_no_prompt_survives` is the declared
+Windows-only exclusion.
+
+Two deviations to name explicitly, neither caused by this packet — it changes
+no product code.
+
+1. **The count differs from the quoted baseline** of 1169 passed / 13 skipped /
+   1182 collected. That baseline was taken at the S05 merge; C03 (#82) and C04
+   (#83) have since added 34 tests. Skips are unchanged at 13, all of them
+   PostgreSQL/PostgREST acceptance tests wanting `BC_TEST_POSTGREST_URL`.
+2. **One intermittent failure, seen once.** The suite was run three times end to
+   end: runs 1 and 3 exited 0; run 2 failed
+   `tests/test_agentd_supervisor.py::test_worker_that_keeps_failing_latches_again_after_cooldown`
+   and exited 1. That test then passed 5/5 run alone and 3/3 with its whole
+   file. It is an `agentd` supervisor test driven by a `FakeClock` and a
+   `tmp_path` latch, unrelated to Score, and this branch is the base commit plus
+   documentation — so the flake exists on `codex/score-v1` itself and is not
+   introduced here. Recorded rather than retried away: a test that fails 1 in 3
+   full-suite runs and never in isolation is worth someone's attention, and the
+   run-2 traceback was lost to a `tail` that kept only the summary, so a
+   reviewer chasing it will need to reproduce it rather than read it here.
