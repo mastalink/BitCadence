@@ -39,7 +39,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Tables whose history must never be rewritten (mirrors the Postgres trigger).
-APPEND_ONLY_TABLES = {"agent_job_events", "mco_audit_outbox", "mco_attempt_receipts", "score_events"}
+APPEND_ONLY_TABLES = {"agent_job_events", "mco_audit_outbox", "mco_attempt_receipts", "score_events", "score_checkpoint_decisions"}
 
 # Natural primary key per table (upsert conflict target).
 PRIMARY_KEYS = {
@@ -49,11 +49,13 @@ PRIMARY_KEYS = {
     "score_tasks": "id",
     "score_events": "seq",
     "score_outbox": "id",
-    "score_grants": "digest",
+    "score_grants": "id",
     "score_reviews": "id",
     "score_providers": "instance_id",
     "score_provider_health": "instance_id",
     "score_recovery": "approval_or_attempt_id",
+    "score_gate_requests": "id",
+    "score_checkpoint_decisions": "id",
     "conductor_leases": "id",
 }
 
@@ -61,6 +63,9 @@ PRIMARY_KEYS = {
 UNIQUE_CONSTRAINTS = {
     "score_tasks": ("org_id", "run_id", "task_id", "attempt"),
     "score_outbox": ("org_id", "run_id", "task_id", "phase"),
+    "score_grants": ("org_id", "run_id", "digest"),
+    "score_gate_requests": ("org_id", "run_id", "digest", "task_id", "kind"),
+    "score_checkpoint_decisions": ("gate_id",),
 }
 
 # Dedicated Score tables mirrored in LocalStore.
@@ -75,6 +80,8 @@ SCORE_TABLES = {
     "score_providers",
     "score_provider_health",
     "score_recovery",
+    "score_gate_requests",
+    "score_checkpoint_decisions",
     "conductor_leases",
 }
 
@@ -313,6 +320,8 @@ class LocalStore:
         elif table == "score_recovery":
             row.setdefault("decision", "pending")
             row.setdefault("uncertain_effect", {})
+        elif table == "score_gate_requests":
+            row.setdefault("status", "pending")
         elif table == "score_runs":
             row.setdefault("status", "pending")
             row.setdefault("authorized_budget_cents", 0)

@@ -9,6 +9,7 @@ import copy
 import hashlib
 import json
 import re
+import uuid
 from pathlib import Path
 
 
@@ -138,12 +139,15 @@ class SandboxRun:
     artifacts and enforce their semantics before calling review().
     """
 
-    def __init__(self, score, run_id, *, grants=(), authorized_budget_cents=0):
+    def __init__(self, score, run_id, *, grants=(), authorized_budget_cents=0,
+                 gate_service=None, org_id="default", projected_monthly_cents=0):
         self.score = load_score(score)
         _string(run_id)
         _integer(authorized_budget_cents)
         _strings(list(grants))
         self.run_id = run_id
+        _string(org_id)
+        self.org_id = org_id
         self.fingerprint = digest(self.score)
         self.grants = frozenset(grants)
         self.budget = min(self.score["budget_cents"], authorized_budget_cents)
@@ -151,7 +155,37 @@ class SandboxRun:
         self.tasks = {t["id"]: t for t in self.score["tasks"]}
         self.state = {key: {"status": "pending", "attempt": 0, "token": None, "author": None, "deadline": None, "evidence": None, "approved": False} for key in self.tasks}
         self.events = []
+        # Human checkpoint decisions are deliberately distinct from external
+        # capability authorizations. They are rendered by the gate view and
+        # never expand ``self.grants``.
+        self.checkpoint_decisions = []
         self.clock = 0
+        self.gate_service = gate_service
+        if isinstance(projected_monthly_cents, dict):
+            for task_id, amount in projected_monthly_cents.items():
+                if task_id not in self.tasks:
+                    raise ScoreError("Unknown projected-spend task")
+                _integer(amount)
+            self.projected_monthly_cents = dict(projected_monthly_cents)
+        else:
+            _integer(projected_monthly_cents)
+            self.projected_monthly_cents = {key: projected_monthly_cents for key in self.tasks}
+        if gate_service is not None:
+            from mco.orchestrator.score_policy import VIA_OWNER_POLICY, required_gates
+            for task_id in self.tasks:
+                kinds = required_gates(
+                    task_id=task_id,
+                    projected_monthly_cents=self.projected_monthly_cents.get(task_id, 0),
+                )
+                for kind in kinds:
+                    gate_service.request(
+                        org_id=self.org_id, run_id=self.run_id,
+                        digest=self.fingerprint, task_id=task_id, kind=kind,
+                        evidence={
+                            "policy_id": VIA_OWNER_POLICY["policy_id"],
+                            "projected_monthly_cents": self.projected_monthly_cents.get(task_id, 0),
+                        },
+                    )
 
     def _time(self, now):
         _integer(now)
@@ -177,7 +211,23 @@ class SandboxRun:
             reasons.append("dependencies")
         if not set(task["capabilities"]) <= self.grants:
             reasons.append("authority")
-        if task["checkpoint"] and not state["approved"]:
+        from mco.orchestrator.score_policy import required_gates
+        policy_gates = required_gates(
+            task_id=task_id,
+            projected_monthly_cents=self.projected_monthly_cents.get(task_id, 0),
+        )
+        # Owner-policy gates never fall back to an in-memory boolean: only an
+        # immutable durable checkpoint decision can release the path.
+        gate_approved = state["approved"] if not policy_gates else False
+        if policy_gates and self.gate_service is not None:
+            gate_approved = all(
+                self.gate_service.approved(
+                    org_id=self.org_id, run_id=self.run_id, digest=self.fingerprint,
+                    task_id=task_id, kind=kind,
+                )
+                for kind in policy_gates
+            )
+        if (task["checkpoint"] or policy_gates) and not gate_approved:
             reasons.append("human_checkpoint")
         if self.reserved + task["max_cost_cents"] > self.budget:
             reasons.append("budget")
@@ -191,15 +241,63 @@ class SandboxRun:
     def ready(self):
         return [key for key in self.tasks if not self.blockers(key)]
 
-    def approve(self, task_id, *, actor, actor_kind):
+    def decide_checkpoint(self, task_id, *, actor, actor_kind, decision,
+                          evidence=None, caller=None, gate_kind=None):
         state = self._state(task_id)
         _string(actor)
-        if actor_kind != "human" or not self.tasks[task_id]["checkpoint"]:
+        from mco.orchestrator.score_policy import required_gates
+        policy_gates = required_gates(
+            task_id=task_id,
+            projected_monthly_cents=self.projected_monthly_cents.get(task_id, 0),
+        )
+        if actor_kind != "human" or not (self.tasks[task_id]["checkpoint"] or policy_gates):
             raise ScoreError("Explicit human principal required")
+        if policy_gates and self.gate_service is None:
+            raise ScoreError("Durable gate service required for owner-policy decisions")
         if state["status"] != "pending":
             raise ScoreError("Checkpoint is not pending")
-        state["approved"] = True
-        self._event("human_approved", task_id, actor=actor)
+        if decision not in ("approved", "rejected"):
+            raise ScoreError("Checkpoint decision must be approved or rejected")
+        if evidence is not None and not isinstance(evidence, dict):
+            raise ScoreError("Checkpoint evidence must be an object")
+        if policy_gates and self.gate_service is not None:
+            if not isinstance(caller, dict) or caller.get("instance_id") != actor:
+                raise ScoreError("Authenticated human caller must match checkpoint actor")
+            if gate_kind is None:
+                if len(policy_gates) != 1:
+                    raise ScoreError("gate_kind is required when multiple owner-policy gates apply")
+                gate_kind = policy_gates[0]
+            if gate_kind not in policy_gates:
+                raise ScoreError("Gate kind does not apply to this task")
+            gate_id = str(uuid.uuid5(
+                uuid.NAMESPACE_URL,
+                f"score-gate:{self.org_id}:{self.run_id}:{self.fingerprint}:{task_id}:{gate_kind}",
+            ))
+            record = self.gate_service.decide(
+                gate_id,
+                caller=caller,
+                decision=decision,
+                reason=str((evidence or {}).get("reason") or ""),
+            )
+        else:
+            record = dict(task=task_id, run=self.run_id, score_digest=self.fingerprint,
+                          decision=decision, actor=actor, evidence=copy.deepcopy(evidence or {}), at=self.clock)
+        self.checkpoint_decisions.append(record)
+        state["approved"] = decision == "approved"
+        self._event("human_" + decision, task_id, actor=actor, evidence=copy.deepcopy(evidence or {}))
+        return copy.deepcopy(record)
+
+    def approve(self, task_id, *, actor, actor_kind, evidence=None, caller=None,
+                gate_kind=None):
+        return self.decide_checkpoint(task_id, actor=actor, actor_kind=actor_kind,
+                                      decision="approved", evidence=evidence, caller=caller,
+                                      gate_kind=gate_kind)
+
+    def reject(self, task_id, *, actor, actor_kind, evidence=None, caller=None,
+               gate_kind=None):
+        return self.decide_checkpoint(task_id, actor=actor, actor_kind=actor_kind,
+                                      decision="rejected", evidence=evidence, caller=caller,
+                                      gate_kind=gate_kind)
 
     def start(self, task_id, *, actor, role, now):
         self._time(now)
@@ -278,7 +376,8 @@ class SandboxRun:
                 "launch_accepted": all(self.state[key]["status"] == "accepted" for key in self.score["launch_requires"]),
                 "reserved_cents": self.reserved, "budget_cents": self.budget,
                 "tasks": copy.deepcopy(self.state), "blockers": {key: self.blockers(key) for key in self.tasks},
-                "events": copy.deepcopy(self.events)}
+                "events": copy.deepcopy(self.events),
+                "checkpoint_decisions": copy.deepcopy(self.checkpoint_decisions)}
 
 
 def main():

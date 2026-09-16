@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from mco.orchestrator.score_authority import grant_identity
+from mco.localstore import LocalStore
+from mco.orchestrator.score_authority import GrantService, grant_identity, sign_grant
 from mco.orchestrator.score_evidence import (
     EvidenceBinding,
     EvidenceError,
@@ -15,6 +16,7 @@ from mco.orchestrator.score_providers import Provider, Run, Task
 
 NOW = datetime(2026, 9, 15, tzinfo=timezone.utc)
 DIGEST = "a" * 64
+KEY = b"evidence-authority-key-is-32-bytes!"
 
 
 def provider(instance_id="reviewer", provider_name="other"):
@@ -51,16 +53,17 @@ def task(**changes):
 
 
 def authority():
-    return {
-        "org_id": "default",
+    return sign_grant({
+        "org_id": "default", "run_id": "run",
         "digest": DIGEST,
         "actions": ["evidence:test", "evidence:review"],
         "resources": ["run"],
         "env": "test",
+        "not_before": "2026-09-15T00:00:00Z",
         "expires_at": "2026-10-01T00:00:00Z",
+        "budget_cents": 0,
         "human_principal": "owner",
-        "signature": "signed",
-    }
+    }, KEY)
 
 
 def binding(**changes):
@@ -94,7 +97,10 @@ def evidence(tmp_path):
     claim = {"report": {"location": "run", "path": "artifact.json", "sha256": hashlib.sha256(content).hexdigest()}}
     tests = receipt("test_receipt", suites=[{"name": "unit", "status": "passed", "skipped": False}, {"name": "postgres-optional", "status": "skipped", "skipped": True}])
     review = receipt("code_review", reviewer_id="reviewer", reviewer_provider="other", verdict="pass")
-    return EvidenceVerifier({"run": tmp_path}), claim, tests, review
+    store = LocalStore(tmp_path / "authority.db")
+    service = GrantService(store, verification_key=KEY)
+    service.issue({key: value for key, value in authority().items() if key != "signature"})
+    return EvidenceVerifier({"run": tmp_path}, grant_service=service), claim, tests, review
 
 
 def verify(evidence, **changes):
@@ -104,7 +110,8 @@ def verify(evidence, **changes):
         worker_output={"artifacts": claim},
         test_receipt=tests,
         review_receipt=review,
-        grant=authority(),
+        resource="run", environment="test", cost_cents=0,
+        owner_principal="owner",
         mandatory_suites=["unit"],
         reviewer=provider(),
         contribution_instance_ids=["author", "original-author"],
@@ -165,7 +172,8 @@ def test_worker_verified_claim_is_insufficient(evidence):
     with pytest.raises(EvidenceError, match="receipt_required"):
         verifier.verify(
             binding=binding(), worker_output={"artifacts": claim, "verified_evidence": True},
-            test_receipt=None, review_receipt=None, grant=authority(), mandatory_suites=["unit"],
+            test_receipt=None, review_receipt=None, resource="run", environment="test",
+            cost_cents=0, owner_principal="owner", mandatory_suites=["unit"],
             reviewer=provider(), contribution_instance_ids=["author"], author_provider="author-vendor",
             require_cross_provider=True, now=NOW,
         )

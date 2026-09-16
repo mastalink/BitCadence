@@ -104,10 +104,10 @@ def test_migrate_store_with_job_priority_applied_applies_only_score(monkeypatch)
 
     result = mig.apply_postgres("postgres://acceptance-existing")
     assert "2026-09_job_priority.sql" in result["skipped"]
-    assert result["applied"] == ["2026-09_score_store.sql"]
+    assert result["applied"] == ["2026-09_score_store.sql", "2026-09_score_store_s04.sql"]
     inserts = [s for s, p in state["log"] if s.startswith("INSERT INTO schema_migrations")]
-    assert len(inserts) == 1
-    assert state["commits"] == 2  # 1 for schema_migrations init, 1 for the applied migration
+    assert len(inserts) == 2
+    assert state["commits"] == 3  # init plus the two applied Score migrations
 
 
 def test_migrate_idempotent_when_already_applied(monkeypatch):
@@ -158,6 +158,12 @@ def test_sql_contains_all_12_required_score_tables_and_specs():
     assert "score_id    TEXT NOT NULL" in sql
     assert "digest      TEXT NOT NULL" in sql
     assert "attempt     INTEGER NOT NULL DEFAULT 1" in sql
+
+    s04_path = migration_path.with_name("2026-09_score_store_s04.sql")
+    s04_sql = s04_path.read_text(encoding="utf-8")
+    assert "PRIMARY KEY (id)" in s04_sql
+    assert "UNIQUE (org_id, run_id, digest)" in s04_sql
+    assert "legacy-unscoped:" in s04_sql
     assert "uq_score_outbox_dispatch UNIQUE (org_id, run_id, task_id, phase)" in sql
 
     # Verify score_recovery decisions
@@ -215,7 +221,7 @@ def test_localstore_primary_keys_and_registrations():
     assert PRIMARY_KEYS["score_tasks"] == "id"
     assert PRIMARY_KEYS["score_events"] == "seq"
     assert PRIMARY_KEYS["score_outbox"] == "id"
-    assert PRIMARY_KEYS["score_grants"] == "digest"
+    assert PRIMARY_KEYS["score_grants"] == "id"
     assert PRIMARY_KEYS["score_reviews"] == "id"
     assert PRIMARY_KEYS["score_providers"] == "instance_id"
     assert PRIMARY_KEYS["score_provider_health"] == "instance_id"
@@ -225,6 +231,7 @@ def test_localstore_primary_keys_and_registrations():
     assert "score_events" in APPEND_ONLY_TABLES
     assert UNIQUE_CONSTRAINTS["score_tasks"] == ("org_id", "run_id", "task_id", "attempt")
     assert UNIQUE_CONSTRAINTS["score_outbox"] == ("org_id", "run_id", "task_id", "phase")
+    assert UNIQUE_CONSTRAINTS["score_grants"] == ("org_id", "run_id", "digest")
 
 
 # ── 5. LocalStore CRUD Across All Score Tables ──────────────────────────────
@@ -280,6 +287,7 @@ def test_localstore_score_outbox_transitions(store):
 
 def test_localstore_score_grants_and_reviews(store):
     store.table("score_grants").insert({
+        "run_id": "run-100",
         "digest": "sha256:grant-1",
         "actions": ["repo:read", "test:run"],
         "resources": ["repo"],

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Sequence
 
-from mco.orchestrator.score_authority import AuthorityError, require_receipt
+from mco.orchestrator.score_authority import AuthorityError, GrantService, require_receipt
 from mco.orchestrator.score_providers import Provider, Run, Task, select
 
 
@@ -59,13 +59,18 @@ def select_reviewer(
 
 
 class EvidenceVerifier:
-    def __init__(self, allowed_locations: Mapping[str, str | Path], *, max_artifact_bytes: int = 16 * 1024 * 1024):
+    def __init__(self, allowed_locations: Mapping[str, str | Path], *,
+                 grant_service: GrantService,
+                 max_artifact_bytes: int = 16 * 1024 * 1024):
         if not allowed_locations:
             raise EvidenceError("artifact_location_allowlist_required")
         self.locations = {name: Path(root).resolve() for name, root in allowed_locations.items()}
         if any(not isinstance(name, str) or not name for name in self.locations):
             raise EvidenceError("invalid_artifact_location")
         self.max_artifact_bytes = max_artifact_bytes
+        if not isinstance(grant_service, GrantService):
+            raise EvidenceError("durable_grant_service_required")
+        self.grants = grant_service
 
     def _artifacts(self, claims: object) -> Mapping[str, bytes]:
         if not isinstance(claims, dict) or not claims:
@@ -95,12 +100,25 @@ class EvidenceVerifier:
             fetched[name] = content
         return fetched
 
-    @staticmethod
-    def _authenticate(receipt: object, binding: EvidenceBinding, grant: dict, action: str, now) -> dict:
+    def _authenticate(self, receipt: object, binding: EvidenceBinding, action: str,
+                      *, resource: str, environment: str, cost_cents: int,
+                      owner_principal: str, now) -> dict:
         if not isinstance(receipt, dict):
             raise EvidenceError("receipt_required")
         try:
-            require_receipt(receipt, org_id=binding.org_id, digest=binding.score_digest, grant=grant, action=action, now=now)
+            grant, _ = self.grants.require(
+                org_id=binding.org_id, run_id=binding.run_id,
+                digest=binding.score_digest, action=action, resource=resource,
+                environment=environment, cost_cents=cost_cents,
+                owner_principal=owner_principal, now=now,
+            )
+            require_receipt(
+                receipt, org_id=binding.org_id, digest=binding.score_digest,
+                grant=grant, action=action, run_id=binding.run_id,
+                resource=resource, environment=environment, cost_cents=cost_cents,
+                owner_principal=owner_principal,
+                verification_key=self.grants.key, now=now,
+            )
         except AuthorityError as exc:
             raise EvidenceError(str(exc)) from exc
         expected = {
@@ -122,7 +140,10 @@ class EvidenceVerifier:
         worker_output: Mapping[str, object],
         test_receipt: dict,
         review_receipt: dict,
-        grant: dict,
+        resource: str,
+        environment: str,
+        cost_cents: int,
+        owner_principal: str,
         mandatory_suites: Sequence[str],
         reviewer: Provider,
         contribution_instance_ids: Sequence[str],
@@ -130,12 +151,24 @@ class EvidenceVerifier:
         require_cross_provider: bool,
         now=None,
     ) -> VerifiedEvidence:
-        """Establish evidence without trusting any worker verification claim."""
+        """Establish evidence without trusting any worker verification claim.
+
+        ``cost_cents`` is the caller-declared authorization ceiling in S04,
+        not measured spend. Later accounting must bind the actual cost.
+        """
         if not isinstance(worker_output, dict):
             raise EvidenceError("worker_output_required")
         artifacts = self._artifacts(worker_output.get("artifacts"))
-        tests = self._authenticate(test_receipt, binding, grant, "evidence:test", now)
-        review = self._authenticate(review_receipt, binding, grant, "evidence:review", now)
+        tests = self._authenticate(
+            test_receipt, binding, "evidence:test", resource=resource,
+            environment=environment, cost_cents=cost_cents,
+            owner_principal=owner_principal, now=now,
+        )
+        review = self._authenticate(
+            review_receipt, binding, "evidence:review", resource=resource,
+            environment=environment, cost_cents=cost_cents,
+            owner_principal=owner_principal, now=now,
+        )
         if tests.get("event_type") != "test_receipt" or review.get("event_type") != "code_review":
             raise EvidenceError("receipt_event_types_must_be_separate")
         suites = tests.get("suites")
