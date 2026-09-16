@@ -158,6 +158,14 @@ async def score_sweep_loop(app, interval, stop=None):
     from mco.orchestrator import score_sweep
     conductor = None
     while True:
+        # Before anything, not only after a tick: a stop set before the loop is
+        # first scheduled (shutdown racing startup, or a sweep disabled between
+        # task creation and its first run) must cost nothing. Opening the
+        # conductor creates the database and artifact root, and a tick would
+        # dispatch real jobs - side effects a gateway that is already stopping
+        # has no business creating.
+        if stop is not None and stop.is_set():
+            return
         try:
             if conductor is None:
                 conductor = await asyncio.to_thread(score_sweep.open_conductor)

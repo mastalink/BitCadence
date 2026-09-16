@@ -624,6 +624,41 @@ class TestGatewayLoop:
         assert app.state.score_sweep_error == "RuntimeError"
         assert app.state.score_sweep_last_ok is None
 
+    async def test_a_sweep_stopped_before_it_starts_does_absolutely_nothing(
+            self, tmp_path, monkeypatch):
+        """A stop set before the loop is first scheduled must cost nothing.
+
+        The loop used to open the conductor and run a full tick before it ever
+        looked at the flag, so a shutdown racing startup still created the
+        database, the artifact root, and real dispatched jobs on the board -
+        side effects invented by a gateway that was already stopping.
+        """
+        opens, sweeps = [], []
+        conductor = _conductor(tmp_path)
+        _start(conductor, "run-a")
+
+        def _open(*_a, **_k):
+            opens.append(1)
+            return conductor
+
+        async def _sweep(*_a, **_k):
+            sweeps.append(1)
+            raise AssertionError("a pre-stopped sweep must not tick")
+
+        monkeypatch.setattr(score_sweep, "open_conductor", _open)
+        monkeypatch.setattr(health, "score_sweep_once", _sweep)
+        app = _app()
+        stop = asyncio.Event()
+        stop.set()
+
+        await asyncio.wait_for(health.score_sweep_loop(app, 0.01, stop), timeout=5)
+
+        assert opens == [], "opened a conductor while already stopped"
+        assert sweeps == [], "ticked while already stopped"
+        assert conductor.status("run-a")["dispatch"] == [], "dispatched while already stopped"
+        assert app.state.score_sweep_last_ok is None
+        assert app.state.score_sweep_error is None
+
     async def test_a_failing_run_is_named_without_breaking_the_sweep(
             self, tmp_path, monkeypatch):
         conductor = _conductor(tmp_path)
