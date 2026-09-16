@@ -164,6 +164,7 @@ def test_sql_contains_all_12_required_score_tables_and_specs():
     assert "PRIMARY KEY (id)" in s04_sql
     assert "UNIQUE (org_id, run_id, digest)" in s04_sql
     assert "legacy-unscoped:" in s04_sql
+    assert "ALTER TABLE score_grants ALTER COLUMN not_before SET NOT NULL" in s04_sql
     assert "uq_score_outbox_dispatch UNIQUE (org_id, run_id, task_id, phase)" in sql
 
     # Verify score_recovery decisions

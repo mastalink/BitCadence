@@ -13,8 +13,16 @@ UPDATE score_grants
 SET run_id = 'legacy-unscoped:' || digest
 WHERE run_id IS NULL OR btrim(run_id) = '';
 
+-- Legacy grants are quarantined above and cannot validate under the S04
+-- signature contract.  Give them a deterministic lower time bound so an
+-- upgraded database has the same NOT NULL shape as a fresh installation.
+UPDATE score_grants
+SET not_before = created_at
+WHERE not_before IS NULL;
+
 ALTER TABLE score_grants ALTER COLUMN id SET NOT NULL;
 ALTER TABLE score_grants ALTER COLUMN run_id SET NOT NULL;
+ALTER TABLE score_grants ALTER COLUMN not_before SET NOT NULL;
 
 DO $$
 DECLARE

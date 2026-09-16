@@ -193,7 +193,10 @@ class GrantService:
             .eq("digest", signed["digest"]).execute().data or []
         )
         if existing:
-            if any(existing[0].get(field) != signed.get(field) for field in (*_SIGNED_FIELDS, "signature")):
+            # PostgreSQL normalizes equivalent TIMESTAMPTZ spellings (for
+            # example Z to +00:00).  The signature is the stable comparison:
+            # it already authenticates every canonical signed field.
+            if existing[0].get("signature") != signed.get("signature"):
                 raise AuthorityError("grant_digest_already_has_different_authority")
             return existing[0]
         return self.db.table("score_grants").insert(signed).execute().data[0]
