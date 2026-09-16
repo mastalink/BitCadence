@@ -5,6 +5,20 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 ## [Unreleased]
 
 ### Added
+- **Lease TTL adapts to the work instead of one flat window.** The default lease
+  (`MCO_LEASE_TTL_SECONDS`) is raised from 15 minutes to one hour: careful work
+  (a full review, a large refactor) routinely outlived 15 minutes, so a live
+  worker's lease silently expired mid-task and its own completion 409'd on a
+  fence it never saw. `mco_lease` / `mco_lease_next` / `mco_renew` now take an
+  optional `estimated_seconds` - how long the worker itself expects the work
+  to take, or at renew time how much *more* it needs - and the gateway adds a
+  buffer (`MCO_LEASE_BUFFER_FLOOR_SECONDS` / `MCO_LEASE_BUFFER_FRACTION`) and
+  uses that as the lease's actual TTL, clamped to
+  `MCO_LEASE_MIN_TTL_SECONDS`/`MCO_LEASE_MAX_TTL_SECONDS` (5 min–4 h by
+  default) so neither a tiny nor a runaway estimate produces a useless or
+  near-permanent lease. `reclaim_stale_leases` needed no change: it always
+  reads the `lease_expires_at` a lease or renewal actually wrote, so an
+  abandoned job still comes back to `pending` at any TTL this can produce.
 - **A chain that forgets to hand off is now caught.** The delivery watchdog only
   saw jobs that exist, so a worker finishing its own job and never dispatching the
   next one left an empty board that looked healthy while the mission was dead

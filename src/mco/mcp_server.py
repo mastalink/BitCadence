@@ -47,23 +47,34 @@ def mco_inbox() -> List[dict]:
 
 
 @mcp.tool()
-def mco_lease_next() -> dict:
+def mco_lease_next(estimated_seconds: int = 0) -> dict:
     """Lease the highest-priority job addressed to you, chosen by the server.
 
     Prefer this over mco_inbox + mco_lease. The server applies the priority
     order and hands you exactly one job, so urgent work cannot be read past,
     and two workers on the same role cannot collide on the same entry.
     Returns {"success": true, "job": {...}, "lease": {...}} or
-    {"success": false, "job": null} when nothing is waiting for you."""
+    {"success": false, "job": null} when nothing is waiting for you.
+
+    estimated_seconds: how long you expect this job to take, if you have a
+    sense of it (a quick fix vs. a full review with a fresh pytest run). The
+    server adds a buffer on top and uses that as this lease's time-to-live, so
+    careful work is not silently reclaimed out from under you mid-task. Omit
+    it (0) for the default TTL, currently one hour. If you turn out to need
+    more time than you get, call mco_renew with a fresh estimate rather than
+    racing a clock you cannot see - an expired lease is reassigned, not
+    waited for."""
     client = _client()
     client.flush_reports()
-    return client.lease_next()
+    return client.lease_next(estimated_seconds or None)
 
 
 @mcp.tool()
-def mco_lease(task_id: str) -> dict:
-    """Atomically claim a job before working it. Returns success and the lease proof; renew during long work."""
-    return _client().lease(task_id)
+def mco_lease(task_id: str, estimated_seconds: int = 0) -> dict:
+    """Atomically claim a job before working it. Returns success and the lease proof; renew during long work.
+
+    estimated_seconds: see mco_lease_next - same effect, same default."""
+    return _client().lease(task_id, estimated_seconds or None)
 
 
 @mcp.tool()
@@ -253,10 +264,13 @@ def run() -> None:
 
 
 @mcp.tool()
-def mco_renew(task_id: str) -> dict:
+def mco_renew(task_id: str, estimated_seconds: int = 0) -> dict:
     """Renew the attempt leased through this MCP session. Call between work units.
-    A 409 means stop: this attempt expired or an operator halted it."""
-    return _client().renew(task_id)
+    A 409 means stop: this attempt expired or an operator halted it.
+
+    estimated_seconds: how much MORE time you now think you need, not your
+    original estimate restated. Omit (0) for the default TTL again."""
+    return _client().renew(task_id, estimated_seconds or None)
 
 
 if __name__ == "__main__":

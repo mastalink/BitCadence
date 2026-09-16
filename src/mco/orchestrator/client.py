@@ -274,13 +274,21 @@ class GatewayClient:
             path.unlink()
         _sync_directory(path.parent)
 
-    def lease_next(self) -> dict:
+    def lease_next(self, estimated_seconds: Optional[int] = None) -> dict:
         """Lease the highest-priority job addressed to this agent, server-picked.
 
         Preferred over inbox()+lease(): the server chooses, so priority is
-        enforced rather than left to whoever is reading the list."""
+        enforced rather than left to whoever is reading the list.
+
+        `estimated_seconds`, if given, is how long this job is expected to
+        take; the server adds a buffer and uses that as the lease TTL instead
+        of the flat default, so a genuinely long job is not silently reclaimed
+        mid-work."""
+        payload: dict = {"agent_instance_id": self.instance_id}
+        if estimated_seconds:
+            payload["estimated_seconds"] = int(estimated_seconds)
         with self._client() as c:
-            r = c.post("/api/jobs/lease_next", json={"agent_instance_id": self.instance_id})
+            r = c.post("/api/jobs/lease_next", json=payload)
             r.raise_for_status()
             result = r.json()
         job = result.get("job") or {}
@@ -288,21 +296,30 @@ class GatewayClient:
             self._record_claim(job["id"], result["lease"])
         return result
 
-    def lease(self, task_id: str) -> dict:
-        """Claim a job and retain its proof for subsequent renew/complete/fail."""
+    def lease(self, task_id: str, estimated_seconds: Optional[int] = None) -> dict:
+        """Claim a job and retain its proof for subsequent renew/complete/fail.
+        See lease_next() for what `estimated_seconds` does to the lease TTL."""
+        payload: dict = {"task_id": task_id, "agent_instance_id": self.instance_id}
+        if estimated_seconds:
+            payload["estimated_seconds"] = int(estimated_seconds)
         with self._client() as c:
-            r = c.post("/api/jobs/lease", json={"task_id": task_id, "agent_instance_id": self.instance_id})
+            r = c.post("/api/jobs/lease", json=payload)
             r.raise_for_status()
             result = r.json()
         if result.get("success") and result.get("lease"):
             self._record_claim(task_id, result["lease"])
         return result
 
-    def renew(self, task_id: str) -> dict:
+    def renew(self, task_id: str, estimated_seconds: Optional[int] = None) -> dict:
+        """Extend a held lease. `estimated_seconds`, if given, is how much MORE
+        time is needed from now, not the original estimate restated."""
         with self._task_lock(task_id):
             claim = self._load_claim_unlocked(task_id)
+            payload = dict(claim)
+            if estimated_seconds:
+                payload["estimated_seconds"] = int(estimated_seconds)
             with self._client() as c:
-                r = c.post(f"/api/jobs/{task_id}/renew", json=claim)
+                r = c.post(f"/api/jobs/{task_id}/renew", json=payload)
                 r.raise_for_status()
                 return r.json()
 
