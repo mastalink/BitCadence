@@ -6,10 +6,13 @@ caller org, immutable document digest, and a stable grant identity.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import json
 from datetime import datetime, timezone
+
+from mco.config import get_config
 
 
 class AuthorityError(ValueError):
@@ -46,6 +49,28 @@ def verify_grant_signature(grant: dict, key: bytes) -> None:
         raise AuthorityError("grant_signature_invalid")
 
 
+def configured_grant_key(value: str | None = None) -> bytes:
+    """Load the Score grant key from encrypted configuration, failing closed."""
+    raw = value if value is not None else get_config().get("MCO_SCORE_GRANT_KEY")
+    if not isinstance(raw, str) or not raw.strip():
+        raise AuthorityError("grant_verification_key_not_configured")
+    raw = raw.strip()
+    try:
+        if len(raw) == 64:
+            key = bytes.fromhex(raw)
+        else:
+            key = base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4))
+    except (ValueError, TypeError):
+        key = raw.encode()
+    if len(key) < 32:
+        # A raw passphrase is supported for local installs, but it must still
+        # carry at least 256 bits of material.
+        key = raw.encode()
+    if len(key) < 32:
+        raise AuthorityError("grant_verification_key_too_short")
+    return key
+
+
 def grant_identity(grant: dict) -> str:
     """Return a stable identity for the signed authority, excluding timestamps."""
     # Old S03 receipts remain readable, while every S04-issued grant includes
@@ -63,7 +88,15 @@ def require_grant(grant: dict, *, org_id: str, digest: str, action: str,
                   environment: str | None = None, cost_cents: int | None = None,
                   owner_principal: str | None = None,
                   verification_key: bytes | None = None,
+                  allow_legacy_unverified: bool = False,
                   now: datetime | None = None) -> str:
+    if not isinstance(grant, dict):
+        raise AuthorityError("malformed_grant")
+    if not allow_legacy_unverified:
+        if verification_key is None:
+            raise AuthorityError("grant_verification_key_required")
+        if run_id is None or resource is None or environment is None or cost_cents is None or owner_principal is None:
+            raise AuthorityError("complete_grant_scope_required")
     if grant.get("org_id") != org_id or grant.get("digest") != digest:
         raise AuthorityError("grant_not_bound_to_org_and_digest")
     if action not in grant.get("actions", []):
@@ -85,12 +118,16 @@ def require_grant(grant: dict, *, org_id: str, digest: str, action: str,
         expiry = datetime.fromisoformat(str(grant["expires_at"]).replace("Z", "+00:00"))
     except (KeyError, ValueError) as exc:
         raise AuthorityError("malformed_grant_expiry") from exc
+    if expiry.tzinfo is None:
+        raise AuthorityError("malformed_grant_expiry")
     now = now or datetime.now(timezone.utc)
     if "not_before" in grant:
         try:
             not_before = datetime.fromisoformat(str(grant["not_before"]).replace("Z", "+00:00"))
         except ValueError as exc:
             raise AuthorityError("malformed_grant_not_before") from exc
+        if not_before.tzinfo is None:
+            raise AuthorityError("malformed_grant_not_before")
         if now < not_before:
             raise AuthorityError("grant_not_yet_valid")
     if expiry <= now:
@@ -100,10 +137,86 @@ def require_grant(grant: dict, *, org_id: str, digest: str, action: str,
     return grant_identity(grant)
 
 
-def require_receipt(receipt: dict, *, org_id: str, digest: str, grant: dict, action: str, now: datetime | None = None) -> None:
+def require_receipt(receipt: dict, *, org_id: str, digest: str, grant: dict, action: str,
+                    run_id: str | None = None, resource: str | None = None,
+                    environment: str | None = None, cost_cents: int | None = None,
+                    owner_principal: str | None = None,
+                    verification_key: bytes | None = None,
+                    allow_legacy_unverified: bool = False,
+                    now: datetime | None = None) -> None:
     """Reject receipts created under another document, tenant, or grant."""
-    expected = require_grant(grant, org_id=org_id, digest=digest, action=action, now=now)
+    expected = require_grant(
+        grant, org_id=org_id, digest=digest, action=action, run_id=run_id,
+        resource=resource, environment=environment, cost_cents=cost_cents,
+        owner_principal=owner_principal, verification_key=verification_key,
+        allow_legacy_unverified=allow_legacy_unverified, now=now,
+    )
     if not isinstance(receipt, dict) or receipt.get("org_id") != org_id or receipt.get("digest") != digest:
         raise AuthorityError("stale_or_cross_tenant_receipt")
     if receipt.get("grant_identity") != expected:
         raise AuthorityError("receipt_not_bound_to_grant")
+
+
+class GrantService:
+    """Trusted issuance and durable lookup for signed Score grants."""
+
+    def __init__(self, db, *, verification_key: bytes | None = None):
+        self.db = db
+        self.key = verification_key if verification_key is not None else configured_grant_key()
+        if not isinstance(self.key, bytes) or len(self.key) < 32:
+            raise AuthorityError("grant_verification_key_too_short")
+
+    def issue(self, grant: dict) -> dict:
+        if not isinstance(grant, dict):
+            raise AuthorityError("malformed_grant")
+        for field in ("org_id", "run_id", "digest", "env", "human_principal"):
+            if not isinstance(grant.get(field), str) or not grant[field].strip():
+                raise AuthorityError(f"malformed_grant_{field}")
+        for field in ("actions", "resources"):
+            values = grant.get(field)
+            if not isinstance(values, list) or not values or any(not isinstance(v, str) or not v.strip() for v in values):
+                raise AuthorityError(f"malformed_grant_{field}")
+        if type(grant.get("budget_cents")) is not int or grant["budget_cents"] < 0:
+            raise AuthorityError("malformed_grant_budget")
+        try:
+            not_before = datetime.fromisoformat(str(grant["not_before"]).replace("Z", "+00:00"))
+            expires_at = datetime.fromisoformat(str(grant["expires_at"]).replace("Z", "+00:00"))
+        except (KeyError, ValueError) as exc:
+            raise AuthorityError("malformed_grant_time_window") from exc
+        if not_before.tzinfo is None or expires_at.tzinfo is None or expires_at <= not_before:
+            raise AuthorityError("malformed_grant_time_window")
+        signed = sign_grant(grant, self.key)
+        # Verify before persistence so malformed dates/scopes never become
+        # durable authority. The caller-specific action check happens at use.
+        verify_grant_signature(signed, self.key)
+        existing = (
+            self.db.table("score_grants").select("*")
+            .eq("digest", signed["digest"]).execute().data or []
+        )
+        if existing:
+            if any(existing[0].get(field) != signed.get(field) for field in (*_SIGNED_FIELDS, "signature")):
+                raise AuthorityError("grant_digest_already_has_different_authority")
+            return existing[0]
+        return self.db.table("score_grants").insert(signed).execute().data[0]
+
+    def load(self, *, org_id: str, run_id: str, digest: str) -> dict:
+        rows = (
+            self.db.table("score_grants").select("*")
+            .eq("org_id", org_id).eq("run_id", run_id).eq("digest", digest)
+            .execute().data or []
+        )
+        if len(rows) != 1:
+            raise AuthorityError("issued_grant_not_found")
+        verify_grant_signature(rows[0], self.key)
+        return rows[0]
+
+    def require(self, *, org_id: str, run_id: str, digest: str, action: str,
+                resource: str, environment: str, cost_cents: int,
+                owner_principal: str, now: datetime | None = None) -> tuple[dict, str]:
+        grant = self.load(org_id=org_id, run_id=run_id, digest=digest)
+        identity = require_grant(
+            grant, org_id=org_id, run_id=run_id, digest=digest, action=action,
+            resource=resource, environment=environment, cost_cents=cost_cents,
+            owner_principal=owner_principal, verification_key=self.key, now=now,
+        )
+        return grant, identity

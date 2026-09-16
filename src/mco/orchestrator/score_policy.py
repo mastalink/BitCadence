@@ -25,19 +25,28 @@ VIA_OWNER_POLICY = {
 }
 
 
-def required_gate(*, task_id: str, projected_monthly_cents: int) -> str | None:
-    """Return the single gate that pauses this path, or None.
+def required_gates(*, task_id: str, projected_monthly_cents: int) -> tuple[str, ...]:
+    """Return every owner-policy gate that pauses this path.
 
     G08 sign-off is consumed by the first expansion task (G09); G01-G08 run
     unattended. Spend interrupts only the task that would cross the cap.
     """
     if type(projected_monthly_cents) is not int or projected_monthly_cents < 0:
         raise ScoreError("Projected monthly spend must be a non-negative integer")
-    if projected_monthly_cents > SPEND_CAP_CENTS:
-        return SPEND_ABOVE_CAP
+    gates = []
     if task_id.upper() == "G09":
-        return G08_LAUNCH_SIGNOFF
-    return None
+        gates.append(G08_LAUNCH_SIGNOFF)
+    if projected_monthly_cents > SPEND_CAP_CENTS:
+        gates.append(SPEND_ABOVE_CAP)
+    return tuple(gates)
+
+
+def required_gate(*, task_id: str, projected_monthly_cents: int) -> str | None:
+    """Compatibility helper for callers that only render one gate."""
+    gates = required_gates(
+        task_id=task_id, projected_monthly_cents=projected_monthly_cents,
+    )
+    return gates[0] if gates else None
 
 
 def authenticated_human(caller: dict) -> str:
@@ -85,6 +94,29 @@ class GateService:
         decisions = self.db.table("score_checkpoint_decisions").select("*").eq("org_id", org_id).execute().data or []
         by_gate = {row["gate_id"]: row for row in decisions}
         return [dict(row, decision=by_gate.get(row["id"])) for row in gates]
+
+    def decision_for(self, *, org_id: str, run_id: str, digest: str,
+                     task_id: str, kind: str) -> dict | None:
+        gates = (
+            self.db.table("score_gate_requests").select("*")
+            .eq("org_id", org_id).eq("run_id", run_id).eq("digest", digest)
+            .eq("task_id", task_id).eq("kind", kind).execute().data or []
+        )
+        if not gates:
+            return None
+        decisions = (
+            self.db.table("score_checkpoint_decisions").select("*")
+            .eq("org_id", org_id).eq("gate_id", gates[0]["id"]).execute().data or []
+        )
+        return decisions[0] if decisions else None
+
+    def approved(self, *, org_id: str, run_id: str, digest: str,
+                 task_id: str, kind: str) -> bool:
+        decision = self.decision_for(
+            org_id=org_id, run_id=run_id, digest=digest,
+            task_id=task_id, kind=kind,
+        )
+        return bool(decision and decision.get("decision") == "approved")
 
     def decide(self, gate_id: str, *, caller: dict, decision: str, reason: str = "") -> dict:
         principal = authenticated_human(caller)

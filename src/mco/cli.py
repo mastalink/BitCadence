@@ -220,8 +220,9 @@ def create_app() -> FastAPI:
 
     # Score gate API: one explicit decision/evidence view, separate from the
     # legacy per-job approval queue.
-    from mco.orchestrator.score_gate_routes import score_gates_router
+    from mco.orchestrator.score_gate_routes import score_gates_router, score_grants_router
     app_server.include_router(score_gates_router)
+    app_server.include_router(score_grants_router)
 
     # Admin API: agent management, settings, workflow submission (Control Panel)
     from mco.orchestrator.admin_routes import (

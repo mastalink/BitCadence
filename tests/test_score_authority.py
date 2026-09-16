@@ -14,17 +14,28 @@ def grant(org="acme", digest="a" * 64):
 
 def test_changed_digest_cannot_inherit_grant_or_approval():
     with pytest.raises(AuthorityError, match="org_and_digest"):
-        require_grant(grant(), org_id="acme", digest="b" * 64, action="release:approve", now=NOW)
+        require_grant(grant(), org_id="acme", digest="b" * 64, action="release:approve",
+                      allow_legacy_unverified=True, now=NOW)
 
 
 def test_stale_digest_receipt_is_rejected():
     active = grant()
     receipt = {"org_id": "acme", "digest": "b" * 64, "grant_identity": grant_identity(active)}
     with pytest.raises(AuthorityError, match="stale"):
-        require_receipt(receipt, org_id="acme", digest="a" * 64, grant=active, action="release:approve", now=NOW)
+        require_receipt(receipt, org_id="acme", digest="a" * 64, grant=active,
+                        action="release:approve", allow_legacy_unverified=True, now=NOW)
 
 
 def test_same_document_bytes_cannot_share_authority_across_orgs():
     shared_digest = "a" * 64
     with pytest.raises(AuthorityError, match="org_and_digest"):
-        require_grant(grant("acme", shared_digest), org_id="globex", digest=shared_digest, action="release:approve", now=NOW)
+        require_grant(grant("acme", shared_digest), org_id="globex", digest=shared_digest,
+                      action="release:approve", allow_legacy_unverified=True, now=NOW)
+
+
+def test_live_grant_shape_fails_closed_without_verification_key():
+    forged = grant()
+    forged["signature"] = "deadbeef"
+    with pytest.raises(AuthorityError, match="verification_key_required"):
+        require_grant(forged, org_id="acme", digest="a" * 64,
+                      action="release:approve", now=NOW)

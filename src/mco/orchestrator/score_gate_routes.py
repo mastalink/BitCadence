@@ -2,11 +2,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from mco.orchestrator.auth import require_scopes
-from mco.orchestrator.score_policy import GateService
+from mco.orchestrator.score_authority import AuthorityError, GrantService
+from mco.orchestrator.score_policy import GateService, authenticated_human
 from mco.orchestrator.scores import ScoreError
 
 
 score_gates_router = APIRouter(prefix="/api/score/gates")
+score_grants_router = APIRouter(prefix="/api/score/grants")
 
 
 def _service() -> GateService:
@@ -15,6 +17,43 @@ def _service() -> GateService:
     if db is None:
         raise HTTPException(status_code=400, detail="Database not configured")
     return GateService(db)
+
+
+def _grant_service() -> GrantService:
+    from mco.orchestrator.routes import get_db_client
+    db = get_db_client()
+    if db is None:
+        raise HTTPException(status_code=400, detail="Database not configured")
+    try:
+        return GrantService(db)
+    except AuthorityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@score_grants_router.post("")
+async def issue_score_grant(payload: dict,
+                            caller: dict = Depends(require_scopes("jobs:approve"))):
+    """Issue signed authority only from a human-authenticated server path."""
+    try:
+        owner = authenticated_human(caller)
+        grant = {
+            "org_id": caller.get("org_id") or "default",
+            "run_id": payload.get("run_id"),
+            "digest": payload.get("digest"),
+            "actions": payload.get("actions"),
+            "resources": payload.get("resources"),
+            "env": payload.get("environment"),
+            "not_before": payload.get("not_before"),
+            "expires_at": payload.get("expires_at"),
+            "budget_cents": payload.get("budget_cents"),
+            "human_principal": owner,
+        }
+        saved = _grant_service().issue(grant)
+    except (AuthorityError, ScoreError) as exc:
+        message = str(exc)
+        status = 403 if "human principal" in message else 400
+        raise HTTPException(status_code=status, detail=message) from exc
+    return {"success": True, "grant": saved}
 
 
 @score_gates_router.get("")
