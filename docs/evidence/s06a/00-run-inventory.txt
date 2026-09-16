@@ -1,0 +1,18 @@
+run                     status    digest        events
+s06a-01-baseline        accepted  5974bd7a18e2  8
+s06a-02-crash           accepted  5974bd7a18e2  8
+s06a-03-duplicate       accepted  5974bd7a18e2  9
+s06a-04-dupcomplete     accepted  5974bd7a18e2  8
+s06a-05-reject          blocked   5974bd7a18e2  7
+s06a-06-tamper          blocked   5974bd7a18e2  7
+s06a-07-restart         accepted  5974bd7a18e2  8
+s06a-11-rootmismatch    running   5974bd7a18e2  1
+
+evidence artifacts under the sweep's artifact root:
+  score-runs/s06a-01-baseline/canary_artifact.json     sha256 0054e438e22500de803d4d62f3b3cfae67c6c732664904d112cb65e3c8bfda1d
+  score-runs/s06a-02-crash/canary_artifact.json        sha256 90858d046f15708cdffc6ad02aeed1f3c90b3f916fda434a5f08a235f82c717d
+  score-runs/s06a-03-duplicate/canary_artifact.json    sha256 77415402d323c0ef91f51972fc9f4bc0687b71f7700e37a9c8232d3fef8881fd
+  score-runs/s06a-04-dupcomplete/canary_artifact.json  sha256 1d9ebca089895b5c4e3542836bff01536c133c8da34409ec1de1db5add30672e
+  score-runs/s06a-05-reject/canary_artifact.json       sha256 60ca524acc6bacb83d884a7d1cb059ce381535f7a3bb82100dfb8d3cca9a8fb4
+  score-runs/s06a-06-tamper/canary_artifact.json       sha256 24e6cf16936e6b19a3ae6f9ed599c80e3d1cd2eeb93d7d42bc931b49c36e6bf0
+  score-runs/s06a-07-restart/canary_artifact.json      sha256 507ab164a82157c1b588da7586cec6cb59bb78a467f606c206611cc237846fdd

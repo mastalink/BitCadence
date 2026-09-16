@@ -1,0 +1,15 @@
+job f904c572-d36c-567b-917c-9669107c6683  lease 2d94d6db33e7484787835494690bce73 epoch 1
+  DELIVERY 1 - the honest completion
+    HTTP 200   _replayed=None
+  DELIVERY 2 - byte-identical retry after a lost response (SAME lease)
+    HTTP 200   _replayed=None
+  DELIVERY 3 - a DIFFERENT result under the SAME lease
+    HTTP 409   _replayed=None
+    detail: {"detail": "FENCED: attempt already reported a different result"}
+
+run: accepted
+job 038062b4 status=completed completions=1 fenced=0
+job f904c572 status=completed completions=1 fenced=1
+conductor 'validated' events: 1
+conductor 'accepted'  events: 1
+validated artifact: {"artifacts": {"canary_artifact": {"path": "score-runs/s06a-04-dupcomplete/canary_artifact.json", "sha256": "1d9ebca089895b5c4e3542836bff01536c133c8da34409ec1de1db5add30672e"}}}
