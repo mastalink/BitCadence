@@ -218,6 +218,11 @@ def create_app() -> FastAPI:
     from mco.orchestrator.context_routes import context_router
     app_server.include_router(context_router)
 
+    # Score gate API: one explicit decision/evidence view, separate from the
+    # legacy per-job approval queue.
+    from mco.orchestrator.score_gate_routes import score_gates_router
+    app_server.include_router(score_gates_router)
+
     # Admin API: agent management, settings, workflow submission (Control Panel)
     from mco.orchestrator.admin_routes import (
         agents_admin_router,
@@ -271,6 +276,12 @@ def create_app() -> FastAPI:
     @app_server.get("/flow", response_class=HTMLResponse, include_in_schema=False)
     async def flow_ui() -> str:
         return get_flow_html()
+
+    from mco.orchestrator.score_gate_routes import SCORE_GATE_HTML
+
+    @app_server.get("/score-gates", response_class=HTMLResponse, include_in_schema=False)
+    async def score_gate_ui() -> str:
+        return SCORE_GATE_HTML
 
     # Register broadcast callback
     register_broadcast_callback(server_broadcast_callback)

@@ -151,6 +151,10 @@ class SandboxRun:
         self.tasks = {t["id"]: t for t in self.score["tasks"]}
         self.state = {key: {"status": "pending", "attempt": 0, "token": None, "author": None, "deadline": None, "evidence": None, "approved": False} for key in self.tasks}
         self.events = []
+        # Human checkpoint decisions are deliberately distinct from external
+        # capability authorizations. They are rendered by the gate view and
+        # never expand ``self.grants``.
+        self.checkpoint_decisions = []
         self.clock = 0
 
     def _time(self, now):
@@ -191,15 +195,31 @@ class SandboxRun:
     def ready(self):
         return [key for key in self.tasks if not self.blockers(key)]
 
-    def approve(self, task_id, *, actor, actor_kind):
+    def decide_checkpoint(self, task_id, *, actor, actor_kind, decision, evidence=None):
         state = self._state(task_id)
         _string(actor)
         if actor_kind != "human" or not self.tasks[task_id]["checkpoint"]:
             raise ScoreError("Explicit human principal required")
         if state["status"] != "pending":
             raise ScoreError("Checkpoint is not pending")
-        state["approved"] = True
-        self._event("human_approved", task_id, actor=actor)
+        if decision not in ("approved", "rejected"):
+            raise ScoreError("Checkpoint decision must be approved or rejected")
+        if evidence is not None and not isinstance(evidence, dict):
+            raise ScoreError("Checkpoint evidence must be an object")
+        record = dict(task=task_id, run=self.run_id, score_digest=self.fingerprint,
+                      decision=decision, actor=actor, evidence=copy.deepcopy(evidence or {}), at=self.clock)
+        self.checkpoint_decisions.append(record)
+        state["approved"] = decision == "approved"
+        self._event("human_" + decision, task_id, actor=actor, evidence=copy.deepcopy(evidence or {}))
+        return copy.deepcopy(record)
+
+    def approve(self, task_id, *, actor, actor_kind, evidence=None):
+        return self.decide_checkpoint(task_id, actor=actor, actor_kind=actor_kind,
+                                      decision="approved", evidence=evidence)
+
+    def reject(self, task_id, *, actor, actor_kind, evidence=None):
+        return self.decide_checkpoint(task_id, actor=actor, actor_kind=actor_kind,
+                                      decision="rejected", evidence=evidence)
 
     def start(self, task_id, *, actor, role, now):
         self._time(now)
@@ -278,7 +298,8 @@ class SandboxRun:
                 "launch_accepted": all(self.state[key]["status"] == "accepted" for key in self.score["launch_requires"]),
                 "reserved_cents": self.reserved, "budget_cents": self.budget,
                 "tasks": copy.deepcopy(self.state), "blockers": {key: self.blockers(key) for key in self.tasks},
-                "events": copy.deepcopy(self.events)}
+                "events": copy.deepcopy(self.events),
+                "checkpoint_decisions": copy.deepcopy(self.checkpoint_decisions)}
 
 
 def main():

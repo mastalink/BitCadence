@@ -104,10 +104,10 @@ def test_migrate_store_with_job_priority_applied_applies_only_score(monkeypatch)
 
     result = mig.apply_postgres("postgres://acceptance-existing")
     assert "2026-09_job_priority.sql" in result["skipped"]
-    assert result["applied"] == ["2026-09_score_store.sql"]
+    assert result["applied"] == ["2026-09_score_store.sql", "2026-09_score_store_s04.sql"]
     inserts = [s for s, p in state["log"] if s.startswith("INSERT INTO schema_migrations")]
-    assert len(inserts) == 1
-    assert state["commits"] == 2  # 1 for schema_migrations init, 1 for the applied migration
+    assert len(inserts) == 2
+    assert state["commits"] == 3  # init plus the two applied Score migrations
 
 
 def test_migrate_idempotent_when_already_applied(monkeypatch):
