@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 from mco.orchestrator.score_canary import (
+    CANARY_SCORE_ID,
+    CANARY_TASK_ID,
     CANARY_ROLE_REVIEW,
     CANARY_ROLE_WORKER,
     hash_artifact,
@@ -39,10 +41,26 @@ class CanaryContractError(ValueError):
 
 def _contract(job: dict) -> dict:
     contract = ((job.get("input_payload") or {}).get("score")) or {}
-    for key in ("run_id", "task", "phase", "artifact_root", "required_evidence"):
+    for key in ("protocol", "score_id", "run_id", "task", "phase", "artifact_root", "required_evidence"):
         if key not in contract:
             raise CanaryContractError(f"score contract missing {key!r}")
+    if contract["protocol"] != "score-v1":
+        raise CanaryContractError("unsupported score contract protocol")
+    if contract["score_id"] != CANARY_SCORE_ID or contract["task"] != CANARY_TASK_ID:
+        raise CanaryContractError("unexpected score canary identity")
+    if contract["phase"] not in ("work", "review"):
+        raise CanaryContractError("score canary phase must be work or review")
     return contract
+
+
+def _trusted_root(contract: dict, root: Optional[str | Path]) -> Path:
+    if root is None:
+        raise CanaryContractError("canary worker requires a configured trusted artifact root")
+    trusted = Path(root).resolve()
+    claimed = Path(contract["artifact_root"]).resolve()
+    if claimed != trusted:
+        raise CanaryContractError("score contract artifact_root does not match trusted worker root")
+    return trusted
 
 
 def _evidence_name(contract: dict) -> str:
@@ -59,7 +77,7 @@ def work(job: dict, root: Optional[str | Path] = None) -> str:
     """Produce the deterministic artifact and report it by name and digest."""
     contract = _contract(job)
     name = _evidence_name(contract)
-    reference = hash_artifact(root or contract["artifact_root"], contract["run_id"])
+    reference = hash_artifact(_trusted_root(contract, root), contract["run_id"])
     return json.dumps({"artifacts": {name: reference}}, sort_keys=True)
 
 
@@ -74,7 +92,7 @@ def review(job: dict, reviewer: str, root: Optional[str | Path] = None) -> str:
         return json.dumps({"verdict": "fail", "review_of": evidence,
                            "findings": [f"no evidence named {name!r} to review"]}, sort_keys=True)
 
-    outcome = verify_artifact(root or contract["artifact_root"], contract["run_id"], reference,
+    outcome = verify_artifact(_trusted_root(contract, root), contract["run_id"], reference,
                               author=author or "unknown-author", reviewer=reviewer)
     findings = [] if outcome.get("passed") else [str(outcome.get("reason") or "verification failed")]
     return json.dumps({"verdict": "pass" if outcome.get("passed") else "fail",
@@ -88,6 +106,8 @@ def build_agent(role: str, instance_id: str, *, token: str = "", gateway: str = 
 
     if role not in (CANARY_ROLE_WORKER, CANARY_ROLE_REVIEW):
         raise ValueError(f"unknown canary role {role!r}")
+    if root is None:
+        raise ValueError("canary agent requires --root for its trusted artifact boundary")
     agent = BitCadenceAgent(role=role, instance_id=instance_id, token=token,
                             gateway=gateway, client=client)
 
@@ -108,7 +128,7 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument("--instance", required=True)
     parser.add_argument("--token-file", required=True)
     parser.add_argument("--gateway", default="http://127.0.0.1:18789")
-    parser.add_argument("--root", default=None, help="artifact root (default: the job's contract)")
+    parser.add_argument("--root", required=True, help="trusted artifact root; job contracts may not override it")
     parser.add_argument("--once", action="store_true", help="drain the inbox once and exit")
     args = parser.parse_args(argv)
 

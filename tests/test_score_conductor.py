@@ -217,34 +217,34 @@ class TestStartRun:
 
 class TestCanaryHandlers:
     def test_work_reports_the_artifact_under_its_evidence_name(self, tmp_path):
-        job = {"input_payload": {"score": {"run_id": "r1", "task": "C01", "phase": "work",
+        job = {"input_payload": {"score": {"protocol": "score-v1", "score_id": "via-score-conductor-canary", "run_id": "r1", "task": "C01", "phase": "work",
                                            "artifact_root": str(tmp_path),
                                            "required_evidence": ["canary_artifact"]}}}
-        result = json.loads(work(job))
+        result = json.loads(work(job, tmp_path))
         reference = result["artifacts"]["canary_artifact"]
         written = tmp_path / reference["path"]
         assert written.is_file()
         assert reference["sha256"] == __import__("hashlib").sha256(written.read_bytes()).hexdigest()
 
     def test_review_passes_on_matching_bytes_and_fails_on_tampering(self, tmp_path):
-        contract = {"run_id": "r1", "task": "C01", "phase": "work", "artifact_root": str(tmp_path),
+        contract = {"protocol": "score-v1", "score_id": "via-score-conductor-canary", "run_id": "r1", "task": "C01", "phase": "work", "artifact_root": str(tmp_path),
                     "required_evidence": ["canary_artifact"]}
-        evidence = json.loads(work({"input_payload": {"score": contract}}))["artifacts"]
+        evidence = json.loads(work({"input_payload": {"score": contract}}, tmp_path))["artifacts"]
         review_job = {"source_agent_id": "canary-worker-1",
                       "input_payload": {"score": {**contract, "phase": "review", "review_of": evidence}}}
-        assert json.loads(review(review_job, "canary-review-1"))["verdict"] == "pass"
+        assert json.loads(review(review_job, "canary-review-1", tmp_path))["verdict"] == "pass"
 
         (tmp_path / evidence["canary_artifact"]["path"]).write_text("tampered", encoding="utf-8")
-        failed = json.loads(review(review_job, "canary-review-1"))
+        failed = json.loads(review(review_job, "canary-review-1", tmp_path))
         assert failed["verdict"] == "fail" and failed["findings"]
 
     def test_author_cannot_review_their_own_artifact(self, tmp_path):
-        contract = {"run_id": "r1", "task": "C01", "phase": "work", "artifact_root": str(tmp_path),
+        contract = {"protocol": "score-v1", "score_id": "via-score-conductor-canary", "run_id": "r1", "task": "C01", "phase": "work", "artifact_root": str(tmp_path),
                     "required_evidence": ["canary_artifact"]}
-        evidence = json.loads(work({"input_payload": {"score": contract}}))["artifacts"]
+        evidence = json.loads(work({"input_payload": {"score": contract}}, tmp_path))["artifacts"]
         job = {"source_agent_id": "canary-worker-1",
                "input_payload": {"score": {**contract, "phase": "review", "review_of": evidence}}}
-        verdict = json.loads(review(job, "canary-worker-1"))
+        verdict = json.loads(review(job, "canary-worker-1", tmp_path))
         assert verdict["verdict"] == "fail"
         assert "independent" in verdict["findings"][0].lower()
 
@@ -253,11 +253,26 @@ class TestCanaryHandlers:
             work({"input_payload": {}})
 
     def test_multiple_evidence_names_are_refused_with_a_useful_message(self, tmp_path):
-        job = {"input_payload": {"score": {"run_id": "r1", "task": "C01", "phase": "work",
+        job = {"input_payload": {"score": {"protocol": "score-v1", "score_id": "via-score-conductor-canary", "run_id": "r1", "task": "C01", "phase": "work",
                                            "artifact_root": str(tmp_path),
                                            "required_evidence": ["path", "sha256"]}}}
         with pytest.raises(CanaryContractError, match="one required evidence name"):
-            work(job)
+            work(job, tmp_path)
+
+    def test_job_cannot_choose_artifact_root_or_escape_run_directory(self, tmp_path):
+        contract = {"protocol": "score-v1", "score_id": "via-score-conductor-canary",
+                    "run_id": "../../escaped", "task": "C01", "phase": "work",
+                    "artifact_root": str(tmp_path / "attacker"),
+                    "required_evidence": ["canary_artifact"]}
+        with pytest.raises(CanaryContractError):
+            work({"input_payload": {"score": contract}}, tmp_path)
+
+    def test_contract_identity_and_protocol_are_bound(self, tmp_path):
+        contract = {"protocol": "other", "score_id": "not-the-canary", "run_id": "r1",
+                    "task": "C01", "phase": "work", "artifact_root": str(tmp_path),
+                    "required_evidence": ["canary_artifact"]}
+        with pytest.raises(CanaryContractError, match="protocol"):
+            work({"input_payload": {"score": contract}}, tmp_path)
 
 
 def test_tick_result_describes_itself():

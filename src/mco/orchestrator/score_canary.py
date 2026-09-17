@@ -1,6 +1,7 @@
 """Fixed non-LLM worker and reviewer handlers for the VIA Score conductor canary."""
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
@@ -9,6 +10,8 @@ CANARY_TASK_ID = "C01"
 CANARY_ROLE_WORKER = "score-canary-worker"
 CANARY_ROLE_REVIEW = "score-canary-review"
 CANARY_RESOURCE_LANE = "score-canary-lane"
+_SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+_SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 def default_canary_body(run_id: str) -> Dict[str, Any]:
@@ -35,14 +38,17 @@ def hash_artifact(
     Writes one JSON artifact under score-runs/{run_id}/ with a known body
     and returns {"path": <rel_path>, "sha256": <sha256>}.
     """
-    if not run_id or not isinstance(run_id, str):
-        raise ValueError("run_id must be a non-empty string")
+    if not isinstance(run_id, str) or not _SAFE_RUN_ID.fullmatch(run_id):
+        raise ValueError("run_id must be a safe single path component")
+    if not isinstance(filename, str) or not _SAFE_FILENAME.fullmatch(filename):
+        raise ValueError("filename must be a safe single path component")
 
     payload = default_canary_body(run_id) if body is None else body
     raw_bytes = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
     content_sha256 = hashlib.sha256(raw_bytes).hexdigest()
 
-    run_dir = Path(root_dir) / "score-runs" / run_id
+    root_path = Path(root_dir).resolve()
+    run_dir = root_path / "score-runs" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     artifact_path = run_dir / filename
     artifact_path.write_bytes(raw_bytes)
