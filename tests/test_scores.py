@@ -211,3 +211,134 @@ def test_via_score_has_all_goals_no_invented_human_checkpoints():
     assert value["launch_requires"] == ["G08"]
     assert all(t["checkpoint"] is None for t in value["tasks"])
     assert SandboxRun(value, "via-preview").ready() == []
+
+
+def test_on_reject_valid():
+    value = score()
+    fix_task = copy.deepcopy(value["tasks"][0])
+    fix_task["id"] = "fix_build"
+    fix_task["depends_on"] = ["build"]
+    value["tasks"][0]["on_reject"] = "fix_build"
+    value["tasks"].append(fix_task)
+    loaded = load_score(value)
+    assert loaded["tasks"][0]["on_reject"] == "fix_build"
+
+
+def test_on_reject_cannot_point_to_self():
+    value = score()
+    value["tasks"][0]["on_reject"] = "build"
+    with pytest.raises(ScoreError, match="cannot point to itself"):
+        load_score(value)
+
+
+def test_on_reject_unknown_task():
+    value = score()
+    value["tasks"][0]["on_reject"] = "nonexistent_task"
+    with pytest.raises(ScoreError, match="Unknown on_reject task"):
+        load_score(value)
+
+
+def test_on_reject_target_must_depend_on_rejected_task():
+    value = score()
+    fix_task = copy.deepcopy(value["tasks"][0])
+    fix_task["id"] = "fix_build"
+    fix_task["depends_on"] = []  # Missing "build" dependency
+    value["tasks"][0]["on_reject"] = "fix_build"
+    value["tasks"].append(fix_task)
+    with pytest.raises(ScoreError, match="on_reject target must depend on rejected task"):
+        load_score(value)
+
+
+def test_on_reject_cycle_rejected():
+    value = score()
+    task_a = value["tasks"][0]  # build
+    task_b = copy.deepcopy(task_a)
+    task_b["id"] = "fix_b"
+    task_b["depends_on"] = ["build"]
+    task_b["on_reject"] = "build"  # Cycle: build -> fix_b -> build
+    task_a["on_reject"] = "fix_b"
+    task_a["depends_on"] = ["fix_b"]  # Cycle in depends_on as well, but let's test on_reject cycle alone
+    # To test pure on_reject cycle without depends_on cycle:
+    # A has depends_on: []
+    # B has depends_on: [A]
+    # B on_reject: A (cycle in on_reject, but not depends_on)
+    task_a["depends_on"] = []
+    value["tasks"] = [task_a, task_b]
+    with pytest.raises(ScoreError, match="on_reject cycle"):
+        load_score(value)
+
+
+def test_on_reject_3_step_cycle():
+    value = score()
+    t0 = value["tasks"][0]
+    t0["id"] = "T0"
+    t0["depends_on"] = []
+    t0["on_reject"] = "T1"
+
+    t1 = copy.deepcopy(t0)
+    t1["id"] = "T1"
+    t1["depends_on"] = ["T0"]
+    t1["on_reject"] = "T2"
+
+    t2 = copy.deepcopy(t0)
+    t2["id"] = "T2"
+    t2["depends_on"] = ["T1"]
+    t2["on_reject"] = "T0"  # Cycle: T0 -> T1 -> T2 -> T0
+
+    value["tasks"] = [t0, t1, t2]
+    value["launch_requires"] = ["T2"]
+    with pytest.raises(ScoreError, match="on_reject cycle"):
+        load_score(value)
+
+
+def test_commit_configuration_valid():
+    val = score()
+    val["tasks"][0]["capabilities"] = ["repository:write"]
+    val["tasks"][0]["commit"] = {
+        "worktree_path": "/tmp/repo",
+        "target_branch": "feature/1",
+        "allowed_paths": ["src/app.py"],
+        "commit_message": "Feature commit",
+        "expected_before_sha": "abc1234",
+    }
+    loaded = load_score(val)
+    assert loaded["tasks"][0]["commit"]["worktree_path"] == "/tmp/repo"
+    assert loaded["tasks"][0]["commit"]["target_branch"] == "feature/1"
+    assert loaded["tasks"][0]["commit"]["allowed_paths"] == ["src/app.py"]
+    assert loaded["tasks"][0]["commit"]["commit_message"] == "Feature commit"
+    assert loaded["tasks"][0]["commit"]["expected_before_sha"] == "abc1234"
+
+
+def test_commit_configuration_forbidden_without_capability():
+    val = score()
+    val["tasks"][0]["capabilities"] = ["repository:read"]
+    val["tasks"][0]["commit"] = {
+        "worktree_path": "/tmp/repo",
+        "target_branch": "feature/1",
+        "allowed_paths": ["src/app.py"],
+    }
+    with pytest.raises(ScoreError, match="commit configuration forbidden"):
+        load_score(val)
+
+
+def test_commit_configuration_missing_required_subfields():
+    val = score()
+    val["tasks"][0]["capabilities"] = ["repository:write"]
+    val["tasks"][0]["commit"] = {
+        "worktree_path": "/tmp/repo",
+    }
+    with pytest.raises(ScoreError):
+        load_score(val)
+
+
+def test_commit_configuration_empty_allowed_paths():
+    val = score()
+    val["tasks"][0]["capabilities"] = ["repository:write"]
+    val["tasks"][0]["commit"] = {
+        "worktree_path": "/tmp/repo",
+        "target_branch": "feature/1",
+        "allowed_paths": [],
+    }
+    with pytest.raises(ScoreError):
+        load_score(val)
+
