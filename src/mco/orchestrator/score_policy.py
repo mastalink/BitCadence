@@ -16,7 +16,13 @@ SPEND_CAP_CENTS = 15_000
 G08_LAUNCH_SIGNOFF = "g08_launch_signoff"
 SPEND_ABOVE_CAP = "spend_above_cap"
 TASK_CHECKPOINT = "task_checkpoint"
-GATE_KINDS = frozenset({G08_LAUNCH_SIGNOFF, SPEND_ABOVE_CAP, TASK_CHECKPOINT})
+GATEWAY_RESTART_AUTHORIZATION = "gateway_restart_authorization"
+GATE_KINDS = frozenset({
+    G08_LAUNCH_SIGNOFF,
+    SPEND_ABOVE_CAP,
+    TASK_CHECKPOINT,
+    GATEWAY_RESTART_AUTHORIZATION,
+})
 
 VIA_OWNER_POLICY = {
     "policy_id": "via-owner-2026-09-15",
@@ -80,6 +86,13 @@ class GateService:
             projected = evidence.get("projected_monthly_cents")
             if type(projected) is not int or projected <= SPEND_CAP_CENTS:
                 raise ScoreError("Spend gate requires evidence above the owner cap")
+        if kind == GATEWAY_RESTART_AUTHORIZATION:
+            target_branch = evidence.get("target_branch")
+            deploy_target = evidence.get("deploy_target")
+            if not isinstance(target_branch, str) or not target_branch.strip():
+                raise ScoreError("Gateway restart authorization requires target_branch in evidence")
+            if not isinstance(deploy_target, str) or not deploy_target.strip():
+                raise ScoreError("Gateway restart authorization requires deploy_target in evidence")
         gate_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"score-gate:{org_id}:{run_id}:{digest}:{task_id}:{kind}"))
         existing = self.db.table("score_gate_requests").select("*").eq("id", gate_id).execute().data or []
         if existing:

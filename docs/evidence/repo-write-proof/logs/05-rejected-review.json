@@ -1,0 +1,4002 @@
+{
+  "adapter_events": [],
+  "board": {
+    "631764b9-abf9-589c-9915-7bcf4ae76e15": {
+      "events": [
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:16:20.491958+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-review-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:16:21.236387+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:16:21.561889+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:21.565371+00:00",
+          "detail": {
+            "context_id": "f80d63d4-916e-42f7-8404-237192df69f4",
+            "kind": "handoff"
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:23.831794+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:16:20.488829+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:23.837160+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:16:20.488829+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:16:31.234456+00:00",
+              "lease_id": "9a52ed46be424e2190edf8c5f4a57c08",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:16:21.234456+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:16:20.488829+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:23.842361+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:16:21.557262+00:00",
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:16:20.488829+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:16:31.234456+00:00",
+              "lease_id": "9a52ed46be424e2190edf8c5f4a57c08",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"verdict\": \"fail\", \"review_of\": {\"commit_sha\": \"6fe8b79a35d5266049b9cdc66b26b86ffebfc160\"}, \"findings\": [\"INJECTION 5: Canary reviewer deliberate rejection\"]}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:16:21.234456+00:00",
+              "status": "completed",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:16:20.488829+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:16:31.234456+00:00",
+              "lease_id": "9a52ed46be424e2190edf8c5f4a57c08",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:16:21.234456+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:19:09.955834+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-review-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:19:11.218250+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:19:11.534295+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:19:11.539078+00:00",
+          "detail": {
+            "context_id": "f80d63d4-916e-42f7-8404-237192df69f4",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:19:13.353548+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:19:09.952832+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:19:13.361533+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:19:09.952832+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:19:21.215566+00:00",
+              "lease_id": "ede07cbafa484f10b96733d72e75482d",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:19:11.215566+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:19:09.952832+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:19:13.369323+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:19:11.528305+00:00",
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:19:09.952832+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:19:21.215566+00:00",
+              "lease_id": "ede07cbafa484f10b96733d72e75482d",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"verdict\": \"fail\", \"review_of\": {\"commit_sha\": \"6fe8b79a35d5266049b9cdc66b26b86ffebfc160\"}, \"findings\": [\"INJECTION 5: Canary reviewer deliberate rejection\"]}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:19:11.215566+00:00",
+              "status": "completed",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:19:09.952832+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:19:21.215566+00:00",
+              "lease_id": "ede07cbafa484f10b96733d72e75482d",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:19:11.215566+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:21:09.416541+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-review-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:21:10.481246+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:21:10.829006+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:10.837764+00:00",
+          "detail": {
+            "context_id": "f80d63d4-916e-42f7-8404-237192df69f4",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:10.941308+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:21:09.412139+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:10.952405+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:21:09.412139+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:21:20.477222+00:00",
+              "lease_id": "fb123f094bbd4fcc9a94a8a0cc62167b",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:21:10.477222+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:21:09.412139+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:16.206016+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:21:10.819918+00:00",
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:21:09.412139+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:21:20.477222+00:00",
+              "lease_id": "fb123f094bbd4fcc9a94a8a0cc62167b",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"verdict\": \"fail\", \"review_of\": {\"commit_sha\": \"6fe8b79a35d5266049b9cdc66b26b86ffebfc160\"}, \"findings\": [\"INJECTION 5: Canary reviewer deliberate rejection\"]}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:21:10.477222+00:00",
+              "status": "completed",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:21:09.412139+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:21:20.477222+00:00",
+              "lease_id": "fb123f094bbd4fcc9a94a8a0cc62167b",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:21:10.477222+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:23:21.538567+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-review-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:23:22.351328+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:23:22.678123+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:22.693251+00:00",
+          "detail": {
+            "context_id": "f80d63d4-916e-42f7-8404-237192df69f4",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:23.145735+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:23:21.533039+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:23.158630+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:23:21.533039+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:23:32.347277+00:00",
+              "lease_id": "4a2ed3f9ff884d5bb32a2e27595853fe",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:23:22.347277+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:23:21.533039+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:28.636726+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:23:22.668201+00:00",
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:23:21.533039+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:23:32.347277+00:00",
+              "lease_id": "4a2ed3f9ff884d5bb32a2e27595853fe",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"verdict\": \"fail\", \"review_of\": {\"commit_sha\": \"6fe8b79a35d5266049b9cdc66b26b86ffebfc160\"}, \"findings\": [\"INJECTION 5: Canary reviewer deliberate rejection\"]}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:23:22.347277+00:00",
+              "status": "completed",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:23:21.533039+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:23:32.347277+00:00",
+              "lease_id": "4a2ed3f9ff884d5bb32a2e27595853fe",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:23:22.347277+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:25:16.669901+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-review-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:25:17.918598+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:25:18.328544+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:18.336728+00:00",
+          "detail": {
+            "context_id": "f80d63d4-916e-42f7-8404-237192df69f4",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:20.223259+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:25:16.664437+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:20.240671+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:25:16.664437+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:25:27.913551+00:00",
+              "lease_id": "d93b51998e934d0f81c704bd1516d54e",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:25:17.913551+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:25:16.664437+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:20.257864+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:25:18.318155+00:00",
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:25:16.664437+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:25:27.913551+00:00",
+              "lease_id": "d93b51998e934d0f81c704bd1516d54e",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"verdict\": \"fail\", \"review_of\": {\"commit_sha\": \"6fe8b79a35d5266049b9cdc66b26b86ffebfc160\"}, \"findings\": [\"INJECTION 5: Canary reviewer deliberate rejection\"]}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:25:17.913551+00:00",
+              "status": "completed",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:25:16.664437+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:25:27.913551+00:00",
+              "lease_id": "d93b51998e934d0f81c704bd1516d54e",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:25:17.913551+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:49:55.770651+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-review-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:49:55.861831+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:49:56.237749+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:49:56.251472+00:00",
+          "detail": {
+            "context_id": "f80d63d4-916e-42f7-8404-237192df69f4",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:50:02.184917+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:49:55.756513+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:50:02.223812+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:49:55.756513+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:50:05.847235+00:00",
+              "lease_id": "b378534d61ee4a45a4da343731d4657f",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:49:55.847235+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:49:55.756513+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:50:02.244680+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:49:56.220207+00:00",
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:49:55.756513+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:50:05.847235+00:00",
+              "lease_id": "b378534d61ee4a45a4da343731d4657f",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"verdict\": \"fail\", \"review_of\": {\"commit_sha\": \"6fe8b79a35d5266049b9cdc66b26b86ffebfc160\"}, \"findings\": [\"INJECTION 5: Canary reviewer deliberate rejection\"]}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:49:55.847235+00:00",
+              "status": "completed",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:49:55.756513+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:50:05.847235+00:00",
+              "lease_id": "b378534d61ee4a45a4da343731d4657f",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:49:55.847235+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:52:49.452777+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-review-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:52:50.053702+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "reviewer-1",
+          "at": "2026-09-17T16:52:50.476558+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-review-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:52:50.493426+00:00",
+          "detail": {
+            "context_id": "f80d63d4-916e-42f7-8404-237192df69f4",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:52:51.952150+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:52:49.442176+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:52:52.002555+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:52:49.442176+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:53:00.043206+00:00",
+              "lease_id": "836d8b4b7645472097afda2ab99adafb",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:52:50.043206+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:52:49.442176+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:52:58.625943+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:52:50.458814+00:00",
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:52:49.442176+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:53:00.043206+00:00",
+              "lease_id": "836d8b4b7645472097afda2ab99adafb",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"verdict\": \"fail\", \"review_of\": {\"commit_sha\": \"6fe8b79a35d5266049b9cdc66b26b86ffebfc160\"}, \"findings\": [\"INJECTION 5: Canary reviewer deliberate rejection\"]}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:52:50.043206+00:00",
+              "status": "completed",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a1cead9bb48c1f3b23484ffae3f2fa96851fc722c065aff4f5c086ad54b5d337",
+              "created_at": "2026-09-17T16:52:49.442176+00:00",
+              "depends_on": [],
+              "description": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+              "id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+              "input_payload": {
+                "prompt": "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "phase": "review",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": {
+                    "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+                  },
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:53:00.043206+00:00",
+              "lease_id": "836d8b4b7645472097afda2ab99adafb",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "reviewer-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:52:50.043206+00:00",
+              "status": "leased",
+              "target_agent_id": "reviewer-1",
+              "target_agent_role": "canary-review-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 review"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        }
+      ],
+      "lease_epoch": 1,
+      "leased_by": "reviewer-1",
+      "status": "completed"
+    },
+    "fc634750-9223-5b28-9b4f-c38f5878b3c8": {
+      "events": [
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:16:14.465934+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:16:16.306699+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:16:16.592166+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:16.595226+00:00",
+          "detail": {
+            "context_id": "e2d9030e-fe70-490b-9e1f-89c367253b00",
+            "kind": "handoff"
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:18.755431+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:16:14.462654+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:18.759954+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:16:14.462654+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:16:26.304942+00:00",
+              "lease_id": "589c3096b7ca48a8af148154e9119ebb",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:16:16.304942+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:16:14.462654+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:18.764475+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:16:16.588014+00:00",
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:16:14.462654+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:16:26.304942+00:00",
+              "lease_id": "589c3096b7ca48a8af148154e9119ebb",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:16:16.304942+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:16:14.462654+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:16:26.304942+00:00",
+              "lease_id": "589c3096b7ca48a8af148154e9119ebb",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:16:16.304942+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:19:04.291991+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:19:04.957004+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:19:05.238786+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:19:05.242635+00:00",
+          "detail": {
+            "context_id": "e2d9030e-fe70-490b-9e1f-89c367253b00",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:19:08.134096+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:19:04.288584+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:19:08.142010+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:19:04.288584+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:19:14.954468+00:00",
+              "lease_id": "5bf32d398ea44a108b07fc67755c5891",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:19:04.954468+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:19:04.288584+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:19:08.150909+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:19:05.233327+00:00",
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:19:04.288584+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:19:14.954468+00:00",
+              "lease_id": "5bf32d398ea44a108b07fc67755c5891",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:19:04.954468+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:19:04.288584+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:19:14.954468+00:00",
+              "lease_id": "5bf32d398ea44a108b07fc67755c5891",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:19:04.954468+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:21:03.711827+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:21:05.502354+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:05.643287+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:21:03.706797+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:21:05.792036+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:05.797269+00:00",
+          "detail": {
+            "context_id": "e2d9030e-fe70-490b-9e1f-89c367253b00",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:10.920609+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:21:03.706797+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:21:15.499668+00:00",
+              "lease_id": "fc893afb9efc4b4e927388e1d2876aac",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:21:05.499668+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:21:03.706797+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:10.930387+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:21:05.786123+00:00",
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:21:03.706797+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:21:15.499668+00:00",
+              "lease_id": "fc893afb9efc4b4e927388e1d2876aac",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:21:05.499668+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:21:03.706797+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:21:15.499668+00:00",
+              "lease_id": "fc893afb9efc4b4e927388e1d2876aac",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:21:05.499668+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:23:15.775507+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:23:16.082288+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:23:16.365338+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:16.371959+00:00",
+          "detail": {
+            "context_id": "e2d9030e-fe70-490b-9e1f-89c367253b00",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:17.625090+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:23:15.770595+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:17.639395+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:23:15.770595+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:23:26.077923+00:00",
+              "lease_id": "c23acbdbe45e4270ac2ef0208a3d076f",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:23:16.077923+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:23:15.770595+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:17.653694+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:23:16.357132+00:00",
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:23:15.770595+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:23:26.077923+00:00",
+              "lease_id": "c23acbdbe45e4270ac2ef0208a3d076f",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:23:16.077923+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:23:15.770595+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:23:26.077923+00:00",
+              "lease_id": "c23acbdbe45e4270ac2ef0208a3d076f",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:23:16.077923+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:25:10.846289+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:25:11.646072+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:25:11.940603+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:11.948331+00:00",
+          "detail": {
+            "context_id": "e2d9030e-fe70-490b-9e1f-89c367253b00",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:14.499074+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:25:10.840246+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:14.528225+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:25:10.840246+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:25:21.639531+00:00",
+              "lease_id": "7f9ab9c68378454688e87241342fde51",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:25:11.639531+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:25:10.840246+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:14.543568+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:25:11.930412+00:00",
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:25:10.840246+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:25:21.639531+00:00",
+              "lease_id": "7f9ab9c68378454688e87241342fde51",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:25:11.639531+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:25:10.840246+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:25:21.639531+00:00",
+              "lease_id": "7f9ab9c68378454688e87241342fde51",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:25:11.639531+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:49:49.401681+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:49:50.818000+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:49:51.130997+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:49:51.147035+00:00",
+          "detail": {
+            "context_id": "e2d9030e-fe70-490b-9e1f-89c367253b00",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:49:56.033503+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:49:49.393076+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:49:56.063621+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:49:49.393076+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:50:00.810155+00:00",
+              "lease_id": "21f38f1110944020b29ef9bd430f25da",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:49:50.810155+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:49:49.393076+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:49:56.089792+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:49:51.114247+00:00",
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:49:49.393076+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:50:00.810155+00:00",
+              "lease_id": "21f38f1110944020b29ef9bd430f25da",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:49:50.810155+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:49:49.393076+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:50:00.810155+00:00",
+              "lease_id": "21f38f1110944020b29ef9bd430f25da",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:49:50.810155+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:52:43.153394+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:52:45.056341+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:52:45.323613+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:52:43.142062+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:52:45.366977+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:52:45.384229+00:00",
+          "detail": {
+            "context_id": "e2d9030e-fe70-490b-9e1f-89c367253b00",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:52:51.878563+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:52:43.142062+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:52:55.042674+00:00",
+              "lease_id": "cb96f7a526b44e66ac08658c691236d4",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:52:45.042674+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:52:43.142062+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:52:51.914442+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:52:45.349950+00:00",
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:52:43.142062+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:52:55.042674+00:00",
+              "lease_id": "cb96f7a526b44e66ac08658c691236d4",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:52:45.042674+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "a468eb29a0ba60c51958cef9fce6bb131e85c050c296183ac635eedb90b60abf",
+              "created_at": "2026-09-17T16:52:43.142062+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-05-rejected-review",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:52:55.042674+00:00",
+              "lease_id": "cb96f7a526b44e66ac08658c691236d4",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:52:45.042674+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-05-rejected-review write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        }
+      ],
+      "lease_epoch": 1,
+      "leased_by": "worker-1",
+      "status": "completed"
+    }
+  },
+  "conductor_events": [
+    {
+      "at": "2026-09-17T16:52:42.304Z",
+      "detail": {
+        "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c"
+      },
+      "event": "initialized",
+      "seq": 21
+    },
+    {
+      "at": "2026-09-17T16:52:42.445Z",
+      "detail": {
+        "job_id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+        "phase": "work",
+        "task": "write-task-1"
+      },
+      "event": "planned",
+      "seq": 22
+    },
+    {
+      "at": "2026-09-17T16:52:43.162Z",
+      "detail": {
+        "job_id": "fc634750-9223-5b28-9b4f-c38f5878b3c8"
+      },
+      "event": "submitted",
+      "seq": 23
+    },
+    {
+      "at": "2026-09-17T16:52:46.702Z",
+      "detail": {
+        "actor": "worker-1",
+        "job_id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+        "result": {
+          "ready": true,
+          "status": "ready"
+        }
+      },
+      "event": "validated",
+      "seq": 24
+    },
+    {
+      "at": "2026-09-17T16:52:48.725Z",
+      "detail": {
+        "job_id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+        "phase": "review",
+        "task": "write-task-1"
+      },
+      "event": "planned",
+      "seq": 25
+    },
+    {
+      "at": "2026-09-17T16:52:49.464Z",
+      "detail": {
+        "job_id": "631764b9-abf9-589c-9915-7bcf4ae76e15"
+      },
+      "event": "submitted",
+      "seq": 26
+    },
+    {
+      "at": "2026-09-17T16:52:52.865Z",
+      "detail": {
+        "actor": "reviewer-1",
+        "job_id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+        "result": {
+          "findings": [
+            "INJECTION 5: Canary reviewer deliberate rejection"
+          ],
+          "review_of": {
+            "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+          },
+          "verdict": "fail"
+        }
+      },
+      "event": "rejected",
+      "seq": 27
+    }
+  ],
+  "dispatch": [
+    {
+      "evidence": {
+        "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+      },
+      "job_id": "631764b9-abf9-589c-9915-7bcf4ae76e15",
+      "phase": "review",
+      "status": "rejected",
+      "task": "write-task-1"
+    },
+    {
+      "evidence": {
+        "commit_sha": "6fe8b79a35d5266049b9cdc66b26b86ffebfc160"
+      },
+      "job_id": "fc634750-9223-5b28-9b4f-c38f5878b3c8",
+      "phase": "work",
+      "status": "validated",
+      "task": "write-task-1"
+    }
+  ],
+  "git_state": {
+    "branch": "canary/s06b-target",
+    "head_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+    "recent_commits": [
+      "71b5e04d8292a43eb071dd3451d0f911ca5611bb Canary Operator Initial commit on main"
+    ]
+  },
+  "recovery_claims": [],
+  "run": {
+    "digest": "75d82699e9a090f90ad09618c04b86c759e09f6cea52ed9d1c3ea33aa9a3199c",
+    "id": "s06b-05-rejected-review",
+    "org": "default",
+    "principal": "local-operator",
+    "status": "blocked"
+  }
+}

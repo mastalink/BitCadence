@@ -196,8 +196,8 @@ class Conductor:
             self._sleep(interval)
 
 
-def open_bridge(database: str | Path, artifact_root: str | Path, gate_service=None) -> ScoreBridge:
-    return ScoreBridge(str(database), str(artifact_root), gate_service=gate_service)
+def open_bridge(database: str | Path, artifact_root: str | Path, gate_service=None, live_executor=None) -> ScoreBridge:
+    return ScoreBridge(str(database), str(artifact_root), gate_service=gate_service, live_executor=live_executor)
 
 
 def start_run(bridge: ScoreBridge, *, run_id: str, score_path: str | Path, principal: str,

@@ -1,0 +1,2075 @@
+{
+  "adapter_events": [],
+  "board": {
+    "9aec9929-40ff-56fe-a7b7-cee11977c6d9": {
+      "events": [
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:14:42.985023+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:14:44.078506+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:14:44.473307+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:14:44.475728+00:00",
+          "detail": {
+            "context_id": "d54589c9-cec8-479b-961f-8b29cfda5c9c",
+            "kind": "handoff"
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:14:45.284691+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:14:42.982432+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:14:45.287748+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:14:42.982432+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:14:54.077156+00:00",
+              "lease_id": "91d38566986142ee8c56559cde9cffb1",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:14:44.077156+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:14:42.982432+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:14:45.290712+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:14:44.469633+00:00",
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:14:42.982432+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:14:54.077156+00:00",
+              "lease_id": "91d38566986142ee8c56559cde9cffb1",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:14:44.077156+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:14:42.982432+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:14:54.077156+00:00",
+              "lease_id": "91d38566986142ee8c56559cde9cffb1",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:14:44.077156+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:16:08.408096+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:08.625422+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:16:08.404943+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:16:08.966387+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:16:09.380040+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:09.382553+00:00",
+          "detail": {
+            "context_id": "d54589c9-cec8-479b-961f-8b29cfda5c9c",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:13.685385+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:16:08.404943+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:16:18.964614+00:00",
+              "lease_id": "c800f2d0c51f4c148a4254d9984fd8ff",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:16:08.964614+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:16:08.404943+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:16:13.689866+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:16:09.376220+00:00",
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:16:08.404943+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:16:18.964614+00:00",
+              "lease_id": "c800f2d0c51f4c148a4254d9984fd8ff",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:16:08.964614+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:16:08.404943+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:16:18.964614+00:00",
+              "lease_id": "c800f2d0c51f4c148a4254d9984fd8ff",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:16:08.964614+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:18:56.325249+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:18:57.695212+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:18:57.824501+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:18:56.321318+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:18:58.081972+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:18:58.085992+00:00",
+          "detail": {
+            "context_id": "d54589c9-cec8-479b-961f-8b29cfda5c9c",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:19:02.965786+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:18:56.321318+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:19:07.693090+00:00",
+              "lease_id": "3e582a0e896c4b00b552be54f6bdd6db",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:18:57.693090+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:18:56.321318+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:19:02.974187+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:18:58.077364+00:00",
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:18:56.321318+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:19:07.693090+00:00",
+              "lease_id": "3e582a0e896c4b00b552be54f6bdd6db",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:18:57.693090+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:18:56.321318+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:19:07.693090+00:00",
+              "lease_id": "3e582a0e896c4b00b552be54f6bdd6db",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:18:57.693090+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:20:57.666081+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:20:59.422949+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:20:59.841093+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:20:59.846110+00:00",
+          "detail": {
+            "context_id": "d54589c9-cec8-479b-961f-8b29cfda5c9c",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:00.374765+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:20:57.661367+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:00.386009+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:20:57.661367+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:21:09.419727+00:00",
+              "lease_id": "28905f14adfe45cd853d2c89dc887213",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:20:59.419727+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:20:57.661367+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:21:00.395568+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:20:59.834106+00:00",
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:20:57.661367+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:21:09.419727+00:00",
+              "lease_id": "28905f14adfe45cd853d2c89dc887213",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:20:59.419727+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:20:57.661367+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:21:09.419727+00:00",
+              "lease_id": "28905f14adfe45cd853d2c89dc887213",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:20:59.419727+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:23:07.888855+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:23:09.669770+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:23:10.052517+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:10.058753+00:00",
+          "detail": {
+            "context_id": "d54589c9-cec8-479b-961f-8b29cfda5c9c",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:12.150583+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:23:07.883270+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:12.164587+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:23:07.883270+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:23:19.665747+00:00",
+              "lease_id": "ce373bdf36e2461186a613863b1d8e2a",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:23:09.665747+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:23:07.883270+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:23:12.176610+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:23:10.045561+00:00",
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:23:07.883270+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:23:19.665747+00:00",
+              "lease_id": "ce373bdf36e2461186a613863b1d8e2a",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:23:09.665747+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:23:07.883270+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:23:19.665747+00:00",
+              "lease_id": "ce373bdf36e2461186a613863b1d8e2a",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:23:09.665747+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:25:02.848186+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:25:04.293685+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:25:04.679871+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:04.687282+00:00",
+          "detail": {
+            "context_id": "d54589c9-cec8-479b-961f-8b29cfda5c9c",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:08.804837+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:25:02.844208+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:08.820457+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:25:02.844208+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:25:14.288679+00:00",
+              "lease_id": "133b1cdb92724c739a67e05e873a7cbf",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:25:04.288679+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:25:02.844208+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:25:08.837757+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:25:04.669926+00:00",
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:25:02.844208+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:25:14.288679+00:00",
+              "lease_id": "133b1cdb92724c739a67e05e873a7cbf",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:25:04.288679+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:25:02.844208+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:25:14.288679+00:00",
+              "lease_id": "133b1cdb92724c739a67e05e873a7cbf",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:25:04.288679+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:49:42.617127+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:49:43.517764+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:49:43.919321+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:49:43.930130+00:00",
+          "detail": {
+            "context_id": "d54589c9-cec8-479b-961f-8b29cfda5c9c",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:49:49.631992+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:49:42.602306+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:49:49.662873+00:00",
+          "detail": {
+            "after": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:49:42.602306+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:49:53.508633+00:00",
+              "lease_id": "ae41017b84a94e809c80f64c18dc027e",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:49:43.508633+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:49:42.602306+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:49:49.684907+00:00",
+          "detail": {
+            "after": {
+              "completed_at": "2026-09-17T16:49:43.907732+00:00",
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:49:42.602306+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:49:53.508633+00:00",
+              "lease_id": "ae41017b84a94e809c80f64c18dc027e",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "output_payload": {
+                "result": "{\"ready\": true, \"status\": \"ready\"}"
+              },
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:49:43.508633+00:00",
+              "status": "completed",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": {
+              "completed_at": null,
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:49:42.602306+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "lease_epoch": 1,
+              "lease_expires_at": "2026-09-17T16:49:53.508633+00:00",
+              "lease_id": "ae41017b84a94e809c80f64c18dc027e",
+              "lease_incarnation": "d484be63f6cb4011ac70d8c65c9dd8a4",
+              "leased_by_instance_id": "worker-1",
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "started_at": "2026-09-17T16:49:43.508633+00:00",
+              "status": "leased",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "operation": "UPDATE"
+          },
+          "event": "state_committed",
+          "role": "store"
+        },
+        {
+          "actor": "local-operator",
+          "at": "2026-09-17T16:52:36.834147+00:00",
+          "detail": {
+            "status": "pending",
+            "target_agent_role": "canary-worker-repo-write"
+          },
+          "event": "created",
+          "role": "admin"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:52:37.635009+00:00",
+          "detail": {
+            "estimated_seconds": null,
+            "lease_ttl_seconds": 10
+          },
+          "event": "leased",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "worker-1",
+          "at": "2026-09-17T16:52:38.083456+00:00",
+          "detail": {},
+          "event": "status:completed",
+          "role": "canary-worker-repo-write"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:52:38.104611+00:00",
+          "detail": {
+            "context_id": "d54589c9-cec8-479b-961f-8b29cfda5c9c",
+            "kind": null
+          },
+          "event": "context_distilled",
+          "role": "drumline"
+        },
+        {
+          "actor": "system",
+          "at": "2026-09-17T16:52:38.662738+00:00",
+          "detail": {
+            "after": {
+              "create_intent_hash": "3ce5b0d41e872570fdd422ad5813f20c11ebd2a568d156aa68333b061d7b5ec8",
+              "created_at": "2026-09-17T16:52:36.820998+00:00",
+              "depends_on": [],
+              "description": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+              "id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+              "input_payload": {
+                "prompt": "Touch src/canary.txt and signal ready Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit.",
+                "score": {
+                  "artifact_root": "C:\\AI\\baton\\wt\\scratch-s06b\\home\\.mco\\score-artifacts",
+                  "attempt": 1,
+                  "constraints": [
+                    "Isolated repo-write canary execution only",
+                    "Fixed non-LLM handler execution only"
+                  ],
+                  "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+                  "expected_before_sha": "71b5e04d8292a43eb071dd3451d0f911ca5611bb",
+                  "phase": "work",
+                  "protocol": "score-v1",
+                  "required_evidence": [
+                    "commit_sha"
+                  ],
+                  "review_of": null,
+                  "run_id": "s06b-04-exact-head-drift",
+                  "score_id": "via-score-repo-write-canary",
+                  "task": "write-task-1"
+                }
+              },
+              "max_retries": 0,
+              "org_id": "default",
+              "source_agent_id": "local-operator",
+              "source_agent_role": "admin",
+              "status": "pending",
+              "target_agent_id": "worker-1",
+              "target_agent_role": "canary-worker-repo-write",
+              "title": "Score s06b-04-exact-head-drift write-task-1 work"
+            },
+            "before": null,
+            "operation": "INSERT"
+          },
+          "event": "state_committed",
+          "role": "store"
+        }
+      ],
+      "lease_epoch": 1,
+      "leased_by": "worker-1",
+      "status": "completed"
+    }
+  },
+  "conductor_events": [
+    {
+      "at": "2026-09-17T16:52:34.888Z",
+      "detail": {
+        "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828"
+      },
+      "event": "initialized",
+      "seq": 17
+    },
+    {
+      "at": "2026-09-17T16:52:36.178Z",
+      "detail": {
+        "job_id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+        "phase": "work",
+        "task": "write-task-1"
+      },
+      "event": "planned",
+      "seq": 18
+    },
+    {
+      "at": "2026-09-17T16:52:36.842Z",
+      "detail": {
+        "job_id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9"
+      },
+      "event": "submitted",
+      "seq": 19
+    },
+    {
+      "at": "2026-09-17T16:52:40.391Z",
+      "detail": {
+        "reason": "Adapter commit failed: wrapper_exception:LiveAdapterError:exact_head_mismatch: expected '71b5e04d8292a43eb071dd3451d0f911ca5611bb', got 'f5e3ebcdaa5adde7254214efd6252777ee71e6ce'"
+      },
+      "event": "validation_blocked",
+      "seq": 20
+    }
+  ],
+  "dispatch": [
+    {
+      "evidence": null,
+      "job_id": "9aec9929-40ff-56fe-a7b7-cee11977c6d9",
+      "phase": "work",
+      "status": "failed",
+      "task": "write-task-1"
+    }
+  ],
+  "git_state": {
+    "branch": "canary/s06b-target",
+    "head_sha": "f5e3ebcdaa5adde7254214efd6252777ee71e6ce",
+    "recent_commits": [
+      "f5e3ebcdaa5adde7254214efd6252777ee71e6ce Canary Operator Out-of-band drift commit 2026-09-17T16:52:37Z",
+      "71b5e04d8292a43eb071dd3451d0f911ca5611bb Canary Operator Initial commit on main"
+    ]
+  },
+  "recovery_claims": [],
+  "run": {
+    "digest": "07740f321fe7db286d969890c1241c1c0533c6a0d1057cbdf21410864595c828",
+    "id": "s06b-04-exact-head-drift",
+    "org": "default",
+    "principal": "local-operator",
+    "status": "blocked"
+  }
+}

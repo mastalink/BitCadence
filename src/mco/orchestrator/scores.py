@@ -87,7 +87,7 @@ def load_score(source):
     ids = set()
     fields = ("id", "goal", "title", "instructions", "role", "review_role", "depends_on", "resources", "capabilities", "evidence", "max_attempts", "timeout_seconds", "max_cost_cents", "checkpoint")
     for task in score["tasks"]:
-        _keys(task, fields)
+        _keys(task, fields, optional=("on_reject", "commit"))
         for key in ("id", "goal", "title", "instructions", "role", "review_role"):
             _string(task[key])
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", task["id"]):
@@ -97,6 +97,10 @@ def load_score(source):
         ids.add(task["id"])
         if task["role"] == task["review_role"]:
             raise ScoreError("Work and review roles must differ")
+        if "on_reject" in task and task["on_reject"] is not None:
+            _string(task["on_reject"])
+            if task["on_reject"] == task["id"]:
+                raise ScoreError("Task on_reject cannot point to itself")
         for key in ("depends_on", "resources", "capabilities", "evidence"):
             _strings(task[key], key in ("resources", "capabilities", "evidence"))
         for key in ("max_attempts", "timeout_seconds"):
@@ -106,9 +110,39 @@ def load_score(source):
             _keys(task["checkpoint"], ("id", "reason"))
             _string(task["checkpoint"]["id"])
             _string(task["checkpoint"]["reason"])
+        commit_conf = task.get("commit")
+        if commit_conf is not None:
+            if "repository:write" not in task["capabilities"]:
+                raise ScoreError("commit configuration forbidden unless repository:write capability is requested")
+            _keys(commit_conf, ("worktree_path", "target_branch", "allowed_paths"), optional=("commit_message", "expected_before_sha"))
+            _string(commit_conf["worktree_path"])
+            _string(commit_conf["target_branch"])
+            _strings(commit_conf["allowed_paths"], nonempty=True)
+            if "commit_message" in commit_conf and commit_conf["commit_message"] is not None:
+                _string(commit_conf["commit_message"])
+            if "expected_before_sha" in commit_conf and commit_conf["expected_before_sha"] is not None:
+                _string(commit_conf["expected_before_sha"])
+    tasks_by_id = {t["id"]: t for t in score["tasks"]}
     for task in score["tasks"]:
         if not set(task["depends_on"]) <= ids:
             raise ScoreError("Unknown dependency")
+        target_id = task.get("on_reject")
+        if target_id is not None and target_id not in ids:
+            raise ScoreError(f"Unknown on_reject task: {target_id}")
+    # An on_reject chain is a fix-attempt sequence that must also terminate without cycles.
+    reject_pending = {t["id"]: {t["on_reject"]} for t in score["tasks"] if t.get("on_reject")}
+    reject_nodes = set(reject_pending)
+    while reject_pending:
+        ready = [k for k, targets in reject_pending.items() if not (targets & reject_nodes)]
+        if not ready:
+            raise ScoreError("on_reject cycle")
+        for k in ready:
+            reject_nodes.remove(k)
+            del reject_pending[k]
+    for task in score["tasks"]:
+        target_id = task.get("on_reject")
+        if target_id is not None and task["id"] not in tasks_by_id[target_id]["depends_on"]:
+            raise ScoreError("on_reject target must depend on rejected task")
     if not set(score["launch_requires"]) <= ids:
         raise ScoreError("Unknown launch requirement")
     # Kahn's algorithm avoids recursion limits on adversarial input.
@@ -347,6 +381,16 @@ class SandboxRun:
         _string(actor)
         if actor == state["author"] or role != self.tasks[task_id]["review_role"]:
             raise ScoreError("Independent reviewer required")
+        on_reject_targets = {t["on_reject"]: t["id"] for t in self.tasks.values() if t.get("on_reject")}
+        pred = on_reject_targets.get(task_id)
+        while pred:
+            pred_review_actor = getattr(self, "_review_actors", {}).get(pred)
+            if pred_review_actor and actor == pred_review_actor:
+                raise ScoreError("Independent reviewer required")
+            pred = on_reject_targets.get(pred)
+        if not hasattr(self, "_review_actors"):
+            self._review_actors = {}
+        self._review_actors[task_id] = actor
         if type(passed) is not bool:
             raise ScoreError("Boolean review decision required")
         # Compatibility argument is deliberately never authoritative.  A

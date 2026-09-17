@@ -1,0 +1,3 @@
+[X] Could not start the run: Task 'write-task-1' with repository:write must 
+include worktree_path in resources
+

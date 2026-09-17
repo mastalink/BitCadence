@@ -1,0 +1,11 @@
+S06b Repository:Write Adversarial Proof Run Inventory
+Generated: 2026-09-17T16:53:20.345512+00:00
+======================================================================
+
+01-baseline.json                 245267 bytes  sha256:68c6a08ba076cf03710e6bd40529d550c005e407b4a7d91122a57680868e2945
+02-crash.json                    326050 bytes  sha256:a60fa9e58d6945227619504365bfe1b578a06f1f11962880d7e820b78804d578
+03-denied-branch.txt                 80 bytes  sha256:7b6d5acef4dcc11b3648337d4bac2ddbe75120a5481b92b833304f12eb56abee
+04-exact-head-drift.json          99561 bytes  sha256:34f874053f5a53753e59e81cdb8e984ba7c98ee55cf1019ac4c5fc12c49d9857
+05-rejected-review.json          192755 bytes  sha256:f9d11466de674f6614990501a80388ba66d78a2bd4a68d8c2b89adcd9ac53af4
+06-gateway-restart.json          209416 bytes  sha256:e0e3733759af1fddbae5c2d8f6657a0ccd1667dd612fdbe9aaacfd60345a5ea4
+07-resource-lock.txt                116 bytes  sha256:64b7b337ed586bac1ef241f0b1ce5bcf020ea346ac68593aac7c83730819320f
