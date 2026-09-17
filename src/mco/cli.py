@@ -18,7 +18,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 logger = logging.getLogger("mco.cli")
 
@@ -218,6 +218,12 @@ def create_app() -> FastAPI:
     from mco.orchestrator.context_routes import context_router
     app_server.include_router(context_router)
 
+    # Score gate API: one explicit decision/evidence view, separate from the
+    # legacy per-job approval queue.
+    from mco.orchestrator.score_gate_routes import score_gates_router, score_grants_router
+    app_server.include_router(score_gates_router)
+    app_server.include_router(score_grants_router)
+
     # Admin API: agent management, settings, workflow submission (Control Panel)
     from mco.orchestrator.admin_routes import (
         agents_admin_router,
@@ -271,6 +277,12 @@ def create_app() -> FastAPI:
     @app_server.get("/flow", response_class=HTMLResponse, include_in_schema=False)
     async def flow_ui() -> str:
         return get_flow_html()
+
+    from mco.orchestrator.score_gate_routes import SCORE_GATE_HTML
+
+    @app_server.get("/score-gates", response_class=HTMLResponse, include_in_schema=False)
+    async def score_gate_ui() -> str:
+        return SCORE_GATE_HTML
 
     # Register broadcast callback
     register_broadcast_callback(server_broadcast_callback)
@@ -1095,6 +1107,134 @@ def launch_now(
     console.print(f"[green][OK][/green] Launched '{name}' -> {len(job_ids)} job{plural}")
     for job_id in job_ids:
         console.print(f"  [dim]{job_id}[/dim]")
+
+
+# ── Score conductor ──────────────────────────────────────────────────────────
+# A score only advances when something ticks it. These commands are that
+# something: start a run, advance it, and see where it actually is.
+
+score_app = typer.Typer(help="Run a Score: start, advance and inspect a conductor run.")
+app.add_typer(score_app, name="score")
+
+DEFAULT_SCORE_DB = Path.home() / ".mco" / "score-runs.db"
+DEFAULT_SCORE_ROOT = Path.home() / ".mco" / "score-artifacts"
+
+
+def _conductor(database: Path, root: Path):
+    from mco.orchestrator.score_conductor import Conductor, board_for, open_bridge
+    client = _gateway_client()
+    return Conductor(open_bridge(database, root), board_for(client)), client
+
+
+def _parse_targets(values: Optional[List[str]]) -> dict:
+    targets = {}
+    for item in values or []:
+        if "=" not in item:
+            console.print(f"[red][X] --target must be role=instance, got '{item}'.[/red]")
+            raise typer.Exit(code=1)
+        role, instance = item.split("=", 1)
+        targets[role.strip()] = instance.strip()
+    return targets
+
+
+@score_app.command("start")
+def score_start(
+    score_file: str = typer.Argument(..., help="Path to the score JSON document."),
+    run_id: str = typer.Option(..., "--run-id", help="Identity of this run; re-using one resumes it."),
+    target: Optional[List[str]] = typer.Option(None, "--target",
+                                               help="role=instance for every role in the score."),
+    org: str = typer.Option("default", "--org"),
+    database: Path = typer.Option(DEFAULT_SCORE_DB, "--db"),
+    root: Path = typer.Option(DEFAULT_SCORE_ROOT, "--artifact-root"),
+):
+    """Initialize a run. Safe to repeat: identical policy and identities resume it."""
+    from mco.orchestrator.score_conductor import start_run
+
+    conductor, client = _conductor(database, root)
+    try:
+        info = start_run(conductor.bridge, run_id=run_id, score_path=score_file,
+                         principal=client.instance_id, org=org,
+                         targets=_parse_targets(target),
+                         credential_hash=conductor.board.identity)
+    except Exception as exc:
+        console.print(f"[red][X] Could not start the run:[/red] {exc}")
+        raise typer.Exit(code=1)
+    console.print(f"[green][OK][/green] Run '{info['run_id']}' ready for score '{info['score_id']}'")
+    console.print(f"[dim]Advance it with: mco score tick --run-id {info['run_id']} --watch[/dim]")
+
+
+@score_app.command("tick")
+def score_tick(
+    run_id: str = typer.Option(..., "--run-id"),
+    watch: bool = typer.Option(False, "--watch", help="Keep ticking until the run settles."),
+    interval: float = typer.Option(5.0, "--interval"),
+    timeout: float = typer.Option(900.0, "--timeout"),
+    database: Path = typer.Option(DEFAULT_SCORE_DB, "--db"),
+    root: Path = typer.Option(DEFAULT_SCORE_ROOT, "--artifact-root"),
+):
+    """Advance the run: plan what can start, dispatch it, accept finished work."""
+    conductor, _ = _conductor(database, root)
+    if not watch:
+        result = conductor.tick(run_id)
+        console.print(result.describe())
+        raise typer.Exit(code=1 if result.error else 0)
+
+    status = conductor.run_until_settled(
+        run_id, interval=interval, timeout=timeout,
+        on_tick=lambda r: console.print(f"[dim]{r.describe()}[/dim]") if not r.idle or r.error else None)
+    _print_score_status(status)
+    raise typer.Exit(code=0 if status["status"] not in ("blocked", "failed") and not status.get("timed_out") else 1)
+
+
+@score_app.command("status")
+def score_status(
+    run_id: str = typer.Option(..., "--run-id"),
+    database: Path = typer.Option(DEFAULT_SCORE_DB, "--db"),
+    root: Path = typer.Option(DEFAULT_SCORE_ROOT, "--artifact-root"),
+):
+    """Where the run actually is: per task, per phase, with the last events."""
+    conductor, _ = _conductor(database, root)
+    try:
+        _print_score_status(conductor.status(run_id))
+    except Exception as exc:
+        console.print(f"[red][X] {exc}[/red]")
+        raise typer.Exit(code=1)
+
+
+@score_app.command("list")
+def score_list(database: Path = typer.Option(DEFAULT_SCORE_DB, "--db")):
+    """Runs in this conductor database."""
+    from mco.orchestrator.score_conductor import sqlite_runs
+
+    rows = sqlite_runs(database)
+    if not rows:
+        console.print(f"[yellow]No runs in {database}.[/yellow]")
+        return
+    table = Table(show_header=True, header_style="bold magenta")
+    for column in ("Run", "Score digest", "Org", "Status"):
+        table.add_column(column)
+    for row in rows:
+        table.add_row(row["id"], row["digest"][:12], row["org"], row["status"])
+    console.print(table)
+
+
+def _print_score_status(status: dict):
+    console.print(f"[bold]{status['score_id']}[/bold] run [cyan]{status['run_id']}[/cyan] "
+                  f"digest {status['digest'][:12]} - status [bold]{status['status']}[/bold]")
+    console.print(f"accepted {len(status['tasks_accepted'])}/{status['tasks_total']} "
+                  f"- launch requires {', '.join(status['launch_requires']) or '(nothing)'} "
+                  f"- launched: {'yes' if status['launched'] else 'no'}")
+    if status.get("timed_out"):
+        console.print("[yellow]Stopped on timeout, not completion.[/yellow]")
+    if status["dispatch"]:
+        table = Table(show_header=True, header_style="bold magenta")
+        for column in ("Task", "Phase", "Status", "Job"):
+            table.add_column(column)
+        for row in status["dispatch"]:
+            table.add_row(row["task"], row["phase"], row["status"], row["job_id"][:8])
+        console.print(table)
+    for event in status["recent_events"][:5]:
+        console.print(f"  [dim]{event['at']} {event['event']} {event['detail'][:90]}[/dim]")
 
 
 def _print_fleet_missing(path):

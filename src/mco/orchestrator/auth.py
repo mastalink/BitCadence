@@ -136,6 +136,10 @@ def verify_token(db_client: Any, token: str) -> Optional[dict]:
         return None
     agent = {k: v for k, v in rows[0].items() if k != "auth_token_hash"}
     agent.setdefault("org_id", "default")
+    # Authentication provenance belongs to this trusted path, never to the
+    # schemaless registry row. An agent cannot become human by storing a
+    # session-looking field in its own record.
+    agent["auth_method"] = "bearer"
     return agent
 
 
