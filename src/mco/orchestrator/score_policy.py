@@ -68,8 +68,8 @@ class GateService:
 
     def request(self, *, org_id: str, run_id: str, digest: str, task_id: str,
                 kind: str, evidence: dict) -> dict:
-        if not isinstance(kind, str) or not kind.strip():
-            raise ScoreError("Gate kind is required")
+        if kind not in GATE_KINDS:
+            raise ScoreError("Gate kind is not allowed by the VIA owner policy")
         if not all(isinstance(value, str) and value.strip() for value in (org_id, run_id, digest, task_id)):
             raise ScoreError("Gate binding is incomplete")
         if not isinstance(evidence, dict) or not evidence:

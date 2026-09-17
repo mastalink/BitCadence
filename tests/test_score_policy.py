@@ -20,6 +20,7 @@ from mco.orchestrator.score_gate_routes import score_gates_router, score_grants_
 from mco.orchestrator.score_policy import (
     G08_LAUNCH_SIGNOFF,
     SPEND_ABOVE_CAP,
+    TASK_CHECKPOINT,
     GateService,
     authenticated_human,
     required_gate,
@@ -157,6 +158,33 @@ def test_gate_view_has_evidence_and_separate_immutable_decision(store):
     assert store.table("score_grants").select("*").execute().data == []
     with pytest.raises(PermissionError):
         store.table("score_checkpoint_decisions").update({"decision": "rejected"}).eq("id", decision["id"]).execute()
+
+
+def test_gate_service_rejects_unallowed_kind(store):
+    service = GateService(store)
+    with pytest.raises(ScoreError, match="Gate kind is not allowed by the VIA owner policy"):
+        service.request(
+            org_id="acme",
+            run_id="run-1",
+            digest="a" * 64,
+            task_id="T01",
+            kind="anything-i-want",
+            evidence={"checkpoint": {"id": "gate_1", "reason": "test"}},
+        )
+
+
+def test_gate_service_accepts_task_checkpoint_kind(store):
+    service = GateService(store)
+    gate = service.request(
+        org_id="acme",
+        run_id="run-1",
+        digest="a" * 64,
+        task_id="T01",
+        kind=TASK_CHECKPOINT,
+        evidence={"checkpoint": {"id": "gate_1", "reason": "test"}},
+    )
+    assert gate["kind"] == TASK_CHECKPOINT
+    assert gate["status"] == "pending"
 
 
 def test_human_issuance_route_persists_signed_grant(store, monkeypatch):

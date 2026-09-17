@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from mco.orchestrator.score_dispatcher import score_job_id
+from mco.orchestrator.score_policy import TASK_CHECKPOINT
 from mco.orchestrator.scores import ScoreError, ScoreIdentityError, digest, load_score
 
 
@@ -142,7 +143,7 @@ class ScoreBridge:
                 # Checkpoint gate evaluation for work phase
                 if t.get("checkpoint"):
                     checkpoint = t["checkpoint"]
-                    gate_kind = checkpoint.get("id") or "task_checkpoint"
+                    gate_kind = TASK_CHECKPOINT
                     gate_service = self.get_gate_service()
 
                     if gate_service is None:
