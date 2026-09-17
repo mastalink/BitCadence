@@ -1,0 +1,43 @@
+{
+  "score_version": 1,
+  "id": "via-score-conductor-canary",
+  "revision": 1,
+  "objective": "Canary execution proving isolated non-LLM worker and reviewer handlers under the VIA Score conductor.",
+  "constraints": [
+    "Isolated canary lane execution only (score-canary-lane); no release lane access.",
+    "Fixed non-LLM handler execution only; no LLM dispatch.",
+    "Deterministic evidence written only under score-runs/{run_id}/.",
+    "Strict separation of duty: work and review roles must differ, and author cannot review own work.",
+    "No SSM command execution, deploy Lambda invocation, kms:Sign, schedule-data mutation, or IAM changes."
+  ],
+  "budget_cents": 0,
+  "max_parallel": 1,
+  "launch_requires": [
+    "C01"
+  ],
+  "tasks": [
+    {
+      "id": "C01",
+      "goal": "C01",
+      "title": "Deterministic canary artifact generation and independent hash verification",
+      "instructions": "Execute fixed non-LLM worker to write a deterministic JSON artifact under score-runs/{run_id}/ and return its path and sha256; independently fetch and verify exact bytes and author/reviewer segregation.",
+      "role": "score-canary-worker",
+      "review_role": "score-canary-review",
+      "depends_on": [],
+      "resources": [
+        "score-canary-lane"
+      ],
+      "capabilities": [
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "canary_artifact"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 300,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    }
+  ]
+}

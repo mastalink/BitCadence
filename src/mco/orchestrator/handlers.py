@@ -230,9 +230,18 @@ async def _unlock_dependents(
     task_id: str,
     broadcast_event: Callable[[str, Dict[str, Any]], Coroutine[Any, Any, None]],
 ) -> None:
-    """Move WAITING jobs whose parents all completed to their next state."""
+    """Move legacy WAITING jobs whose parents all completed to their next state.
+
+    Score-owned jobs are deliberately excluded.  Their dependency graph is
+    advanced only by a conductor after review-ready/accepted Score state, never
+    by a worker completing an ``agent_jobs.depends_on`` parent.
+    """
     waiting_res = db_client.table("agent_jobs").select("*").eq("status", JobStatus.WAITING.value).execute()
     for waiting_job in (waiting_res.data or []):
+        input_payload = waiting_job.get("input_payload") or {}
+        score_stamp = input_payload.get("score") if isinstance(input_payload, dict) else None
+        if isinstance(score_stamp, dict) and score_stamp.get("protocol") == "score-v1":
+            continue
         depends_on = waiting_job.get("depends_on") or []
         if task_id not in depends_on:
             continue

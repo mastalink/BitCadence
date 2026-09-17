@@ -1,0 +1,15 @@
+{
+  "job_id": "9e565111-cae9-5662-aa36-f48f6fa6c133",
+  "claim": {
+    "success": true,
+    "lease": {
+      "lease_id": "ce814aa1db6d4a068f12ec0e19fe661e",
+      "lease_epoch": 1,
+      "lease_incarnation": "8bea2ca2745e4ce4acb1785a8ba1650f",
+      "agent_instance_id": "canary-worker-s06a"
+    },
+    "renew_after_seconds": 6
+  },
+  "leased_at": "2026-09-16T15:14:15Z",
+  "pid": 40160
+}

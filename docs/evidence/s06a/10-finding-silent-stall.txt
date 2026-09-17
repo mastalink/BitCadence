@@ -1,0 +1,45 @@
+sweep artifact root (MCO_SCORE_ARTIFACT_ROOT) : $S6\home\.mco\score-artifacts
+root this run was started under               : $S6\a-different-artifact-root
+
+run started (this is what `mco score start` with default flags does)
+the sweep does see it as a candidate: [('s06a-11-rootmismatch', 'running', '6133c669d6872daf1e02d561a4bbd51d4da2fb92e4500eaab7e7cf9ae67ab861')]
+Conductor sweep failed on run s06a-11-rootmismatch
+Traceback (most recent call last):
+  File "C:\AI\baton\wt\score-s06a-claude-beast\src\mco\orchestrator\score_sweep.py", line 159, in sweep
+    status = conductor.status(run_id)
+  File "C:\AI\baton\wt\score-s06a-claude-beast\src\mco\orchestrator\score_conductor.py", line 74, in status
+    run = self.bridge.run(db, run_id)
+  File "C:\AI\baton\wt\score-s06a-claude-beast\src\mco\orchestrator\score_bridge.py", line 80, in run
+    raise ScoreError("Run artifact root mismatch")
+mco.orchestrator.scores.ScoreError: Run artifact root mismatch
+one sweep pass -> ticked=[] advanced=[] blocked={}
+                 errors={'s06a-11-rootmismatch': 'ScoreError: Run artifact root mismatch'}
+                 failing={'s06a-05-reject': 'blocked', 's06a-06-tamper': 'blocked', 's06a-11-rootmismatch': 'ScoreError: Run artifact root mismatch'}
+
+wait 20s and let the gateway's own sweep hit it four times:
+  /readyz status        : ready
+  checks.score_sweep    : {"ok": true, "error": null, "interval_seconds": 5, "failing_runs": ["s06a-05-reject", "s06a-06-tamper", "s06a-11-rootmismatch"]}
+  run status in the db  : running
+  events for the run    : ['initialized']
+
+CONCLUSION (corrected after reading the result rather than predicting it):
+
+Readiness DOES surface this. `SweepResult.failing` carries per-run tick errors
+as well as blocked/failed runs, so /readyz names s06a-11-rootmismatch in
+checks.score_sweep.failing_runs even though the run's own status is still
+'running'. The gateway stays `ok: true` - correctly, because the sweep itself
+is healthy; it is one run that is broken, and the run is named.
+
+What remains is a configuration trap, not a blind spot:
+
+  `mco score start` resolves --db and --artifact-root from Path.home() and
+  never reads MCO_SCORE_DB / MCO_SCORE_ARTIFACT_ROOT, which is where the
+  gateway sweep reads them. Point the gateway at a non-default artifact root
+  and the documented CLI invocation silently starts runs the gateway will
+  refuse forever with "Run artifact root mismatch".
+
+This is not theoretical: it is exactly what happened to this packet's first
+baseline attempt, and it cost a full setup cycle. The run IS named in
+failing_runs, so an operator watching /readyz would catch it - but the error
+string names the symptom, not the cause, and nothing points at the two
+different config sources. Recommended follow-up in the report.

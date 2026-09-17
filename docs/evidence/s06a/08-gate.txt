@@ -1,0 +1,55 @@
+
+=== 0. the canary path is UNGATED, which is the policy working ===
+  owner policy      : via-owner-2026-09-15, cap 15000 cents/month
+  required_gates(C01, 0 cents)     -> ()
+  the owner is not interrupted for canary work.
+
+=== 1. inject the gate: C01 now projects spend ABOVE the owner cap ===
+  projected_monthly_cents          = 15001  (cap 15000)
+  required_gates(C01, 15001) -> ('spend_above_cap',)
+  run digest                       = 5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe
+
+=== 2. the task is NOT dispatchable while the gate is pending ===
+  blockers("C01") = ['human_checkpoint']
+  ready()         = []
+
+=== 3. the gate is visible through the authenticated gate view ===
+  GET /api/score/gates -> HTTP 200, 1 gate(s) for this run
+    id=88715fff-0584-5c3b-8ab4-a99c8949e524
+    kind=spend_above_cap  task=C01  status=pending
+    bound to digest=5974bd7a18e2f0f9...  evidence={"policy_id": "via-owner-2026-09-15", "projected_monthly_cents": 15001}
+    decision=None
+
+=== 4. an AGENT tries to decide it ===
+  POST .../decision with an agent bearer token -> HTTP 403
+  {"detail": "Authenticated human principal required; agent bearer tokens cannot decide Score gates"}
+  gate status now: ['pending']
+
+=== 5. is there ANY human auth path on this local edition? ===
+  MCO_TRUSTED_HEADER_AUTH  = None
+  edition has trusted_header_auth = False
+  OIDC session configured  = False
+  -> no human can decide a Score gate over HTTP on this profile.
+
+=== 6. the decision itself, made by an authenticated HUMAN principal ===
+  durable authorization record:
+    id               5ff10d95-ace6-4f58-8cf5-8272fedce35e
+    gate_id          88715fff-0584-5c3b-8ab4-a99c8949e524
+    run_id           s06a-09-gate
+    digest           5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe
+    task_id          C01
+    decision         approved
+    human_principal  joseph.arroyo
+    reason           S06a injected human gate: approved for the canary lane
+    decided_at       2026-09-16T15:23:12.485859+00:00
+
+=== 7. the gate releases the path - and ONLY that path ===
+  blockers("C01") = []
+  ready()         = ['C01']
+  grants unchanged: ['evidence:review', 'evidence:write']   (a checkpoint is not an authority grant)
+
+=== 8. the gate cannot be decided twice ===
+  second decision refused: ScoreError: Gate already decided
+
+=== 9. an AGENT actor is refused by the model too, not only by the API ===
+  refused: ScoreError: Explicit human principal required
