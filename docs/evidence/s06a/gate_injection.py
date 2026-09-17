@@ -62,7 +62,7 @@ from mco.orchestrator.auth import trusted_header_agent
 from mco.editions import has_feature
 from mco.config import get_config
 cfg = get_config()
-print(f'  MCO_TRUSTED_HEADER_AUTH  = {cfg.get("MCO_TRUSTED_HEADER_AUTH")!r}')
+print(f'  MCO_TRUSTED_HEADER_AUTH enabled = {bool(cfg.get("MCO_TRUSTED_HEADER_AUTH"))}')
 print(f'  edition has trusted_header_auth = {has_feature("trusted_header_auth")}')
 print(f'  OIDC session configured  = {bool(cfg.get("MCO_OIDC_CLIENT_ID"))}')
 print("  -> no human can decide a Score gate over HTTP on this profile.")
