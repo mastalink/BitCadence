@@ -12,6 +12,7 @@ import json
 import uuid
 from typing import Any
 
+from mco.orchestrator.score_resolver import resolve_score_targets
 from mco.orchestrator.scores import ScoreError
 
 

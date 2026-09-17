@@ -20,6 +20,7 @@ from mco.orchestrator.score_authority import (
 from mco.orchestrator.score_gate_routes import score_gates_router, score_grants_router
 from mco.orchestrator.score_policy import (
     G08_LAUNCH_SIGNOFF,
+    GATEWAY_RESTART_AUTHORIZATION,
     SPEND_ABOVE_CAP,
     TASK_CHECKPOINT,
     GateService,
@@ -186,6 +187,161 @@ def test_gate_service_accepts_task_checkpoint_kind(store):
     )
     assert gate["kind"] == TASK_CHECKPOINT
     assert gate["status"] == "pending"
+
+
+def test_gateway_restart_authorization_distinguishable_from_task_checkpoint_in_audit_trail(store):
+    service = GateService(store)
+    caller = {"org_id": "acme", "instance_id": "user:joe", "auth_method": "session"}
+
+    checkpoint_gate = service.request(
+        org_id="acme",
+        run_id="run-1",
+        digest="a" * 64,
+        task_id="T01",
+        kind=TASK_CHECKPOINT,
+        evidence={"checkpoint": {"id": "gate_1", "reason": "checkpoint review"}},
+    )
+    restart_gate = service.request(
+        org_id="acme",
+        run_id="run-1",
+        digest="a" * 64,
+        task_id="T02",
+        kind=GATEWAY_RESTART_AUTHORIZATION,
+        evidence={"target_branch": "codex/score-v1-b01", "deploy_target": "deploy/local"},
+    )
+
+    # Both gates appear in list() for org with clearly different kind values
+    listed = service.list(org_id="acme")
+    listed_by_kind = {item["kind"]: item for item in listed}
+    assert TASK_CHECKPOINT in listed_by_kind
+    assert GATEWAY_RESTART_AUTHORIZATION in listed_by_kind
+    assert listed_by_kind[TASK_CHECKPOINT]["id"] == checkpoint_gate["id"]
+    assert listed_by_kind[GATEWAY_RESTART_AUTHORIZATION]["id"] == restart_gate["id"]
+    assert listed_by_kind[TASK_CHECKPOINT]["status"] == "pending"
+    assert listed_by_kind[GATEWAY_RESTART_AUTHORIZATION]["status"] == "pending"
+    assert listed_by_kind[TASK_CHECKPOINT]["decision"] is None
+    assert listed_by_kind[GATEWAY_RESTART_AUTHORIZATION]["decision"] is None
+
+    # Deciding TASK_CHECKPOINT does not implicitly decide GATEWAY_RESTART_AUTHORIZATION
+    service.decide(checkpoint_gate["id"], caller=caller, decision="approved", reason="checkpoint approved")
+
+    assert service.approved(
+        org_id="acme", run_id="run-1", digest="a" * 64, task_id="T01", kind=TASK_CHECKPOINT
+    ) is True
+    assert service.approved(
+        org_id="acme", run_id="run-1", digest="a" * 64, task_id="T02", kind=GATEWAY_RESTART_AUTHORIZATION
+    ) is False
+
+    updated_listed = {item["kind"]: item for item in service.list(org_id="acme")}
+    assert updated_listed[TASK_CHECKPOINT]["status"] == "approved"
+    assert updated_listed[TASK_CHECKPOINT]["decision"]["human_principal"] == "user:joe"
+    assert updated_listed[GATEWAY_RESTART_AUTHORIZATION]["status"] == "pending"
+    assert updated_listed[GATEWAY_RESTART_AUTHORIZATION]["decision"] is None
+
+    # Separate decide() call is required for GATEWAY_RESTART_AUTHORIZATION
+    service.decide(restart_gate["id"], caller=caller, decision="approved", reason="restart authorized")
+
+    assert service.approved(
+        org_id="acme", run_id="run-1", digest="a" * 64, task_id="T02", kind=GATEWAY_RESTART_AUTHORIZATION
+    ) is True
+
+    final_listed = {item["kind"]: item for item in service.list(org_id="acme")}
+    assert final_listed[GATEWAY_RESTART_AUTHORIZATION]["status"] == "approved"
+    assert final_listed[GATEWAY_RESTART_AUTHORIZATION]["decision"]["human_principal"] == "user:joe"
+
+    # Distinct records exist in score_checkpoint_decisions
+    decisions = store.table("score_checkpoint_decisions").select("*").eq("org_id", "acme").execute().data or []
+    assert len(decisions) == 2
+    decisions_by_gate = {d["gate_id"]: d for d in decisions}
+    assert checkpoint_gate["id"] in decisions_by_gate
+    assert restart_gate["id"] in decisions_by_gate
+
+
+def test_gateway_restart_authorization_evidence_shape_validation(store):
+    service = GateService(store)
+    valid_evidence = {
+        "target_branch": "codex/score-v1-b01",
+        "deploy_target": "deploy/local",
+    }
+
+    # Missing target_branch
+    with pytest.raises(ScoreError, match="target_branch"):
+        service.request(
+            org_id="acme",
+            run_id="run-1",
+            digest="a" * 64,
+            task_id="T01",
+            kind=GATEWAY_RESTART_AUTHORIZATION,
+            evidence={"deploy_target": "deploy/local"},
+        )
+
+    # Empty target_branch
+    with pytest.raises(ScoreError, match="target_branch"):
+        service.request(
+            org_id="acme",
+            run_id="run-1",
+            digest="a" * 64,
+            task_id="T01",
+            kind=GATEWAY_RESTART_AUTHORIZATION,
+            evidence={"target_branch": "   ", "deploy_target": "deploy/local"},
+        )
+
+    # Non-str target_branch
+    with pytest.raises(ScoreError, match="target_branch"):
+        service.request(
+            org_id="acme",
+            run_id="run-1",
+            digest="a" * 64,
+            task_id="T01",
+            kind=GATEWAY_RESTART_AUTHORIZATION,
+            evidence={"target_branch": 123, "deploy_target": "deploy/local"},
+        )
+
+    # Missing deploy_target
+    with pytest.raises(ScoreError, match="deploy_target"):
+        service.request(
+            org_id="acme",
+            run_id="run-1",
+            digest="a" * 64,
+            task_id="T01",
+            kind=GATEWAY_RESTART_AUTHORIZATION,
+            evidence={"target_branch": "codex/score-v1-b01"},
+        )
+
+    # Empty deploy_target
+    with pytest.raises(ScoreError, match="deploy_target"):
+        service.request(
+            org_id="acme",
+            run_id="run-1",
+            digest="a" * 64,
+            task_id="T01",
+            kind=GATEWAY_RESTART_AUTHORIZATION,
+            evidence={"target_branch": "codex/score-v1-b01", "deploy_target": ""},
+        )
+
+    # Non-str deploy_target
+    with pytest.raises(ScoreError, match="deploy_target"):
+        service.request(
+            org_id="acme",
+            run_id="run-1",
+            digest="a" * 64,
+            task_id="T01",
+            kind=GATEWAY_RESTART_AUTHORIZATION,
+            evidence={"target_branch": "codex/score-v1-b01", "deploy_target": {"target": "deploy/local"}},
+        )
+
+    # Valid request with both succeeds
+    gate = service.request(
+        org_id="acme",
+        run_id="run-1",
+        digest="a" * 64,
+        task_id="T01",
+        kind=GATEWAY_RESTART_AUTHORIZATION,
+        evidence=valid_evidence,
+    )
+    assert gate["kind"] == GATEWAY_RESTART_AUTHORIZATION
+    assert gate["status"] == "pending"
+    assert gate["evidence"] == valid_evidence
 
 
 def test_human_issuance_route_persists_signed_grant(store, monkeypatch):
