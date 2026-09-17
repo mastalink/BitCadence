@@ -10,11 +10,18 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import sqlite3
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Mapping
+
+try:
+    from postgrest.exceptions import APIError as PostgrestAPIError
+except ImportError:  # pragma: no cover
+    class PostgrestAPIError(Exception):  # type: ignore[no-redef]
+        pass
 
 from mco.orchestrator.score_authority import GrantService
 from mco.orchestrator.scores import ScoreError
@@ -131,6 +138,26 @@ def _sha(value: Any) -> str:
 def _desired(observed: Mapping[str, Any], desired: Mapping[str, Any]) -> bool:
     """Desired-state checks are exact and intentionally not worker-defined."""
     return isinstance(observed, Mapping) and all(observed.get(k) == v for k, v in desired.items())
+
+
+def _is_duplicate_claim_error(exc: Exception) -> bool:
+    """Return True only if exc represents a primary key or unique conflict."""
+    if isinstance(exc, ValueError):
+        msg = str(exc).lower()
+        return "duplicate primary key" in msg or "duplicate unique constraint" in msg
+    if isinstance(exc, PostgrestAPIError):
+        code = getattr(exc, "code", None)
+        if code == "23505":
+            return True
+        msg = str(getattr(exc, "message", "") or "").lower()
+        details = str(getattr(exc, "details", "") or "").lower()
+        return "23505" in msg or "duplicate key" in msg or "unique constraint" in msg or "already exists" in details
+    if isinstance(exc, sqlite3.IntegrityError):
+        return "unique" in str(exc).lower() or "primary key" in str(exc).lower()
+    pgcode = getattr(exc, "pgcode", None) or getattr(exc, "sqlstate", None)
+    if pgcode == "23505":
+        return True
+    return False
 
 
 class ScoreAdapterExecutor:
@@ -290,7 +317,9 @@ class ScoreAdapterExecutor:
         try:
             self.db.table("score_recovery").insert(row).execute()
             return True
-        except Exception:
+        except Exception as exc:
+            if not _is_duplicate_claim_error(exc):
+                raise
             existing = self._recovery(op)
             if not existing:
                 raise

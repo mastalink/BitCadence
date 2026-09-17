@@ -19,6 +19,16 @@ from mco.orchestrator.score_adapters import (
 )
 from mco.orchestrator.score_authority import GrantService
 
+try:
+    from postgrest.exceptions import APIError as PostgrestAPIError
+except ImportError:  # pragma: no cover
+    class PostgrestAPIError(Exception):  # type: ignore[no-redef]
+        def __init__(self, data=None):
+            super().__init__(str(data))
+            self.data = data or {}
+            self.code = self.data.get("code")
+            self.message = self.data.get("message")
+
 
 NOW = datetime(2026, 9, 16, tzinfo=timezone.utc)
 KEY = b"s05-test-key-material-is-long-enough-0001"
@@ -544,3 +554,156 @@ def test_notify_adapter_enforces_quiet_policy_before_wrapper_invocation(store, g
     })
     assert run.execute(allowed)["status"] == "succeeded"
     assert calls == ["notify"]
+
+
+def test_claim_concurrency_serializes_and_proves_single_winner(tmp_path):
+    db_path = tmp_path / "concurrent_claim.db"
+    store1 = LocalStore(db_path)
+    store2 = LocalStore(db_path)
+    try:
+        def make_grants(st):
+            service = GrantService(st, verification_key=KEY)
+            service.issue({
+                "org_id": "default",
+                "run_id": "run-5",
+                "digest": DIGEST,
+                "actions": ["deploy:preview"],
+                "resources": ["via"],
+                "env": "test",
+                "not_before": "2026-09-15T00:00:00Z",
+                "expires_at": "2026-10-01T00:00:00Z",
+                "budget_cents": 0,
+                "human_principal": "joseph",
+            })
+            return service
+
+        grants1 = make_grants(store1)
+        grants2 = make_grants(store2)
+        run1 = executor(store1, grants1, state={}, invoke=lambda _op: AdapterResult(EffectStatus.SUCCEEDED, {}), compensate=lambda *_: None)
+        run2 = executor(store2, grants2, state={}, invoke=lambda _op: AdapterResult(EffectStatus.SUCCEEDED, {}), compensate=lambda *_: None)
+        op = operation()
+        barrier = threading.Barrier(2)
+        results = []
+
+        def worker(exec_inst, label):
+            barrier.wait()
+            res = exec_inst._claim(op, {"winner": label})
+            results.append((label, res))
+
+        t1 = threading.Thread(target=worker, args=(run1, "worker1"))
+        t2 = threading.Thread(target=worker, args=(run2, "worker2"))
+        t1.start()
+        t2.start()
+        t1.join(timeout=5)
+        t2.join(timeout=5)
+
+        assert not t1.is_alive()
+        assert not t2.is_alive()
+        outcomes = [r[1] for r in results]
+        assert sorted(outcomes) == [False, True]
+
+        rows = store1.table("score_recovery").select("*").execute().data
+        assert len(rows) == 1
+        assert rows[0]["approval_or_attempt_id"] == op.id
+        assert rows[0]["decision"] == "pending"
+    finally:
+        store1.close()
+        store2.close()
+
+
+def test_claim_does_not_swallow_unrelated_backend_error_when_recovery_row_exists(store, grants):
+    run = executor(store, grants, state={}, invoke=lambda _op: AdapterResult(EffectStatus.SUCCEEDED, {}), compensate=lambda *_: None)
+    op = operation()
+
+    store.table("score_recovery").insert({
+        "approval_or_attempt_id": op.id,
+        "org_id": op.org_id,
+        "uncertain_effect": {"prior": True},
+        "decision": "pending",
+    }).execute()
+
+    orig_table = store.table
+
+    def mocked_table(name):
+        q = orig_table(name)
+        if name == "score_recovery":
+            orig_insert = q.insert
+
+            def mocked_insert(payload):
+                iq = orig_insert(payload)
+
+                def failing_execute():
+                    raise RuntimeError("transient backend connection reset")
+
+                iq.execute = failing_execute
+                return iq
+
+            q.insert = mocked_insert
+        return q
+
+    store.table = mocked_table
+    try:
+        with pytest.raises(RuntimeError, match="transient backend connection reset"):
+            run._claim(op, {"new": True})
+    finally:
+        store.table = orig_table
+
+
+def test_claim_backend_exception_narrowing(store, grants):
+    run = executor(store, grants, state={}, invoke=lambda _op: AdapterResult(EffectStatus.SUCCEEDED, {}), compensate=lambda *_: None)
+    op = operation()
+
+    store.table("score_recovery").insert({
+        "approval_or_attempt_id": op.id,
+        "org_id": op.org_id,
+        "uncertain_effect": {"prior": True},
+        "decision": "pending",
+    }).execute()
+
+    orig_table = store.table
+
+    def set_insert_failure(exc_factory):
+        def mocked_table(name):
+            q = orig_table(name)
+            if name == "score_recovery":
+                orig_insert = q.insert
+
+                def mocked_insert(payload):
+                    iq = orig_insert(payload)
+
+                    def failing_execute():
+                        raise exc_factory()
+
+                    iq.execute = failing_execute
+                    return iq
+
+                q.insert = mocked_insert
+            return q
+
+        store.table = mocked_table
+
+    try:
+        # Postgres 23505 unique violation -> recognized as duplicate key conflict, returns False
+        set_insert_failure(lambda: PostgrestAPIError({
+            "code": "23505",
+            "message": 'duplicate key value violates unique constraint "score_recovery_pkey"',
+            "details": f"Key (approval_or_attempt_id)=({op.id}) already exists.",
+        }))
+        assert run._claim(op, {"test": "pg_dup"}) is False
+
+        # Postgres unrelated error (e.g. 42P01 table missing) -> re-raised
+        set_insert_failure(lambda: PostgrestAPIError({
+            "code": "42P01",
+            "message": 'relation "score_recovery" does not exist',
+        }))
+        with pytest.raises(PostgrestAPIError) as exc_info:
+            run._claim(op, {"test": "pg_err"})
+        assert exc_info.value.code == "42P01"
+
+        # Non-duplicate ValueError -> re-raised
+        set_insert_failure(lambda: ValueError("Unrelated validation failure"))
+        with pytest.raises(ValueError, match="Unrelated validation failure"):
+            run._claim(op, {"test": "val_err"})
+    finally:
+        store.table = orig_table
+
