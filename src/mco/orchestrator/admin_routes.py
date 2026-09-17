@@ -282,6 +282,12 @@ SETTING_GROUPS = {
                                       "label": "Maximum reroutes per job before escalating to a human",
                                       "placeholder": "2"},
     },
+    "score": {
+        "MCO_SCORE_SWEEP_SECONDS": {"type": "text",
+                                    "label": "Advance score runs from the gateway every (seconds; 0 = off, "
+                                             "runs only move when someone types `mco score tick`)",
+                                    "placeholder": "0"},
+    },
     "observability": {
         "MCO_METRICS_TOKEN": {"type": "secret",
                               "label": "Protect /metrics with a bearer token (blank = open, like /healthz)"},

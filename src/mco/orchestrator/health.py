@@ -27,6 +27,8 @@ def maintenance_once():
 
 @asynccontextmanager
 async def lifespan(app):
+    from mco.orchestrator import score_sweep
+
     app.state.maintenance_last_ok = None
     app.state.maintenance_error = None
     async def maintain():
@@ -40,9 +42,43 @@ async def lifespan(app):
                 logger.exception("Gateway maintenance failed")
             await asyncio.sleep(5)
     tasks = [asyncio.create_task(maintain()), asyncio.create_task(delivery_loop())]
+    # The conductor sweep is the only optional task here: with
+    # MCO_SCORE_SWEEP_SECONDS unset no task is created and no score database is
+    # opened, so upgrading a gateway cannot start it driving score runs.
+    interval = score_sweep.get_sweep_seconds()
+    app.state.score_sweep_seconds = interval
+    app.state.score_sweep_started = time.monotonic()
+    app.state.score_sweep_last_ok = None
+    app.state.score_sweep_error = None
+    app.state.score_sweep_failing_runs = []
+    sweep_task = None
+    sweep_stop = asyncio.Event()
+    if interval > 0:
+        logger.info("Conductor sweep enabled: advancing score runs every %ss", interval)
+        sweep_task = asyncio.create_task(score_sweep_loop(app, interval, sweep_stop))
     try:
         yield
     finally:
+        # The sweep is stopped by asking, not by cancelling, and it is stopped
+        # first. A tick runs in a worker thread via asyncio.to_thread, which
+        # cannot be cancelled: cancelling the await returns at once while the
+        # thread is still inside board.create, and shutdown would then return
+        # having left a dispatch row durably 'sending' with no job on the board
+        # for it - a restart's problem, invented by shutdown. Setting the flag
+        # lets the tick in flight commit; awaiting the task is what makes
+        # shutdown wait for it. Bounded, so a board that never answers cannot
+        # hold the gateway open, and none of it blocks the event loop.
+        if sweep_task is not None:
+            sweep_stop.set()
+            await asyncio.wait({sweep_task}, timeout=SCORE_SWEEP_DRAIN_SECONDS)
+            if sweep_task.done():
+                exc = sweep_task.exception()
+                if exc is not None:
+                    logger.warning("Conductor sweep stopped with %s", type(exc).__name__)
+            else:
+                logger.warning("Conductor sweep did not drain within %ss; cancelling it",
+                               SCORE_SWEEP_DRAIN_SECONDS)
+                tasks.append(sweep_task)
         for task in tasks:
             task.cancel()
         for task in tasks:
@@ -53,6 +89,10 @@ async def lifespan(app):
 
 
 DELIVERY_SWEEP_SECONDS = 60
+# How long shutdown waits for a tick already in flight to commit before it gives
+# up and cancels. Long enough for a board call to finish, short enough that an
+# unresponsive board cannot stop the gateway from exiting.
+SCORE_SWEEP_DRAIN_SECONDS = 30
 
 
 async def delivery_once():
@@ -85,6 +125,81 @@ async def delivery_loop():
             logger.exception("Delivery sweep failed")
 
 
+async def score_sweep_once(conductor):
+    """One conductor sweep. Every tick is SQLite plus board HTTP, so it runs in a
+    thread - never inline on the event loop."""
+    from mco.orchestrator import score_sweep
+    return await asyncio.to_thread(score_sweep.sweep, conductor)
+
+
+async def score_sweep_loop(app, interval, stop=None):
+    """Advance score runs on a timer, the way delivery_loop retries delivery.
+
+    Two kinds of failure, kept apart on purpose. A failure of the sweep *itself*
+    (no credential, an unreadable database) clears the cached conductor, sets
+    ``score_sweep_error`` and makes /readyz say not ready - the gateway is
+    advancing nothing. A failure of one *run* is recorded in
+    ``score_sweep_failing_runs`` and logged, but leaves the sweep healthy,
+    because the other runs did advance.
+
+    ``stop`` is how shutdown ends this loop without stranding a tick. Cancelling
+    would return while the worker thread was still mid ``board.create``; setting
+    the flag instead lets the tick in flight finish and be recorded, and the loop
+    returns at the next opportunity. ``asyncio.CancelledError`` is a
+    BaseException and so still travels through the ``except Exception`` below
+    untouched, for the bounded case where a drain has to be given up on.
+
+    The named failing runs come from ``result.failing``, which the sweep reads
+    out of the runs table rather than out of what this pass happened to touch: a
+    run that a sweep blocks is terminal, so the next pass cannot see it, and
+    readiness that forgot it would go silent precisely when the failure became
+    permanent.
+    """
+    from mco.orchestrator import score_sweep
+    conductor = None
+    while True:
+        # Before anything, not only after a tick: a stop set before the loop is
+        # first scheduled (shutdown racing startup, or a sweep disabled between
+        # task creation and its first run) must cost nothing. Opening the
+        # conductor creates the database and artifact root, and a tick would
+        # dispatch real jobs - side effects a gateway that is already stopping
+        # has no business creating.
+        if stop is not None and stop.is_set():
+            return
+        try:
+            if conductor is None:
+                conductor = await asyncio.to_thread(score_sweep.open_conductor)
+            result = await score_sweep_once(conductor)
+            app.state.score_sweep_last_ok = time.monotonic()
+            app.state.score_sweep_error = None
+            app.state.score_sweep_failing_runs = sorted(result.failing)
+            if not result.quiet:
+                logger.info("Conductor sweep: %s", result.describe())
+        except Exception as exc:
+            conductor = None
+            app.state.score_sweep_error = type(exc).__name__
+            logger.exception("Conductor sweep failed")
+        # Checked here, not only inside the sleep: a stop asked for while the
+        # tick above was in flight has already been honoured by waiting for it,
+        # and returning now is what lets shutdown finish.
+        if stop is not None and stop.is_set():
+            return
+        if await _sleep_until(interval, stop):
+            return
+
+
+async def _sleep_until(interval, stop) -> bool:
+    """Wait out the interval; return True as soon as a stop has been asked for."""
+    if stop is None:
+        await asyncio.sleep(interval)
+        return False
+    try:
+        await asyncio.wait_for(stop.wait(), timeout=interval)
+        return True
+    except (asyncio.TimeoutError, TimeoutError):
+        return False
+
+
 async def readyz(request: Request):
     from mco.orchestrator.routes import get_db_client, decorate_presence, get_offline_after_seconds
     from mco.config import get_config
@@ -100,6 +215,25 @@ async def readyz(request: Request):
     if hasattr(request.app.state, "maintenance_last_ok"):
         checks["maintenance"] = {"ok": last is not None and time.monotonic() - last < 30,
                                   "error": request.app.state.maintenance_error}
+    interval = getattr(request.app.state, "score_sweep_seconds", 0) or 0
+    if interval > 0:
+        # Measured from startup, not from the first success: a sweep that never
+        # completes one pass must go stale rather than stay silently "ok".
+        swept = getattr(request.app.state, "score_sweep_last_ok", None)
+        since = swept if swept is not None else getattr(request.app.state, "score_sweep_started", None)
+        error = getattr(request.app.state, "score_sweep_error", None)
+        checks["score_sweep"] = {
+            "ok": error is None and since is not None and time.monotonic() - since < 3 * interval + 30,
+            "error": error,
+            "interval_seconds": interval,
+            # Runs that are stuck right now, read from the conductor database
+            # on every pass rather than remembered, so a run stays named for as
+            # long as it stays stuck. Visible, but not a reason to call the
+            # whole gateway unready: the rest of the sweep still ran.
+            "failing_runs": list(getattr(request.app.state, "score_sweep_failing_runs", [])),
+        }
+    else:
+        checks["score_sweep"] = {"ok": True, "configured": False}
     heartbeat = get_config().get("MCO_SCHEDULER_HEARTBEAT_FILE")
     if heartbeat:
         try:

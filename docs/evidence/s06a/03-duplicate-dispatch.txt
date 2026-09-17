@@ -1,0 +1,9 @@
+job 1852e1a7-9181-54e6-be29-dd74d7f62176
+  status in conductor db : submitted
+  board 'created' events : 1
+  -> rewound dispatch row to 'sending' (the conductor-crash window)
+  -> re-dispatch returned: ['1852e1a7-9181-54e6-be29-dd74d7f62176']
+  board 'created' events after re-dispatch : 1
+  board jobs with this id                  : 1
+  board jobs titled 'Score s06a-03-duplicate C01 work' : 1
+  job status / leased_by                   : completed / canary-worker-s06a

@@ -234,3 +234,32 @@ def test_single_job_read_respects_explicit_addressee(idempotent_api, instance, e
     assert http.post("/api/jobs", json={**PAYLOAD, "target_agent_id": "collector-a"}).status_code == 200
     app.dependency_overrides[require_agent] = lambda: {**AGENT, "instance_id": instance, "role": "collector"}
     assert http.get(f"/api/jobs/{OPERATION_ID}").status_code == expected
+def test_missing_column_failure_does_not_silently_fall_back_to_random_id(idempotent_api, monkeypatch):
+    http, store, broadcast, _app = idempotent_api
+
+    class MissingColumnStore:
+        def table(self, name):
+            class MissingColumnTable:
+                def insert(self, data):
+                    class MissingColumnQuery:
+                        def execute(self):
+                            raise RuntimeError("PGRST204: Could not find the 'create_intent_hash' column")
+                    return MissingColumnQuery()
+                def select(self, *args):
+                    class SelectQuery:
+                        def eq(self, *args):
+                            return self
+                        def limit(self, *args):
+                            return self
+                        def execute(self):
+                            class Result:
+                                data = []
+                            return Result()
+                    return SelectQuery()
+            return MissingColumnTable()
+
+    monkeypatch.setattr(routes, "get_db_client", lambda: MissingColumnStore())
+    response = http.post("/api/jobs", json=PAYLOAD)
+    assert response.status_code == 500
+    assert "create_intent_hash" in response.json()["detail"]
+    assert broadcast.await_count == 0

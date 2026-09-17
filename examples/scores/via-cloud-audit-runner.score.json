@@ -1,0 +1,42 @@
+{
+  "score_version": 1,
+  "id": "via-cloud-audit-runner",
+  "revision": 1,
+  "objective": "Continuously refresh a fixed, evidence-backed VIA cloud inventory without a local runtime dependency.",
+  "constraints": [
+    "Cloud-only scheduled execution; no interactive credential is deployed.",
+    "Read-only inventory and sanitized evidence append only.",
+    "No deployment, IAM, secret, service-control, schedule-data, or arbitrary-command authority.",
+    "Completion of an audit is not production readiness or launch approval."
+  ],
+  "budget_cents": 0,
+  "max_parallel": 1,
+  "launch_requires": [
+    "G01-audit"
+  ],
+  "tasks": [
+    {
+      "id": "G01-audit",
+      "goal": "G01",
+      "title": "Refresh fixed VIA cloud inventory evidence",
+      "instructions": "Run only the deployed fixed-function cloud audit. Persist a sanitized report, preserve explicit unknowns, and never accept trigger input as an AWS command or URL.",
+      "role": "score-auditor",
+      "review_role": "score-review",
+      "depends_on": [],
+      "resources": [
+        "via-readonly-audit"
+      ],
+      "capabilities": [
+        "cloud:inspect",
+        "evidence:write"
+      ],
+      "evidence": [
+        "audit_report"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 90,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    }
+  ]
+}
