@@ -92,13 +92,22 @@ def test_concurrent_planners_create_one_intent(setup):
 @pytest.mark.parametrize("mutation",[
     lambda s:s.update(budget_cents=1),
     lambda s:s["tasks"][0].update(capabilities=["cloud:change"]),
-    lambda s:s["tasks"][0].update(checkpoint={"id":"x","reason":"human"}),
+    lambda s:s["tasks"][0].update(max_cost_cents=100),
 ])
 def test_authority_rejected(tmp_path,mutation):
     s=score();mutation(s)
     b=ScoreBridge(tmp_path/"state.db",tmp_path/"artifacts")
     with pytest.raises(ScoreError):
         b.initialize("r",s,principal="c",org="default",targets={"auditor":"a","reviewer":"b"},credential_hash="hash")
+
+
+def test_checkpointed_task_initializes(tmp_path):
+    s = score()
+    s["tasks"][0].update(checkpoint={"id": "pause_1", "reason": "human inspection"})
+    b = ScoreBridge(tmp_path / "state.db", tmp_path / "artifacts")
+    b.initialize("r", s, principal="c", org="default", targets={"auditor": "a", "reviewer": "b"}, credential_hash="hash")
+    status = b.status("r")
+    assert status["status"] == "running"
 
 
 def test_changed_identity_rejected_before_network(setup):

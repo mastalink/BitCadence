@@ -62,10 +62,13 @@ class Conductor:
     """Drives one Score run on a board. Owns no policy of its own."""
 
     def __init__(self, bridge: ScoreBridge, board: GatewayBoard, *,
-                 sleep: Callable[[float], Any] = time.sleep):
+                 sleep: Callable[[float], Any] = time.sleep,
+                 gate_service=None):
         self.bridge = bridge
         self.board = board
         self._sleep = sleep
+        if gate_service is not None:
+            self.bridge.gate_service = gate_service
 
     # ── state ────────────────────────────────────────────────────────────
 
@@ -78,11 +81,14 @@ class Conductor:
                 "SELECT event,detail,at FROM events WHERE run=? ORDER BY seq DESC LIMIT 10", (run_id,))]
         score = json.loads(run["definition"])
         accepted = {r["task"] for r in rows if r["phase"] == "review" and r["status"] == "accepted"}
+        waiting_on_gate = [r["task"] for r in rows if r["status"] == "waiting_on_gate"]
         return {
             "run_id": run_id,
             "score_id": score["id"],
             "digest": run["digest"],
             "status": run["status"],
+            "gated": bool(waiting_on_gate),
+            "waiting_on_gate": waiting_on_gate,
             "tasks_total": len(score["tasks"]),
             "tasks_accepted": sorted(accepted),
             "launch_requires": score["launch_requires"],
@@ -112,7 +118,7 @@ class Conductor:
         try:
             with self.bridge.tx() as db:
                 run = self.bridge.run(db, run_id)
-                if run["status"] != "running":
+                if run["status"] not in ("running", "waiting_on_gate"):
                     return
                 db.execute("UPDATE runs SET status='blocked' WHERE id=?", (run_id,))
                 self.bridge.event(db, run_id, "tick_blocked", {"stage": stage, "reason": reason})
@@ -190,8 +196,8 @@ class Conductor:
             self._sleep(interval)
 
 
-def open_bridge(database: str | Path, artifact_root: str | Path) -> ScoreBridge:
-    return ScoreBridge(str(database), str(artifact_root))
+def open_bridge(database: str | Path, artifact_root: str | Path, gate_service=None) -> ScoreBridge:
+    return ScoreBridge(str(database), str(artifact_root), gate_service=gate_service)
 
 
 def start_run(bridge: ScoreBridge, *, run_id: str, score_path: str | Path, principal: str,

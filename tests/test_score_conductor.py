@@ -9,8 +9,10 @@ from pathlib import Path
 
 import pytest
 
+from mco.localstore import LocalStore
 from mco.orchestrator.score_canary_worker import CanaryContractError, review, work
 from mco.orchestrator.score_conductor import Conductor, TickResult, start_run, open_bridge
+from mco.orchestrator.score_policy import GateService
 from mco.orchestrator.scores import ScoreError
 
 CANARY = Path(__file__).resolve().parents[1] / "examples" / "scores" / "via-score-conductor-canary.score.json"
@@ -278,3 +280,100 @@ class TestCanaryHandlers:
 def test_tick_result_describes_itself():
     assert "planned=2" in TickResult("r", "running", planned=["a", "b"]).describe()
     assert TickResult("r", "running").idle is True
+
+
+class TestGateConductor:
+    @pytest.fixture
+    def gate_setup(self, tmp_path):
+        store = LocalStore(tmp_path / "gates.db")
+        gate_service = GateService(store)
+        bridge = open_bridge(tmp_path / "runs.db", tmp_path / "artifacts", gate_service=gate_service)
+        board = FakeBoard()
+        conductor = Conductor(bridge, board, sleep=lambda _s: None, gate_service=gate_service)
+
+        score_def = json.loads(CANARY.read_text(encoding="utf-8"))
+        score_def["tasks"][0]["checkpoint"] = {"id": "gate_c01", "reason": "Human gate required"}
+        score_path = tmp_path / "gated.score.json"
+        score_path.write_text(json.dumps(score_def), encoding="utf-8")
+
+        caller = {"org_id": "default", "instance_id": "user:operator", "auth_method": "session"}
+        yield conductor, gate_service, score_path, caller
+        store.close()
+
+    def test_checkpointed_task_stays_undecided_without_dispatching(self, gate_setup):
+        conductor, gate_service, score_path, caller = gate_setup
+        run = "run-undecided"
+        start_run(conductor.bridge, run_id=run, score_path=score_path, principal="score-conductor-1",
+                  org="default", targets=TARGETS, credential_hash=conductor.board.identity)
+
+        res1 = conductor.tick(run)
+        assert len(res1.dispatched) == 0
+        status = conductor.status(run)
+        assert status["status"] == "waiting_on_gate"
+        assert status["gated"] is True
+        assert status["waiting_on_gate"] == ["C01"]
+        assert len(conductor.board.jobs) == 0
+
+        # Repeated tick while undecided remains in waiting_on_gate and does not dispatch
+        res2 = conductor.tick(run)
+        assert len(res2.dispatched) == 0
+        assert conductor.status(run)["status"] == "waiting_on_gate"
+        assert len(conductor.board.jobs) == 0
+
+    def test_checkpointed_task_dispatches_after_approval_and_completes(self, gate_setup):
+        conductor, gate_service, score_path, caller = gate_setup
+        run = "run-approved"
+        start_run(conductor.bridge, run_id=run, score_path=score_path, principal="score-conductor-1",
+                  org="default", targets=TARGETS, credential_hash=conductor.board.identity)
+
+        conductor.tick(run)
+        assert conductor.status(run)["status"] == "waiting_on_gate"
+        assert len(conductor.board.jobs) == 0
+
+        # Operator approves the gate
+        gates = gate_service.list(org_id="default")
+        assert len(gates) == 1
+        gate_service.decide(gates[0]["id"], caller=caller, decision="approve", reason="Approved by operator")
+
+        # Next tick plans and dispatches
+        res = conductor.tick(run)
+        assert len(res.dispatched) == 1
+        work_job = res.dispatched[0]
+        assert work_job in conductor.board.jobs
+        assert conductor.status(run)["status"] == "running"
+        assert conductor.status(run)["gated"] is False
+
+        # Work and review complete to accepted
+        _do_work(conductor, run, work_job)
+        conductor.tick(run)
+        planned_review = conductor.tick(run)
+        review_job = planned_review.dispatched[0]
+        _do_review(conductor, review_job)
+        conductor.tick(run)
+        assert conductor.status(run)["status"] == "accepted"
+
+    def test_checkpointed_task_permanently_blocked_on_reject(self, gate_setup):
+        conductor, gate_service, score_path, caller = gate_setup
+        run = "run-rejected"
+        start_run(conductor.bridge, run_id=run, score_path=score_path, principal="score-conductor-1",
+                  org="default", targets=TARGETS, credential_hash=conductor.board.identity)
+
+        conductor.tick(run)
+        gates = gate_service.list(org_id="default")
+        assert len(gates) == 1
+
+        # Operator rejects the gate
+        gate_service.decide(gates[0]["id"], caller=caller, decision="reject", reason="Rejected by security")
+
+        # Conductor ticks: sees rejection, permanently blocks run
+        conductor.tick(run)
+        status = conductor.status(run)
+        assert status["status"] == "blocked"
+        assert len(conductor.board.jobs) == 0
+
+        # Subsequent ticks never retry or advance
+        res = conductor.tick(run)
+        assert len(res.planned) == 0
+        assert len(res.dispatched) == 0
+        assert conductor.status(run)["status"] == "blocked"
+        assert len(conductor.board.jobs) == 0

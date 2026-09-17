@@ -44,15 +44,29 @@ class GatewayBoard:
 
 
 class ScoreBridge:
-    def __init__(self, database, artifact_root, clock=time.time):
+    def __init__(self, database, artifact_root, clock=time.time, gate_service=None):
         self.database = str(database)
         self.clock = clock
         self.root = Path(artifact_root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
+        self.gate_service = gate_service
         with self.tx() as db:
             db.execute("CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY, definition TEXT NOT NULL, digest TEXT NOT NULL, principal TEXT NOT NULL, credential_hash TEXT NOT NULL, org TEXT NOT NULL, targets TEXT NOT NULL, artifact_root TEXT NOT NULL, status TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS dispatch(run TEXT NOT NULL, task TEXT NOT NULL, phase TEXT NOT NULL, job_id TEXT UNIQUE NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL, evidence TEXT, deadline INTEGER NOT NULL, PRIMARY KEY(run,task,phase))")
             db.execute("CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, run TEXT NOT NULL, event TEXT NOT NULL, detail TEXT NOT NULL, at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')))")
+
+    def get_gate_service(self):
+        if self.gate_service is not None:
+            return self.gate_service
+        try:
+            from mco.orchestrator.routes import get_db_client
+            from mco.orchestrator.score_policy import GateService
+            client = get_db_client()
+            if client is not None:
+                return GateService(client)
+        except Exception:
+            pass
+        return None
 
     @contextmanager
     def tx(self):
@@ -89,7 +103,7 @@ class ScoreBridge:
         for t in score["tasks"]:
             if t["max_attempts"] != 1:
                 raise ScoreError("This bridge supports one work attempt; job lease recovery is gateway-owned")
-            if t["checkpoint"] or t["max_cost_cents"] or not set(t["capabilities"]) <= {"cloud:inspect", "repository:read", "evidence:write", "evidence:review"}:
+            if t["max_cost_cents"] or not set(t["capabilities"]) <= {"cloud:inspect", "repository:read", "evidence:write", "evidence:review"}:
                 raise ScoreError("Only read-only audit authority supported")
             for role in (t["role"], t["review_role"]):
                 if not isinstance(targets.get(role), str) or not targets[role]:
@@ -110,7 +124,7 @@ class ScoreBridge:
         self.check_deadlines(run_id)
         with self.tx() as db:
             run = self.run(db, run_id)
-            if run["status"] != "running":
+            if run["status"] not in ("running", "waiting_on_gate"):
                 return []
             score, targets = json.loads(run["definition"]), json.loads(run["targets"])
             rows = {(r["task"], r["phase"]): dict(r) for r in db.execute("SELECT * FROM dispatch WHERE run=?", (run_id,))}
@@ -118,10 +132,90 @@ class ScoreBridge:
             tasks = {t["id"]: t for t in score["tasks"]}
             active = {k for k, _ in rows if k not in accepted}
             created = []
+            gate_rejected = False
+
             for key, t in tasks.items():
                 if key in accepted or not set(t["depends_on"]) <= accepted:
                     continue
                 work = rows.get((key, "work"))
+
+                # Checkpoint gate evaluation for work phase
+                if t.get("checkpoint"):
+                    checkpoint = t["checkpoint"]
+                    gate_kind = checkpoint.get("id") or "task_checkpoint"
+                    gate_service = self.get_gate_service()
+
+                    if gate_service is None:
+                        if work is None:
+                            job_id = score_job_id(run["org"], run_id, run["digest"], key, "work")
+                            contract = dict(protocol="score-v1", score_id=score["id"], run_id=run_id, digest=run["digest"], task=key, attempt=1, phase="work", artifact_root=str(self.root), required_evidence=t["evidence"], review_of=None, constraints=score["constraints"])
+                            prompt = t["instructions"] + " Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets."
+                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract}, max_retries=0, requires_approval=False, priority=0)
+                            db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'waiting_on_gate',NULL,?)", (run_id, key, "work", job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
+                            self.event(db, run_id, "waiting_on_gate", {"task": key, "reason": "no gate service configured"})
+                            rows[(key, "work")] = {"task": key, "phase": "work", "job_id": job_id, "status": "waiting_on_gate"}
+                            active.add(key)
+                        continue
+
+                    evidence = {
+                        "checkpoint": checkpoint,
+                        "task_id": key,
+                        "role": t["role"],
+                        "reason": str(checkpoint.get("reason", "Human gate required")),
+                    }
+                    gate = gate_service.request(
+                        org_id=run["org"],
+                        run_id=run_id,
+                        digest=run["digest"],
+                        task_id=key,
+                        kind=gate_kind,
+                        evidence=evidence,
+                    )
+
+                    decision = gate_service.decision_for(
+                        org_id=run["org"],
+                        run_id=run_id,
+                        digest=run["digest"],
+                        task_id=key,
+                        kind=gate_kind,
+                    )
+
+                    if decision and decision.get("decision") == "rejected":
+                        job_id = work["job_id"] if work else score_job_id(run["org"], run_id, run["digest"], key, "work")
+                        if work is None:
+                            contract = dict(protocol="score-v1", score_id=score["id"], run_id=run_id, digest=run["digest"], task=key, attempt=1, phase="work", artifact_root=str(self.root), required_evidence=t["evidence"], review_of=None, constraints=score["constraints"])
+                            prompt = t["instructions"]
+                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract}, max_retries=0, requires_approval=False, priority=0)
+                            db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'rejected',NULL,?)", (run_id, key, "work", job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
+                        else:
+                            db.execute("UPDATE dispatch SET status='rejected' WHERE run=? AND task=? AND phase='work'", (run_id, key))
+                        db.execute("UPDATE runs SET status='blocked' WHERE id=?", (run_id,))
+                        self.event(db, run_id, "gate_rejected", {"task": key, "gate_id": gate["id"], "decision": decision})
+                        self.event(db, run_id, "run_blocked", {"reason": f"Gate rejected for task {key}"})
+                        gate_rejected = True
+                        break
+
+                    if not (decision and decision.get("decision") == "approved"):
+                        if work is None:
+                            job_id = score_job_id(run["org"], run_id, run["digest"], key, "work")
+                            contract = dict(protocol="score-v1", score_id=score["id"], run_id=run_id, digest=run["digest"], task=key, attempt=1, phase="work", artifact_root=str(self.root), required_evidence=t["evidence"], review_of=None, constraints=score["constraints"])
+                            prompt = t["instructions"] + " Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets."
+                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract}, max_retries=0, requires_approval=False, priority=0)
+                            db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'waiting_on_gate',NULL,?)", (run_id, key, "work", job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
+                            self.event(db, run_id, "waiting_on_gate", {"task": key, "gate_id": gate["id"]})
+                            rows[(key, "work")] = {"task": key, "phase": "work", "job_id": job_id, "status": "waiting_on_gate"}
+                            active.add(key)
+                        continue
+
+                    if work is not None and work["status"] == "waiting_on_gate":
+                        new_deadline = int(self.clock()) + t["timeout_seconds"]
+                        db.execute("UPDATE dispatch SET status='planned', deadline=? WHERE run=? AND task=? AND phase='work' AND status='waiting_on_gate'", (new_deadline, run_id, key))
+                        self.event(db, run_id, "gate_approved", {"task": key, "gate_id": gate["id"]})
+                        self.event(db, run_id, "planned", {"job_id": work["job_id"], "task": key, "phase": "work"})
+                        created.append(work["job_id"])
+                        work["status"] = "planned"
+                        continue
+
                 if work is None:
                     if len(active) >= score["max_parallel"] or any(set(t["resources"]) & set(tasks[k]["resources"]) for k in active):
                         continue
@@ -142,6 +236,17 @@ class ScoreBridge:
                 self.event(db, run_id, "planned", {"job_id": job_id, "task": key, "phase": phase})
                 created.append(job_id)
                 active.add(key)
+
+            if not gate_rejected:
+                dispatches = db.execute("SELECT status FROM dispatch WHERE run=?", (run_id,)).fetchall()
+                statuses = [r["status"] for r in dispatches]
+                has_waiting = any(s == "waiting_on_gate" for s in statuses)
+                has_active = any(s in ("planned", "sending", "submitted", "validated") for s in statuses)
+                if has_waiting and not has_active:
+                    db.execute("UPDATE runs SET status='waiting_on_gate' WHERE id=? AND status='running'", (run_id,))
+                elif not has_waiting or has_active:
+                    db.execute("UPDATE runs SET status='running' WHERE id=? AND status='waiting_on_gate'", (run_id,))
+
             return created
 
     @staticmethod
@@ -164,7 +269,7 @@ class ScoreBridge:
         with self.tx() as db:
             run = self.run(db, run_id)
             self.identity(run, board)
-            if run["status"] != "running":
+            if run["status"] not in ("running", "waiting_on_gate"):
                 return []
         if board.capabilities().get("create_with_id") != 1:
             raise ScoreError("Retry-safe gateway protocol unavailable")
@@ -199,7 +304,7 @@ class ScoreBridge:
         with self.tx() as db:
             run = self.run(db, run_id)
             expired = [r[0] for r in db.execute("SELECT job_id FROM dispatch WHERE run=? AND status IN ('planned','sending','submitted') AND deadline<=?", (run_id, int(self.clock())))]
-            if expired and run["status"] == "running":
+            if expired and run["status"] in ("running", "waiting_on_gate"):
                 db.execute("UPDATE runs SET status='blocked' WHERE id=?", (run_id,))
                 self.event(db, run_id, "deadline_exceeded", {"jobs": expired, "policy": "stop advancement; do not cancel unrelated work or resubmit"})
 
@@ -224,7 +329,7 @@ class ScoreBridge:
         with self.tx() as db:
             run = self.run(db, run_id)
             self.identity(run, board)
-            if run["status"] != "running":
+            if run["status"] not in ("running", "waiting_on_gate"):
                 return
             rows = [dict(r) for r in db.execute("SELECT * FROM dispatch WHERE run=? AND status='submitted'", (run_id,))]
         for row in rows:
@@ -264,11 +369,22 @@ class ScoreBridge:
         with self.tx() as db:
             run = self.run(db, run_id)
             accepted = {r[0] for r in db.execute("SELECT task FROM dispatch WHERE run=? AND phase='review' AND status='accepted'", (run_id,))}
-            if {t["id"] for t in json.loads(run["definition"])["tasks"]} <= accepted and run["status"] == "running":
+            if {t["id"] for t in json.loads(run["definition"])["tasks"]} <= accepted and run["status"] in ("running", "waiting_on_gate"):
                 db.execute("UPDATE runs SET status='accepted' WHERE id=?", (run_id,))
                 self.event(db, run_id, "score_accepted", {"digest": run["digest"]})
 
     def status(self, run_id):
         with self.tx() as db:
             run = self.run(db, run_id)
-            return dict(run_id=run_id, digest=run["digest"], status=run["status"], scope="read_only_audit_not_product_launch", dispatches=[dict(r) for r in db.execute("SELECT task,phase,job_id,status,evidence FROM dispatch WHERE run=?", (run_id,))], events=[dict(r) for r in db.execute("SELECT * FROM events WHERE run=? ORDER BY seq", (run_id,))])
+            dispatches = [dict(r) for r in db.execute("SELECT task,phase,job_id,status,evidence FROM dispatch WHERE run=?", (run_id,))]
+            waiting_on_gate = [r["task"] for r in dispatches if r["status"] == "waiting_on_gate"]
+            return dict(
+                run_id=run_id,
+                digest=run["digest"],
+                status=run["status"],
+                scope="read_only_audit_not_product_launch",
+                gated=bool(waiting_on_gate),
+                waiting_on_gate=waiting_on_gate,
+                dispatches=dispatches,
+                events=[dict(r) for r in db.execute("SELECT * FROM events WHERE run=? ORDER BY seq", (run_id,))]
+            )

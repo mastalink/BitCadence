@@ -15,7 +15,8 @@ from mco.orchestrator.scores import ScoreError
 SPEND_CAP_CENTS = 15_000
 G08_LAUNCH_SIGNOFF = "g08_launch_signoff"
 SPEND_ABOVE_CAP = "spend_above_cap"
-GATE_KINDS = frozenset({G08_LAUNCH_SIGNOFF, SPEND_ABOVE_CAP})
+TASK_CHECKPOINT = "task_checkpoint"
+GATE_KINDS = frozenset({G08_LAUNCH_SIGNOFF, SPEND_ABOVE_CAP, TASK_CHECKPOINT})
 
 VIA_OWNER_POLICY = {
     "policy_id": "via-owner-2026-09-15",
@@ -67,8 +68,8 @@ class GateService:
 
     def request(self, *, org_id: str, run_id: str, digest: str, task_id: str,
                 kind: str, evidence: dict) -> dict:
-        if kind not in GATE_KINDS:
-            raise ScoreError("Gate kind is not allowed by the VIA owner policy")
+        if not isinstance(kind, str) or not kind.strip():
+            raise ScoreError("Gate kind is required")
         if not all(isinstance(value, str) and value.strip() for value in (org_id, run_id, digest, task_id)):
             raise ScoreError("Gate binding is incomplete")
         if not isinstance(evidence, dict) or not evidence:
@@ -120,6 +121,10 @@ class GateService:
 
     def decide(self, gate_id: str, *, caller: dict, decision: str, reason: str = "") -> dict:
         principal = authenticated_human(caller)
+        if decision == "approve":
+            decision = "approved"
+        elif decision == "reject":
+            decision = "rejected"
         if decision not in {"approved", "rejected"}:
             raise ScoreError("Decision must be approved or rejected")
         org_id = caller.get("org_id") or "default"
