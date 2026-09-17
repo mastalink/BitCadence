@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
+import secrets
 
 import pytest
 from fastapi import FastAPI
@@ -311,3 +312,457 @@ def test_registry_row_cannot_forge_session_auth_over_http(store, monkeypatch):
     )
     assert response.status_code == 403
     assert store.table("score_checkpoint_decisions").select("*").execute().data == []
+
+
+def seed_human_session(
+    store,
+    *,
+    user_id: str = "usr-human-1",
+    email: str = "human@example.com",
+    role: str = "approver",
+    scopes: list[str] | None = None,
+    org_id: str = "default",
+    raw_token: str | None = None,
+    user_active: bool = True,
+    membership_active: bool = True,
+    expires_delta: timedelta = timedelta(hours=8),
+    revoked: bool = False,
+) -> str:
+    if raw_token is None:
+        raw_token = f"session-token-{user_id}-{secrets.token_hex(8)}"
+    store.table("users").insert({
+        "id": user_id,
+        "email": email,
+        "display_name": "Test Approver",
+        "active": user_active,
+    }).execute()
+    store.table("org_memberships").insert({
+        "id": f"mem-{user_id}",
+        "org_id": org_id,
+        "user_id": user_id,
+        "role": role,
+        "scopes": ["jobs:read", "jobs:write", "jobs:approve"] if scopes is None else scopes,
+        "active": membership_active,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }).execute()
+    now = datetime.now(timezone.utc)
+    sess = {
+        "id": f"sess-{user_id}",
+        "org_id": org_id,
+        "user_id": user_id,
+        "session_token_hash": hash_token(raw_token),
+        "expires_at": (now + expires_delta).isoformat(),
+    }
+    if revoked:
+        sess["revoked_at"] = now.isoformat()
+    store.table("user_sessions").insert(sess).execute()
+    return raw_token
+
+
+def test_e2e_real_session_decides_score_gate_happy_path(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    raw_token = seed_human_session(store)
+    gate = GateService(store).request(
+        org_id="default", run_id="run-e2e-1", digest="b" * 64,
+        task_id="G09", kind=G08_LAUNCH_SIGNOFF,
+        evidence={"report": "sha256:verified"},
+    )
+    app = FastAPI()
+    app.include_router(score_gates_router)
+    # Crucial: NO dependency_overrides on require_agent! The entire real auth chain runs.
+    client = TestClient(app, cookies={"mco_session": raw_token})
+    response = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        headers={"Origin": "http://testserver"},
+        json={"decision": "approved", "reason": "Approved by human operator"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["decision"]["decision"] == "approved"
+    assert body["decision"]["human_principal"] == "user:usr-human-1"
+    assert body["decision"]["reason"] == "Approved by human operator"
+
+    # Verify database persistence
+    decisions = store.table("score_checkpoint_decisions").select("*").execute().data
+    assert len(decisions) == 1
+    assert decisions[0]["human_principal"] == "user:usr-human-1"
+    assert decisions[0]["decision"] == "approved"
+
+    # Verify gate request status updated
+    gate_row = store.table("score_gate_requests").select("*").eq("id", gate["id"]).execute().data[0]
+    assert gate_row["status"] == "approved"
+
+
+def test_e2e_real_session_issues_score_grant_happy_path(store, monkeypatch):
+    from mco.orchestrator import routes, score_authority
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    monkeypatch.setattr(score_authority, "get_config", lambda: {"MCO_SCORE_GRANT_KEY": KEY.hex()})
+    raw_token = seed_human_session(store, user_id="usr-approver-2")
+
+    app = FastAPI()
+    app.include_router(score_grants_router)
+    # Crucial: NO dependency overrides on require_agent!
+    client = TestClient(app, cookies={"mco_session": raw_token})
+    response = client.post(
+        "/api/score/grants",
+        headers={"Origin": "http://testserver"},
+        json={
+            "run_id": "run-grant-e2e",
+            "digest": "c" * 64,
+            "actions": ["deploy"],
+            "resources": ["via-api"],
+            "environment": "production",
+            "not_before": "2026-09-15T00:00:00Z",
+            "expires_at": "2026-09-16T00:00:00Z",
+            "budget_cents": 15000,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["grant"]["human_principal"] == "user:usr-approver-2"
+
+    saved = store.table("score_grants").select("*").eq("digest", "c" * 64).execute().data[0]
+    assert saved["human_principal"] == "user:usr-approver-2"
+    assert len(saved["signature"]) == 64
+
+
+def test_e2e_real_session_via_oidc_callback_decides_score_gate(store, monkeypatch):
+    from starlette.middleware.sessions import SessionMiddleware
+    from mco.orchestrator import routes
+    import mco.orchestrator.identity_routes as identity_mod
+    import mco.editions as editions_mod
+    from tests.test_admin_routes import FakeConfig
+
+    cfg = FakeConfig(
+        MCO_SESSION_SECRET="test-session-secret-key-12345",
+        MCO_SESSION_COOKIE_SECURE="false",
+        MCO_EDITION="enterprise",
+    )
+    monkeypatch.setattr(identity_mod, "get_db_client", lambda: store)
+    monkeypatch.setattr(identity_mod, "get_config", lambda: cfg)
+    monkeypatch.setattr(editions_mod, "get_config", lambda: cfg)
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+
+    class FakeOIDCClient:
+        def __init__(self, claims):
+            self.claims = claims
+
+        async def authorize_access_token(self, request):
+            return {"userinfo": self.claims}
+
+    # Seed OIDC provider and role mapping directly in store
+    provider_id = "oidc-test-provider"
+    store.table("identity_providers").insert({
+        "id": provider_id,
+        "org_id": "default",
+        "name": "Test IdP",
+        "protocol": "oidc",
+        "issuer": "https://auth.example.com",
+        "client_id": "client-abc",
+        "enabled": True,
+        "jit_enabled": True,
+        "config": {"group_claim": "groups", "scopes": "openid email profile groups"},
+    }).execute()
+    store.table("role_mappings").insert({
+        "id": "rm-1",
+        "org_id": "default",
+        "identity_provider_id": provider_id,
+        "external_group": "Platform-Engineers",
+        "role": "approver",
+        "scopes": ["jobs:read", "jobs:write", "jobs:approve"],
+    }).execute()
+
+    monkeypatch.setattr(
+        identity_mod,
+        "_oidc_client",
+        lambda provider_row, db: FakeOIDCClient({
+            "sub": "oidc-sub-999",
+            "email": "auditor-alice@example.com",
+            "name": "Alice Operator",
+            "groups": ["Platform-Engineers"],
+        }),
+    )
+
+    app = FastAPI()
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key="test-session-secret-key-12345",
+        session_cookie="mco_oidc_state",
+        https_only=False,
+        same_site="lax",
+    )
+    app.include_router(identity_mod.auth_router)
+    app.include_router(score_gates_router)
+
+    gate = GateService(store).request(
+        org_id="default", run_id="run-oidc-e2e", digest="d" * 64,
+        task_id="G09", kind=G08_LAUNCH_SIGNOFF,
+        evidence={"report": "sha256:oidc-evidence"},
+    )
+
+    # NO dependency overrides! Real cookie issued by oidc_callback.
+    client = TestClient(app)
+
+    # 1. Real login callback issues real session cookie
+    cb_resp = client.get(
+        f"/api/auth/oidc/{provider_id}/callback",
+        follow_redirects=False,
+    )
+    assert cb_resp.status_code == 303
+    assert cb_resp.headers["location"] == "/console"
+    raw_cookie = client.cookies.get("mco_session")
+    assert raw_cookie
+
+    # 2. Real Score gate decision using that cookie
+    dec_resp = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        headers={"Origin": "http://testserver"},
+        json={"decision": "approved", "reason": "OIDC human approved"},
+    )
+    assert dec_resp.status_code == 200
+    body = dec_resp.json()
+    assert body["success"] is True
+    # Verify the human principal matches the JIT-provisioned user
+    user_row = store.table("users").select("*").eq("email", "auditor-alice@example.com").execute().data[0]
+    expected_principal = f"user:{user_row['id']}"
+    assert body["decision"]["human_principal"] == expected_principal
+    assert body["decision"]["decision"] == "approved"
+
+
+def test_e2e_real_session_negative_expired(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    raw_token = seed_human_session(store, expires_delta=timedelta(hours=-1))
+    gate = GateService(store).request(
+        org_id="default", run_id="run-neg-1", digest="e" * 64,
+        task_id="G09", kind=G08_LAUNCH_SIGNOFF,
+        evidence={"report": "sha256:exp"},
+    )
+    app = FastAPI()
+    app.include_router(score_gates_router)
+    client = TestClient(app, cookies={"mco_session": raw_token})
+    response = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        headers={"Origin": "http://testserver"},
+        json={"decision": "approved"},
+    )
+    assert response.status_code == 401
+    assert store.table("score_checkpoint_decisions").select("*").execute().data == []
+
+
+def test_e2e_real_session_negative_revoked(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    raw_token = seed_human_session(store, revoked=True)
+    gate = GateService(store).request(
+        org_id="default", run_id="run-neg-2", digest="f" * 64,
+        task_id="G09", kind=G08_LAUNCH_SIGNOFF,
+        evidence={"report": "sha256:rev"},
+    )
+    app = FastAPI()
+    app.include_router(score_gates_router)
+    client = TestClient(app, cookies={"mco_session": raw_token})
+    response = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        headers={"Origin": "http://testserver"},
+        json={"decision": "approved"},
+    )
+    assert response.status_code == 401
+    assert store.table("score_checkpoint_decisions").select("*").execute().data == []
+
+
+def test_e2e_real_session_negative_inactive_org_membership(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    raw_token = seed_human_session(store, membership_active=False)
+    gate = GateService(store).request(
+        org_id="default", run_id="run-neg-3", digest="1" * 64,
+        task_id="G09", kind=G08_LAUNCH_SIGNOFF,
+        evidence={"report": "sha256:inact-mem"},
+    )
+    app = FastAPI()
+    app.include_router(score_gates_router)
+    client = TestClient(app, cookies={"mco_session": raw_token})
+    response = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        headers={"Origin": "http://testserver"},
+        json={"decision": "approved"},
+    )
+    assert response.status_code == 401
+    assert store.table("score_checkpoint_decisions").select("*").execute().data == []
+
+
+def test_e2e_real_session_negative_inactive_user(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    raw_token = seed_human_session(store, user_active=False)
+    gate = GateService(store).request(
+        org_id="default", run_id="run-neg-4", digest="2" * 64,
+        task_id="G09", kind=G08_LAUNCH_SIGNOFF,
+        evidence={"report": "sha256:inact-usr"},
+    )
+    app = FastAPI()
+    app.include_router(score_gates_router)
+    client = TestClient(app, cookies={"mco_session": raw_token})
+    response = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        headers={"Origin": "http://testserver"},
+        json={"decision": "approved"},
+    )
+    assert response.status_code == 401
+    assert store.table("score_checkpoint_decisions").select("*").execute().data == []
+
+
+def test_e2e_real_session_negative_csrf_cross_site(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    raw_token = seed_human_session(store)
+    gate = GateService(store).request(
+        org_id="default", run_id="run-neg-5", digest="3" * 64,
+        task_id="G09", kind=G08_LAUNCH_SIGNOFF,
+        evidence={"report": "sha256:csrf"},
+    )
+    app = FastAPI()
+    app.include_router(score_gates_router)
+    client = TestClient(app, cookies={"mco_session": raw_token})
+    response = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        headers={
+            "sec-fetch-site": "cross-site",
+            "Origin": "http://testserver",
+        },
+        json={"decision": "approved"},
+    )
+    assert response.status_code == 403
+    assert "Cross-site session request denied" in response.text
+    assert store.table("score_checkpoint_decisions").select("*").execute().data == []
+
+
+def test_e2e_real_session_negative_csrf_origin_mismatch(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    raw_token = seed_human_session(store)
+    gate = GateService(store).request(
+        org_id="default", run_id="run-neg-6", digest="4" * 64,
+        task_id="G09", kind=G08_LAUNCH_SIGNOFF,
+        evidence={"report": "sha256:mismatch"},
+    )
+    app = FastAPI()
+    app.include_router(score_gates_router)
+    client = TestClient(app, cookies={"mco_session": raw_token})
+
+    # 1. Origin header from untrusted third party
+    resp_evil = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        headers={"Origin": "https://evil-attacker.com"},
+        json={"decision": "approved"},
+    )
+    assert resp_evil.status_code == 403
+    assert "Session request origin did not match" in resp_evil.text
+
+    # 2. Missing Origin header on mutation
+    resp_missing = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        json={"decision": "approved"},
+    )
+    assert resp_missing.status_code == 403
+    assert "Session request origin did not match" in resp_missing.text
+
+    assert store.table("score_checkpoint_decisions").select("*").execute().data == []
+
+
+def test_e2e_real_session_negative_insufficient_scope(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    raw_token = seed_human_session(
+        store,
+        role="viewer",
+        scopes=["jobs:read", "agents:read"],
+    )
+    gate = GateService(store).request(
+        org_id="default", run_id="run-neg-7", digest="5" * 64,
+        task_id="G09", kind=G08_LAUNCH_SIGNOFF,
+        evidence={"report": "sha256:viewer"},
+    )
+    app = FastAPI()
+    app.include_router(score_gates_router)
+    client = TestClient(app, cookies={"mco_session": raw_token})
+    response = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        headers={"Origin": "http://testserver"},
+        json={"decision": "approved"},
+    )
+    assert response.status_code == 403
+    assert "Token lacks required scope(s): jobs:approve" in response.text
+    assert store.table("score_checkpoint_decisions").select("*").execute().data == []
+
+
+def test_e2e_real_session_negative_org_tenant_isolation(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    raw_token = seed_human_session(store, org_id="tenant-a")
+    gate = GateService(store).request(
+        org_id="tenant-b", run_id="run-neg-8", digest="6" * 64,
+        task_id="G09", kind=G08_LAUNCH_SIGNOFF,
+        evidence={"report": "sha256:tenant"},
+    )
+    app = FastAPI()
+    app.include_router(score_gates_router)
+    client = TestClient(app, cookies={"mco_session": raw_token})
+    response = client.post(
+        f"/api/score/gates/{gate['id']}/decision",
+        headers={"Origin": "http://testserver"},
+        json={"decision": "approved"},
+    )
+    assert response.status_code == 409
+    assert "Gate not found" in response.text
+    assert store.table("score_checkpoint_decisions").select("*").execute().data == []
+
+
+def test_e2e_real_session_issue_grant_negative_csrf_and_scopes(store, monkeypatch):
+    from mco.orchestrator import routes, score_authority
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    monkeypatch.setattr(score_authority, "get_config", lambda: {"MCO_SCORE_GRANT_KEY": KEY.hex()})
+
+    app = FastAPI()
+    app.include_router(score_grants_router)
+
+    grant_payload = {
+        "run_id": "run-neg-grant",
+        "digest": "7" * 64,
+        "actions": ["deploy"],
+        "resources": ["via-api"],
+        "environment": "production",
+        "not_before": "2026-09-15T00:00:00Z",
+        "expires_at": "2026-09-16T00:00:00Z",
+        "budget_cents": 5000,
+    }
+
+    # 1. CSRF cross-site rejected
+    valid_token = seed_human_session(store, user_id="usr-csrf-grant")
+    client_csrf = TestClient(app, cookies={"mco_session": valid_token})
+    resp_csrf = client_csrf.post(
+        "/api/score/grants",
+        headers={"sec-fetch-site": "cross-site", "Origin": "http://testserver"},
+        json=grant_payload,
+    )
+    assert resp_csrf.status_code == 403
+    assert "Cross-site session request denied" in resp_csrf.text
+
+    # 2. Insufficient scope rejected
+    viewer_token = seed_human_session(store, user_id="usr-viewer-grant", role="viewer", scopes=["jobs:read"])
+    client_viewer = TestClient(app, cookies={"mco_session": viewer_token})
+    resp_viewer = client_viewer.post(
+        "/api/score/grants",
+        headers={"Origin": "http://testserver"},
+        json=grant_payload,
+    )
+    assert resp_viewer.status_code == 403
+    assert "Token lacks required scope(s): jobs:approve" in resp_viewer.text
+
+    # Assert no grant was persisted
+    assert store.table("score_grants").select("*").execute().data == []
+
