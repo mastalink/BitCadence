@@ -969,12 +969,14 @@ def test_allowed_paths_explicit_globstar_matches_at_any_depth():
     assert matches_allowed_paths("subdir/OTHER.md", ["**/README.md"]) is False
 
 
-def test_allowed_paths_top_level_pattern_matches_direct_children_only():
-    """(d) Plain top-level pattern like 'src/*.py' still matches direct children of src/."""
+def test_allowed_paths_top_level_pattern_matches_prefixed_files():
+    """(d) Plain pattern like 'src/*.py' matches files under src/ but excludes other prefixes."""
     assert matches_allowed_paths("src/service.py", ["src/*.py"]) is True
     assert matches_allowed_paths("src/app.py", ["src/*.py"]) is True
     assert matches_allowed_paths("service.py", ["src/*.py"]) is False
     assert matches_allowed_paths("other/service.py", ["src/*.py"]) is False
+    # Note: fnmatch translates '*' to '.*', so 'src/*.py' also matches deeper paths under src/
+    assert matches_allowed_paths("src/sub/deep.py", ["src/*.py"]) is True
 
 
 def test_adapter_staging_refuses_bare_filename_in_subdirectory(git_worktree):

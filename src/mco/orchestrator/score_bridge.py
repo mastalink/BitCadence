@@ -5,16 +5,25 @@ No production mutation, budgeted tasks or human-gate authorization supported.
 """
 import hashlib
 import json
+import logging
 import sqlite3
+import subprocess
 import time
 from contextlib import contextmanager
 from pathlib import Path
 
 from mco.orchestrator.score_adapters import Operation
 from mco.orchestrator.score_adapters_live import LiveScoreAdapterExecutor, LiveAdapterError, _run_git, verify_not_denied_branch
+from mco.orchestrator.score_authority import AuthorityError
 from mco.orchestrator.score_dispatcher import score_job_id
 from mco.orchestrator.score_policy import TASK_CHECKPOINT
 from mco.orchestrator.scores import ScoreError, ScoreIdentityError, digest, load_score
+
+logger = logging.getLogger("mco.orchestrator.score_bridge")
+
+
+class ScoreAuthorityError(ScoreError, AuthorityError):
+    """Authority error encountered during score execution."""
 
 
 def encoded(value):
@@ -333,12 +342,21 @@ class ScoreBridge:
                 if "repository:write" in t["capabilities"] and phase == "work":
                     expected_sha = (t.get("commit") or {}).get("expected_before_sha")
                     if not expected_sha:
-                        try:
-                            proc = _run_git(["rev-parse", "HEAD"], cwd=t["commit"]["worktree_path"])
-                            if proc.returncode == 0:
-                                expected_sha = proc.stdout.strip()
-                        except Exception:
-                            pass
+                        wt_path = (t.get("commit") or {}).get("worktree_path")
+                        if wt_path:
+                            try:
+                                proc = _run_git(["rev-parse", "HEAD"], cwd=wt_path)
+                                if proc.returncode == 0:
+                                    expected_sha = proc.stdout.strip()
+                                else:
+                                    logger.debug(
+                                        "Could not resolve HEAD in %s (exit %d): %s",
+                                        wt_path,
+                                        proc.returncode,
+                                        proc.stderr.strip(),
+                                    )
+                            except (subprocess.SubprocessError, OSError) as exc:
+                                logger.debug("Failed to run git rev-parse HEAD in worktree %s: %s", wt_path, exc)
                     if expected_sha:
                         contract["expected_before_sha"] = expected_sha
                 if pred_id is not None:
@@ -601,8 +619,15 @@ class ScoreBridge:
                                         break
                             if grant.get("human_principal"):
                                 owner_principal = grant["human_principal"]
-                        except Exception:
-                            pass
+                        except AuthorityError as exc:
+                            if "issued_grant_not_found" in str(exc):
+                                logger.debug("No issued grant found for run %s: using defaults", run_id)
+                            else:
+                                logger.warning("Authority error loading grant for run %s: %s", run_id, exc)
+                                raise ScoreAuthorityError(f"Invalid authority grant: {exc}") from exc
+                        except Exception as exc:
+                            logger.error("Unexpected error loading grant for run %s: %s", run_id, exc)
+                            raise ScoreError(f"Unexpected error loading grant: {exc}") from exc
 
                     op = Operation(
                         org_id=run["org"],
