@@ -585,6 +585,63 @@ def test_e2e_real_session_issues_score_grant_happy_path(store, monkeypatch):
     assert len(saved["signature"]) == 64
 
 
+def test_score_grants_console_authenticated_session(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    raw_token = seed_human_session(store, user_id="usr-approver-console")
+
+    app = FastAPI()
+    app.include_router(score_grants_router)
+    client = TestClient(app, cookies={"mco_session": raw_token})
+    response = client.get("/api/score/grants/console")
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
+    html = response.text
+    assert "<!doctype html>" in html.lower()
+    assert "grant-form" in html
+    assert "run_id" in html
+    assert "digest" in html
+    assert "actions" in html
+    assert "resources" in html
+    assert "environment" in html
+    assert "not_before" in html
+    assert "expires_at" in html
+    assert "budget_cents" in html
+
+
+def test_score_grants_console_unauthenticated_rejected(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+
+    app = FastAPI()
+    app.include_router(score_grants_router)
+    client = TestClient(app)
+    response = client.get("/api/score/grants/console")
+    assert response.status_code == 401
+
+
+def test_score_grants_console_agent_bearer_token_rejected(store, monkeypatch):
+    from mco.orchestrator import routes
+    monkeypatch.setattr(routes, "get_db_client", lambda: store)
+    token = "agent-console-token"
+    store.table("agent_registry").insert({
+        "id": "agent-approver",
+        "instance_id": "agent:bot-1",
+        "role": "worker",
+        "auth_token_hash": hash_token(token),
+        "scopes": ["jobs:approve"],
+    }).execute()
+
+    app = FastAPI()
+    app.include_router(score_grants_router)
+    client = TestClient(app)
+    response = client.get(
+        "/api/score/grants/console",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+
+
 def test_e2e_real_session_via_oidc_callback_decides_score_gate(store, monkeypatch):
     from starlette.middleware.sessions import SessionMiddleware
     from mco.orchestrator import routes
