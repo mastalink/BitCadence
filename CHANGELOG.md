@@ -5,6 +5,24 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 ## [Unreleased]
 
 ### Added
+- **B01: BitCadence can now build itself, under governance.** Score v1 gained a
+  `repository:write` capability: a Score task can commit real changes to an
+  isolated, disposable git worktree/branch — never `main`/`deploy/local`, never
+  pushed or merged by the automation itself — enforced by a hardcoded denylist,
+  an exact-parent-commit check, and a path allowlist inside the adapter, not
+  just operator discipline. Every commit requires a human-issued, signed grant
+  (`GrantService`) scoped to the exact run and score digest; `authenticated_human()`
+  categorically refuses any agent bearer token, so no automation can grant
+  itself write authority. On 2026-09-18 this produced BitCadence's first real
+  (non-adversarial-proof) self-authored commit: antigravity wrote the change,
+  claude independently reviewed and accepted it, a human issued the grant. Two
+  pieces of tooling replace what was a one-off hand-run script for that first
+  run: `mco score start`/`mco score tick --live-repository-write` (opt-in;
+  every other invocation stays exactly as dark-by-default as before), and a
+  real operator console at `GET /api/score/grants/console` for issuing grants
+  from a form instead of a hand-pasted DevTools snippet. A blocked/failed Score
+  run has no resume path by design — governance state only ever moves forward
+  or stops, never silently retries.
 - **Lease TTL adapts to the work instead of one flat window.** The default lease
   (`MCO_LEASE_TTL_SECONDS`) is raised from 15 minutes to one hour: careful work
   (a full review, a large refactor) routinely outlived 15 minutes, so a live
