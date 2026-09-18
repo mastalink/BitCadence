@@ -1120,10 +1120,18 @@ DEFAULT_SCORE_DB = Path.home() / ".mco" / "score-runs.db"
 DEFAULT_SCORE_ROOT = Path.home() / ".mco" / "score-artifacts"
 
 
-def _conductor(database: Path, root: Path):
+def _conductor(database: Path, root: Path, live_repository_write: bool = False):
     from mco.orchestrator.score_conductor import Conductor, board_for, open_bridge
     client = _gateway_client()
-    return Conductor(open_bridge(database, root), board_for(client)), client
+    live_executor = None
+    if live_repository_write:
+        from mco.orchestrator.routes import get_db_client
+        from mco.orchestrator.score_authority import GrantService
+        from mco.orchestrator.score_adapters_live import LiveScoreAdapterExecutor
+        db = get_db_client()
+        grant_svc = GrantService(db)
+        live_executor = LiveScoreAdapterExecutor(db=db, grant_service=grant_svc)
+    return Conductor(open_bridge(database, root, live_executor=live_executor), board_for(client)), client
 
 
 def _parse_targets(values: Optional[List[str]]) -> dict:
@@ -1146,11 +1154,21 @@ def score_start(
     org: str = typer.Option("default", "--org"),
     database: Path = typer.Option(DEFAULT_SCORE_DB, "--db"),
     root: Path = typer.Option(DEFAULT_SCORE_ROOT, "--artifact-root"),
+    live_repository_write: bool = typer.Option(
+        False,
+        "--live-repository-write",
+        help=(
+            "Enable live repository:write adapter execution. "
+            "Required on every tick of a run with repository:write tasks, not just start — "
+            "a human-issued grant (see POST /api/score/grants) must also authorize the run's "
+            "digest/run_id before any commit actually executes."
+        ),
+    ),
 ):
     """Initialize a run. Safe to repeat: identical policy and identities resume it."""
     from mco.orchestrator.score_conductor import start_run
 
-    conductor, client = _conductor(database, root)
+    conductor, client = _conductor(database, root, live_repository_write=live_repository_write)
     try:
         info = start_run(conductor.bridge, run_id=run_id, score_path=score_file,
                          principal=client.instance_id, org=org,
@@ -1171,9 +1189,19 @@ def score_tick(
     timeout: float = typer.Option(900.0, "--timeout"),
     database: Path = typer.Option(DEFAULT_SCORE_DB, "--db"),
     root: Path = typer.Option(DEFAULT_SCORE_ROOT, "--artifact-root"),
+    live_repository_write: bool = typer.Option(
+        False,
+        "--live-repository-write",
+        help=(
+            "Enable live repository:write adapter execution. "
+            "Required on every tick of a run with repository:write tasks, not just start — "
+            "a human-issued grant (see POST /api/score/grants) must also authorize the run's "
+            "digest/run_id before any commit actually executes."
+        ),
+    ),
 ):
     """Advance the run: plan what can start, dispatch it, accept finished work."""
-    conductor, _ = _conductor(database, root)
+    conductor, _ = _conductor(database, root, live_repository_write=live_repository_write)
     if not watch:
         result = conductor.tick(run_id)
         console.print(result.describe())
