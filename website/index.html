@@ -422,6 +422,22 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
       </div>
     </div>
     <div class="bento">
+      <div class="box indigo span3 sr">
+        <span class="tag">Governed self-build</span>
+        <h3>BitCadence can build itself now.</h3>
+        <p>A Score task can commit real code to an isolated, disposable branch —
+        never <code class="inline">main</code>, never pushed by the automation itself,
+        blocked by a hardcoded denylist and path allowlist, not just operator
+        discipline. Every commit needs a signed, human-issued grant scoped to that
+        exact run; an agent token can never satisfy the human-auth check, no matter
+        its permissions. On 2026-09-18 this shipped its first real commit: one agent
+        wrote it, a second independently reviewed it, a human authorized it.</p>
+        <div class="gate">
+          <span class="pill p1">antigravity builds</span>
+          <span class="arrow">→ claude reviews →</span>
+          <span class="pill p2">human grants</span>
+        </div>
+      </div>
       <div class="box span3 sr">
         <span class="tag">Human-in-the-loop</span>
         <h3>Approval gates</h3>
