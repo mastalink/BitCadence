@@ -1,7 +1,7 @@
 {
   "score_version": 1,
   "id": "via-cloud-launch",
-  "revision": 1,
+  "revision": 2,
   "objective": "Deliver an evidence-backed, cloud-only Lorain Android MVP, then gated regional/global expansion and recurring production operations.",
   "constraints": [
     "Cloud-only production; no Beast, Jetson or home-device dependency",
@@ -13,7 +13,9 @@
     "No production action without externally verified grants bound to this score digest.",
     "Preserve user work; use isolated worktrees, shared migration ownership, exact-head independent review.",
     "Checkpoint list is empty until the owner deliberately chooses human gates; missing external authority still blocks.",
-    "G14 represents operations setup and one accepted cycle, not the end of ongoing operations."
+    "G14 represents operations setup and one accepted cycle, not the end of ongoing operations.",
+    "This fourteen-goal file is the protected master roadmap, not the first executable slice; run via-cloud-repository-slice before any cloud-change implementation exists.",
+    "The cloud-change capability remains dark until a separately reviewed signer, manifest, invocation, recovery and human-gate lane passes adversarial proof."
   ],
   "budget_cents": 0,
   "max_parallel": 3,

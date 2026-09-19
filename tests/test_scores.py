@@ -213,6 +213,21 @@ def test_via_score_has_all_goals_no_invented_human_checkpoints():
     assert SandboxRun(value, "via-preview").ready() == []
 
 
+def test_via_repository_slice_is_bounded_and_executable_shape():
+    path = Path(__file__).parents[1] / "examples/scores/via-cloud-repository-slice.score.json"
+    value = load_score(path.read_text(encoding="utf-8"))
+    assert [t["id"] for t in value["tasks"]] == [
+        "G01-audit", "G02-repository", "G03-repository", "G04-repository"
+    ]
+    assert value["launch_requires"] == ["G04-repository"]
+    assert all(t["max_attempts"] == 1 for t in value["tasks"])
+    assert all("cloud:change" not in t["capabilities"] for t in value["tasks"])
+    writes = [t for t in value["tasks"] if "repository:write" in t["capabilities"]]
+    assert len(writes) == 3
+    assert all(t["commit"]["worktree_path"] in t["resources"] for t in writes)
+    assert all(t["role"] != t["review_role"] for t in value["tasks"])
+
+
 def test_on_reject_valid():
     value = score()
     fix_task = copy.deepcopy(value["tasks"][0])

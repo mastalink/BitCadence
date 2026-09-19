@@ -1,0 +1,168 @@
+{
+  "score_version": 1,
+  "id": "via-cloud-repository-slice",
+  "revision": 1,
+  "objective": "Advance the Lorain MVP through three governed repository commits while the production cloud-change lane remains dark.",
+  "constraints": [
+    "This slice cannot deploy, invoke AWS mutation APIs, alter production data, or publish schedules.",
+    "All repository writes occur only in the pre-created isolated VIA worktree and branch named in each commit contract.",
+    "Every builder is reviewed by a different role against the exact resulting commit.",
+    "No GitHub Actions, push, merge, grant issuance, or production activation is authorized by this document.",
+    "Unsupported, stale, blocked, or conflicting schedule facts remain explicit; no agent may type or invent parish times.",
+    "G08 Lorain launch approval and spend above 15000 cents per month remain human-only gates in the master roadmap.",
+    "Cloud change is a separate future capability and remains unavailable until its signed-approval lane passes independent adversarial review."
+  ],
+  "budget_cents": 0,
+  "max_parallel": 2,
+  "launch_requires": [
+    "G04-repository"
+  ],
+  "tasks": [
+    {
+      "id": "G01-audit",
+      "goal": "G01",
+      "title": "Verify the current cloud and repository baseline",
+      "instructions": "Read the current fixed G01 audit artifact and the VIA repository at the pinned base. Produce a redacted gap report that distinguishes deployed evidence, repository-only work, unknowns, and missing authority. Do not mutate AWS, repositories, grants, schedules, or source data. Acceptance: cite exact artifact and commit digests; identify any stale observation; confirm that the deployment adapter remains inert and verification-only.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [],
+      "resources": [
+        "via-readonly-audit"
+      ],
+      "capabilities": [
+        "repository:read",
+        "cloud:inspect",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "audit_report"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 3600,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G02-repository",
+      "goal": "G02",
+      "title": "Implement automatic Lorain campus and source discovery",
+      "instructions": "In the assigned isolated VIA worktree, close the highest-value verified gaps in automatic Lorain campus/source discovery. Work from official directory and first-party source evidence already represented in the repository. Do not type schedule facts or add a manual source list. Add focused tests for included, excluded, held, redirected, duplicate, and inaccessible sources. Return strict JSON {\"ready\": true} when the allowed-path changes and tests are ready for the conductor to commit.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [
+        "G01-audit"
+      ],
+      "resources": [
+        "C:/AI/via-score-option-c"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "commit": {
+        "worktree_path": "C:/AI/via-score-option-c",
+        "target_branch": "score/via-option-c-work",
+        "allowed_paths": [
+          "apps/api/src/discovery.ts",
+          "apps/api/src/source-discovery.ts",
+          "apps/api/src/domain.ts",
+          "apps/api/test/domain.test.ts",
+          "apps/api/test/ingestion.test.ts",
+          "docs/*"
+        ],
+        "commit_message": "feat(via): automate Lorain campus and source discovery",
+        "expected_before_sha": "fc6db79ab0d86929d088427aadc76b4f1b576b4a"
+      },
+      "evidence": [
+        "commit_sha"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 7200,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G03-repository",
+      "goal": "G03",
+      "title": "Harden the cloud ingestion worker contract in code",
+      "instructions": "Continue on the governed VIA branch after G02. Implement the repository-side scheduler, queue, fenced-worker, recovery, and budget behavior needed for cloud-only ingestion without applying infrastructure or using home endpoints. Prove duplicate delivery and worker interruption cannot duplicate accepted publication. Return strict JSON {\"ready\": true} only after focused tests pass. Do not deploy, push, merge, or invoke AWS mutation APIs.",
+      "role": "antigravity",
+      "review_role": "claude",
+      "depends_on": [
+        "G02-repository"
+      ],
+      "resources": [
+        "C:/AI/via-score-option-c"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "commit": {
+        "worktree_path": "C:/AI/via-score-option-c",
+        "target_branch": "score/via-option-c-work",
+        "allowed_paths": [
+          "apps/api/src/jobs.ts",
+          "apps/api/src/pipeline.ts",
+          "apps/api/src/ingestion-status.ts",
+          "apps/api/src/budget.ts",
+          "apps/api/test/ingestion.test.ts",
+          "infra/aws/*",
+          "docs/*"
+        ],
+        "commit_message": "feat(via): harden cloud ingestion worker contracts"
+      },
+      "evidence": [
+        "commit_sha"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 7200,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G04-repository",
+      "goal": "G04",
+      "title": "Implement bounded bulletin and feed collection",
+      "instructions": "Continue on the governed VIA branch after G03. Implement or harden permitted HTTP, feed, publisher, PDF, proxy-quarantine, and browser-escalation code with exact artifact preservation and explicit blocked outcomes. Tests must cover hostile redirects, byte/page limits, large bulletin streaming, destination 403, proxy 407, and 429 pacing. Do not bypass explicit access refusal and do not deploy. Return strict JSON {\"ready\": true} only after focused tests pass.",
+      "role": "codex",
+      "review_role": "antigravity",
+      "depends_on": [
+        "G03-repository"
+      ],
+      "resources": [
+        "C:/AI/via-score-option-c"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "commit": {
+        "worktree_path": "C:/AI/via-score-option-c",
+        "target_branch": "score/via-option-c-work",
+        "allowed_paths": [
+          "apps/api/src/fetcher.ts",
+          "apps/api/src/bulletins.ts",
+          "apps/api/src/proxy-pool.ts",
+          "apps/api/src/calendar-catalog.ts",
+          "apps/api/test/bulletins.test.ts",
+          "apps/api/test/proxy.test.ts",
+          "apps/api/test/calendar.test.ts",
+          "docs/*"
+        ],
+        "commit_message": "feat(via): bound bulletin and feed collection"
+      },
+      "evidence": [
+        "commit_sha"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 7200,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    }
+  ]
+}
