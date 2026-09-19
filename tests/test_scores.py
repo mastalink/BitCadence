@@ -228,6 +228,20 @@ def test_via_repository_slice_is_bounded_and_executable_shape():
     assert all(t["role"] != t["review_role"] for t in value["tasks"])
 
 
+def test_via_repository_continuation_avoids_exhausted_provider():
+    path = Path(__file__).parents[1] / "examples/scores/via-cloud-repository-continuation.score.json"
+    value = load_score(path.read_text(encoding="utf-8"))
+    assert [t["id"] for t in value["tasks"]] == [
+        "G02-repository", "G03-repository", "G04-repository",
+    ]
+    assert all(t["max_attempts"] == 1 for t in value["tasks"])
+    assert all("cloud:change" not in t["capabilities"] for t in value["tasks"])
+    assert all("claude" not in (t["role"], t["review_role"]) for t in value["tasks"])
+    assert value["tasks"][0]["commit"]["expected_before_sha"] == (
+        "fc6db79ab0d86929d088427aadc76b4f1b576b4a"
+    )
+
+
 def test_on_reject_valid():
     value = score()
     fix_task = copy.deepcopy(value["tasks"][0])
