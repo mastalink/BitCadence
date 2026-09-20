@@ -2,7 +2,7 @@
   "score_version": 1,
   "id": "via-cloud-repository-continuation",
   "revision": 1,
-  "objective": "Complete the governed VIA G02-G04 repository slice without depending on an exhausted Claude provider.",
+  "objective": "Complete the governed VIA G02-G04 repository slice with explicit Grok review and no Claude dependency.",
   "constraints": [
     "G01 was independently accepted in run via-option-c-20260919-01; this continuation does not repeat or widen that audit.",
     "This continuation cannot deploy, invoke AWS mutation APIs, alter production data, publish schedules, push, or merge.",
@@ -23,7 +23,7 @@
       "title": "Verify and commit automatic Lorain campus and source discovery",
       "instructions": "In C:/AI/via-score-option-c, inspect every existing uncommitted change left by the expired G02 attempt. Confirm it is confined to the allowed paths, derives campuses and sources only from committed official-directory and first-party evidence, and never types schedule facts or a manual source list. Run focused tests and typecheck. Correct defects within the allowed paths. Return strict JSON {\"ready\": true} only when the exact changes are ready for the conductor to commit; do not commit, push, deploy, or fetch live sources.",
       "role": "codex",
-      "review_role": "antigravity",
+      "review_role": "grok",
       "depends_on": [],
       "resources": ["C:/AI/via-score-option-c"],
       "capabilities": ["repository:write", "evidence:write", "evidence:review"],
