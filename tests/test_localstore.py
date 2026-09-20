@@ -7,6 +7,8 @@ token auth served entirely by the embedded store.
 """
 
 import hashlib
+import threading
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -60,6 +62,32 @@ def test_select_can_read_while_another_connection_holds_write_lock(tmp_path):
         assert rows.data == [{"status": "pending"}]
     finally:
         writer._conn.rollback()
+        reader.close()
+        writer.close()
+
+
+def test_write_retries_transient_interprocess_lock(tmp_path):
+    path = tmp_path / "retry.db"
+    writer = LocalStore(path)
+    writer.table("agent_jobs").insert({"id": "held", "title": "x", "status": "pending"}).execute()
+    reader = LocalStore(path)
+    # Force the first BEGIN IMMEDIATE to fail immediately so this exercises
+    # LocalStore's bounded retry rather than sqlite's built-in busy wait.
+    reader._conn.execute("PRAGMA busy_timeout=0")
+    writer._conn.execute("BEGIN IMMEDIATE")
+    writer._conn.execute("INSERT INTO agent_jobs(pk, data) VALUES('lock-hold', '{}')")
+
+    def release_lock():
+        time.sleep(0.15)
+        writer._conn.rollback()
+
+    releaser = threading.Thread(target=release_lock)
+    releaser.start()
+    try:
+        result = reader.table("agent_jobs").insert({"id": "after-lock", "title": "y", "status": "pending"}).execute()
+        assert result.data[0]["id"] == "after-lock"
+    finally:
+        releaser.join(timeout=2)
         reader.close()
         writer.close()
 

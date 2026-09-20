@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+import time
 import uuid
 import re
 from contextlib import contextmanager
@@ -345,6 +346,27 @@ class LocalStore:
 
     # ── query execution ──────────────────────────────────────────────────
     def _run(self, q: _Query) -> APIResult:
+        """Execute a query, briefly retrying inter-process SQLite contention.
+
+        The gateway, listeners, and Score conductor can all write the same
+        LocalStore from separate processes.  WAL plus a busy timeout handles
+        ordinary overlap, but a long heartbeat/audit transaction can still
+        surface ``database is locked`` at the transaction boundary.  A short
+        bounded retry keeps that transient contention from failing an
+        otherwise valid Score step while preserving fail-closed behavior for
+        every other SQLite error.
+        """
+        delay = 0.1
+        for attempt in range(8):
+            try:
+                return self._run_once(q)
+            except sqlite3.OperationalError as exc:
+                if "locked" not in str(exc).lower() or attempt == 7:
+                    raise
+                time.sleep(delay)
+                delay = min(delay * 2, 2.0)
+
+    def _run_once(self, q: _Query) -> APIResult:
         # A grant/status lookup must not contend for the write lock held by a
         # worker heartbeat or completion. WAL readers can safely use a deferred
         # snapshot while writes remain serialized with BEGIN IMMEDIATE.
