@@ -25,6 +25,10 @@ def test_sweep_defaults_to_no_live_executor(tmp_path, monkeypatch, setting):
 
 
 def test_sweep_opt_in_installs_real_grant_checked_executor(tmp_path, monkeypatch):
+    from mco.orchestrator import score_authority
+    monkeypatch.setattr(score_authority, "get_config", lambda: {
+        "MCO_SCORE_GRANT_KEY": "test-only-grant-verification-key-not-for-production",
+    })
     store = LocalStore(tmp_path / "board.db")
     monkeypatch.setattr(routes, "get_db_client", lambda: store)
     conductor = score_sweep.open_conductor(config(tmp_path, MCO_SCORE_LIVE_REPOSITORY_WRITE="true"))
