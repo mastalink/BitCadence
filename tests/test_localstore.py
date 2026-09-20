@@ -48,6 +48,22 @@ def test_select_eq_in_order_limit_projection(store):
     assert newest.data[0]["id"] == "j2"
 
 
+def test_select_can_read_while_another_connection_holds_write_lock(tmp_path):
+    path = tmp_path / "concurrent.db"
+    writer = LocalStore(path)
+    reader = LocalStore(path)
+    writer.table("agent_jobs").insert({"id": "lock-1", "title": "x", "status": "pending"}).execute()
+    writer._conn.execute("BEGIN IMMEDIATE")
+    writer._conn.execute("INSERT INTO agent_jobs(pk, data) VALUES('lock-hold', '{}')")
+    try:
+        rows = reader.table("agent_jobs").select("status").eq("id", "lock-1").execute()
+        assert rows.data == [{"status": "pending"}]
+    finally:
+        writer._conn.rollback()
+        reader.close()
+        writer.close()
+
+
 def test_update_filters_and_returns_updated_rows(store):
     store.table("agent_jobs").insert({"id": "u1", "status": "pending", "title": "x"}).execute()
     res = store.table("agent_jobs").update({"status": "in_progress"}).eq("id", "u1").execute()
