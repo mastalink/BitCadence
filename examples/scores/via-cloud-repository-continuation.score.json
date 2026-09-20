@@ -1,15 +1,15 @@
 {
   "score_version": 1,
   "id": "via-cloud-repository-continuation",
-  "revision": 3,
-  "objective": "Complete the governed VIA G02-G04 repository slice from a clean recovery worktree with explicit Grok review and no Claude dependency, replaying G02 from the verified pre-commit base.",
+  "revision": 4,
+  "objective": "Complete the governed VIA G03-G04 repository slice from the Grok-accepted G02 commit with no Claude dependency.",
   "constraints": [
     "G01 was independently accepted in run via-option-c-20260919-01; this continuation does not repeat or widen that audit.",
     "This continuation cannot deploy, invoke AWS mutation APIs, alter production data, publish schedules, push, or merge.",
     "All repository writes occur only in C:/AI/via-score-option-c-recovery2 on score/via-option-c-recovery2.",
     "Every builder is reviewed by a different role against the exact conductor-owned commit.",
     "Unsupported, stale, blocked, or conflicting schedule facts remain explicit; no agent may type or invent parish times.",
-    "The prior G02 result was verified as commit 39c9a836d09d6edcfa043d32d8abc8995890a93b, but this run replays its exact diff from the clean fc6db79ab0d86929d088427aadc76b4f1b576b4a base so the live adapter can create a fresh governed commit.",
+    "G02 was accepted by Grok in run via-option-c-grok-20260920-08 at commit bb0209e31a7bec63884f0c0d58313486f1e110de; this continuation starts from that exact commit and does not repeat G02.",
     "G08 Lorain launch approval and spend above 15000 cents per month remain human-only gates in the master roadmap.",
     "Cloud change remains unavailable until its signed-approval lane passes independent adversarial review."
   ],
@@ -18,43 +18,13 @@
   "launch_requires": ["G04-repository"],
   "tasks": [
     {
-      "id": "G02-repository",
-      "goal": "G02",
-      "title": "Verify and commit automatic Lorain campus and source discovery",
-      "instructions": "In C:/AI/via-score-option-c-recovery2, inspect the replayed G02 changes carried forward from the previously verified commit 39c9a836d09d6edcfa043d32d8abc8995890a93b. Confirm they are confined to the allowed paths, derive campuses and sources only from committed official-directory and first-party evidence, and never type schedule facts or a manual source list. Run focused tests and typecheck. Correct defects within the allowed paths. Return strict JSON {\"ready\": true} only when the exact changes are ready for the conductor to commit; do not commit, push, deploy, or fetch live sources.",
-      "role": "codex",
-      "review_role": "grok",
-      "depends_on": [],
-      "resources": ["C:/AI/via-score-option-c-recovery2"],
-      "capabilities": ["repository:write", "evidence:write", "evidence:review"],
-      "commit": {
-        "worktree_path": "C:/AI/via-score-option-c-recovery2",
-        "target_branch": "score/via-option-c-recovery2",
-        "allowed_paths": [
-          "apps/api/src/discovery.ts",
-          "apps/api/src/source-discovery.ts",
-          "apps/api/src/domain.ts",
-          "apps/api/test/domain.test.ts",
-          "apps/api/test/ingestion.test.ts",
-          "docs/*"
-        ],
-        "commit_message": "feat(via): automate Lorain campus and source discovery",
-        "expected_before_sha": "fc6db79ab0d86929d088427aadc76b4f1b576b4a"
-      },
-      "evidence": ["commit_sha"],
-      "max_attempts": 1,
-      "timeout_seconds": 7200,
-      "max_cost_cents": 0,
-      "checkpoint": null
-    },
-    {
       "id": "G03-repository",
       "goal": "G03",
       "title": "Harden the cloud ingestion worker contract in code",
-      "instructions": "Continue on the governed VIA branch after G02. Implement the repository-side scheduler, queue, fenced-worker, recovery, and budget behavior needed for cloud-only ingestion without applying infrastructure or using home endpoints. Prove duplicate delivery and worker interruption cannot duplicate accepted publication. Return strict JSON {\"ready\": true} only after focused tests pass. Do not deploy, push, merge, or invoke AWS mutation APIs.",
+      "instructions": "Continue on the governed VIA branch after the Grok-accepted G02 commit bb0209e31a7bec63884f0c0d58313486f1e110de. Implement the repository-side scheduler, queue, fenced-worker, recovery, and budget behavior needed for cloud-only ingestion without applying infrastructure or using home endpoints. Prove duplicate delivery and worker interruption cannot duplicate accepted publication. Return strict JSON {\"ready\": true} only after focused tests pass. Do not deploy, push, merge, or invoke AWS mutation APIs.",
       "role": "antigravity",
       "review_role": "codex",
-      "depends_on": ["G02-repository"],
+      "depends_on": [],
       "resources": ["C:/AI/via-score-option-c-recovery2"],
       "capabilities": ["repository:write", "evidence:write", "evidence:review"],
       "commit": {
@@ -70,6 +40,7 @@
           "docs/*"
         ],
         "commit_message": "feat(via): harden cloud ingestion worker contracts"
+        ,"expected_before_sha": "bb0209e31a7bec63884f0c0d58313486f1e110de"
       },
       "evidence": ["commit_sha"],
       "max_attempts": 1,
