@@ -112,6 +112,14 @@ def test_windows_waker_task_xml_has_restart_on_failure_settings():
     assert "--instance opencode-beast" in xml
 
 
+def test_windows_gateway_task_xml_has_restart_on_failure_settings():
+    xml = service._windows_task_xml("127.0.0.1", 18789)
+    assert "<RestartOnFailure>" in xml
+    interval, count = _restart_on_failure_values(xml)
+    assert _task_scheduler_duration_seconds(interval) >= 60
+    assert 1 <= count <= 255
+
+
 def test_windows_poll_task_xml_has_repetition_interval_without_waker_restart():
     xml = service._poll_windows_task_xml(
         "opencode",

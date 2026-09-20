@@ -204,7 +204,9 @@ def _gateway_spec(host: str, port: int) -> ServiceSpec:
         kind="gateway",
         argv=_serve_argv(host, port),
         description="BitCadence gateway",
-        restart_on_failure=False,
+        # The gateway owns the durable job board. A process crash must not
+        # silently disable dispatch until the next interactive logon/reboot.
+        restart_on_failure=True,
     )
 
 
