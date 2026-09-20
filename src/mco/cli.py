@@ -1121,17 +1121,10 @@ DEFAULT_SCORE_ROOT = Path.home() / ".mco" / "score-artifacts"
 
 
 def _conductor(database: Path, root: Path, live_repository_write: bool = False):
-    from mco.orchestrator.score_conductor import Conductor, board_for, open_bridge
+    from mco.orchestrator.score_conductor import configured_conductor
     client = _gateway_client()
-    live_executor = None
-    if live_repository_write:
-        from mco.orchestrator.routes import get_db_client
-        from mco.orchestrator.score_authority import GrantService
-        from mco.orchestrator.score_adapters_live import LiveScoreAdapterExecutor
-        db = get_db_client()
-        grant_svc = GrantService(db)
-        live_executor = LiveScoreAdapterExecutor(db=db, grant_service=grant_svc)
-    return Conductor(open_bridge(database, root, live_executor=live_executor), board_for(client)), client
+    return configured_conductor(database, root, client,
+                                live_repository_write=live_repository_write), client
 
 
 def _parse_targets(values: Optional[List[str]]) -> dict:

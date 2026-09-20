@@ -214,6 +214,24 @@ def board_for(client) -> GatewayBoard:
     return GatewayBoard(client)
 
 
+def configured_conductor(database, artifact_root, client, *, live_repository_write=False):
+    """Use the same grant-checked executor for CLI and unattended execution.
+
+    Enabling the adapter does not issue authority: each effect still requires
+    its existing run/digest/resource-bound grant.
+    """
+    executor = None
+    if live_repository_write:
+        from mco.orchestrator.routes import get_db_client
+        from mco.orchestrator.score_authority import GrantService
+        from mco.orchestrator.score_adapters_live import LiveScoreAdapterExecutor
+        db = get_db_client()
+        if db is None:
+            raise RuntimeError("Repository executor requires an authority store")
+        executor = LiveScoreAdapterExecutor(db=db, grant_service=GrantService(db))
+    return Conductor(open_bridge(database, artifact_root, live_executor=executor), board_for(client))
+
+
 def sqlite_runs(database: str | Path) -> list[dict]:
     """List runs in a conductor database (for `mco score list`)."""
     try:
