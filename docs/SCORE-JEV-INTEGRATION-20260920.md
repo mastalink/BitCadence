@@ -13,7 +13,7 @@ content is not executable authority. The exact source files inspected were:
 | --- | --- | --- |
 | `C:\Users\masta\Downloads\jev-system-one-bitcadence-via-v2.score.json` | `9888D69D5882236E6AF302007C0F87BFD48033CA4878CD10C4A3684AB493EDAB` | Optional Jev/System One product score, J01-J09 |
 | `C:\Users\masta\Downloads\bitcadence-jev-marketing-cloudflare.score.json` | `4FBAE103A990865CD18D3C915FAB83FAB36C962EF4ABC536EC9506F6914338B5` | Jev marketing and Cloudflare release score, M01-M09 |
-| active VIA continuation revision 5 | `64DFAC392E3736932DDEF324608FB1C81DA77E30F2F57DB86D8345E7D62504AD` | Existing G03-G04 execution lane |
+| active VIA continuation revision 5 snapshot | `3773313A6DA53216352067D376922140BE8E1A1264EB80C48FB78D4C1AE6C669` | Immutable review snapshot at `docs/evidence/score-inputs/via-cloud-repository-continuation-r5.score.json` |
 
 Normalized review snapshots are retained under
 `docs/evidence/score-inputs/` so the review does not depend on a user's Downloads
@@ -21,7 +21,11 @@ directory. The hashes recorded above are the original downloaded inputs; the
 Score v1 digests of the normalized snapshots are captured by the validation
 evidence. Changing either input or snapshot requires a new integration revision.
 
-The active VIA run remains separate and immutable: run
+The VIA revision-5 snapshot is pinned beside the two Astra inputs. The moving
+continuation path is not evidence for this preflight; later recovery revisions
+must receive a new integration audit.
+
+The historical VIA revision-5 run remains separate and immutable: run
 `via-option-c-grok-20260920-11`, Score digest
 `9fd104666dc56f5936d4ac900c4e38d1c52afbb03ebc211d78b1169205016372`, starts
 from accepted G02 commit `bb0209e31a7bec63884f0c0d58313486f1e110de`.
