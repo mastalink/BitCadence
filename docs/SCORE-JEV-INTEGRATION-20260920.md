@@ -15,6 +15,11 @@ content is not executable authority. The exact source files inspected were:
 | `C:\Users\masta\Downloads\bitcadence-jev-marketing-cloudflare.score.json` | `4FBAE103A990865CD18D3C915FAB83FAB36C962EF4ABC536EC9506F6914338B5` | Jev marketing and Cloudflare release score, M01-M09 |
 | active VIA continuation revision 5 | `64DFAC392E3736932DDEF324608FB1C81DA77E30F2F57DB86D8345E7D62504AD` | Existing G03-G04 execution lane |
 
+Byte-for-byte review snapshots are retained under
+`docs/evidence/score-inputs/` so the review does not depend on a user's Downloads
+directory. Their hashes are recorded above; changing either snapshot requires a
+new integration revision.
+
 The active VIA run remains separate and immutable: run
 `via-option-c-grok-20260920-11`, Score digest
 `9fd104666dc56f5936d4ac900c4e38d1c52afbb03ebc211d78b1169205016372`, starts
@@ -102,4 +107,3 @@ Choice probabilities are reusable signals rather than authority; confidence is a
 routing signal, not proof; and high-risk fields use a per-field verifier with an
 `any`-flag escalation to a stronger model or review. Code remains responsible for
 policy, dates, budgets, leases, evidence hashes, and publication.
-
