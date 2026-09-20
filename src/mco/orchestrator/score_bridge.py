@@ -372,9 +372,9 @@ class ScoreBridge:
                         prompt += " Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets."
                 else:
                     if "repository:write" in t["capabilities"]:
-                        prompt = "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}."
+                        prompt = "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}. Copy review_of exactly from the supplied contract map; do not add, remove, or rename keys."
                     else:
-                        prompt = "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}."
+                        prompt = "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}. Copy review_of exactly from the supplied contract map; do not add, remove, or rename keys."
 
                 if phase == "review":
                     author_id = json.loads(work["payload"])["target_agent_id"]
