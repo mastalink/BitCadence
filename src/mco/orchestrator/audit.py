@@ -368,12 +368,29 @@ def drain_outbox(db_client, job_id=None):
     if job_id is not None:
         query = query.eq("job_id", str(job_id))
     rows = query.execute().data or []
+    # Read materialized ids in bounded groups. Looking up the full events table
+    # once per outbox row made maintenance O(outbox * events); fetching the
+    # relevant ids in groups keeps it linear without depending on a PostgREST
+    # server's maximum response size.
+    outbox_ids = [str(row["id"]) for row in rows]
+    materialized = set()
+    for start in range(0, len(outbox_ids), 200):
+        group = outbox_ids[start:start + 200]
+        event_query = db_client.table(EVENTS_TABLE).select("outbox_id").in_("outbox_id", group)
+        if job_id is not None:
+            event_query = event_query.eq("job_id", str(job_id))
+        materialized.update(
+            str(row["outbox_id"])
+            for row in (event_query.execute().data or [])
+            if row.get("outbox_id") is not None
+        )
     count = 0
     for row in rows:
         oid = str(row["id"])
-        if db_client.table(EVENTS_TABLE).select("*").eq("outbox_id", oid).execute().data:
+        if oid in materialized:
             continue
         record_event(db_client, row["job_id"], row["event"], "system", "store",
                      row.get("detail") or {}, outbox_id=oid)
+        materialized.add(oid)
         count += 1
     return count
