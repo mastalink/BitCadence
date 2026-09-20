@@ -204,12 +204,12 @@ class LocalStore:
         return _Query(self, name)
 
     @contextmanager
-    def transaction(self):
-        """Serialize read/modify/write across connections and roll back on failure."""
+    def transaction(self, *, immediate: bool = True):
+        """Serialize writes while allowing snapshot reads during a writer transaction."""
         with self._lock:
             outer = self._depth == 0
             if outer:
-                self._conn.execute("BEGIN IMMEDIATE")
+                self._conn.execute("BEGIN IMMEDIATE" if immediate else "BEGIN")
             self._depth += 1
             try:
                 yield self
@@ -235,9 +235,15 @@ class LocalStore:
 
     # ── storage plumbing ─────────────────────────────────────────────────
     def _ensure_table(self, table: str) -> None:
-        self._conn.execute(
-            f'CREATE TABLE IF NOT EXISTS "{table}" (pk TEXT PRIMARY KEY, data TEXT NOT NULL)'
-        )
+        # Do not issue CREATE TABLE for every read: DDL upgrades a deferred
+        # reader into a writer and collides with a worker's heartbeat commit.
+        exists = self._conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+        ).fetchone()
+        if not exists:
+            self._conn.execute(
+                f'CREATE TABLE IF NOT EXISTS "{table}" (pk TEXT PRIMARY KEY, data TEXT NOT NULL)'
+            )
 
     def _pk_field(self, table: str) -> str:
         return PRIMARY_KEYS.get(table, "id")
@@ -339,7 +345,10 @@ class LocalStore:
 
     # ── query execution ──────────────────────────────────────────────────
     def _run(self, q: _Query) -> APIResult:
-        with self.transaction():
+        # A grant/status lookup must not contend for the write lock held by a
+        # worker heartbeat or completion. WAL readers can safely use a deferred
+        # snapshot while writes remain serialized with BEGIN IMMEDIATE.
+        with self.transaction(immediate=q._op != "select"):
             if q._table in APPEND_ONLY_TABLES and q._op == "upsert":
                 raise PermissionError(f"{q._table} is append-only: UPSERT is not allowed")
             if q._op == "select":
