@@ -237,6 +237,7 @@ def test_via_repository_continuation_avoids_exhausted_provider():
     assert all(t["max_attempts"] == 1 for t in value["tasks"])
     assert all("cloud:change" not in t["capabilities"] for t in value["tasks"])
     assert all("claude" not in (t["role"], t["review_role"]) for t in value["tasks"])
+    assert value["tasks"][0]["review_role"] == "grok"
     assert value["tasks"][0]["commit"]["expected_before_sha"] == (
         "fc6db79ab0d86929d088427aadc76b4f1b576b4a"
     )
