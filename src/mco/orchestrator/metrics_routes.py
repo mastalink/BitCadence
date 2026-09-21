@@ -103,7 +103,27 @@ def render_metrics() -> str:
     metric("mco_agents_online", "Agents heard from within the presence threshold.", "gauge",
            [_line("mco_agents_online", online)])
 
+    # TypeSafe Jev decision metrics (additive, non-blocking)
+    try:
+        from mco.orchestrator.jev import get_jev_metrics
+        jm = get_jev_metrics()
+        metric("mco_jev_calls_total", "Total Jev semantic decision calls.", "counter",
+               [_line("mco_jev_calls_total", jm["calls"])])
+        metric("mco_jev_latency_ms_total", "Total latency of Jev calls in milliseconds.", "counter",
+               [_line("mco_jev_latency_ms_total", jm["latency_ms_total"])])
+        metric("mco_jev_low_confidence_total", "Total Jev low-confidence or abstention decisions.", "counter",
+               [_line("mco_jev_low_confidence_total", jm["low_confidence"])])
+        metric("mco_jev_disagreements_total", "Total disagreements between Jev recommendation and deterministic route.", "counter",
+               [_line("mco_jev_disagreements_total", jm["disagreements"])])
+        metric("mco_jev_fallbacks_total", "Total Jev fallback decisions.", "counter",
+               [_line("mco_jev_fallbacks_total", jm["fallbacks"])])
+        metric("mco_jev_errors_total", "Total Jev error responses.", "counter",
+               [_line("mco_jev_errors_total", jm["errors"])])
+    except Exception as e:
+        logger.debug(f"metrics: jev metrics export failed: {e}")
+
     return "\n".join(out) + "\n"
+
 
 
 @metrics_router.get("/metrics", include_in_schema=False)
