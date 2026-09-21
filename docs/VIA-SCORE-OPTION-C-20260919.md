@@ -1,5 +1,12 @@
 # VIA Score Option C: repository progress now, governed cloud change next
 
+> **Status update 2026-09-21 (read-only check of the live gateway):** `/readyz`
+> now reports `score_sweep` ok with `interval_seconds: 5` and no failing runs;
+> 8 workers online. The "sweep not configured" fault below is resolved on the
+> live gateway (repair merged in #101). Still unproven: a bounded repository
+> packet reaching acceptance *through* the live sweep, and exact-head review
+> of G02-G04. The canonical continuation remains `recovery21` below.
+
 Status: owner-approved design and executable repository slice. This document does not issue a grant, start a Score run, push a branch, merge code, or invoke production infrastructure.
 
 ## Decision
