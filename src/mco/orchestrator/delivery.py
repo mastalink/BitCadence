@@ -37,6 +37,9 @@ CHAIN_STALLED = "chain_stalled"
 # Events that record the watchdog's own progress; they must not restart the
 # stall clock, or a re-kick would postpone its own follow-up forever.
 _PROGRESS_EVENTS = {REKICKED, ESCALATED}
+# Shadow annotations are append-only evidence. They must not restart the stall
+# clock or clear rekick/escalate progress, or Jev would change delivery.
+_ANNOTATION_EVENTS = {"jev_decision"}
 
 DEFAULT_STALL_SECONDS = 600
 DEFAULT_MAX_REROUTES = 2
@@ -103,6 +106,7 @@ class SweepResult:
     rerouted: list[str] = field(default_factory=list)
     escalated: list[str] = field(default_factory=list)
     chain_stalled: list[str] = field(default_factory=list)
+    jev_annotations: list = field(default_factory=list)
 
 
 def _parse_ts(value: Any) -> Optional[datetime]:
@@ -122,6 +126,8 @@ def _delivery_state(job: dict, events: list) -> tuple[Optional[datetime], set, i
     reroutes = 0
     for event in events:
         name = event.get("event")
+        if name in _ANNOTATION_EVENTS:
+            continue
         if name == REROUTED:
             reroutes += 1
         if name in _PROGRESS_EVENTS:
@@ -152,6 +158,7 @@ def sweep(
     now: Optional[datetime] = None,
     config: Optional[dict] = None,
     online_roles: Optional[Callable[[Any, str], set]] = None,
+    jev_provider: Optional[Any] = None,
 ) -> SweepResult:
     """Advance delivery for every stalled PENDING job by at most one step."""
     from mco.orchestrator.audit import get_events, record_event
@@ -188,6 +195,17 @@ def sweep(
                           "target_agent_id": job.get("target_agent_id")})
             result.broadcasts.append(("job_pending", job))
             result.rekicked.append(job_id)
+            _shadow_watchdog(result, jev_provider, db, job_id, "retry", {
+                "worker_state": None,
+                "pending_seconds": int(age),
+                "reroutes": reroutes,
+                "max_reroutes": max_reroutes,
+                "stall_seconds": stall,
+                "crash_loop": False,
+                "chain_stalled": False,
+                "broken": False,
+                "reason": None,
+            })
             continue
 
         if age < 2 * stall or ESCALATED in since:
@@ -224,6 +242,18 @@ def sweep(
                           "to_role": target, "pending_seconds": int(age)})
             result.broadcasts.append(("job_pending", updated[0]))
             result.rerouted.append(job_id)
+            _shadow_watchdog(result, jev_provider, db, job_id, "reroute", {
+                "worker_state": None,
+                "pending_seconds": int(age),
+                "reroutes": reroutes,
+                "max_reroutes": max_reroutes,
+                "stall_seconds": stall,
+                "crash_loop": False,
+                "chain_stalled": False,
+                "broken": False,
+                "reason": None,
+                "to_role": target,
+            })
             continue
 
         record_event(db, job_id, ESCALATED, ACTOR_ID, ACTOR_ROLE,
@@ -238,8 +268,20 @@ def sweep(
                         f"Job {job_id}"),
         })
         result.escalated.append(job_id)
+        _shadow_watchdog(result, jev_provider, db, job_id, "escalate", {
+            "worker_state": None,
+            "pending_seconds": int(age),
+            "reroutes": reroutes,
+            "max_reroutes": max_reroutes,
+            "stall_seconds": stall,
+            "crash_loop": False,
+            "chain_stalled": False,
+            "broken": True,
+            "reason": reason,
+        })
 
-    _sweep_chain_stalls(db, result, now=now, config=config, grace=stall)
+    _sweep_chain_stalls(db, result, now=now, config=config, grace=stall,
+                        jev_provider=jev_provider)
     return result
 
 
@@ -259,8 +301,30 @@ def _successor_exists(jobs: list, parent: dict, completed_at: datetime) -> bool:
     return False
 
 
+def _shadow_watchdog(
+    result: SweepResult,
+    provider: Any,
+    db: Any,
+    job_id: str,
+    action: str,
+    state: dict,
+) -> None:
+    """Annotate a concrete watchdog action. Never changes who is rerouted or stalled."""
+    try:
+        from mco.orchestrator.jev_ops import annotate_watchdog
+        result.jev_annotations.append(annotate_watchdog(
+            provider,
+            deterministic_action=action,
+            state=state,
+            job_id=job_id,
+            db=db,
+        ))
+    except Exception:
+        logger.debug("watchdog shadow annotation skipped", exc_info=True)
+
+
 def _sweep_chain_stalls(db: Any, result: SweepResult, *, now: datetime,
-                        config: dict, grace: int) -> None:
+                        config: dict, grace: int, jev_provider: Any = None) -> None:
     """Catch the failure the rest of this module cannot see: a job that was
     never created.
 
@@ -304,6 +368,17 @@ def _sweep_chain_stalls(db: Any, result: SweepResult, *, now: datetime,
         record_event(db, job_id, CHAIN_STALLED, ACTOR_ID, ACTOR_ROLE, detail)
         result.broadcasts.append(("chain_stalled", job))
         result.chain_stalled.append(job_id)
+        _shadow_watchdog(result, jev_provider, db, job_id, "operator-review", {
+            "worker_state": None,
+            "pending_seconds": int((now - completed_at).total_seconds()),
+            "reroutes": 0,
+            "max_reroutes": get_max_reroutes(config),
+            "stall_seconds": grace,
+            "crash_loop": False,
+            "chain_stalled": True,
+            "broken": False,
+            "reason": "expects_successor with no follow-up",
+        })
 
         if to_role:
             successor = {
