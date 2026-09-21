@@ -31,6 +31,8 @@ logger = logging.getLogger("mco.drumline")
 
 CONTEXT_TABLE = "agent_context"
 KINDS = ("fact", "decision", "lesson", "handoff", "artifact")
+# Side channel for recall flags/relevance. Never reorders, drops, or rewrites entries.
+last_recall_annotations: List[dict] = []
 FETCH_WINDOW = 200          # newest entries considered per recall
 MAX_CONTENT_CHARS = 2000    # stored content cap
 DISTILL_PROMPT_CHARS = 280  # how much of the ask survives distillation
@@ -136,10 +138,40 @@ def remember(
 
     try:
         res = db_client.table(CONTEXT_TABLE).insert(data).execute()
-        return res.data[0] if res.data else None
+        row = res.data[0] if res.data else None
     except Exception as e:
         logger.warning(f"Drumline remember skipped: {e}")
         return None
+    if row:
+        _shadow_drumline(
+            data["title"], data["content"], kind,
+            job_id=source_job_id, db=db_client,
+        )
+    return row
+
+
+def _shadow_drumline(
+    title: str,
+    content: str,
+    kind: str,
+    job_id: Optional[str] = None,
+    db: Any = None,
+    query: Optional[str] = None,
+) -> None:
+    """Fire-and-forget Jev annotation. Never changes stored kind or skips insert."""
+    try:
+        from mco.orchestrator.jev_ops import annotate_drumline_output
+        annotate_drumline_output(
+            None,
+            title=title,
+            content=content,
+            deterministic_kind=kind,
+            query=query,
+            job_id=job_id,
+            db=db,
+        )
+    except Exception:
+        logger.debug("drumline shadow annotation skipped", exc_info=True)
 
 
 # ── Structured handoffs (the Context Exchange) ───────────────────────────────
@@ -281,7 +313,7 @@ def distill_job(db_client: Any, job: dict) -> Optional[dict]:
         job.get("source_agent_role"),
         payload.get("connector"),
     ) if t] + workflow_tags(job)
-    stored = remember(
+    return remember(
         db_client,
         title=f"Job outcome: {job.get('title', 'untitled')}",
         content=content,
@@ -293,18 +325,6 @@ def distill_job(db_client: Any, job: dict) -> Optional[dict]:
         weight=weight,
         org_id=job.get("org_id") or "default",
     )
-    try:
-        from mco.orchestrator.jev_ops import annotate_drumline
-        annotate_drumline(
-            title=f"Job outcome: {job.get('title', 'untitled')}",
-            content=content,
-            deterministic_kind="handoff",
-            db_client=db_client,
-            job_id=str(job.get("id")),
-        )
-    except Exception:
-        pass
-    return stored
 
 
 # ── Recalling memory ──────────────────────────────────────────────────────────
@@ -369,7 +389,29 @@ def recall(
             continue
         scored.append((s, i, entry))
     scored.sort(key=lambda t: (-t[0], t[1]))
-    return [e for _, _, e in scored[:max(1, min(limit, 25))]]
+    ranked = [e for _, _, e in scored[:max(1, min(limit, 25))]]
+    _shadow_recall(query, ranked, db_client)
+    return ranked
+
+
+def _shadow_recall(query: str, entries: List[dict], db_client: Any) -> None:
+    """Annotate top recall hits without reordering, dropping, or rewriting them."""
+    global last_recall_annotations
+    last_recall_annotations = []
+    try:
+        from mco.orchestrator.jev_ops import annotate_drumline_output
+        for entry in entries:
+            annotation = annotate_drumline_output(
+                None,
+                title=entry.get("title") or "",
+                content=entry.get("content") or "",
+                deterministic_kind=entry.get("kind") or "fact",
+                query=query,
+                db=db_client,
+            )
+            last_recall_annotations.append({"id": entry.get("id"), **annotation})
+    except Exception:
+        logger.debug("drumline recall shadow annotation skipped", exc_info=True)
 
 
 def render_context_block(entries: List[dict], title: str = "SHARED CONTEXT (Drumline)") -> str:

@@ -101,6 +101,7 @@ def notify(
     tags: Optional[List[str]] = None,
     topic: Optional[str] = None,
     server: Optional[str] = None,
+    jev_provider=None,
 ) -> bool:
     """
     Send a notification to ntfy.
@@ -110,19 +111,9 @@ def notify(
     cfg = get_ntfy_config()
     if not cfg["topic"]:
         return False
-    allowed = _allowed(message, title, priority, cfg, time.time())
-    try:
-        from mco.orchestrator.jev_ops import annotate_notification
-        annotate_notification(
-            title=title or "BitCadence",
-            message=message,
-            priority=priority,
-            allowed=allowed,
-        )
-    except Exception:
-        pass
-    if not allowed:
+    if not _allowed(message, title, priority, cfg, time.time()):
         return False
+    _shadow_notify(title, message, priority, jev_provider)
     server = cfg["server"]
     topic = cfg["topic"]  # Configuration is the sole destination authority.
 
@@ -155,6 +146,27 @@ def notify(
         else:
             logger.warning(f"Failed to send ntfy notification: {e}")
         return False
+
+
+def _shadow_notify(title: Optional[str], message: str, priority: int, provider) -> None:
+    """Annotate a push that `_allowed` already admitted. Never changes the send."""
+    try:
+        from mco.orchestrator.jev_ops import annotate_notification
+        key = (title or "", message)
+        recent = [
+            {"title": t, "message": m}
+            for (t, m) in list(_last_sent.keys())[-20:]
+            if (t, m) != key
+        ]
+        annotate_notification(
+            provider,
+            title=title,
+            message=message,
+            deterministic_priority=priority,
+            recent=recent,
+        )
+    except Exception:
+        logger.debug("ntfy shadow annotation skipped")
 
 
 # Convenience wrappers for common MCO events

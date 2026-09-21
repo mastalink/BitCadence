@@ -55,21 +55,24 @@ or execute cloud/repository effects. Any future `typesafe:invoke` Score adapter
 requires its own digest-bound grant, budget, effect receipt, and adversarial
 review before live use.
 
-## J03 operations shadows
+## J03 shadow operations
 
-Three versioned use cases (`bitcadence-ops-drumline`, `bitcadence-ops-fleet`,
-`bitcadence-ops-notify`, question-set version 1) may annotate already-computed
-operations:
+Three BitCadence paths may ask Jev for an annotation after deterministic code
+has already produced an outcome. Even if the global mode is `assist` or
+`active`, these paths treat Jev as annotation-only: `applied` is always false,
+and no Jev answer mutates durable truth or authorizes an effect.
 
-- Drumline classifies completed output and may suggest injection or flag
-  contradiction/staleness/sensitivity. Stored kind and immutable history do
-  not change.
-- Fleet triage classifies a worker/chain symptom only after `state` (working /
-  broken / standby / offline), stall timers, retry limits, and crash-loop
-  logic are computed. Suggested retry/reroute/escalate/operator-review/noise
-  does not take the action.
-- Notifications may mark semantic duplicates and impact. Hard ntfy rate
-  budgets and urgent-bypass remain in `mco.notifiers.ntfy`.
+| Use case | Question set | What Jev may suggest | What code still owns |
+| --- | --- | --- | --- |
+| `drumline-ops` v1 | kind, inject, contradiction, staleness, sensitivity, relevance | Classify completed output; flag recall quality | Stored kind (`fact` / `decision` / `lesson` / `handoff` / `artifact`), content, weight, tags, recall order. `incident` is annotation-only and is not a Drumline kind. `inject=skip` cannot prevent `remember()`. |
+| `watchdog-symptom` v1 | action (`retry` / `reroute` / `escalate` / `operator-review` / `noise`) | Classify an already-computed delivery step | Stall timers, max reroutes, reroute CAS, crash-loop safeguards, chain-stall detection, kill switch, who is rerouted. |
+| `notify-quality` v1 | duplicate, urgency, impact | Quality of a push that `_allowed` already admitted | Rate budgets, urgent-bypass, identical-message dedup, the Priority header, and whether the message is sent. |
 
-Receipts persist as append-only `jev_shadow_receipt` audit events when a job
-id is present. Disabled or down Jev constructs no TypeSafe request.
+Question sets are frozen and digest-bound. Changing instructions, criteria, or
+candidate meanings requires a new version string. DecisionReceipts are appended
+as `jev_decision` audit events when a `job_id` is provided and the provider is
+not disabled. Persist failure is logged and ignored; receipts are never rewritten.
+`jev_decision` events are ignored by the delivery stall clock, so an annotation
+cannot postpone rekick, reroute, or escalate. Disabled mode records process-level
+metrics only and performs no network request and no audit write, so durable state
+matches today's deterministic tests.

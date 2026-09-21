@@ -370,3 +370,23 @@ def _isolate_operator_secrets(monkeypatch, tmp_path_factory):
     yield
     # Leave no singleton pointing at a now-deleted temp path for the next test.
     monkeypatch.setattr(security_mod, "_store", None, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _jev_shadow_hooks_disabled():
+    """Keep Jev annotation hooks off the network and out of audit counts.
+
+    Production uses get_config(); tests must not inherit a developer machine's
+    MCO_JEV_MODE or they would call TypeSafe and append jev_decision events.
+    Tests that need a live/fake provider pass one explicitly or set
+    ``jev_ops.provider_override``.
+    """
+    from mco.orchestrator.jev import JevConfig, JevProvider
+    import mco.orchestrator.jev_ops as jev_ops
+
+    previous = jev_ops.provider_override
+    jev_ops.provider_override = JevProvider(JevConfig())
+    jev_ops.reset_metrics()
+    yield
+    jev_ops.provider_override = previous
+    jev_ops.reset_metrics()
