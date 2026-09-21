@@ -254,17 +254,18 @@ def _repo_root() -> Path:
 
 
 def _package_version() -> str:
+    pyproject = _repo_root() / "pyproject.toml"
+    if pyproject.is_file():
+        text = pyproject.read_text(encoding="utf-8")
+        match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', text)
+        if not match:
+            raise RuntimeError("project version not found in pyproject.toml")
+        return match.group(1)
+
     try:
         return importlib_metadata.version("bitcadence")
-    except importlib_metadata.PackageNotFoundError:
-        pass
-
-    pyproject = _repo_root() / "pyproject.toml"
-    text = pyproject.read_text(encoding="utf-8")
-    match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', text)
-    if not match:
-        raise RuntimeError("project version not found in pyproject.toml")
-    return match.group(1)
+    except importlib_metadata.PackageNotFoundError as exc:
+        raise RuntimeError("BitCadence version could not be resolved") from exc
 
 
 def _git_commit() -> str | None:

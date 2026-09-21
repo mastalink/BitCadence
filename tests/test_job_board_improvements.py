@@ -229,4 +229,3 @@ def test_console_bundle_roundtrips_and_includes_improvements():
     assert "AutonomyControlCard" in overview_src
     assert "MemoryDetailDrawer" in overview_src
     assert "handleBatchApprove" in overview_src
-
