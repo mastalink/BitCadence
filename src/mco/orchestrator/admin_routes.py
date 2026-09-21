@@ -262,6 +262,9 @@ SETTING_GROUPS = {
                                    "placeholder": "servicenow,dynatrace"},
         "MCO_ESCALATION_CONNECTOR": {"type": "text", "label": "Escalation connector (mirror terminal failures to ITSM)",
                                      "placeholder": "servicenow"},
+        "MCO_DEFAULT_JOB_SORT": {"type": "choice", "label": "Default Job Board sort order",
+                                 "choices": ["created_desc", "created_asc", "priority_desc", "status"],
+                                 "default": "created_desc"},
     },
     "memory": {
         "MCO_DRUMLINE_DISTILL": {"type": "bool", "label": "Distill completed jobs into shared memory", "default": True},

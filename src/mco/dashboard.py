@@ -133,13 +133,54 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
     <!-- ── Operations ─────────────────────────────────────────── -->
     <section id="view-ops" class="view on">
       <div class="topbar"><h1>Operations</h1></div>
+
+      <!-- Autonomy Status Bar -->
+      <div id="autonomy-banner" class="card" style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.8rem;">
+        <div>
+          <span style="font-weight:600; margin-right:.6rem">Autonomy Engine:</span>
+          <span id="autonomy-badge" class="badge s-waiting">-</span>
+          <span id="autonomy-desc" class="muted" style="margin-left:.6rem; font-size:.82rem"></span>
+        </div>
+        <div style="display:flex; gap:.5rem; align-items:center">
+          <button id="btn-toggle-pause" onclick="toggleAutonomyPause()">Pause</button>
+          <button id="btn-tick-now" onclick="triggerManualTick()">Tick Now</button>
+          <button class="primary" onclick="openLiveLook()">Live Look</button>
+        </div>
+      </div>
+
+      <!-- Bulk Actions Bar -->
+      <div id="bulk-bar" class="card" style="display:none; padding:.6rem 1rem; margin-bottom:.8rem; background:#1f2d3d; border-color:#58a6ff; justify-content:space-between; align-items:center;">
+        <div>
+          <b id="bulk-count" style="color:#58a6ff">0</b> <span style="font-size:.85rem">jobs selected</span>
+        </div>
+        <div style="display:flex; gap:.4rem; align-items:center; flex-wrap:wrap">
+          <button class="ok" onclick="bulkAction('approve')">Approve</button>
+          <button class="no" onclick="bulkAction('reject')">Reject</button>
+          <button onclick="bulkAction('retry')">Retry</button>
+          <button class="no" onclick="bulkAction('cancel')">Cancel</button>
+          <button onclick="bulkAction('archive')">Archive</button>
+          <button onclick="bulkAction('reassign')">Reassign</button>
+          <button onclick="clearSelection()">Clear</button>
+        </div>
+      </div>
+
       <h2>Approval Queue</h2>
-      <table><thead><tr><th>Job</th><th>Title</th><th>Target</th><th>From</th><th>Decide</th></tr></thead>
-      <tbody id="approvals"><tr><td colspan="5" class="muted">-</td></tr></tbody></table>
+      <table><thead><tr><th style="width:2rem"><input type="checkbox" id="chk-all-approvals" onchange="toggleSelectAllApprovals(this.checked)"></th><th>Job</th><th>Title</th><th>Target</th><th>From</th><th>Decide</th></tr></thead>
+      <tbody id="approvals"><tr><td colspan="6" class="muted">-</td></tr></tbody></table>
 
       <h2>Job Board</h2>
-      <table><thead><tr><th>Job</th><th>Title</th><th>Status</th><th>Target</th><th>Leased By</th><th>Created</th><th></th></tr></thead>
-      <tbody id="jobs"><tr><td colspan="7" class="muted">-</td></tr></tbody></table>
+      <table><thead><tr>
+        <th style="width:2rem"><input type="checkbox" id="chk-all-jobs" onchange="toggleSelectAllJobs(this.checked)"></th>
+        <th onclick="toggleSort('id')" style="cursor:pointer">Job <span id="sort-ind-id"></span></th>
+        <th onclick="toggleSort('title')" style="cursor:pointer">Title <span id="sort-ind-title"></span></th>
+        <th onclick="toggleSort('status')" style="cursor:pointer">Status <span id="sort-ind-status"></span></th>
+        <th onclick="toggleSort('priority')" style="cursor:pointer">Priority <span id="sort-ind-priority"></span></th>
+        <th onclick="toggleSort('target')" style="cursor:pointer">Target <span id="sort-ind-target"></span></th>
+        <th onclick="toggleSort('leased_by')" style="cursor:pointer">Leased By <span id="sort-ind-leased_by"></span></th>
+        <th onclick="toggleSort('created')" style="cursor:pointer">Created <span id="sort-ind-created"></span></th>
+        <th></th>
+      </tr></thead>
+      <tbody id="jobs"><tr><td colspan="9" class="muted">-</td></tr></tbody></table>
 
       <div id="audit-panel" class="card" style="display:none; margin-top:1rem">
         <h3>Audit Trail: <span id="audit-job"></span></h3>
@@ -253,32 +294,229 @@ function nav(view) {
   if (view === "settings") loadSettings();
 }
 
-/* ── operations ──────────────────────────────────────────────── */
+/* ── operations & multi-select & sorting ─────────────────────── */
+let selectedJobs = new Set();
+let currentSort = localStorage.getItem("mco_job_sort") || "created_desc";
+let sortCol = "created";
+let sortDir = "desc";
+
+function updateSortIndicators() {
+  for (const c of ["id", "title", "status", "priority", "target", "leased_by", "created"]) {
+    const el = $("sort-ind-" + c);
+    if (el) el.textContent = (sortCol === c) ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+  }
+}
+
+function toggleSort(col) {
+  if (sortCol === col) {
+    sortDir = (sortDir === "asc") ? "desc" : "asc";
+  } else {
+    sortCol = col;
+    sortDir = (col === "priority" || col === "created") ? "desc" : "asc";
+  }
+  currentSort = sortCol + "_" + sortDir;
+  localStorage.setItem("mco_job_sort", currentSort);
+  updateSortIndicators();
+  refreshOps();
+}
+
+function toggleSelectAllApprovals(checked) {
+  document.querySelectorAll(".approval-cb").forEach(cb => {
+    cb.checked = checked;
+    if (checked) selectedJobs.add(cb.value);
+    else selectedJobs.delete(cb.value);
+  });
+  updateSelectedCount();
+}
+
+function toggleSelectAllJobs(checked) {
+  document.querySelectorAll(".job-cb").forEach(cb => {
+    cb.checked = checked;
+    if (checked) selectedJobs.add(cb.value);
+    else selectedJobs.delete(cb.value);
+  });
+  updateSelectedCount();
+}
+
+function toggleJobSelection(id, checked) {
+  if (checked) selectedJobs.add(id);
+  else selectedJobs.delete(id);
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const count = selectedJobs.size;
+  $("bulk-count").textContent = count;
+  $("bulk-bar").style.display = count > 0 ? "flex" : "none";
+}
+
+function clearSelection() {
+  selectedJobs.clear();
+  document.querySelectorAll(".job-cb, .approval-cb").forEach(cb => cb.checked = false);
+  const allJ = $("chk-all-jobs"); if (allJ) allJ.checked = false;
+  const allA = $("chk-all-approvals"); if (allA) allA.checked = false;
+  updateSelectedCount();
+}
+
+async function bulkAction(action) {
+  const ids = [...selectedJobs];
+  if (!ids.length) { alert("No jobs selected."); return; }
+  let reason = "";
+  let targetRole = "";
+  if (action === "reject") {
+    reason = prompt("Reason for batch rejection?") || "";
+    if (!reason) return;
+  } else if (action === "cancel") {
+    reason = prompt("Reason for batch cancellation?") || "";
+  } else if (action === "reassign") {
+    targetRole = prompt("Target agent role (e.g. claude, codex, antigravity):") || "";
+    if (!targetRole) return;
+  }
+
+  try {
+    const res = await api("/api/jobs/batch-action", {
+      method: "POST",
+      body: JSON.stringify({
+        job_ids: ids,
+        action: action,
+        reason: reason,
+        target_agent_role: targetRole || undefined
+      })
+    });
+    const succ = res.succeeded ? res.succeeded.length : 0;
+    const fail = res.failed ? Object.keys(res.failed).length : 0;
+    alert(`Batch ${action} completed: ${succ} succeeded, ${fail} failed.`);
+    clearSelection();
+    refreshOps();
+  } catch (e) {
+    alert("Batch action error: " + e.message);
+  }
+}
+
+/* ── autonomy controls & live look ──────────────────────────── */
+async function toggleAutonomyPause() {
+  try {
+    const cur = $("btn-toggle-pause").textContent;
+    const endpoint = cur === "Resume" ? "/api/score/autonomy/resume" : "/api/score/autonomy/pause";
+    await api(endpoint, { method: "POST" });
+    refreshOps();
+  } catch (e) { alert("Autonomy toggle error: " + e.message); }
+}
+
+async function triggerManualTick() {
+  try {
+    $("btn-tick-now").textContent = "Ticking...";
+    const res = await api("/api/score/autonomy/tick", { method: "POST" });
+    $("btn-tick-now").textContent = "Tick Now";
+    const t = res.result && res.result.ticked ? res.result.ticked.length : 0;
+    const a = res.result && res.result.advanced ? res.result.advanced.length : 0;
+    alert(`Manual tick completed: ${t} ticked, ${a} advanced.`);
+    refreshOps();
+  } catch (e) {
+    $("btn-tick-now").textContent = "Tick Now";
+    alert("Manual tick error: " + e.message);
+  }
+}
+
+async function abortActiveRun(runId) {
+  const reason = prompt("Reason for aborting run " + runId + "?") || "Aborted by operator";
+  try {
+    await api("/api/score/autonomy/abort", {
+      method: "POST",
+      body: JSON.stringify({ run_id: runId, reason: reason })
+    });
+    alert("Run " + runId + " aborted.");
+    openLiveLook();
+    refreshOps();
+  } catch (e) {
+    alert("Abort error: " + e.message);
+  }
+}
+
+async function openLiveLook() {
+  try {
+    const a = await api("/api/score/autonomy");
+    const activeHtml = a.active_runs && a.active_runs.length ? a.active_runs.map(r => `
+      <tr>
+        <td><b>${esc(r.id)}</b></td>
+        <td>${badge(r.status)}</td>
+        <td>${esc(r.tasks_accepted ? r.tasks_accepted.length : 0)} tasks</td>
+        <td><button class="no" onclick="abortActiveRun('${esc(r.id)}')">Abort Run</button></td>
+      </tr>
+    `).join("") : '<tr><td colspan="4" class="muted">No active Score runs in progress.</td></tr>';
+
+    const failHtml = a.failing_runs && a.failing_runs.length ? `
+      <h4 style="color:#f85149; margin-top:1rem">Failing / Stuck Runs</h4>
+      <table><thead><tr><th>Run</th><th>Status</th></tr></thead>
+      <tbody>${a.failing_runs.map(r => `<tr><td>${esc(r.id)}</td><td>${badge(r.status)}</td></tr>`).join("")}</tbody></table>
+    ` : "";
+
+    openModal(`<h3>Autonomy Live Look</h3>
+      <div style="margin-bottom:1rem; font-size:.85rem; display:grid; grid-template-columns:9rem 1fr; gap:.4rem .8rem">
+        <span class="muted">Autonomy State:</span> <b>${badge(a.status)}</b>
+        <span class="muted">Conductor Sweep:</span> <span>${a.interval_seconds}s interval (${a.paused ? "PAUSED" : (a.configured ? "Running" : "Standby")})</span>
+        <span class="muted">Live Repository:</span> <span>${a.live_repository_write ? '<span class="good">Enabled</span>' : '<span class="muted">Shadow / Read-Only</span>'}</span>
+        <span class="muted">Conductor State DB:</span> <span style="font-family:monospace; font-size:.78rem">${esc(a.database)}</span>
+      </div>
+      <div style="margin-bottom:1rem">
+        <button onclick="triggerManualTick()">Trigger Sweep Now</button>
+        <button onclick="toggleAutonomyPause()">${a.paused ? "Resume Conductor" : "Pause Conductor"}</button>
+      </div>
+      <h4>Active Score Runs (${a.active_runs ? a.active_runs.length : 0})</h4>
+      <table><thead><tr><th>Run ID</th><th>Status</th><th>Accepted</th><th>Action</th></tr></thead>
+      <tbody>${activeHtml}</tbody></table>
+      ${failHtml}
+      <div style="margin-top:1.2rem"><button onclick="closeModal()">Close</button></div>
+    `);
+  } catch (e) {
+    alert("Live Look error: " + e.message);
+  }
+}
+
 function startOps() { refreshOps(); clearInterval(opsTimer); opsTimer = setInterval(refreshOps, 5000); }
 
 async function refreshOps() {
   if (!token) return;
   try {
-    const jobs = await api("/api/jobs");
+    updateSortIndicators();
+    const [jobs, autonomy] = await Promise.all([
+      api("/api/jobs?sort=" + encodeURIComponent(currentSort)),
+      api("/api/score/autonomy").catch(() => null)
+    ]);
     $("conn").textContent = "connected " + new Date().toLocaleTimeString();
     $("conn").className = "muted";
 
+    if (autonomy) {
+      const st = autonomy.status;
+      $("autonomy-badge").className = "badge " + (st === "active" ? "s-online" : (st === "paused" ? "s-disabled" : (st === "frozen" ? "s-failed" : "s-waiting")));
+      $("autonomy-badge").textContent = st.toUpperCase();
+      const runCount = autonomy.active_runs ? autonomy.active_runs.length : 0;
+      $("autonomy-desc").textContent = `${autonomy.interval_seconds}s sweep | ${autonomy.live_repository_write ? "Live-Write" : "Shadow"} | ${runCount} active runs`;
+      $("btn-toggle-pause").textContent = autonomy.paused ? "Resume" : "Pause";
+    }
+
     const approvals = jobs.filter(j => j.status === "needs_approval");
     $("approvals").innerHTML = approvals.length ? approvals.map(j => `
-      <tr><td>${short(j.id)}</td><td>${esc(j.title)}</td><td>${esc(j.target_agent_role)}</td>
-      <td>${esc(j.source_agent_id)}</td>
-      <td><button class="ok" onclick="decide('${j.id}','approve')">Approve</button>
-          <button class="no" onclick="decide('${j.id}','reject')">Reject</button></td></tr>`).join("")
-      : '<tr><td colspan="5" class="muted">Nothing awaiting approval.</td></tr>';
+      <tr>
+        <td><input type="checkbox" class="approval-cb" value="${j.id}" onchange="toggleJobSelection('${j.id}',this.checked)" ${selectedJobs.has(j.id) ? "checked" : ""}></td>
+        <td>${short(j.id)}</td><td>${esc(j.title)}</td><td>${esc(j.target_agent_role)}</td>
+        <td>${esc(j.source_agent_id)}</td>
+        <td><button class="ok" onclick="decide('${j.id}','approve')">Approve</button>
+            <button class="no" onclick="decide('${j.id}','reject')">Reject</button></td></tr>`).join("")
+      : '<tr><td colspan="6" class="muted">Nothing awaiting approval.</td></tr>';
 
     $("jobs").innerHTML = jobs.length ? jobs.map(j => `
-      <tr><td>${short(j.id)}</td><td>${esc(j.title)}</td><td>${badge(j.status)}</td>
-      <td>${esc(j.target_agent_role)}${j.target_agent_id ? " / " + esc(j.target_agent_id) : ""}</td>
-      <td>${esc(j.leased_by_instance_id || "-")}</td><td>${esc((j.created_at || "").slice(0, 19))}</td>
-      <td><button onclick="showAudit('${j.id}')">Audit</button>
-          ${["failed","rejected"].includes(j.status) ? `<button class="ok" onclick="retryJob('${j.id}')">Retry</button>` : ""}
-      </td></tr>`).join("")
-      : '<tr><td colspan="7" class="muted">No jobs.</td></tr>';
+      <tr>
+        <td><input type="checkbox" class="job-cb" value="${j.id}" onchange="toggleJobSelection('${j.id}',this.checked)" ${selectedJobs.has(j.id) ? "checked" : ""}></td>
+        <td>${short(j.id)}</td><td>${esc(j.title)}</td><td>${badge(j.status)}</td>
+        <td>${esc(j.priority || 0)}</td>
+        <td>${esc(j.target_agent_role)}${j.target_agent_id ? " / " + esc(j.target_agent_id) : ""}</td>
+        <td>${esc(j.leased_by_instance_id || "-")}</td><td>${esc((j.created_at || "").slice(0, 19))}</td>
+        <td><button onclick="showAudit('${j.id}')">Audit</button>
+            ${["failed","rejected"].includes(j.status) ? `<button class="ok" onclick="retryJob('${j.id}')">Retry</button>` : ""}
+        </td></tr>`).join("")
+      : '<tr><td colspan="9" class="muted">No jobs.</td></tr>';
+    updateSelectedCount();
   } catch (e) {
     $("conn").textContent = "error: " + e.message; $("conn").className = "err";
     if (e.status === 401) lockUp();

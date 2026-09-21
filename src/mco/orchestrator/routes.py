@@ -320,26 +320,66 @@ def get_db_client(force_new: bool = False):
     return _db_client
 
 
+STATUS_SORT_ORDER = {
+    "needs_approval": 0,
+    "waiting": 1,
+    "pending": 2,
+    "leased": 3,
+    "in_progress": 4,
+    "completed": 5,
+    "failed": 6,
+    "rejected": 7,
+    "cancelled": 8,
+    "halted": 9,
+}
+
+
 @router.get("")
-async def get_jobs(include_archived: bool = False, agent: dict = Depends(require_scopes("jobs:read"))):
-    """Retrieve job list from the Supabase database.
+async def get_jobs(
+    include_archived: bool = False,
+    sort: str = None,
+    agent: dict = Depends(require_scopes("jobs:read")),
+):
+    """Retrieve job list from the database.
 
     Archived jobs (soft-hidden terminal jobs - see POST /{job_id}/archive) are
     excluded by default so a long-running board doesn't drown in old Done/
     Problems rows; pass ?include_archived=true to see everything.
+
+    Sorting defaults to MCO_DEFAULT_JOB_SORT ('created_desc') and can be
+    overridden per-query via ?sort=created_desc|created_asc|priority_desc|status.
     """
     db_client = get_db_client()
     if not db_client:
         return []
+    effective_sort = (sort or get_config().get("MCO_DEFAULT_JOB_SORT") or "created_desc").strip().lower()
+    if effective_sort not in ("created_desc", "created_asc", "priority_desc", "status"):
+        effective_sort = "created_desc"
     try:
-        res = (
-            db_client.table("agent_jobs").select("*")
-            .eq("org_id", agent_org(agent))
-            .order("created_at", desc=True).limit(100).execute()
-        )
+        query = db_client.table("agent_jobs").select("*").eq("org_id", agent_org(agent))
+        if effective_sort == "created_asc":
+            query = query.order("created_at", desc=False)
+        elif effective_sort == "priority_desc":
+            query = query.order("priority", desc=True)
+        else:
+            query = query.order("created_at", desc=True)
+        res = query.limit(100).execute()
         jobs = res.data or []
         if not include_archived:
             jobs = [j for j in jobs if not j.get("archived")]
+
+        if effective_sort == "created_asc":
+            jobs.sort(key=lambda j: j.get("created_at") or "")
+        elif effective_sort == "created_desc":
+            jobs.sort(key=lambda j: j.get("created_at") or "", reverse=True)
+        elif effective_sort == "priority_desc":
+            jobs.sort(key=lambda j: (j.get("priority") or 0, j.get("created_at") or ""), reverse=True)
+        elif effective_sort == "status":
+            jobs.sort(key=lambda j: (
+                STATUS_SORT_ORDER.get(j.get("status"), 99),
+                -(j.get("priority") or 0),
+                j.get("created_at") or "",
+            ))
         return jobs
     except Exception as e:
         logger.error(f"Error fetching jobs: {e}")
@@ -1282,6 +1322,87 @@ async def reassign_job(job_id: str, payload: dict, agent: dict = Depends(require
         logger.debug(f"ntfy addon skipped: {ntfy_err}")
 
     return {"success": True, "job": new_job, "superseded_job": old_job}
+
+
+@router.post("/batch-action")
+async def batch_job_action(payload: dict, agent: dict = Depends(require_agent)):
+    """Execute a batch operation across multiple jobs.
+
+    Supported actions:
+      - 'retry': Re-queue failed/rejected/halted jobs (approver role required)
+      - 'cancel': Cancel in-flight jobs (approver role required)
+      - 'archive': Soft-hide terminal jobs (jobs:write scope required)
+      - 'unarchive': Restore archived terminal jobs (jobs:write scope required)
+      - 'reassign': Re-target failed/rejected/cancelled jobs (approver role required)
+      - 'approve': Approve jobs awaiting human decision (jobs:approve scope & approver role)
+      - 'reject': Reject jobs awaiting human decision (jobs:approve scope & approver role)
+
+    Returns a structured summary of succeeded and failed item IDs with reasons.
+    """
+    db_client = get_db_client()
+    if not db_client:
+        raise HTTPException(status_code=400, detail="Database not configured")
+
+    job_ids = payload.get("job_ids")
+    if not isinstance(job_ids, list) or not job_ids:
+        raise HTTPException(status_code=400, detail="job_ids list is required")
+
+    action = (payload.get("action") or "").strip().lower()
+    if action not in ("retry", "cancel", "archive", "unarchive", "reassign", "approve", "reject"):
+        raise HTTPException(status_code=400, detail=f"Unsupported batch action: {action}")
+
+    approver_roles = utils_mod.get_approver_roles()
+    caller_role = (agent.get("role") or "").lower()
+    is_approver = caller_role in approver_roles or has_scope(agent, "admin")
+
+    if action in ("retry", "cancel", "reassign", "approve", "reject"):
+        if not (has_scope(agent, "jobs:approve") or has_scope(agent, "admin")):
+            raise HTTPException(status_code=403, detail="jobs:approve scope required")
+        if not is_approver:
+            raise HTTPException(status_code=403, detail="Your role is not permitted to perform this action")
+    else:
+        if not (has_scope(agent, "jobs:write") or has_scope(agent, "jobs:approve") or has_scope(agent, "admin")):
+            raise HTTPException(status_code=403, detail="jobs:write scope required")
+
+    succeeded = []
+    failed = {}
+    reason = payload.get("reason", "")
+    target_role = payload.get("target_agent_role")
+    target_id = payload.get("target_agent_id")
+
+    for jid in job_ids:
+        try:
+            if action == "retry":
+                await retry_job(jid, agent=agent)
+            elif action == "cancel":
+                await cancel_job(jid, payload={"reason": reason}, agent=agent)
+            elif action == "archive":
+                await archive_job(jid, agent=agent)
+            elif action == "unarchive":
+                await unarchive_job(jid, agent=agent)
+            elif action == "reassign":
+                await reassign_job(
+                    jid,
+                    payload={"target_agent_role": target_role, "target_agent_id": target_id, "reason": reason},
+                    agent=agent,
+                )
+            elif action == "approve":
+                await approve_job(jid, agent=agent)
+            elif action == "reject":
+                await reject_job(jid, payload={"reason": reason}, agent=agent)
+            succeeded.append(jid)
+        except HTTPException as exc:
+            failed[jid] = exc.detail
+        except Exception as exc:
+            failed[jid] = str(exc)
+
+    return {
+        "success": True,
+        "action": action,
+        "total": len(job_ids),
+        "succeeded": succeeded,
+        "failed": failed,
+    }
 
 
 @agents_router.get("")

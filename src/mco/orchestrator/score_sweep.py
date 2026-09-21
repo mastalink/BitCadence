@@ -143,9 +143,27 @@ def failing_runs(bridge) -> dict[str, str]:
             FAILING_RUN_STATES)}
 
 
-def sweep(conductor) -> SweepResult:
+_sweep_paused: bool = False
+
+
+def is_sweep_paused() -> bool:
+    """Whether autonomous conductor sweep execution has been paused by an operator."""
+    return _sweep_paused
+
+
+def set_sweep_paused(paused: bool) -> bool:
+    """Pause or unpause autonomous conductor sweeps."""
+    global _sweep_paused
+    _sweep_paused = bool(paused)
+    return _sweep_paused
+
+
+def sweep(conductor, *, force: bool = False) -> SweepResult:
     """Advance every run this conductor owns and is allowed to move, by one tick."""
     result = SweepResult()
+    if is_sweep_paused() and not force:
+        result.skipped["_all"] = "sweep_paused"
+        return result
     for run_id, _status, credential in candidates(conductor.bridge):
         try:
             if credential != conductor.board.identity:
