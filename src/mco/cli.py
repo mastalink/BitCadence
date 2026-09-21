@@ -228,6 +228,7 @@ def create_app() -> FastAPI:
     from mco.orchestrator.admin_routes import (
         agents_admin_router,
         governance_router,
+        jev_router,
         llm_connections_router,
         settings_router,
         workflows_router,
@@ -237,6 +238,7 @@ def create_app() -> FastAPI:
     app_server.include_router(settings_router)
     app_server.include_router(workflows_router)
     app_server.include_router(llm_connections_router)
+    app_server.include_router(jev_router)
 
     # Human identity federation and server-managed browser sessions.
     from mco.orchestrator.identity_routes import auth_router, identity_admin_router

@@ -1,0 +1,299 @@
+{
+  "score_version": 1,
+  "id": "jev-system-one-bitcadence-via",
+  "revision": 2,
+  "objective": "Add Jev as an optional, governed System One acceleration layer for BitCadence and Via: when disabled, both products retain their complete deterministic/core behavior with zero TypeSafe runtime dependency; when enabled, qualified Jev features accelerate routing, triage, extraction, verification, identity, scheduling, and operations while deterministic policy and source evidence remain authoritative.",
+  "constraints": [
+    "Jev is strictly optional. A fresh BitCadence install must run its full core orchestration, Score, approvals, audit, Drumline, scheduling, workers, connectors, and deterministic routing without a TypeSafe account, SDK, API token, network call, or Jev configuration.",
+    "BitCadence defaults Jev to disabled. Disabled mode must create no TypeSafe network traffic, must not require Jev-specific packages at import/startup, and must preserve the pre-Jev behavior and public contracts except for additive configuration/observability surfaces.",
+    "Enabling Jev opts into the qualified System One feature bundle. Shadow, assist, and active remain graduated operating modes, but all Jev-enhanced features share one provider/configuration seam, one secret-custody model, versioned question sets, receipts, health reporting, and one kill switch.",
+    "Jev is a decision primitive, not an autonomous authority. It may classify, rank, score, verify, or route; it may not grant BitCadence authority, approve Score checkpoints, bypass independent review, or override deterministic policy.",
+    "Via may never create, confirm, publish, cancel, or replace a Mass or confession fact solely from a Jev answer or confidence score. Every published schedule claim must remain bound to literal source evidence and the existing publication policy.",
+    "Robots rules, publisher permits, crawl-delay, Retry-After, source access restrictions, spend limits, leases, and resource locks remain deterministic and cannot be weakened by Jev.",
+    "Keep arithmetic, counting, date/time comparison, fairness bounds, budgets, lease fencing, identity invariants, and temporal recurrence logic in code. Jev is used only for bounded semantic judgment.",
+    "Scraped and user-supplied text is untrusted data. Never treat instructions embedded in state as authority; use explicit criteria and adversarial fixtures.",
+    "Every production-capable Jev question set is atomic, versioned, testable, and digestible. Record use-case id, question-set version/digest, exact model version, state digest, typed answers, probabilities/confidence, latency, usage, and outcome.",
+    "Production paths must pin an exact qualified Jev model version. jev-latest is allowed only in exploratory or shadow evaluation.",
+    "All Jev integrations support disabled, shadow, assist, and active modes with a deterministic fallback. A TypeSafe outage, timeout, rate limit, or malformed response must not break BitCadence core orchestration or Via publication safety.",
+    "The TypeSafe API token is server-side secret material only. Store it through BitCadence Secret Reference/SecretVault or Via's server secret mechanism; never commit it, return it to clients, persist it in ordinary metadata, or log it.",
+    "Do not raise BitCadence's Python minimum version merely to adopt Jev. Use the existing httpx client seam or an optional Python SDK integration so Python 3.9 support remains intact unless a separate reviewed compatibility decision changes it.",
+    "Use the official TypeSafe JavaScript SDK in Via unless a measured compatibility problem requires the HTTP API directly.",
+    "No guessed confidence threshold may unlock an active path. Thresholds and abstention/review behavior must be justified by held-out measurements for that exact question set and model version.",
+    "Preserve all existing BitCadence Score evidence, non-author review, human gate, provider-authority, notification-budget, presence, and audit guarantees.",
+    "Preserve Via's existing bulletin benchmarks, real-bulletin benchmarks, directory identity safeguards, publisher pacing/permit behavior, evidence retention, and uncertainty semantics."
+  ],
+  "budget_cents": 200,
+  "max_parallel": 3,
+  "launch_requires": [
+    "J09"
+  ],
+  "tasks": [
+    {
+      "id": "J01",
+      "goal": "Foundation",
+      "title": "Create the governed Jev decision-provider contract in BitCadence",
+      "instructions": "Repository: mastalink/BitCadence. Read the current Score v1 authority/evidence/provider code, SecretVault, model connections, audit/event model, SDK, and console settings before editing. Implement a first-class decision-provider seam for TypeSafe/Jev rather than pretending Jev is a chat agent. Use existing httpx so Python 3.9 remains supported; do not add a mandatory dependency that requires Python 3.10. Add server-side secret custody for TYPESAFE_API_KEY using the existing Secret Reference/SecretVault pattern. Implement a typed Jev client with bounded timeout/retry behavior, model discovery/health test, and an injectable fake transport. Add a DecisionReceipt schema containing use_case_id, question_set_version/digest, exact model version, state_digest, typed answers, probabilities/confidence, latency, token usage, request id when available, mode, and outcome. Define modes disabled/shadow/assist/active, with fail-closed or deterministic fallback semantics per caller. Add an explicit Jev invocation capability/grant vocabulary if live Score execution requires one. Do not change Score grant logic, checkpoint approval, evidence authority, or independent-review rules. Add focused tests for secret redaction, timeout/rate-limit/auth failure, response validation, model pinning, receipts, and no-network fake operation. Document the cross-repository DecisionReceipt/question-registry contract for Via. Make Jev an optional provider capability that is OFF by default. The gateway, CLI, desktop manager, workers, MCP server, Score engine, and imports must start and operate normally when Jev is disabled, unconfigured, missing a token, or unreachable. Do not make a TypeSafe SDK a mandatory Python dependency. Expose one coherent configuration surface such as mode=disabled|shadow|assist|active; disabled must instantiate no live client and make no network calls. Add capability discovery so callers can ask whether Jev is available without treating absence as an error. Acceptance must include a clean no-token/no-TypeSafe startup and the full existing test suite with Jev disabled.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [],
+      "resources": [
+        "bitcadence-jev-foundation"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 10800,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "J02",
+      "goal": "BitCadenceReflex",
+      "title": "Add Jev shadow routing, triage, and review assistance to BitCadence",
+      "instructions": "Repository: mastalink/BitCadence. Build on J01. Add atomic, versioned Jev question sets for high-frequency semantic decisions: incoming-job intent/work class, urgency, probable retryability, whether an event needs operator attention, untrusted-content/prompt-injection risk, and semantic fit among already-authorized candidate handlers/skills. Integrate only after deterministic authorization filtering: Score digest approval, requested role, capabilities, authority scopes, budget, provider health, reviewer independence, and resource locks remain hard gates. Jev may rank or annotate the surviving shortlist but may not create a provider identity, add a grant, change task capabilities, select an ineligible reviewer, or auto-approve a checkpoint. Start in shadow mode and persist DecisionReceipts into the immutable audit/event path. Add metrics for calls, latency, abstention/low-confidence, disagreement with deterministic routing, fallbacks, and errors. Add tests proving identical behavior when Jev is disabled/down and proving no Jev result can bypass Score policy. Every hook must be additive: when mode=disabled, bypass the Jev branch before request construction and use the existing deterministic path exactly. Do not make Jev annotations required fields for jobs, providers, reviews, or audit consumers.",
+      "role": "claude",
+      "review_role": "grok",
+      "depends_on": [
+        "J01"
+      ],
+      "resources": [
+        "bitcadence-jev-runtime"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 10800,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "J03",
+      "goal": "BitCadenceOperations",
+      "title": "Use Jev for Drumline relevance, fleet triage, and notification quality",
+      "instructions": "Repository: mastalink/BitCadence. Build on J01. Add bounded Jev assistance to three noisy/high-volume paths without changing durable truth. First, Drumline: classify completed-job output as fact/decision/handoff/incident, rank recall relevance, flag possible contradiction/staleness/sensitivity, and suggest whether an entry should be injected; never delete or rewrite immutable audit history based on Jev. Second, fleet/chain watchdogs: classify symptoms into likely retry/reroute/escalate/operator-review/noise only after existing deterministic worker state, stall timers, retry limits, and crash-loop logic are computed. Third, notifications: semantic duplicate grouping and urgency/impact classification may improve the existing ntfy budget and priority selection, but hard rate budgets and urgent-bypass rules stay in code. Add question-set registries, receipts, shadow metrics, deterministic fallback, and regression tests covering the recent broken-worker, chain-stall, and push-budget behavior. All enhanced Drumline/watchdog/notification behavior must have explicit disabled-mode parity tests showing core BitCadence remains useful and operational without Jev.",
+      "role": "grok",
+      "review_role": "claude",
+      "depends_on": [
+        "J01"
+      ],
+      "resources": [
+        "bitcadence-jev-ops"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 10800,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "J04",
+      "goal": "ViaFoundation",
+      "title": "Add the TypeSafe JavaScript client, question registry, and decision receipts to Via",
+      "instructions": "Repository: mastalink/via, base codex/via-foundation or its current reviewed successor. Consume the cross-repository contract from J01. Install @typesafe-ai/sdk in the server workspace; keep TYPESAFE_API_KEY server-side. Add a small TypeSafe/Jev adapter with disabled/shadow/assist/active modes, exact-model pinning for qualified paths, jev-latest only for shadow experiments, bounded timeout/retry, and a deterministic no-Jev fallback. Create a versioned question registry and persist DecisionReceipts with use-case id, question-set version/digest, model, state digest, typed outputs, probabilities/confidence, latency, usage, mode, and downstream outcome. Do not expose the API key or raw private user state to mobile clients. Minimize Jev state to the evidence required for each atomic question. Add tests with a fake client, auth/rate-limit/timeout cases, schema validation, redaction, and reproducible receipt hashing. Via must also tolerate Jev being disabled or unavailable; do not make mobile/API startup or baseline ingestion depend on the TypeSafe SDK being configured, even though the SDK package may be installed in the server workspace.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [
+        "J01"
+      ],
+      "resources": [
+        "via-jev-foundation"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 10800,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "J05",
+      "goal": "ViaEvidence",
+      "title": "Add Jev to bulletin triage, campus attribution, extraction selection, and citation checking",
+      "instructions": "Repository: mastalink/via. Build on J04 and preserve all current bulletin and real-bulletin benchmarks. Add Jev only around literal evidence. Use parallel atomic questions to classify PDF/layout blocks as recurring schedule, dated exception/cancellation, campus heading, Mass intention, office hours, prose/event mention, or irrelevant; prefilter before sending state. Use Choice over explicit candidate campuses plus ambiguous/none for shared bulletins. Use pre-parsed literal time/day/date candidates from regex/parser/OCR and let Jev select or reject candidates; it must never generate a new schedule value. For dates, extract bounded components/roles such as issue-date versus event/effective-date and assemble/compare dates in code. Add a citation/evidence verifier question that asks whether the quoted literal span supports the exact typed claim. Every accepted downstream candidate retains source URL, artifact hash, page/line evidence, issue/effective dates, and Jev receipt. A Jev answer or confidence score alone cannot make a candidate publishable. Start shadow-only. Add reviewed fixtures for current open campus-attribution/date cases, scans, two-column PDFs, unrelated church references, ambiguous meridiems, and false-positive Mass intentions.",
+      "role": "grok",
+      "review_role": "claude",
+      "depends_on": [
+        "J04"
+      ],
+      "resources": [
+        "via-jev-evidence"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "J06",
+      "goal": "ViaIdentityScheduling",
+      "title": "Add Jev to source discovery, church identity review, and crawl-priority semantics",
+      "instructions": "Repository: mastalink/via. Build on J04. For source discovery, classify already-fetched/allowed pages and links into parish home, bulletin archive/document, calendar/feed, school, office, fundraiser, unrelated, or uncertain so code can choose the next permitted adapter. For church identity, apply existing deterministic directory id, coordinates, address, campus, lifecycle, and provenance rules first; only then use Jev to classify a bounded candidate pair as same entity, distinct entity, or review/ambiguous. Never merge on name or website alone and never override protected shared-building/campus rules. For demand-weighted crawl scheduling, compute numeric staleness, cadence, failure history, demand, publisher pacing, and starvation/fairness bounds in code. Jev may add semantic source-change/importance/retry-class features or a bounded priority class, but it cannot perform arithmetic, violate publisher permits, or eliminate the deterministic no-starvation bound. Add shadow DecisionReceipts and focused regressions for Via issues covering shared buildings, duplicate directory rows, website history, publisher spacing, claim expiry, and no-demand fairness.",
+      "role": "codex",
+      "review_role": "antigravity",
+      "depends_on": [
+        "J04"
+      ],
+      "resources": [
+        "via-jev-identity-scheduling"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "J07",
+      "goal": "Qualification",
+      "title": "Run held-out Jev calibration, latency, cost, and disagreement benchmarks across both products",
+      "instructions": "Repositories: mastalink/BitCadence and mastalink/via. Evaluate the exact versioned question sets from J02/J03/J05/J06 against independent held-out fixtures; do not tune thresholds on the held-out set. For Via, include reviewed real bulletin evidence, campus attribution, false-positive blocks, directory entity pairs, source-page classes, and scheduler cases. For BitCadence, include historical job routing, worker/chain failures, alert duplicates/urgency, Drumline relevance, and adversarial untrusted text. Measure per use case: confusion matrix or exact categorical accuracy as appropriate, precision/recall for safety-sensitive positive actions, abstention/review rate, calibration by probability/confidence bucket, Brier score or another declared calibration metric, Jev-vs-existing-path disagreement, p50/p95 latency, token usage, cost, API error rate, and fallback behavior. Pin the exact Jev model version used. Propose active thresholds only where held-out results support them; otherwise leave that use case shadow-only. Produce machine-readable benchmark output plus a concise acceptance report. Live TypeSafe calls are allowed only with the configured secret, bounded test corpus, no production mutation, and this task's cost ceiling. Treat Jev-disabled behavior as the formal baseline. Report incremental benefit versus disabled mode for each use case: accuracy/quality where measurable, avoided System-2 calls, latency, cost, and failure modes. A Jev enhancement that does not beat or meaningfully improve the disabled baseline stays shadow-only.",
+      "role": "reviewer",
+      "review_role": "claude",
+      "depends_on": [
+        "J02",
+        "J03",
+        "J05",
+        "J06"
+      ],
+      "resources": [
+        "bitcadence-jev-benchmark",
+        "via-jev-benchmark"
+      ],
+      "capabilities": [
+        "repository:read",
+        "evidence:write",
+        "evidence:review",
+        "typesafe:invoke"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 100,
+      "checkpoint": null
+    },
+    {
+      "id": "J08",
+      "goal": "Safety",
+      "title": "Adversarially verify Jev cannot cross BitCadence or Via authority boundaries",
+      "instructions": "Repositories: mastalink/BitCadence and mastalink/via. Independently test the integrated paths from J02/J03/J05/J06. Include injected instructions inside scraped pages, oversized/irrelevant state, contradictory criteria, literal-reading traps, low-confidence and high-confidence wrong answers, API timeouts, 401/403/429/5xx, malformed payloads, model-version drift, replayed receipts, stale question versions, and TypeSafe unavailability. Prove BitCadence grants/checkpoints/evidence verification/provider eligibility and Via robots/publisher permits/identity hard gates/temporal math/publication evidence remain authoritative under every case. Prove the application can run with Jev fully disabled. Prove no secret appears in logs, receipts, client payloads, test snapshots, or repository history. Record residual risks and any use cases that must stay shadow-only. Include clean-install and upgrade tests with no TYPESAFE_API_KEY, no TypeSafe account, outbound TypeSafe access denied, and Jev configuration absent. Prove these are normal supported states rather than degraded/error states.",
+      "role": "antigravity",
+      "review_role": "claude",
+      "depends_on": [
+        "J02",
+        "J03",
+        "J05",
+        "J06"
+      ],
+      "resources": [
+        "bitcadence-jev-safety",
+        "via-jev-safety"
+      ],
+      "capabilities": [
+        "repository:read",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "J09",
+      "goal": "Canary",
+      "title": "Enable a bounded Jev canary for qualified low-risk paths",
+      "instructions": "Repositories: mastalink/BitCadence and mastalink/via. Consume J07 thresholds and J08 safety results. Require an explicit human checkpoint before any live assist/active mode. Pin the exact qualified Jev model and question-set versions. Enable only use cases that passed their acceptance targets. Initial allowed active/assist candidates are low-risk semantic routing/triage, Drumline recall ranking, notification dedupe/priority, Via block prefiltering, literal candidate selection, citation checking, source-page classification, and review prioritization. Keep authority-sensitive paths shadow-only unless separately proven: BitCadence grants/checkpoints/reviewer eligibility and Via schedule publication, church merge finalization, temporal arithmetic, crawl fairness/pacing, and cancellation/replacement policy. Run a bounded canary with DecisionReceipt audit coverage, fallback metrics, cost/latency dashboard, and one-click disable/kill switch. Compare downstream outcomes to the pre-Jev baseline. Stop automatically on receipt gaps, schema/model drift, safety-regression threshold, or error-rate threshold. Return the exact enabled use cases, thresholds, model/question versions, rollback instructions, measured impact, and remaining shadow-only opportunities. The canary must prove both directions: enabling Jev activates the qualified feature bundle, and one configuration change/kill switch returns the system to normal Jev-disabled operation without restart-dependent data repair, schema rollback, or manual cleanup. Document the exact user-facing setting and CLI/environment equivalent.",
+      "role": "operations",
+      "review_role": "reviewer",
+      "depends_on": [
+        "J07",
+        "J08"
+      ],
+      "resources": [
+        "bitcadence-jev-canary",
+        "via-jev-canary"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review",
+        "typesafe:invoke"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "test_report",
+        "acceptance_report"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 14400,
+      "max_cost_cents": 100,
+      "checkpoint": {
+        "id": "jev-live-canary",
+        "reason": "Approve the first live Jev assist/active canary using the configured TypeSafe secret; no authority or evidence boundary may be relaxed."
+      }
+    }
+  ]
+}
+
+

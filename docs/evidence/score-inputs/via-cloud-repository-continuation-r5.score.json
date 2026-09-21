@@ -1,0 +1,67 @@
+{
+  "score_version": 1,
+  "id": "via-cloud-repository-continuation",
+  "revision": 5,
+  "objective": "Complete the governed VIA G03-G04 repository slice from the Grok-accepted G02 commit using healthy Grok/Codex lanes with no Claude dependency.",
+  "constraints": [
+    "G01 was independently accepted in run via-option-c-20260919-01; this continuation does not repeat or widen that audit.",
+    "This continuation cannot deploy, invoke AWS mutation APIs, alter production data, publish schedules, push, or merge.",
+    "All repository writes occur only in C:/AI/via-score-option-c-recovery2 on score/via-option-c-recovery2.",
+    "Every builder is reviewed by a different role against the exact conductor-owned commit.",
+    "Unsupported, stale, blocked, or conflicting schedule facts remain explicit; no agent may type or invent parish times.",
+    "G02 was accepted by Grok in run via-option-c-grok-20260920-08 at commit bb0209e31a7bec63884f0c0d58313486f1e110de; this continuation starts from that exact commit and does not repeat G02.",
+    "The Antigravity sidecar did not lease G03 within the polling window; G03 and G04 review are explicitly routed to healthy Grok.",
+    "G08 Lorain launch approval and spend above 15000 cents per month remain human-only gates in the master roadmap.",
+    "Cloud change remains unavailable until its signed-approval lane passes independent adversarial review."
+  ],
+  "budget_cents": 0,
+  "max_parallel": 1,
+  "launch_requires": ["G04-repository"],
+  "tasks": [
+    {
+      "id": "G03-repository",
+      "goal": "G03",
+      "title": "Harden the cloud ingestion worker contract in code",
+      "instructions": "Continue on the governed VIA branch after the Grok-accepted G02 commit bb0209e31a7bec63884f0c0d58313486f1e110de. Implement the repository-side scheduler, queue, fenced-worker, recovery, and budget behavior needed for cloud-only ingestion without applying infrastructure or using home endpoints. Prove duplicate delivery and worker interruption cannot duplicate accepted publication. Return strict JSON {\"ready\": true} only after focused tests pass. Do not deploy, push, merge, or invoke AWS mutation APIs.",
+      "role": "grok",
+      "review_role": "codex",
+      "depends_on": [],
+      "resources": ["C:/AI/via-score-option-c-recovery2"],
+      "capabilities": ["repository:write", "evidence:write", "evidence:review"],
+      "commit": {
+        "worktree_path": "C:/AI/via-score-option-c-recovery2",
+        "target_branch": "score/via-option-c-recovery2",
+        "allowed_paths": ["apps/api/src/jobs.ts", "apps/api/src/pipeline.ts", "apps/api/src/ingestion-status.ts", "apps/api/src/budget.ts", "apps/api/test/ingestion.test.ts", "infra/aws/*", "docs/*"],
+        "commit_message": "feat(via): harden cloud ingestion worker contracts",
+        "expected_before_sha": "bb0209e31a7bec63884f0c0d58313486f1e110de"
+      },
+      "evidence": ["commit_sha"],
+      "max_attempts": 1,
+      "timeout_seconds": 7200,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "G04-repository",
+      "goal": "G04",
+      "title": "Implement bounded bulletin and feed collection",
+      "instructions": "Continue on the governed VIA branch after G03. Implement or harden permitted HTTP, feed, publisher, PDF, proxy-quarantine, and browser-escalation code with exact artifact preservation and explicit blocked outcomes. Tests must cover hostile redirects, byte/page limits, large bulletin streaming, destination 403, proxy 407, and 429 pacing. Do not bypass explicit access refusal and do not deploy. Return strict JSON {\"ready\": true} only after focused tests pass.",
+      "role": "codex",
+      "review_role": "grok",
+      "depends_on": ["G03-repository"],
+      "resources": ["C:/AI/via-score-option-c-recovery2"],
+      "capabilities": ["repository:write", "evidence:write", "evidence:review"],
+      "commit": {
+        "worktree_path": "C:/AI/via-score-option-c-recovery2",
+        "target_branch": "score/via-option-c-recovery2",
+        "allowed_paths": ["apps/api/src/fetcher.ts", "apps/api/src/bulletins.ts", "apps/api/src/proxy-pool.ts", "apps/api/src/calendar-catalog.ts", "apps/api/test/bulletins.test.ts", "apps/api/test/proxy.test.ts", "apps/api/test/calendar.test.ts", "docs/*"],
+        "commit_message": "feat(via): bound bulletin and feed collection"
+      },
+      "evidence": ["commit_sha"],
+      "max_attempts": 1,
+      "timeout_seconds": 7200,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    }
+  ]
+}

@@ -1,0 +1,280 @@
+{
+  "score_version": 1,
+  "id": "bitcadence-jev-marketing-cloudflare",
+  "revision": 1,
+  "objective": "Reposition and update the BitCadence Cloudflare Pages website to explain the optional Jev-powered System One reflex layer with a high-conviction, evidence-backed marketing narrative, then preview, review, gate, deploy, verify, and retain a rollback path without weakening BitCadence's local-first core promise.",
+  "constraints": [
+    "Jev is an optional acceleration layer, not a prerequisite. The website must state plainly that BitCadence remains fully usable with Jev disabled and requires no TypeSafe account, token, SDK, or network access for core operation.",
+    "The default product story remains local-first, self-hosted, governed agent orchestration: job board, approvals, immutable audit, Drumline, scheduling, Flow Control, Score authority, and connectors must not be visually or rhetorically demoted into a Jev dependency.",
+    "Market the architecture as two-speed intelligence: Jev/System One for fast typed probabilistic decisions; Claude, Codex, Gemini/Grok and other agents/System Two for deeper reasoning and generative work; deterministic BitCadence policy and Score authority remain in control of consequential actions.",
+    "Do not imply Jev can issue grants, satisfy human gates, authenticate evidence, override deterministic policy, or replace independent review. Jev may advise or classify only where the shipped product permits it.",
+    "Only market Jev capabilities that exist at the exact reviewed BitCadence commit. If a feature is not merged and demonstrably available, label it as planned/coming soon or omit it; never present roadmap work as shipped functionality.",
+    "All numeric Jev speed, price, efficiency, calibration, or accuracy claims must either come from a BitCadence-controlled benchmark tied to an artifact digest or be explicitly attributed to TypeSafe with source date and qualification. Never present TypeSafe's 193.6x/444.6x workflow figures as BitCadence measurements.",
+    "Do not imply a partnership, endorsement, certification, or commercial relationship with TypeSafe unless separately evidenced. Use TypeSafe/Jev names descriptively and do not copy third-party logos or protected artwork without verified permission.",
+    "The website must preserve the zero-build static-site philosophy. Prefer edits to website/index.html and website/README.md only; do not add a framework, package manager dependency, client-side TypeSafe SDK, or build pipeline merely for marketing.",
+    "No TypeSafe API key, Cloudflare API token, BitCadence secret, account identifier, or private deployment metadata may be embedded in HTML, JavaScript, Git history, screenshots, evidence excerpts, or browser-visible assets.",
+    "No browser-side Jev calls. Any Jev product functionality described by the site must remain server-side/worker-side and governed by BitCadence.",
+    "Use a Cloudflare Pages preview deployment before production. Production deployment requires exact-head independent review and an explicit human checkpoint.",
+    "Do not alter DNS, custom-domain ownership, Cloudflare account settings, production-branch configuration, Pages project identity, install endpoints, email routing, or unrelated infrastructure as part of this Score.",
+    "Preserve https://bitcadence.ai/install.sh, https://bitcadence.ai/install.ps1, GitHub/docs links, pilots@bitcadence.ai, and the existing install experience unless an independently reviewed change is required.",
+    "Before production deploy, capture the current production deployment ID and a verified rollback target. If post-deploy acceptance finds a release-blocking defect, roll back to the captured successful production deployment rather than leaving a broken public site.",
+    "The new page must remain responsive, keyboard accessible, reduced-motion tolerant, readable without JavaScript for core content, and performant on mobile. Interactive marketing elements are progressive enhancement only.",
+    "Cloudflare preview URLs must remain non-indexed. Verify the preview response includes X-Robots-Tag: noindex or an equivalent Cloudflare Pages preview protection before sharing it beyond reviewers.",
+    "Marketing should be concrete about outcomes: fewer unnecessary System Two calls, faster repeated routing/triage decisions, better semantic prioritization, confidence-aware fallback, and auditable decision assistance. Do not promise savings or reliability percentages until measured in BitCadence benchmarks.",
+    "Do not deploy from an uncommitted working tree. Every preview and production deployment must be tied to a reviewed Git commit SHA and its artifact digest.",
+    "Use official current TypeSafe and Cloudflare documentation for external factual claims. Record source URLs and retrieval dates in the marketing claim matrix or acceptance artifact.",
+    "Base repository head at Score creation was mastalink/BitCadence main commit 17e23d139a1eafa84d3a4395fbc90bb442ef6993; M01 must re-read the live head and stop if the website has materially changed in ways that invalidate this plan."
+  ],
+  "budget_cents": 0,
+  "max_parallel": 2,
+  "launch_requires": [
+    "M09-production-acceptance"
+  ],
+  "tasks": [
+    {
+      "id": "M01-baseline-and-claims",
+      "goal": "M01",
+      "title": "Audit the live marketing baseline, Jev product reality, and Cloudflare release lane",
+      "instructions": "Read the current mastalink/BitCadence main branch, especially website/index.html, website/README.md, README.md, current Jev-related implementation, Score provider/evidence/policy code, and recent merged Jev work if present. Read-only inspect the Cloudflare Pages project named bitcadence using the operator-provided scoped credential: deployment mode, production branch if applicable, current production deployment ID, custom domain, and recent successful deployment. Consult current official TypeSafe Jev/System One documentation and current official Cloudflare Pages preview/deploy/rollback documentation. Produce a redacted baseline and claim matrix with four columns for every proposed Jev statement: claim, product evidence at exact commit, external source if needed, and allowed website wording. Explicitly classify each desired Jev feature as SHIPPED, QUALIFIED-SHADOW, PLANNED, or NOT-SUPPORTED. Confirm whether the current implementation truly guarantees zero TypeSafe traffic when disabled. Do not mutate GitHub, Cloudflare, DNS, TypeSafe, or the website.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [],
+      "resources": [
+        "bitcadence-marketing-audit"
+      ],
+      "capabilities": [
+        "repository:read",
+        "cloud:inspect",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "audit_report"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 5400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "M02-positioning-architecture",
+      "goal": "M02",
+      "title": "Create the System One plus System Two marketing architecture",
+      "instructions": "Using only claims cleared by M01, create a marketing brief that turns Jev into a compelling BitCadence product story rather than a model-name feature. The central narrative should explain: (1) BitCadence already coordinates and governs System Two agents; (2) optional Jev gives the mesh a System One reflex layer for fast typed decisions; (3) BitCadence policy, evidence, gates and audit remain authoritative; (4) Jev disabled means normal full BitCadence, not degraded mode; (5) enabled modes should be explained as disabled, shadow, assist, and active only if those modes are actually shipped or otherwise labelled accurately. Define audience-specific value for solo developers, AI/platform engineers, production operations teams, and enterprise governance buyers. Design a page information architecture containing a strong hero evolution, a 'Two speeds. One governed system.' explanation, a Jev-off vs Jev-on comparison, concrete reflex use cases, trust/governance explanation, optionality/modes, evidence-backed economics section, FAQ, and calls to action. Require at least one progressive-enhancement interactive concept such as an Off/On or System One/System Two flow comparison, but keep core content accessible without JavaScript. Preserve 'Every agent. One beat.' as a recognizable brand asset unless the brief demonstrates a stronger additive treatment. Do not make repository changes in this task.",
+      "role": "claude",
+      "review_role": "grok",
+      "depends_on": [
+        "M01-baseline-and-claims"
+      ],
+      "resources": [
+        "bitcadence-marketing-strategy"
+      ],
+      "capabilities": [
+        "repository:read",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "acceptance_report"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 5400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "M03-website-rewrite",
+      "goal": "M03",
+      "title": "Implement the Jev reflex-layer marketing experience in the static site",
+      "instructions": "Create a fresh isolated BitCadence worktree from the exact main commit re-verified by M01 and a dedicated branch such as score/jev-marketing-site. Implement the approved M02 narrative in the existing zero-build website. Prefer website/index.html only; update website/README.md only when deployment or preview instructions need clarification. Keep the current visual language and brand quality while making the Jev story feel like a major architectural advance. Add a clearly navigable Reflex/System One section, visually explain event -> Jev reflex decision -> BitCadence deterministic policy/Score -> System Two agent when needed -> evidence/review/audit, and make clear that Jev cannot bypass gates. Add an honest Jev disabled vs enabled comparison and, if supported by M01, the disabled/shadow/assist/active progression. Show concrete use cases such as semantic worker routing, Drumline relevance, incident/chain triage, notification prioritization, review triage, or other features only when M01 says they are shipped. Add an interactive progressive-enhancement comparison that makes the latency/cost architecture understandable without inventing numeric savings. Keep the existing install section and core BitCadence features prominent. Do not add a framework, npm dependency, browser-side TypeSafe code, analytics vendor, or external JavaScript package. Commit the result; do not push, merge, preview-deploy, or production-deploy in this task.",
+      "role": "codex",
+      "review_role": "claude",
+      "depends_on": [
+        "M02-positioning-architecture"
+      ],
+      "resources": [
+        "bitcadence-website-source"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "commit_sha"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 7200,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "M04-seo-accessibility-performance",
+      "goal": "M04",
+      "title": "Polish SEO, social metadata, accessibility, responsiveness, and performance",
+      "instructions": "Continue from the exact M03 commit in the same isolated marketing branch. Make the page discoverable for relevant searches without keyword stuffing: AI agent orchestration, governed multi-agent workflows, self-hosted agent control plane, System One AI, Jev integration, agent memory, human-in-the-loop, and AI operations. Update title/description/OpenGraph metadata to reflect the new story while preserving the BitCadence brand. Verify semantic heading order, keyboard navigation, focus visibility, color contrast, reduced-motion handling, responsive behavior from narrow mobile through large desktop, no horizontal overflow, and core readability with JavaScript disabled. Preserve or improve first-load performance; do not add heavyweight media. Verify install.sh, install.ps1, GitHub, docs, pilot email, anchors, and existing demo media links remain correct. Any third-party performance numbers shown on page must follow M01 attribution rules. Commit only website-scoped changes. Do not deploy.",
+      "role": "grok",
+      "review_role": "claude",
+      "depends_on": [
+        "M03-website-rewrite"
+      ],
+      "resources": [
+        "bitcadence-website-source"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "commit_sha"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 5400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "M05-independent-truth-review",
+      "goal": "M05",
+      "title": "Independently review the exact website commit for product truth and marketing integrity",
+      "instructions": "Review the exact M04 commit without authoring changes. Compare every Jev-related statement on the page against the M01 claim matrix and current BitCadence code. Reject the page if it implies Jev is required for BitCadence; if it presents an unmerged or unqualified capability as shipped; if it implies TypeSafe partnership or endorsement; if a numerical performance/cost claim lacks allowed attribution or BitCadence benchmark evidence; if it suggests Jev can bypass Score authority, human gates, grants, evidence verification, or reviewer independence; or if it hides the fact that Jev is an external service when enabled. Also review the page as marketing: the reader should understand within one screen what BitCadence is, within the Jev section why a reflex layer matters, and within the comparison what changes when Jev is off versus on. Verify the core local-first/ MIT story remains strong. Produce an exact-head acceptance report and a list of any required corrections. Do not edit or deploy.",
+      "role": "reviewer",
+      "review_role": "claude",
+      "depends_on": [
+        "M04-seo-accessibility-performance"
+      ],
+      "resources": [
+        "bitcadence-marketing-review"
+      ],
+      "capabilities": [
+        "repository:read",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "acceptance_report"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 5400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "M06-cloudflare-preview",
+      "goal": "M06",
+      "title": "Deploy the exact reviewed commit to a non-production Cloudflare Pages preview",
+      "instructions": "Use only the exact M04 commit accepted by M05. Read the current Cloudflare Pages project configuration before mutation and preserve it. Use the existing bitcadence Pages project and its current deployment method; do not create a new project, modify DNS, change custom domains, alter production branch configuration, or enable automatic deployment. Deploy website/ as a preview using Wrangler with an explicit non-production branch such as jev-marketing-score and attach the exact Git commit hash when supported. The repository README currently documents 'wrangler pages deploy website --project-name bitcadence'; follow current Cloudflare syntax verified by M01 rather than assuming stale CLI behavior. Capture the preview deployment ID, preview URL, exact commit SHA, artifact hash, the current production deployment ID, and the most recent known-good production deployment suitable for rollback. Verify the preview has X-Robots-Tag: noindex or equivalent preview indexing protection. Never print or persist the Cloudflare token. Do not touch production.",
+      "role": "operations",
+      "review_role": "codex",
+      "depends_on": [
+        "M05-independent-truth-review"
+      ],
+      "resources": [
+        "bitcadence-cloudflare-pages"
+      ],
+      "capabilities": [
+        "cloud:inspect",
+        "cloud:change",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "acceptance_report"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 3600,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "M07-preview-acceptance",
+      "goal": "M07",
+      "title": "Perform independent visual, content, link, and conversion-path QA on the Cloudflare preview",
+      "instructions": "Review the M06 preview, not a local file and not an unreviewed branch. Test narrow mobile, common laptop, and large desktop widths; keyboard navigation; reduced-motion behavior; JavaScript disabled core content; interactive Reflex/System One enhancement; nav anchors; external GitHub/docs links; mailto pilot CTA; install.sh and install.ps1 reachability; video/poster behavior if retained; console errors; mixed content; metadata; and preview noindex behavior. Evaluate the marketing journey as a buyer: hero -> core BitCadence value -> Jev reflex explanation -> optionality -> governance/trust -> editions/install/pilot CTA. Verify Jev-off messaging is impossible to misread as a crippled product. Confirm the page does not expose Cloudflare or TypeSafe credentials or account data. Record screenshots or equivalent artifacts only if they do not contain secrets. Reject for broken conversion paths, misleading product truth, major responsive regressions, accessibility blockers, or a materially weaker core BitCadence story. Do not change source or production.",
+      "role": "claude",
+      "review_role": "grok",
+      "depends_on": [
+        "M06-cloudflare-preview"
+      ],
+      "resources": [
+        "bitcadence-marketing-preview-review"
+      ],
+      "capabilities": [
+        "repository:read",
+        "cloud:inspect",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "acceptance_report"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 5400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "M08-production-deploy",
+      "goal": "M08",
+      "title": "Deploy the exact accepted Jev marketing release to production Cloudflare Pages",
+      "instructions": "This is the only production-deployment task. Require the human checkpoint before doing anything. Deploy exactly the commit and website artifact accepted by M05 and M07; if either digest or SHA differs, stop. Re-read the current Cloudflare production deployment and rollback target immediately before deployment. Use the existing bitcadence Pages project and verified current production deployment method; do not alter DNS, domain attachment, email routing, Pages project settings, production branch settings, or unrelated Cloudflare resources. Attach the exact commit hash to the deployment when supported. Capture deployment ID, production URL, custom-domain result, previous production deployment ID, and rollback target. Never expose the Cloudflare token. Do not merge unrelated repository work as part of deployment.",
+      "role": "operations",
+      "review_role": "reviewer",
+      "depends_on": [
+        "M07-preview-acceptance"
+      ],
+      "resources": [
+        "bitcadence-cloudflare-pages"
+      ],
+      "capabilities": [
+        "cloud:inspect",
+        "cloud:change",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "artifact_digest",
+        "acceptance_report"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 3600,
+      "max_cost_cents": 0,
+      "checkpoint": {
+        "id": "bitcadence-jev-marketing-production",
+        "reason": "Owner approval is required before the new Jev/System One positioning becomes the public BitCadence website on bitcadence.ai."
+      }
+    },
+    {
+      "id": "M09-production-acceptance",
+      "goal": "M09",
+      "title": "Verify the public release and roll back automatically on release-blocking failure",
+      "instructions": "Immediately verify the exact M08 production deployment on both the Cloudflare production URL and https://bitcadence.ai. Confirm the expected commit/artifact identity where observable; HTTP success; custom domain and TLS; title, meta description and OpenGraph content; hero and Jev sections; Jev optionality copy; all primary CTA links; install.sh and install.ps1 availability; GitHub/docs links; mobile/desktop rendering; no critical JavaScript errors; and that production is indexable while preview remains noindex. Confirm no credential or account metadata leaked. If any release-blocking check fails, use the previously captured Cloudflare successful production deployment as the rollback target through the official Pages rollback mechanism/API, verify the rollback restored the prior public site, and return a failed acceptance rather than leaving production partially broken. If all checks pass, produce the final acceptance record containing deployment ID, exact commit SHA, artifact digest, verification results, previous deployment ID, and rollback target. Do not modify marketing copy in production during verification.",
+      "role": "operations",
+      "review_role": "claude",
+      "depends_on": [
+        "M08-production-deploy"
+      ],
+      "resources": [
+        "bitcadence-cloudflare-pages"
+      ],
+      "capabilities": [
+        "cloud:inspect",
+        "cloud:change",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "acceptance_report"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 3600,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    }
+  ]
+}
+
+

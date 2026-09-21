@@ -30,7 +30,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from mco.config import get_config
 from mco.editions import edition_summary
-from mco.orchestrator import llm_connections
+from mco.orchestrator import jev, llm_connections
 from mco.secret_vault import (
     SecretNotFoundError,
     SecretRef,
@@ -51,6 +51,7 @@ settings_router = APIRouter(prefix="/api/settings")
 workflows_router = APIRouter(prefix="/api/workflows")
 governance_router = APIRouter(prefix="/api/governance")
 llm_connections_router = APIRouter(prefix="/api/llm-connections")
+jev_router = APIRouter(prefix="/api/jev")
 
 
 def _db():
@@ -287,6 +288,17 @@ SETTING_GROUPS = {
                                     "label": "Advance score runs from the gateway every (seconds; 0 = off, "
                                              "runs only move when someone types `mco score tick`)",
                                     "placeholder": "0"},
+    },
+    "jev": {
+        "MCO_JEV_MODE": {"type": "choice", "label": "Jev mode",
+                         "choices": ["disabled", "shadow", "assist", "active"],
+                         "default": "disabled"},
+        "MCO_JEV_MODEL": {"type": "text", "label": "Jev model",
+                          "placeholder": "jev-latest (shadow only)"},
+        "MCO_JEV_TIMEOUT_SECONDS": {"type": "text", "label": "Jev timeout (seconds)",
+                                    "placeholder": "5"},
+        "MCO_JEV_MAX_RETRIES": {"type": "choice", "label": "Jev retry count",
+                                "choices": ["0", "1", "2"], "default": "1"},
     },
     "observability": {
         "MCO_METRICS_TOKEN": {"type": "secret",
@@ -769,6 +781,74 @@ async def submit_workflow_api(payload: dict, caller: dict = Depends(require_scop
                                 detail=f"Step '{step_id}' failed to submit (created so far: {job_ids})")
         job_ids[step_id] = job["id"]
     return {"success": True, "workflow": name, "run": run_id, "jobs": job_ids}
+# ── TypeSafe/Jev decision provider ────────────────────────────────────────────
+
+def _jev_public(db, caller: dict) -> dict:
+    config = get_config()
+    resolved = jev.config_from_manager(config)
+    try:
+        configured = build_secret_vault(config, db).exists(jev.secret_ref(_caller_org(caller)))
+    except VaultError as exc:
+        raise _vault_http_error(exc)
+    return {
+        "provider": "typesafe-jev",
+        "mode": resolved.mode,
+        "model": resolved.model if resolved.mode != "disabled" else None,
+        "configured": configured,
+        "available": resolved.mode != "disabled" and configured,
+        "live_invocation": resolved.mode in {"assist", "active"} and configured,
+    }
+
+
+@jev_router.get("")
+async def get_jev_configuration(caller: dict = Depends(require_scopes("admin"))):
+    """Offline capability discovery. Never contacts TypeSafe or returns a key."""
+    return _jev_public(_db(), caller)
+
+
+@jev_router.put("")
+async def put_jev_configuration(payload: dict, caller: dict = Depends(require_scopes("admin"))):
+    """Configure Jev without exposing its credential or silently enabling it."""
+    allowed = {"mode", "model", "timeout_seconds", "max_retries", "api_key"}
+    if not isinstance(payload, dict) or not payload:
+        raise HTTPException(status_code=400, detail="Configuration payload is required")
+    unknown = sorted(set(payload) - allowed)
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown Jev settings: {', '.join(unknown)}")
+
+    config = get_config()
+    current = jev.config_from_manager(config)
+    try:
+        proposed = jev.JevConfig(
+            mode=str(payload.get("mode", current.mode)).strip().lower(),
+            model=str(payload.get("model", current.model)).strip(),
+            timeout_seconds=float(payload.get("timeout_seconds", current.timeout_seconds)),
+            max_retries=int(payload.get("max_retries", current.max_retries)),
+        )
+    except (TypeError, ValueError, jev.JevConfigurationError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    api_key = str(payload.get("api_key") or "").strip()
+    if api_key:
+        try:
+            build_secret_vault(config, _db()).put(jev.secret_ref(_caller_org(caller)), api_key)
+        except VaultError as exc:
+            raise _vault_http_error(exc)
+
+    config.set("MCO_JEV_MODE", proposed.mode, encrypt=False)
+    config.set("MCO_JEV_MODEL", proposed.model, encrypt=False)
+    config.set("MCO_JEV_TIMEOUT_SECONDS", str(proposed.timeout_seconds), encrypt=False)
+    config.set("MCO_JEV_MAX_RETRIES", str(proposed.max_retries), encrypt=False)
+    return {"success": True, "configuration": _jev_public(_db(), caller)}
+
+
+@jev_router.post("/test")
+async def test_jev_configuration(caller: dict = Depends(require_scopes("admin"))):
+    """Perform explicit model discovery; ordinary capability checks are offline."""
+    provider = jev.build_provider(get_config(), _db(), _caller_org(caller))
+    return provider.health()
+
+
 # ── LLM Provider Connections ("Model Connections" in the Control Panel) ──────
 #
 # Named, testable connections to LLM providers. See llm_connections.py for
