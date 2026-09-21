@@ -1325,6 +1325,9 @@ async def reassign_job(job_id: str, payload: dict, agent: dict = Depends(require
     return {"success": True, "job": new_job, "superseded_job": old_job}
 
 
+BATCH_ACTION_MAX_JOBS = 200
+
+
 @router.post("/batch-action")
 async def batch_job_action(payload: dict, agent: dict = Depends(require_agent)):
     """Execute a batch operation across multiple jobs.
@@ -1347,6 +1350,12 @@ async def batch_job_action(payload: dict, agent: dict = Depends(require_agent)):
     job_ids = payload.get("job_ids")
     if not isinstance(job_ids, list) or not job_ids:
         raise HTTPException(status_code=400, detail="job_ids list is required")
+    job_ids = list(dict.fromkeys(str(j) for j in job_ids if j))
+    if len(job_ids) > BATCH_ACTION_MAX_JOBS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"At most {BATCH_ACTION_MAX_JOBS} jobs per batch action (got {len(job_ids)})",
+        )
 
     action = (payload.get("action") or "").strip().lower()
     if action not in ("retry", "cancel", "archive", "unarchive", "reassign", "approve", "reject"):

@@ -229,3 +229,13 @@ def test_console_bundle_roundtrips_and_includes_improvements():
     assert "AutonomyControlCard" in overview_src
     assert "MemoryDetailDrawer" in overview_src
     assert "handleBatchApprove" in overview_src
+
+
+def test_batch_action_rejects_oversized_batch(test_env):
+    client = test_env["client"]
+    resp = client.post("/api/jobs/batch-action", json={
+        "job_ids": [f"job-{i}" for i in range(201)],
+        "action": "archive",
+    })
+    assert resp.status_code == 400
+    assert "At most 200" in resp.json()["detail"]
