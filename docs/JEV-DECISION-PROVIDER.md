@@ -54,3 +54,22 @@ No current Score capability permits Jev to create grants, approve checkpoints,
 or execute cloud/repository effects. Any future `typesafe:invoke` Score adapter
 requires its own digest-bound grant, budget, effect receipt, and adversarial
 review before live use.
+
+## J03 operations shadows
+
+Three versioned use cases (`bitcadence-ops-drumline`, `bitcadence-ops-fleet`,
+`bitcadence-ops-notify`, question-set version 1) may annotate already-computed
+operations:
+
+- Drumline classifies completed output and may suggest injection or flag
+  contradiction/staleness/sensitivity. Stored kind and immutable history do
+  not change.
+- Fleet triage classifies a worker/chain symptom only after `state` (working /
+  broken / standby / offline), stall timers, retry limits, and crash-loop
+  logic are computed. Suggested retry/reroute/escalate/operator-review/noise
+  does not take the action.
+- Notifications may mark semantic duplicates and impact. Hard ntfy rate
+  budgets and urgent-bypass remain in `mco.notifiers.ntfy`.
+
+Receipts persist as append-only `jev_shadow_receipt` audit events when a job
+id is present. Disabled or down Jev constructs no TypeSafe request.

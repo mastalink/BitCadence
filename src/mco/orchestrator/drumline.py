@@ -281,7 +281,7 @@ def distill_job(db_client: Any, job: dict) -> Optional[dict]:
         job.get("source_agent_role"),
         payload.get("connector"),
     ) if t] + workflow_tags(job)
-    return remember(
+    stored = remember(
         db_client,
         title=f"Job outcome: {job.get('title', 'untitled')}",
         content=content,
@@ -293,6 +293,18 @@ def distill_job(db_client: Any, job: dict) -> Optional[dict]:
         weight=weight,
         org_id=job.get("org_id") or "default",
     )
+    try:
+        from mco.orchestrator.jev_ops import annotate_drumline
+        annotate_drumline(
+            title=f"Job outcome: {job.get('title', 'untitled')}",
+            content=content,
+            deterministic_kind="handoff",
+            db_client=db_client,
+            job_id=str(job.get("id")),
+        )
+    except Exception:
+        pass
+    return stored
 
 
 # ── Recalling memory ──────────────────────────────────────────────────────────

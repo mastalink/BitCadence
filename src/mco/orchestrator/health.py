@@ -251,6 +251,19 @@ async def readyz(request: Request):
         online = sum(1 for row in described if row.get("status") == "online")
         broken = sorted(row["instance_id"] for row in described if row.get("state") == BROKEN)
         checks["fleet"] = {"online_workers": online, "broken_workers": broken, "degraded": online == 0}
+        try:
+            from mco.orchestrator.jev_ops import annotate_fleet
+            checks["fleet"]["jev_shadow"] = [
+                annotate_fleet(
+                    instance_id=row["instance_id"],
+                    deterministic_state=row.get("state") or "",
+                    broken=row.get("state") == BROKEN,
+                    stalled=row.get("state") == BROKEN,
+                )
+                for row in described if row.get("state") == BROKEN
+            ]
+        except Exception:
+            pass
     except Exception:
         checks["fleet"] = {"degraded": True, "error": "presence unavailable"}
     ready = all(c.get("ok", True) for c in checks.values())

@@ -110,7 +110,18 @@ def notify(
     cfg = get_ntfy_config()
     if not cfg["topic"]:
         return False
-    if not _allowed(message, title, priority, cfg, time.time()):
+    allowed = _allowed(message, title, priority, cfg, time.time())
+    try:
+        from mco.orchestrator.jev_ops import annotate_notification
+        annotate_notification(
+            title=title or "BitCadence",
+            message=message,
+            priority=priority,
+            allowed=allowed,
+        )
+    except Exception:
+        pass
+    if not allowed:
         return False
     server = cfg["server"]
     topic = cfg["topic"]  # Configuration is the sole destination authority.
