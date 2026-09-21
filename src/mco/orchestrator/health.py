@@ -202,6 +202,7 @@ async def _sleep_until(interval, stop) -> bool:
 
 async def readyz(request: Request):
     from mco.orchestrator.routes import get_db_client, decorate_presence, get_offline_after_seconds
+    from mco.orchestrator import score_sweep
     from mco.config import get_config
     checks = {}
     try:
@@ -226,6 +227,7 @@ async def readyz(request: Request):
             "ok": error is None and since is not None and time.monotonic() - since < 3 * interval + 30,
             "error": error,
             "interval_seconds": interval,
+            "paused": score_sweep.is_sweep_paused(),
             # Runs that are stuck right now, read from the conductor database
             # on every pass rather than remembered, so a run stays named for as
             # long as it stays stuck. Visible, but not a reason to call the

@@ -390,3 +390,12 @@ def _jev_shadow_hooks_disabled():
     yield
     jev_ops.provider_override = previous
     jev_ops.reset_metrics()
+
+
+@pytest.fixture(autouse=True)
+def _reset_score_sweep_pause():
+    """The sweep pause flag is process-global; never let one test's pause leak."""
+    from mco.orchestrator import score_sweep
+    score_sweep.set_sweep_paused(False)
+    yield
+    score_sweep.set_sweep_paused(False)

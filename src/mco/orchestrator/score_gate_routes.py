@@ -233,3 +233,141 @@ async function submitGrant(e){
 init();
 </script></body></html>'''
 
+
+score_autonomy_router = APIRouter(prefix="/api/score/autonomy")
+
+
+@score_autonomy_router.get("")
+async def get_autonomy_status(caller: dict = Depends(require_scopes("jobs:read"))):
+    """Current state of autonomous execution, conductor loops, and active runs."""
+    from mco.config import get_config
+    from mco.orchestrator import score_sweep
+    from mco.orchestrator.routes import kill_switch_active
+    from mco.orchestrator.score_conductor import sqlite_runs, TERMINAL_RUN_STATES
+    from mco.orchestrator.score_sweep import FAILING_RUN_STATES
+
+    config = get_config()
+    interval = score_sweep.get_sweep_seconds(config)
+    configured = interval > 0
+    paused = score_sweep.is_sweep_paused()
+    kill_switch = kill_switch_active()
+    live_repository_write = str(config.get("MCO_SCORE_LIVE_REPOSITORY_WRITE", "false")).lower() == "true"
+
+    if kill_switch:
+        status = "frozen"
+    elif paused:
+        status = "paused"
+    elif not configured:
+        status = "standby"
+    else:
+        status = "active"
+
+    db_path = score_sweep.get_database(config)
+    all_runs = []
+    active_runs = []
+    failing_runs = []
+    if db_path.exists():
+        try:
+            all_runs = sqlite_runs(db_path)
+            for r in all_runs:
+                st = r.get("status")
+                if st not in TERMINAL_RUN_STATES:
+                    active_runs.append(r)
+                if st in FAILING_RUN_STATES:
+                    failing_runs.append(r)
+        except Exception:
+            pass
+
+    return {
+        "status": status,
+        "configured": configured,
+        "interval_seconds": interval,
+        "paused": paused,
+        "kill_switch": kill_switch,
+        "live_repository_write": live_repository_write,
+        "database": str(db_path),
+        "total_runs": len(all_runs),
+        "active_runs": active_runs,
+        "failing_runs": failing_runs,
+    }
+
+
+@score_autonomy_router.post("/pause")
+async def pause_autonomy(caller: dict = Depends(require_scopes("jobs:approve"))):
+    """Pause autonomous conductor sweeps without halting general gateway work."""
+    from mco.orchestrator import score_sweep
+    from mco.orchestrator.audit import record_event
+    from mco.orchestrator.routes import get_db_client
+
+    score_sweep.set_sweep_paused(True)
+    db = get_db_client()
+    if db:
+        record_event(db, "system:autonomy", "autonomy_paused", caller.get("instance_id"),
+                     caller.get("role"), {"action": "pause"})
+    return {"success": True, "paused": True, "status": "paused"}
+
+
+@score_autonomy_router.post("/resume")
+async def resume_autonomy(caller: dict = Depends(require_scopes("jobs:approve"))):
+    """Resume autonomous conductor sweeps."""
+    from mco.orchestrator import score_sweep
+    from mco.orchestrator.audit import record_event
+    from mco.orchestrator.routes import get_db_client
+
+    score_sweep.set_sweep_paused(False)
+    db = get_db_client()
+    if db:
+        record_event(db, "system:autonomy", "autonomy_resumed", caller.get("instance_id"),
+                     caller.get("role"), {"action": "resume"})
+    interval = score_sweep.get_sweep_seconds()
+    status = "active" if interval > 0 else "standby"
+    return {"success": True, "paused": False, "status": status}
+
+
+@score_autonomy_router.post("/tick")
+async def tick_autonomy(caller: dict = Depends(require_scopes("jobs:approve"))):
+    """Manually trigger a single conductor sweep pass ('Tick Now')."""
+    from mco.orchestrator import score_sweep
+    from mco.orchestrator.audit import record_event
+    from mco.orchestrator.routes import get_db_client
+
+    conductor = score_sweep.open_conductor()
+    res = score_sweep.sweep(conductor, force=True)
+    db = get_db_client()
+    if db:
+        record_event(db, "system:autonomy", "autonomy_manual_tick", caller.get("instance_id"),
+                     caller.get("role"), {"ticked": len(res.ticked), "advanced": len(res.advanced)})
+    return {
+        "success": True,
+        "result": {
+            "ticked": res.ticked,
+            "advanced": res.advanced,
+            "blocked": res.blocked,
+            "skipped": res.skipped,
+            "errors": res.errors,
+            "failing": res.failing,
+        }
+    }
+
+
+@score_autonomy_router.post("/abort")
+async def abort_run(payload: dict, caller: dict = Depends(require_scopes("jobs:approve"))):
+    """Abort an active Score run, blocking future automatic ticks."""
+    from mco.orchestrator import score_sweep
+    from mco.orchestrator.audit import record_event
+    from mco.orchestrator.routes import get_db_client
+
+    run_id = (payload or {}).get("run_id")
+    reason = (payload or {}).get("reason") or "Aborted by operator"
+    if not run_id:
+        raise HTTPException(status_code=400, detail="run_id is required")
+
+    conductor = score_sweep.open_conductor()
+    conductor._block(run_id, "operator_abort", reason)
+    db = get_db_client()
+    if db:
+        record_event(db, f"score:run:{run_id}", "run_aborted_by_operator",
+                     caller.get("instance_id"), caller.get("role"),
+                     {"run_id": run_id, "reason": reason})
+    return {"success": True, "run_id": run_id, "status": "blocked"}
+
