@@ -38,8 +38,81 @@ SECRET_KEY_PATTERN = re.compile(
     r"(?i)(?:secret|password|token|credential|api[_-]?key|private[_-]?key|auth|bearer)"
 )
 
+MAX_PEM_HEADER_LEN = 128
+MAX_PEM_BLOCK_LEN = 65536
+
+
+def _redact_pem_keys(text: str) -> str:
+    """Bounded linear-time redaction of PEM private key blocks without regex.
+
+    Replaces blocks starting with '-----BEGIN ... PRIVATE KEY-----' and ending
+    with '-----END ... PRIVATE KEY-----' with '[REDACTED_PRIVATE_KEY]'.
+    """
+    begin_marker = "-----BEGIN "
+    end_marker = "-----END "
+    priv_suffix = "PRIVATE KEY-----"
+
+    if begin_marker not in text or priv_suffix not in text:
+        return text
+
+    result = []
+    pos = 0
+    text_len = len(text)
+
+    while pos < text_len:
+        begin_idx = text.find(begin_marker, pos)
+        if begin_idx == -1:
+            result.append(text[pos:])
+            break
+
+        result.append(text[pos:begin_idx])
+
+        # Locate the closing '-----' of the BEGIN header
+        header_end = text.find("-----", begin_idx + len(begin_marker))
+        if header_end == -1 or (header_end + 5 - begin_idx) > MAX_PEM_HEADER_LEN:
+            result.append(text[begin_idx : begin_idx + len(begin_marker)])
+            pos = begin_idx + len(begin_marker)
+            continue
+
+        header = text[begin_idx : header_end + 5]
+        if "\n" in header or "\r" in header or not header.endswith(priv_suffix):
+            result.append(text[begin_idx : begin_idx + len(begin_marker)])
+            pos = begin_idx + len(begin_marker)
+            continue
+
+        # Search for closing -----END ... PRIVATE KEY----- within bounded window
+        search_limit = min(text_len, header_end + 5 + MAX_PEM_BLOCK_LEN)
+
+        # Do not bridge across another BEGIN header
+        next_begin = text.find(begin_marker, header_end + 5)
+        if next_begin != -1 and next_begin < search_limit:
+            effective_limit = next_begin
+        else:
+            effective_limit = search_limit
+
+        footer_idx = text.find(end_marker, header_end + 5, effective_limit)
+        matched_block = False
+
+        while footer_idx != -1:
+            footer_end = text.find("-----", footer_idx + len(end_marker), effective_limit)
+            if footer_end == -1 or (footer_end + 5 - footer_idx) > MAX_PEM_HEADER_LEN:
+                break
+            footer = text[footer_idx : footer_end + 5]
+            if "\n" not in footer and "\r" not in footer and footer.endswith(priv_suffix):
+                result.append("[REDACTED_PRIVATE_KEY]")
+                pos = footer_end + 5
+                matched_block = True
+                break
+            footer_idx = text.find(end_marker, footer_idx + len(end_marker), effective_limit)
+
+        if not matched_block:
+            result.append(header)
+            pos = header_end + 5
+
+    return "".join(result)
+
+
 # String pattern regexes for secret redaction
-RE_PEM_KEY = re.compile(r"-----BEGIN [A-Z ]+ PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+ PRIVATE KEY-----")
 RE_AWS_KEY = re.compile(r"(?i)\b(?:AKIA|ASIA)[A-Z0-9]{16}\b")
 RE_MCO_TOKEN = re.compile(r"\bmco_tok_[A-Za-z0-9_-]+\b")
 RE_GH_TOKEN = re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b")
@@ -52,7 +125,7 @@ def redact_text(text: str) -> str:
     """Redact common secret-bearing patterns from a string."""
     if not isinstance(text, str):
         return text
-    s = RE_PEM_KEY.sub("[REDACTED_PRIVATE_KEY]", text)
+    s = _redact_pem_keys(text)
     s = RE_AWS_KEY.sub("[REDACTED_AWS_KEY]", s)
     s = RE_MCO_TOKEN.sub("[REDACTED_TOKEN]", s)
     s = RE_GH_TOKEN.sub("[REDACTED_TOKEN]", s)

@@ -809,6 +809,40 @@ def test_redact_secrets_patterns():
     assert "xyz987654321" not in redacted
 
 
+def test_redact_pem_keys_and_redos_safety():
+    """PEM private keys are redacted in linear time without regex or ReDoS vulnerability."""
+    pem_rsa = (
+        "-----BEGIN RSA PRIVATE KEY-----\n"
+        "MIIEowIBAAKCAQEA0Y1...\n"
+        "-----END RSA PRIVATE KEY-----"
+    )
+    pem_pkcs8 = (
+        "-----BEGIN PRIVATE KEY-----\n"
+        "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC...\n"
+        "-----END PRIVATE KEY-----"
+    )
+    pem_cert = (
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIDXTCCAkWgAwIBAgIJAP...\n"
+        "-----END CERTIFICATE-----"
+    )
+    mixed = f"Deploy key:\n{pem_rsa}\nand server cert:\n{pem_cert}\nand key2:\n{pem_pkcs8}"
+    redacted = redact_text(mixed)
+    assert "[REDACTED_PRIVATE_KEY]" in redacted
+    assert "MIIEowIBAAKCAQEA0Y1" not in redacted
+    assert "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC" not in redacted
+    assert pem_cert in redacted
+
+    # Attack payload simulating polynomial ReDoS vulnerability
+    attack_payload = "-----BEGIN   PRIVATE KEY-----" * 500
+    import time
+    start = time.perf_counter()
+    safe_output = redact_text(attack_payload)
+    elapsed = time.perf_counter() - start
+    assert elapsed < 0.2
+    assert safe_output == attack_payload
+
+
 def test_redact_secrets_dict_keys_and_values():
     """Dictionary keys matching secret/token/password names have their values scrubbed."""
     payload = {
