@@ -1,0 +1,52 @@
+{
+  "score_version": 1,
+  "id": "usage-capacity-u01",
+  "revision": 1,
+  "objective": "Discover permitted remaining-usage sources and establish an evidence-bound capacity-signal contract for BitCadence without changing routing, credentials, provider configuration, or spend.",
+  "constraints": [
+    "U01 is read-only: do not alter account settings, provider configuration, credentials, routing, budgets, scheduled tasks, or cloud resources.",
+    "Do not scrape or automate a provider dashboard. Accept only official APIs, documented local CLI output, or provider-issued rate-limit headers as candidate sources.",
+    "Never record API keys, cookies, email addresses, raw account pages, or unredacted command output in artifacts, audit records, fixtures, or logs.",
+    "Unknown capacity remains explicit. It must not be converted to zero, inferred from token use, or treated as fresh capacity.",
+    "Jev does not determine usage, quotas, resets, budgets, or routing eligibility. Numeric policy remains deterministic code.",
+    "A provider without a permitted, reproducible usage source remains unmetered and cannot justify automatic capacity-aware routing.",
+    "Every finding must include source type, observed freshness, account reference shape, redaction behavior, and a reproducible non-secret fixture or a documented reason it cannot exist."
+  ],
+  "budget_cents": 0,
+  "max_parallel": 1,
+  "launch_requires": ["U01-review"],
+  "tasks": [
+    {
+      "id": "U01-audit",
+      "goal": "UsageCapacityDiscovery",
+      "title": "Audit permitted remaining-usage sources and capacity-signal boundaries",
+      "instructions": "Repository: mastalink/BitCadence. Read docs/USAGE-CAPACITY-SIGNAL.md, current provider health/quota schema, routing code, adapters, local worker launchers, and the configured provider integration seams. Produce a redacted evidence report under the Score artifact root. For each configured provider/account class, classify the best candidate source as official API, documented local CLI output, rate-limit header, no permitted source, or requires a later human/contract decision. Define exact normalized fields, freshness thresholds, error/unknown semantics, opaque account-reference rules, and fixture strategy. Verify no candidate approach requires a dashboard scrape or secret exposure. Do not edit repository files, start browser automation, call paid model APIs, change a provider, or launch a worker. Return strict JSON with the evidence artifact paths and a machine-readable proposed adapter inventory.",
+      "role": "codex",
+      "review_role": "antigravity",
+      "depends_on": [],
+      "resources": ["C:/AI/baton/Batoncadence"],
+      "capabilities": ["repository:read", "evidence:write", "evidence:review"],
+      "evidence": ["artifact_digest", "acceptance_report"],
+      "max_attempts": 1,
+      "timeout_seconds": 3600,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "U01-review",
+      "goal": "UsageCapacityReview",
+      "title": "Independently verify the U01 capacity-signal audit",
+      "instructions": "Independently review the exact U01 audit artifacts and the cited BitCadence code. Verify that every claimed provider source is permitted and reproducible without dashboard automation or secret leakage; unknown is not treated as capacity; the proposed contract preserves deterministic routing and does not grant Jev, a provider, or an account additional authority; and no unsupported source was presented as available. Return strict JSON with pass/fail, exact artifact digests reviewed, approved candidate sources, rejected sources, and blockers for U02. Do not edit repository files, configure providers, or merge work.",
+      "role": "antigravity",
+      "review_role": "codex",
+      "depends_on": ["U01-audit"],
+      "resources": ["C:/AI/baton/Batoncadence"],
+      "capabilities": ["repository:read", "evidence:write", "evidence:review"],
+      "evidence": ["acceptance_report"],
+      "max_attempts": 1,
+      "timeout_seconds": 3600,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    }
+  ]
+}
