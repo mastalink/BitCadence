@@ -21,12 +21,15 @@ from mco.orchestrator.jev import (
     PROMPT_INJECTION_RISK_QUESTIONS,
     QUESTION_SET_REGISTRY,
     QUESTION_SET_VERSION,
+    MAX_TRIAGE_DESCRIPTION_LENGTH,
+    MAX_TRIAGE_TITLE_LENGTH,
     DecisionReceipt,
     JevConfig,
     JevMetrics,
     JevProtocolError,
     JevProvider,
     _validate_questions,
+    bound_text,
     build_incoming_job_triage_questions,
     build_shortlist_choice_questions,
     evaluate_shadow_operator_attention,
@@ -37,7 +40,10 @@ from mco.orchestrator.jev import (
     get_jev_metrics,
     get_question_set,
     get_question_set_digest,
+    minimize_job_state,
     persist_decision_receipt,
+    redact_secrets,
+    redact_text,
     reset_jev_metrics,
 )
 from mco.orchestrator.metrics_routes import render_metrics
@@ -756,5 +762,168 @@ def test_create_job_with_jev_disabled_parity(monkeypatch):
     assert event_names == ["created"]
     assert "jev_shadow_triage" not in event_names
     assert verify_chain(db, job_id)["ok"] is True
+
+
+# ── State Minimization & Secret Redaction (J02 Repair) ──────────────────────────
+
+
+def test_minimize_job_state_bounds_length():
+    """Length bounds truncate oversized descriptions and titles while preserving types."""
+    raw_desc = "x" * 2500
+    raw_title = "y" * 500
+    state = minimize_job_state({
+        "title": raw_title,
+        "description": raw_desc,
+        "target_agent_role": "codex" * 30,
+        "priority": "2",
+        "input_payload": {"super": "secret", "nested": [1, 2, 3]},
+        "unrelated_large_field": "z" * 10000,
+    })
+
+    assert len(state["description"]) == MAX_TRIAGE_DESCRIPTION_LENGTH
+    assert len(state["title"]) == MAX_TRIAGE_TITLE_LENGTH
+    assert len(state["target_agent_role"]) == 64
+    assert state["priority"] == 2
+    assert "input_payload" not in state
+    assert "unrelated_large_field" not in state
+
+
+def test_redact_secrets_patterns():
+    """Obvious secret-bearing tokens and credentials are redacted."""
+    leaky_text = (
+        "Deployment failed with AWS key AKIAIOSFODNN7EXAMPLE and secret "
+        "mco_tok_sec_1234567890abcdef. Also ghp_0123456789abcdefghijklmnopqrstuv and "
+        "sk-ant-api03-abcdefghijklmnopqrstuvwxyz1234567890. "
+        "Authorization: Bearer my_jwt_token_here_12345! "
+        "credentials: password='SuperSecretPassword123' and api_key=xyz987654321."
+    )
+    redacted = redact_text(leaky_text)
+    assert "AKIAIOSFODNN7EXAMPLE" not in redacted
+    assert "[REDACTED_AWS_KEY]" in redacted
+    assert "mco_tok_sec_1234567890abcdef" not in redacted
+    assert "[REDACTED_TOKEN]" in redacted
+    assert "ghp_0123456789abcdefghijklmnopqrstuv" not in redacted
+    assert "sk-ant-api03-abcdefghijklmnopqrstuvwxyz1234567890" not in redacted
+    assert "Bearer [REDACTED]" in redacted
+    assert "SuperSecretPassword123" not in redacted
+    assert "xyz987654321" not in redacted
+
+
+def test_redact_secrets_dict_keys_and_values():
+    """Dictionary keys matching secret/token/password names have their values scrubbed."""
+    payload = {
+        "title": "Fix login bug",
+        "api_key": "raw_secret_value",
+        "auth_token": "bearer xyz",
+        "client_secret": {"id": 123},
+        "safe_field": "normal text",
+        "nested": {
+            "password": "p@ssword!",
+            "note": "Connect with AWS key AKIA1234567890ABCDEF",
+        },
+    }
+    cleaned = redact_secrets(payload)
+    assert cleaned["title"] == "Fix login bug"
+    assert cleaned["api_key"] == "[REDACTED]"
+    assert cleaned["auth_token"] == "[REDACTED]"
+    assert cleaned["client_secret"] == "[REDACTED]"
+    assert cleaned["safe_field"] == "normal text"
+    assert cleaned["nested"]["password"] == "[REDACTED]"
+    assert "[REDACTED_AWS_KEY]" in cleaned["nested"]["note"]
+    assert "AKIA1234567890ABCDEF" not in cleaned["nested"]["note"]
+
+
+def test_evaluate_shadow_triage_minimizes_and_redacts():
+    """evaluate_shadow_triage minimizes state and strips raw secret/payload fields."""
+    recorded_requests = []
+
+    def mock_post(request: httpx.Request):
+        recorded_requests.append(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(200, json={
+            "id": "dec_mock_min",
+            "model": "typesafe-1",
+            "answers": {
+                "triage_category": {"choice": "code_refactor", "confidence": 0.95, "reasoning": "bounded"},
+            },
+        })
+
+    config = JevConfig(mode="shadow")
+    provider = JevProvider(config, api_key="test-key", transport=httpx.MockTransport(mock_post))
+
+    job_data = {
+        "id": "job-test-min",
+        "title": "Audit job with secret: password=TopSecretPass123",
+        "description": "Long description with AWS key AKIAIOSFODNN7EXAMPLE: " + ("a" * 3000),
+        "target_agent_role": "claude",
+        "priority": 1,
+        "input_payload": {"private_token": "super-confidential-payload-data"},
+        "env": {"AWS_SECRET_ACCESS_KEY": "should-never-be-sent"},
+    }
+
+    receipt = evaluate_shadow_triage(provider, job_data)
+    assert receipt is not None
+    assert len(recorded_requests) == 1
+    sent_payload = recorded_requests[0]
+    sent_state = sent_payload["state"]
+
+    # State is minimized: input_payload and env dropped
+    assert "input_payload" not in sent_state
+    assert "env" not in sent_state
+
+    # Bounded
+    assert len(sent_state["description"]) <= MAX_TRIAGE_DESCRIPTION_LENGTH
+
+    # Redacted
+    assert "AKIAIOSFODNN7EXAMPLE" not in sent_state["description"]
+    assert "[REDACTED_AWS_KEY]" in sent_state["description"]
+    assert "TopSecretPass123" not in sent_state["title"]
+    assert "[REDACTED]" in sent_state["title"]
+
+
+def test_decide_defense_in_depth_redacts_state_and_digest():
+    """JevProvider.decide redacts secrets defense-in-depth, protecting wire and digest."""
+    captured = {}
+
+    def mock_post(request: httpx.Request):
+        captured["req"] = json.loads(request.content.decode("utf-8"))
+        return httpx.Response(200, json={
+            "id": "dec_defense",
+            "model": "typesafe-1",
+            "usage": {"input_tokens": 10, "output_tokens": 5},
+            "answers": {
+                "safe": {
+                    "type": "choice",
+                    "choice": "yes",
+                    "confidence": 1.0,
+                    "probabilities": {"yes": 1.0, "no": 0.0},
+                    "reasoning": "all good",
+                },
+            },
+        })
+
+    config = JevConfig(mode="shadow")
+    provider = JevProvider(config, api_key="test-key", transport=httpx.MockTransport(mock_post))
+
+    raw_state = {
+        "user_secret": "my-secret-key-12345",
+        "auth_header": "sensitive-value-here",
+        "public_data": "Use Bearer token_abc1234567890 to authenticate",
+    }
+    receipt = provider.decide(
+        use_case_id="incoming_job_triage",
+        question_set_version=QUESTION_SET_VERSION,
+        state=raw_state,
+        questions={"safe": {"type": "choice", "choices": ["yes", "no"], "criteria": "Is the state safe?"}},
+    )
+
+    assert receipt.outcome == "shadow"
+    assert captured["req"]["state"]["user_secret"] == "[REDACTED]"
+    assert captured["req"]["state"]["auth_header"] == "[REDACTED]"
+    assert captured["req"]["state"]["public_data"] == "Use Bearer [REDACTED] to authenticate"
+    # Wire digest matches redacted state, not raw state
+    from mco.orchestrator.jev import _digest
+    assert receipt.state_digest == _digest(captured["req"]["state"])
+    assert receipt.state_digest != _digest(raw_state)
+
 
 

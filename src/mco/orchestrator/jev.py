@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import threading
 import time
 from dataclasses import asdict, dataclass, field
@@ -29,6 +30,94 @@ BASE_URL = "https://api.typesafe.ai"
 SYSTEM_ONE_PATH = "/v1/systemone"
 MODELS_PATH = "/v1/models"
 MODES = frozenset({"disabled", "shadow", "assist", "active"})
+
+MAX_TRIAGE_DESCRIPTION_LENGTH = 1000
+MAX_TRIAGE_TITLE_LENGTH = 256
+
+SECRET_KEY_PATTERN = re.compile(
+    r"(?i)(?:secret|password|token|credential|api[_-]?key|private[_-]?key|auth|bearer)"
+)
+
+# String pattern regexes for secret redaction
+RE_PEM_KEY = re.compile(r"-----BEGIN [A-Z ]+ PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+ PRIVATE KEY-----")
+RE_AWS_KEY = re.compile(r"(?i)\b(?:AKIA|ASIA)[A-Z0-9]{16}\b")
+RE_MCO_TOKEN = re.compile(r"\bmco_tok_[A-Za-z0-9_-]+\b")
+RE_GH_TOKEN = re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b")
+RE_AI_TOKEN = re.compile(r"\b(?:sk-[A-Za-z0-9_-]{20,}|ant-[A-Za-z0-9_-]{20,})\b")
+RE_BEARER = re.compile(r"(?i)\bbearer\s+[A-Za-z0-9_\-\.~+/]+=*")
+RE_KV_SECRET = re.compile(r"(?i)\b(api[_-]?key|secret|password|token|credential|auth)\s*[:=]\s*['\"]?[^\s,'\"]+['\"]?")
+
+
+def redact_text(text: str) -> str:
+    """Redact common secret-bearing patterns from a string."""
+    if not isinstance(text, str):
+        return text
+    s = RE_PEM_KEY.sub("[REDACTED_PRIVATE_KEY]", text)
+    s = RE_AWS_KEY.sub("[REDACTED_AWS_KEY]", s)
+    s = RE_MCO_TOKEN.sub("[REDACTED_TOKEN]", s)
+    s = RE_GH_TOKEN.sub("[REDACTED_TOKEN]", s)
+    s = RE_AI_TOKEN.sub("[REDACTED_TOKEN]", s)
+    s = RE_BEARER.sub("Bearer [REDACTED]", s)
+    s = RE_KV_SECRET.sub(r"\1=[REDACTED]", s)
+    return s
+
+
+def redact_secrets(value: Any) -> Any:
+    """Recursively redact obvious secret-bearing fields and patterns from a value."""
+    if isinstance(value, dict):
+        cleaned = {}
+        for k, v in value.items():
+            k_str = str(k)
+            if SECRET_KEY_PATTERN.search(k_str):
+                cleaned[k_str] = "[REDACTED]"
+            else:
+                cleaned[k_str] = redact_secrets(v)
+        return cleaned
+    elif isinstance(value, (list, tuple)):
+        return [redact_secrets(v) for v in value]
+    elif isinstance(value, str):
+        return redact_text(value)
+    return value
+
+
+def bound_text(text: Any, max_length: int) -> str:
+    """Safely coerce to string and truncate to max_length."""
+    s = str(text or "")
+    if len(s) > max_length:
+        return s[:max_length]
+    return s
+
+
+def minimize_job_state(
+    job_data: Mapping[str, Any],
+    *,
+    max_desc_len: int = MAX_TRIAGE_DESCRIPTION_LENGTH,
+    max_title_len: int = MAX_TRIAGE_TITLE_LENGTH,
+) -> Dict[str, Any]:
+    """Minimize and bound submitted job state before sending to TypeSafe.
+
+    Drops raw input_payload and unneeded fields, bounds description and title,
+    and redacts obvious secret-bearing patterns.
+    """
+    raw_title = str(job_data.get("title") or "")
+    raw_desc = str(job_data.get("description") or "")
+    raw_role = str(job_data.get("target_agent_role") or "")
+
+    clean_title = bound_text(redact_text(raw_title), max_title_len)
+    clean_desc = bound_text(redact_text(raw_desc), max_desc_len)
+    clean_role = bound_text(raw_role, 64)
+
+    try:
+        priority = int(job_data.get("priority", 0) or 0)
+    except (TypeError, ValueError):
+        priority = 0
+
+    return {
+        "title": clean_title,
+        "description": clean_desc,
+        "target_agent_role": clean_role,
+        "priority": priority,
+    }
 
 
 class JevConfigurationError(ValueError):
@@ -508,6 +597,7 @@ class JevProvider:
         _validate_questions(questions)
         if not use_case_id or not question_set_version:
             raise JevProtocolError("use_case_id and question_set_version are required")
+        state = redact_secrets(state)
         if self.config.mode == "disabled":
             return _fallback_receipt(self.config, use_case_id, question_set_version, questions, state, "disabled")
         if not self._api_key:
@@ -631,15 +721,13 @@ def evaluate_shadow_triage(
     """Evaluate incoming job triage in shadow mode.
 
     Bypasses completely if provider is None or mode is disabled.
+    Minimizes and bounds submitted job state before sending to TypeSafe:
+    bounds description and title, redacts obvious secrets, and excludes
+    unneeded raw payloads.
     """
     if provider is None or getattr(getattr(provider, "config", None), "mode", "disabled") == "disabled":
         return None
-    state = {
-        "title": str(job_data.get("title") or ""),
-        "description": str(job_data.get("description") or ""),
-        "target_agent_role": str(job_data.get("target_agent_role") or ""),
-        "priority": job_data.get("priority", 0),
-    }
+    state = minimize_job_state(job_data)
     questions = build_incoming_job_triage_questions()
     try:
         return provider.decide(
@@ -710,9 +798,11 @@ def evaluate_shadow_retryability(
     """Evaluate failed job retryability in shadow mode."""
     if provider is None or getattr(getattr(provider, "config", None), "mode", "disabled") == "disabled":
         return None
+    raw_error = str(error_info.get("error") or "")
+    clean_error = bound_text(redact_text(raw_error), 1000)
     state = {
-        "error": str(error_info.get("error") or ""),
-        "status": str(error_info.get("status") or ""),
+        "error": clean_error,
+        "status": bound_text(error_info.get("status") or "", 64),
         "attempt": error_info.get("attempt", 1),
     }
     questions = get_question_set("job_retryability", QUESTION_SET_VERSION)
@@ -735,8 +825,8 @@ def evaluate_shadow_operator_attention(
     if provider is None or getattr(getattr(provider, "config", None), "mode", "disabled") == "disabled":
         return None
     state = {
-        "event": str(event_info.get("event") or ""),
-        "detail": dict(event_info.get("detail") or {}),
+        "event": bound_text(event_info.get("event") or "", 64),
+        "detail": redact_secrets(dict(event_info.get("detail") or {})),
     }
     questions = get_question_set("operator_attention", QUESTION_SET_VERSION)
     try:
@@ -759,8 +849,8 @@ def evaluate_shadow_untrusted_content(
     if provider is None or getattr(getattr(provider, "config", None), "mode", "disabled") == "disabled":
         return None
     state = {
-        "content": str(content)[:4000],
-        "context": dict(context or {}),
+        "content": bound_text(redact_text(str(content)), 4000),
+        "context": redact_secrets(dict(context or {})),
     }
     questions = get_question_set("prompt_injection_risk", QUESTION_SET_VERSION)
     try:
