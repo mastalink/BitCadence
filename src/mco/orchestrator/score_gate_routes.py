@@ -255,10 +255,10 @@ async def get_autonomy_status(caller: dict = Depends(require_scopes("jobs:read")
 
     if kill_switch:
         status = "frozen"
-    elif not configured:
-        status = "standby"
     elif paused:
         status = "paused"
+    elif not configured:
+        status = "standby"
     else:
         status = "active"
 
