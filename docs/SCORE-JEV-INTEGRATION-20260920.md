@@ -1,8 +1,9 @@
 # Jev + BitCadence + VIA score integration
 
-Status: integrated planning and read-only preflight package. No cloud deployment,
-TypeSafe activation, Cloudflare mutation, production data change, or schedule
-publication is authorized by this artifact.
+Status: J01 provider foundation implemented on the integration branch; the
+read-only preflight and later Jev/VIA/marketing lanes remain separately gated.
+No cloud deployment, TypeSafe activation, Cloudflare mutation, production data
+change, or schedule publication is authorized by this artifact.
 
 ## Inputs and provenance
 
@@ -112,3 +113,14 @@ Choice probabilities are reusable signals rather than authority; confidence is a
 routing signal, not proof; and high-risk fields use a per-field verifier with an
 `any`-flag escalation to a stronger model or review. Code remains responsible for
 policy, dates, budgets, leases, evidence hashes, and publication.
+
+## J01 implementation
+
+The server-side provider contract is documented in
+`docs/JEV-DECISION-PROVIDER.md`. It uses the current TypeSafe HTTP contract over
+BitCadence's existing `httpx` dependency, preserving Python 3.9 compatibility
+and making the official SDK optional rather than mandatory. Disabled mode
+constructs no live client and performs no network request. Credentials use the
+tenant-scoped SecretVault, responses are validated into DecisionReceipts, live
+modes require an exact model pin, and bounded failures return deterministic,
+sanitized fallback receipts.
