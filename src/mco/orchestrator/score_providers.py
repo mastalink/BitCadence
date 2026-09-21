@@ -192,6 +192,7 @@ def select(
     run: Run,
     *,
     weights: Mapping[str, int] = DEFAULT_WEIGHTS,
+    jev_provider: Optional[Any] = None,
 ) -> Selection:
     """Pick exactly one identity or pause visibly. Never silent reassignment."""
     used_weights = _require_weights(weights)
@@ -281,6 +282,28 @@ def select(
             if row.provider.instance_id != chosen.instance_id
         ),
     }
+    if jev_provider is not None and getattr(getattr(jev_provider, "config", None), "mode", "disabled") != "disabled":
+        try:
+            from mco.orchestrator.jev import GLOBAL_JEV_METRICS, evaluate_shadow_shortlist
+            candidates = [row.provider for row in available]
+            shadow_res = evaluate_shadow_shortlist(
+                jev_provider,
+                {"task_id": task.task_id, "role": _needed_role(task, phase), "capabilities": list(task.capabilities)},
+                candidates,
+            )
+            if shadow_res is not None:
+                receipt, jev_pick = shadow_res
+                disagreed = bool(jev_pick and jev_pick != chosen.instance_id)
+                if disagreed:
+                    GLOBAL_JEV_METRICS.record_disagreement()
+                event["shadow_annotation"] = {
+                    "receipt": receipt.to_dict(),
+                    "disagreed": disagreed,
+                    "deterministic_chosen": chosen.instance_id,
+                    "jev_pick": jev_pick,
+                }
+        except Exception:
+            pass
     return Selection(
         status="dispatch",
         error_class=None,

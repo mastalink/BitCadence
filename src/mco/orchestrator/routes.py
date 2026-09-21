@@ -539,6 +539,23 @@ async def create_job(payload: dict, agent: dict = Depends(require_scopes("jobs:w
             record_event(db_client, new_job.get("id"), "created",
                          agent["instance_id"], agent["role"],
                          {"status": status, "target_agent_role": target_agent_role})
+
+            # Optional Jev shadow triage (only runs when mode != "disabled")
+            try:
+                jev_mode = str(get_config().get("MCO_JEV_MODE") or "disabled").strip().lower()
+                if jev_mode != "disabled":
+                    from mco.orchestrator.jev import (
+                        build_provider,
+                        evaluate_shadow_triage,
+                        persist_decision_receipt,
+                    )
+                    j_provider = build_provider(get_config(), db_client, agent_org(agent))
+                    j_receipt = evaluate_shadow_triage(j_provider, new_job)
+                    if j_receipt is not None:
+                        persist_decision_receipt(db_client, new_job.get("id"), "jev_shadow_triage", j_receipt)
+            except Exception as j_exc:
+                logger.debug(f"Jev shadow triage bypassed or failed: {j_exc}")
+
             # Trigger registered broadcast callback first
             if _broadcast_callback:
                 try:
@@ -1045,6 +1062,22 @@ async def retry_job(job_id: str, agent: dict = Depends(require_scopes("jobs:appr
 
     record_event(db_client, job_id, "retried", agent["instance_id"], agent["role"],
                  {"manual": True, "previous_status": job.get("status")})
+
+    # Optional Jev shadow retry triage (only runs when mode != "disabled")
+    try:
+        jev_mode = str(get_config().get("MCO_JEV_MODE") or "disabled").strip().lower()
+        if jev_mode != "disabled":
+            from mco.orchestrator.jev import (
+                build_provider,
+                evaluate_shadow_retryability,
+                persist_decision_receipt,
+            )
+            j_provider = build_provider(get_config(), db_client, agent_org(agent))
+            j_receipt = evaluate_shadow_retryability(j_provider, {"error": job.get("error_message"), "status": job.get("status")})
+            if j_receipt is not None:
+                persist_decision_receipt(db_client, job_id, "jev_shadow_retry_triage", j_receipt)
+    except Exception as j_exc:
+        logger.debug(f"Jev shadow retry triage bypassed or failed: {j_exc}")
 
     if _broadcast_callback:
         try:

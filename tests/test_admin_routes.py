@@ -56,9 +56,11 @@ def setup(monkeypatch):
     db = FakeDB()
     cfg = FakeConfig()
     monkeypatch.setattr(routes_mod, "get_db_client", lambda: db)
+    monkeypatch.setattr(routes_mod, "get_config", lambda: cfg)
     monkeypatch.setattr(admin_mod, "get_config", lambda: cfg)
     monkeypatch.setattr(editions_mod, "get_config", lambda: cfg)
     monkeypatch.setattr(ntfy_mod, "notify", lambda *a, **k: True)
+    monkeypatch.setenv("MCO_JEV_MODE", "disabled")
 
     app = FastAPI()
     app.include_router(jobs_router)
@@ -542,7 +544,30 @@ class TestDemoPipeline:
         assert build["depends_on"] == [plan["id"]]
         assert review["depends_on"] == [build["id"]]
         assert plan["input_payload"]["workflow"]["run"] == body["run"]
-        assert len(_ctx().db._events) == 3
+
+        created_events = [e for e in _ctx().db._events if e.get("event") == "created"]
+        assert len(created_events) == 3
+        jev_mode = str(_ctx().cfg.get("MCO_JEV_MODE") or "disabled").strip().lower()
+        if jev_mode != "disabled":
+            shadow_events = [e for e in _ctx().db._events if e.get("event") == "jev_shadow_triage"]
+            assert len(shadow_events) == 3
+            assert len(_ctx().db._events) == 6
+        else:
+            assert len(_ctx().db._events) == 3
+
+    def test_demo_pipeline_shadow_mode_records_additive_receipts(self):
+        _ctx().cfg.set("MCO_JEV_MODE", "shadow")
+        resp = _ctx().http.post("/api/workflows/demo-pipeline")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["workflow"] == "jde-demo-live-pipeline"
+        assert set(body["jobs"]) == {"plan", "build", "review"}
+
+        created_events = [e for e in _ctx().db._events if e.get("event") == "created"]
+        shadow_events = [e for e in _ctx().db._events if e.get("event") == "jev_shadow_triage"]
+        assert len(created_events) == 3
+        assert len(shadow_events) == 3
+        assert len(_ctx().db._events) == 6
 
 
 class TestGovernanceEvidencePack:
@@ -592,5 +617,25 @@ class TestGovernanceEvidencePack:
         files = {f["filename"]: f for f in resp.json()["files"]}
         audit = json.loads(files["audit-trail.json"]["text"])
 
-        assert audit["summary"]["audit_events"] == 1
+        jev_mode = str(_ctx().cfg.get("MCO_JEV_MODE") or "disabled").strip().lower()
+        expected_events = 2 if jev_mode != "disabled" else 1
+        assert audit["summary"]["audit_events"] == expected_events
         assert audit["audit_events"][0]["job_id"] == job["id"]
+
+    def test_evidence_pack_preserves_shadow_receipts_in_audit_trail(self):
+        _ctx().cfg.set("MCO_JEV_MODE", "shadow")
+        job = _ctx().http.post("/api/jobs", json={
+            "title": "Audit shadow trail test",
+            "target_agent_role": "codex",
+        }).json()["job"]
+
+        resp = _ctx().http.post("/api/governance/evidence-pack", json={})
+        assert resp.status_code == 200
+        files = {f["filename"]: f for f in resp.json()["files"]}
+        audit = json.loads(files["audit-trail.json"]["text"])
+
+        job_events = [e for e in audit["audit_events"] if e.get("job_id") == job["id"]]
+        event_types = [e["event"] for e in job_events]
+        assert "created" in event_types
+        assert "jev_shadow_triage" in event_types
+        assert len(job_events) == 2

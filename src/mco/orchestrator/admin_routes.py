@@ -852,6 +852,12 @@ async def test_jev_configuration(caller: dict = Depends(require_scopes("admin"))
     return provider.health()
 
 
+@jev_router.get("/metrics")
+async def get_jev_metrics_endpoint(caller: dict = Depends(require_scopes("admin"))):
+    """Additive Jev decision metrics: calls, latency, low-confidence, disagreements, fallbacks, errors."""
+    return jev.get_jev_metrics()
+
+
 # ── LLM Provider Connections ("Model Connections" in the Control Panel) ──────
 #
 # Named, testable connections to LLM providers. See llm_connections.py for
