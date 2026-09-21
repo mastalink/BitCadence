@@ -109,7 +109,7 @@ function App() {
     governance: <Governance jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
     workflows: <WorkflowBuilder jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
     agents: <AgentFleet agents={agents} jobs={jobs} tone={tone} advanced={advanced} />,
-    memory: <DrumlineMemory tone={tone} advanced={advanced} />,
+    memory: <DrumlineMemory tone={tone} advanced={advanced} onOpen={setOpenJob} />,
     activity: <ActivityFeedScreen jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
     settings: <Settings tone={tone} advanced={advanced} setAdvanced={setAdvanced} />,
   }[page];

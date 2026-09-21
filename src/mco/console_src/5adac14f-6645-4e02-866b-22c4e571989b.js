@@ -28,7 +28,24 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
   const [filter, setFilter] = useStateJ("all");
   const [query, setQuery] = useStateJ("");
   const [role, setRole] = useStateJ("all");
-  const [sort, setSort] = useStateJ("priority");
+  const [sort, setSortState] = useStateJ(() => {
+    try {
+      return localStorage.getItem("bitcadence_job_sort") || localStorage.getItem("mco_job_sort") || "priority";
+    } catch (e) {
+      return "priority";
+    }
+  });
+  const [selected, setSelected] = useStateJ(new Set());
+  const [batchBusy, setBatchBusy] = useStateJ(false);
+  const [reassignRole, setReassignRole] = useStateJ("");
+
+  const setSort = (s) => {
+    setSortState(s);
+    try {
+      localStorage.setItem("bitcadence_job_sort", s);
+      localStorage.setItem("mco_job_sort", s);
+    } catch (e) {}
+  };
 
   const roles = useMemoJ(() => {
     const set = new Set(jobs.map((j) => j.target_agent_role).filter(Boolean));
@@ -73,6 +90,58 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
     return c;
   }, [jobs]);
 
+  const allVisibleSelected = visible.length > 0 && visible.every((j) => selected.has(j.id));
+  const someVisibleSelected = visible.some((j) => selected.has(j.id));
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(visible.map((j) => j.id)));
+    }
+  };
+
+  const toggleSelect = (id) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
+  };
+
+  const selectedJobs = useMemoJ(() => jobs.filter((j) => selected.has(j.id)), [jobs, selected]);
+  const canApprove = selectedJobs.some((j) => j.status === "needs_approval");
+  const canReject = selectedJobs.some((j) => j.status === "needs_approval");
+  const canRetry = selectedJobs.some((j) => ["failed", "rejected", "halted"].includes(j.status));
+  const canCancel = selectedJobs.some((j) => !["completed", "failed", "rejected", "cancelled", "halted"].includes(j.status));
+  const canArchive = selectedJobs.some((j) => ["completed", "failed", "rejected", "cancelled"].includes(j.status));
+  const canReassign = selectedJobs.some((j) => !["completed", "failed", "rejected", "cancelled", "halted"].includes(j.status));
+
+  const runBatch = async (action, extra = {}) => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    if (action === "reject" || action === "cancel") {
+      const reason = window.prompt(`Enter reason for batch ${action}:`, "");
+      if (reason === null) return;
+      extra.reason = reason;
+    }
+    setBatchBusy(true);
+    try {
+      await window.BitCadenceStore.batchAction(action, ids, extra);
+      setSelected(new Set());
+    } catch (e) {
+      // toast notification handled by store
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const onHeaderSort = (col) => {
+    if (col === "job") setSort("title");
+    else if (col === "status") setSort("status");
+    else if (col === "role") setSort("role");
+    else if (col === "time") setSort(sort === "newest" ? "oldest" : "newest");
+  };
+
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
@@ -98,54 +167,140 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
           <option value="all">All roles</option>
           {roles.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select aria-label="Sort jobs" value={sort} onChange={(e) => setSort(e.target.value)} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
-          background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }}>
-          {JOB_SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-        </select>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <select aria-label="Sort jobs" value={sort} onChange={(e) => setSort(e.target.value)} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
+            background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }}>
+            {JOB_SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+          </select>
+          <span title="Order persisted in local settings" style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 500 }}>default saved</span>
+        </div>
         <div style={{ flex: 1 }}></div>
         <Btn kind="primary" onClick={onCompose}>+ New job</Btn>
       </div>
 
+      {selected.size > 0 ? (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+          padding: "10px 16px", marginBottom: 14,
+          background: "var(--accent-soft)", border: "1px solid var(--accent)", borderRadius: "var(--radius-m)",
+          boxShadow: "var(--shadow-s)",
+        }}>
+          <span style={{ fontWeight: 650, fontSize: 13, color: "var(--accent-text)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 99, background: "var(--accent)" }}></span>
+            {selected.size} job{selected.size > 1 ? "s" : ""} selected
+          </span>
+          <div style={{ height: 16, width: 1, background: "var(--border)" }}></div>
+          {canApprove ? <Btn small kind="ok" disabled={batchBusy} onClick={() => runBatch("approve")}>✓ Approve ({selectedJobs.filter((j) => j.status === "needs_approval").length})</Btn> : null}
+          {canReject ? <Btn small kind="danger" disabled={batchBusy} onClick={() => runBatch("reject")}>Reject ({selectedJobs.filter((j) => j.status === "needs_approval").length})</Btn> : null}
+          {canRetry ? <Btn small disabled={batchBusy} onClick={() => runBatch("retry")}>Retry ({selectedJobs.filter((j) => ["failed", "rejected", "halted"].includes(j.status)).length})</Btn> : null}
+          {canCancel ? <Btn small disabled={batchBusy} onClick={() => runBatch("cancel")}>Cancel ({selectedJobs.filter((j) => !["completed", "failed", "rejected", "cancelled", "halted"].includes(j.status)).length})</Btn> : null}
+          {canArchive ? <Btn small disabled={batchBusy} onClick={() => runBatch("archive")}>Archive ({selectedJobs.filter((j) => ["completed", "failed", "rejected", "cancelled"].includes(j.status)).length})</Btn> : null}
+          {canReassign ? (
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <select value={reassignRole} onChange={(e) => setReassignRole(e.target.value)}
+                style={{ border: "1px solid var(--border)", borderRadius: 6, padding: "4px 8px", fontSize: 12, background: "var(--surface)", color: "var(--text)" }}>
+                <option value="">Reassign to role…</option>
+                {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              {reassignRole ? <Btn small disabled={batchBusy} onClick={() => { runBatch("reassign", { to_role: reassignRole }); setReassignRole(""); }}>Apply</Btn> : null}
+            </div>
+          ) : null}
+          <div style={{ flex: 1 }}></div>
+          <Btn small kind="ghost" onClick={() => setSelected(new Set())}>Clear selection</Btn>
+        </div>
+      ) : null}
+
       <Card pad={false}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
-          <THead cols={["Job", "Status", "Assigned to", "From", advanced ? "Retries" : "Workflow", "Updated"]} />
+          <thead>
+            <tr>
+              <th style={{ width: 38, padding: "8px 10px 8px 14px", borderBottom: "1px solid var(--border)", background: "var(--surface-2)", textAlign: "center" }}>
+                <input type="checkbox" aria-label="Select all jobs" checked={allVisibleSelected} onChange={toggleSelectAll} style={{ cursor: "pointer" }} />
+              </th>
+              <th onClick={() => onHeaderSort("job")} style={{
+                textAlign: "left", padding: "8px 14px", fontSize: 11.5, fontWeight: 600,
+                color: sort === "title" ? "var(--accent-text)" : "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em",
+                borderBottom: "1px solid var(--border)", background: "var(--surface-2)", cursor: "pointer", userSelect: "none",
+              }}>
+                Job {sort === "title" ? "▲" : ""}
+              </th>
+              <th onClick={() => onHeaderSort("status")} style={{
+                textAlign: "left", padding: "8px 14px", fontSize: 11.5, fontWeight: 600,
+                color: sort === "status" ? "var(--accent-text)" : "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em",
+                borderBottom: "1px solid var(--border)", background: "var(--surface-2)", cursor: "pointer", userSelect: "none",
+              }}>
+                Status {sort === "status" ? "▲" : ""}
+              </th>
+              <th onClick={() => onHeaderSort("role")} style={{
+                textAlign: "left", padding: "8px 14px", fontSize: 11.5, fontWeight: 600,
+                color: sort === "role" ? "var(--accent-text)" : "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em",
+                borderBottom: "1px solid var(--border)", background: "var(--surface-2)", cursor: "pointer", userSelect: "none",
+              }}>
+                Assigned to {sort === "role" ? "▲" : ""}
+              </th>
+              <th style={{
+                textAlign: "left", padding: "8px 14px", fontSize: 11.5, fontWeight: 600,
+                color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em",
+                borderBottom: "1px solid var(--border)", background: "var(--surface-2)",
+              }}>From</th>
+              <th style={{
+                textAlign: "left", padding: "8px 14px", fontSize: 11.5, fontWeight: 600,
+                color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em",
+                borderBottom: "1px solid var(--border)", background: "var(--surface-2)",
+              }}>{advanced ? "Retries" : "Workflow"}</th>
+              <th onClick={() => onHeaderSort("time")} style={{
+                textAlign: "left", padding: "8px 14px", fontSize: 11.5, fontWeight: 600,
+                color: (sort === "newest" || sort === "oldest") ? "var(--accent-text)" : "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em",
+                borderBottom: "1px solid var(--border)", background: "var(--surface-2)", cursor: "pointer", userSelect: "none",
+              }}>
+                Updated {sort === "newest" ? "▼" : sort === "oldest" ? "▲" : ""}
+              </th>
+            </tr>
+          </thead>
           <tbody>
             {visible.length === 0 ? (
-              <tr><Td style={{ borderBottom: "none" }} ><EmptyState icon="○" title="No jobs here" body={role !== "all" || query ? "Nothing matches these filters. Clear the role or search to widen it." : "Try another filter, or create a new job."} /></Td></tr>
-            ) : visible.map((j) => (
-              <tr key={j.id} onClick={() => onOpen(j.id)} style={{ cursor: "pointer" }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-2)"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-                <Td>
-                  <div style={{ fontWeight: 600 }}>{j.title}</div>
-                  <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 1 }}>
-                    <Mono style={{ fontSize: 11 }}>{shortId(j.id)}</Mono>
-                    {j.workflow ? <span> · {j.workflow}</span> : null}
-                    {jobPriority(j) !== 0 ? (
-                      <span title="Higher priority is leased first" style={{
-                        marginLeft: 6, padding: "1px 6px", borderRadius: 999, fontSize: 10.5, fontWeight: 700,
-                        background: jobPriority(j) > 0 ? "var(--accent-soft)" : "var(--surface-2)",
-                        color: jobPriority(j) > 0 ? "var(--accent-text)" : "var(--text-3)",
-                      }}>P{jobPriority(j)}</span>
-                    ) : null}
-                  </div>
-                </Td>
-                <Td><StatusBadge status={j.status} tone={tone} /></Td>
-                <Td>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                    <RoleChip role={j.target_agent_role} size={20} />
-                    <span>{j.leased_by_instance_id || j.target_agent_role}</span>
-                  </span>
-                </Td>
-                <Td><span style={{ color: "var(--text-2)" }}>{j.source_agent_id}</span></Td>
-                <Td>
-                  {advanced
-                    ? <span style={{ color: "var(--text-2)" }}>{j.max_retries ? `${j.retry_count || 0}/${j.max_retries}` : "—"}{j.escalate_to_role ? ` → ${j.escalate_to_role}` : ""}</span>
-                    : <span style={{ color: "var(--text-2)" }}>{j.workflow || "—"}</span>}
-                </Td>
-                <Td><span style={{ color: "var(--text-3)", fontSize: 12.5, whiteSpace: "nowrap" }}>{timeAgo(j.updated_at || j.completed_at || j.started_at || j.created_at)}</span></Td>
-              </tr>
-            ))}
+              <tr><td colSpan={7} style={{ padding: "36px 20px" }}><EmptyState icon="○" title="No jobs here" body={role !== "all" || query ? "Nothing matches these filters. Clear the role or search to widen it." : "Try another filter, or create a new job."} /></td></tr>
+            ) : visible.map((j) => {
+              const isSelected = selected.has(j.id);
+              return (
+                <tr key={j.id} onClick={() => onOpen(j.id)} style={{ cursor: "pointer", background: isSelected ? "var(--accent-soft)" : "transparent" }}
+                  onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--surface-2)"; }}
+                  onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}>
+                  <td style={{ width: 38, padding: "var(--row-pad) 10px var(--row-pad) 14px", borderBottom: "1px solid var(--border)", textAlign: "center" }}
+                    onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" aria-label={`Select job ${j.title}`} checked={isSelected} onChange={() => toggleSelect(j.id)} style={{ cursor: "pointer" }} />
+                  </td>
+                  <Td>
+                    <div style={{ fontWeight: 600 }}>{j.title}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 1 }}>
+                      <Mono style={{ fontSize: 11 }}>{shortId(j.id)}</Mono>
+                      {j.workflow ? <span> · {j.workflow}</span> : null}
+                      {jobPriority(j) !== 0 ? (
+                        <span title="Higher priority is leased first" style={{
+                          marginLeft: 6, padding: "1px 6px", borderRadius: 999, fontSize: 10.5, fontWeight: 700,
+                          background: jobPriority(j) > 0 ? "var(--accent-soft)" : "var(--surface-2)",
+                          color: jobPriority(j) > 0 ? "var(--accent-text)" : "var(--text-3)",
+                        }}>P{jobPriority(j)}</span>
+                      ) : null}
+                    </div>
+                  </Td>
+                  <Td><StatusBadge status={j.status} tone={tone} /></Td>
+                  <Td>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                      <RoleChip role={j.target_agent_role} size={20} />
+                      <span>{j.leased_by_instance_id || j.target_agent_role}</span>
+                    </span>
+                  </Td>
+                  <Td><span style={{ color: "var(--text-2)" }}>{j.source_agent_id}</span></Td>
+                  <Td>
+                    {advanced
+                      ? <span style={{ color: "var(--text-2)" }}>{j.max_retries ? `${j.retry_count || 0}/${j.max_retries}` : "—"}{j.escalate_to_role ? ` → ${j.escalate_to_role}` : ""}</span>
+                      : <span style={{ color: "var(--text-2)" }}>{j.workflow || "—"}</span>}
+                  </Td>
+                  <Td><span style={{ color: "var(--text-3)", fontSize: 12.5, whiteSpace: "nowrap" }}>{timeAgo(j.updated_at || j.completed_at || j.started_at || j.created_at)}</span></Td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </Card>

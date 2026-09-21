@@ -193,3 +193,40 @@ def test_autonomy_manual_tick(test_env, monkeypatch):
     res = resp.json()
     assert res["success"] is True
     assert res["result"]["ticked"] == ["run-1"]
+
+
+def test_console_bundle_roundtrips_and_includes_improvements():
+    """Verify scripts/build_console.py roundtrips with 0 mismatches, and console.html contains new features."""
+    import scripts.build_console as builder
+    from mco.console import get_console_html
+
+    # Roundtrip verification: checks all console_src/ match console.html
+    builder.build(check_only=True)
+
+    html = get_console_html()
+    assert html is not None
+    # Verify manifest contains all updated assets
+    manifest = builder._read_manifest(html)
+    assert len(manifest) > 0
+
+    # Verify that extracted source files contain the new features
+    store_src = (builder.SRC / "47e66145-9c4d-41a1-acbb-42b12848f160.js").read_text(encoding="utf-8")
+    assert "batchAction" in store_src
+    assert "getAutonomy" in store_src
+    assert "pauseAutonomy" in store_src
+    assert "resumeAutonomy" in store_src
+    assert "tickAutonomy" in store_src
+    assert "abortRun" in store_src
+
+    board_src = (builder.SRC / "5adac14f-6645-4e02-866b-22c4e571989b.js").read_text(encoding="utf-8")
+    assert "bitcadence_job_sort" in board_src
+    assert "mco_job_sort" in board_src
+    assert "runBatch" in board_src
+    assert "toggleSelectAll" in board_src
+
+    overview_src = (builder.SRC / "43b328d0-9d0e-4fce-a105-be0a939d7e48.js").read_text(encoding="utf-8")
+    assert "AutonomyLiveLookModal" in overview_src
+    assert "AutonomyControlCard" in overview_src
+    assert "MemoryDetailDrawer" in overview_src
+    assert "handleBatchApprove" in overview_src
+

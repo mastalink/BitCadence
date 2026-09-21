@@ -240,6 +240,23 @@
       }
       catch (e) { toast("err", "Reassign failed", e.message + " (reassign needs an approver-role token)"); }
     },
+    async batchAction(action, jobIds, extra = {}) {
+      if (connState === "demo") {
+        const res = demo.batchAction ? demo.batchAction(action, jobIds, extra) : { ok: true, success_count: jobIds.length, failure_count: 0 };
+        toast("ok", "Batch " + action, `Action applied to ${res.success_count} job(s).`);
+        return res;
+      }
+      try {
+        const payload = Object.assign({ action, job_ids: jobIds }, extra);
+        const res = await api("/api/jobs/batch-action", { method: "POST", body: JSON.stringify(payload) });
+        await poll();
+        toast(res.failure_count > 0 ? "info" : "ok", "Batch " + action, `Completed: ${res.success_count} succeeded, ${res.failure_count} failed.`);
+        return res;
+      } catch (e) {
+        toast("err", "Batch " + action + " failed", e.message);
+        throw e;
+      }
+    },
     async createJob(payload) {
       if (connState === "demo") return demo.createJob(payload);
       try {
@@ -370,6 +387,83 @@
     async addContext(payload) {
       if (!isLive()) throw new Error("Connect to your orchestrator first.");
       return api("/api/context", { method: "POST", body: JSON.stringify(payload) });
+    },
+
+    // ---- autonomy & score conductor controls ----
+    async getAutonomy() {
+      if (!isLive()) {
+        return {
+          ok: true,
+          conductor_active: true,
+          conductor_leader: true,
+          sweep_paused: false,
+          sweep_interval_sec: 10.0,
+          live_runs_count: 2,
+          live_runs: [
+            { run_id: "demo-run-001", stage: "execute_plan", target_agent: "codex-build-1", remaining_sec: 240, score_progress: 0.75 },
+            { run_id: "demo-run-002", stage: "qa_verification", target_agent: "gemini-qa-1", remaining_sec: 180, score_progress: 0.90 }
+          ],
+          active_workers: ["codex-build-1", "gemini-qa-1", "claude-research-1"],
+          telemetry: { total_sweeps: 142, tasks_dispatched: 38, failures: 1, pass_rate: 0.974 }
+        };
+      }
+      return api("/api/score/autonomy/status");
+    },
+    async pauseAutonomy() {
+      if (!isLive()) {
+        toast("ok", "Autonomy Paused", "Conductor sweep paused in demo mode.");
+        return { ok: true, sweep_paused: true };
+      }
+      try {
+        const res = await api("/api/score/autonomy/pause", { method: "POST" });
+        toast("ok", "Autonomy Paused", "Autonomous conductor sweep is now paused.");
+        return res;
+      } catch (e) {
+        toast("err", "Pause failed", e.message);
+        throw e;
+      }
+    },
+    async resumeAutonomy() {
+      if (!isLive()) {
+        toast("ok", "Autonomy Resumed", "Conductor sweep resumed in demo mode.");
+        return { ok: true, sweep_paused: false };
+      }
+      try {
+        const res = await api("/api/score/autonomy/resume", { method: "POST" });
+        toast("ok", "Autonomy Resumed", "Autonomous conductor sweep is active.");
+        return res;
+      } catch (e) {
+        toast("err", "Resume failed", e.message);
+        throw e;
+      }
+    },
+    async tickAutonomy() {
+      if (!isLive()) {
+        toast("ok", "Autonomy Tick", "Triggered manual sweep tick in demo mode.");
+        return { ok: true, swept: true };
+      }
+      try {
+        const res = await api("/api/score/autonomy/tick", { method: "POST" });
+        toast("ok", "Autonomy Tick", "Conductor sweep executed successfully.");
+        return res;
+      } catch (e) {
+        toast("err", "Tick failed", e.message);
+        throw e;
+      }
+    },
+    async abortRun(runId, reason) {
+      if (!isLive()) {
+        toast("ok", "Run Aborted", `Run ${runId} aborted.`);
+        return { ok: true, run_id: runId, status: "aborted" };
+      }
+      try {
+        const res = await api("/api/score/autonomy/abort", { method: "POST", body: JSON.stringify({ run_id: runId, reason: reason || "" }) });
+        toast("ok", "Run Aborted", `Run ${runId} aborted.`);
+        return res;
+      } catch (e) {
+        toast("err", "Abort failed", e.message);
+        throw e;
+      }
     },
 
     // ---- demo sim controls (no-ops while live) ----

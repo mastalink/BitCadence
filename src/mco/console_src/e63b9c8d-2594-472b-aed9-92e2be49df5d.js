@@ -133,6 +133,60 @@
       toast("ok", "Re-queued", j.title);
       notify();
     },
+    cancelJob(jobId, reason) {
+      const j = find(jobId); if (!j) return;
+      touch(j, "cancelled");
+      j.error_message = reason ? "Cancelled: " + reason : "Cancelled by operator";
+      record(jobId, "cancelled", "joe-laptop", "human", { reason });
+      toast("ok", "Cancelled", j.title);
+      notify();
+    },
+    reassignJob(jobId, toRole, toInstance) {
+      const j = find(jobId); if (!j) return;
+      if (toRole) j.target_agent_role = toRole;
+      if (toInstance) j.leased_by_instance_id = toInstance;
+      touch(j, "pending");
+      record(jobId, "reassigned", "joe-laptop", "human", { toRole, toInstance });
+      toast("ok", "Reassigned", j.title + " → " + (toInstance || toRole));
+      notify();
+    },
+    batchAction(action, jobIds, extra = {}) {
+      let count = 0;
+      (jobIds || []).forEach((id) => {
+        const j = find(id);
+        if (!j) return;
+        if (action === "approve" && j.status === "needs_approval") {
+          touch(j, "pending"); j.approved_by = "joe-laptop";
+          record(j.id, "approved", "joe-laptop", "human");
+          count++;
+        } else if (action === "reject" && j.status === "needs_approval") {
+          touch(j, "rejected"); j.approved_by = "joe-laptop";
+          j.error_message = extra.reason || "Rejected by operator";
+          record(j.id, "rejected", "joe-laptop", "human", { reason: extra.reason });
+          count++;
+        } else if (action === "retry" && ["failed", "rejected", "halted"].includes(j.status)) {
+          j.retry_count = 0; j.error_message = null; touch(j, "pending");
+          record(j.id, "retried", "joe-laptop", "human", { manual: true });
+          count++;
+        } else if (action === "cancel" && !["completed", "failed", "rejected", "cancelled", "halted"].includes(j.status)) {
+          touch(j, "cancelled"); j.error_message = extra.reason || "Cancelled by operator";
+          record(j.id, "cancelled", "joe-laptop", "human", { reason: extra.reason });
+          count++;
+        } else if (action === "archive" && ["completed", "failed", "rejected", "cancelled"].includes(j.status)) {
+          touch(j, "archived");
+          record(j.id, "archived", "joe-laptop", "human");
+          count++;
+        } else if (action === "reassign" && !["completed", "failed", "rejected", "cancelled", "halted"].includes(j.status)) {
+          if (extra.to_role) j.target_agent_role = extra.to_role;
+          if (extra.to_instance) j.leased_by_instance_id = extra.to_instance;
+          touch(j, "pending");
+          record(j.id, "reassigned", "joe-laptop", "human", extra);
+          count++;
+        }
+      });
+      notify();
+      return { ok: true, action, success_count: count, failure_count: 0 };
+    },
     createJob(payload) {
       const requires = !!payload.requires_approval;
       const status = (payload.depends_on || []).length ? "waiting" : (requires ? "needs_approval" : "pending");
