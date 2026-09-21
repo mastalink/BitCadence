@@ -205,7 +205,7 @@ def open_conductor(config: Optional[dict] = None):
     leave no trace on disk.
     """
     from mco.orchestrator.client import GatewayClient
-    from mco.orchestrator.score_conductor import Conductor, board_for, open_bridge
+    from mco.orchestrator.score_conductor import configured_conductor
 
     config = config if config is not None else get_config()
     token = config.get("MCO_AGENT_TOKEN") or config.get("MCO_LOCAL_TOKEN") or None
@@ -220,5 +220,12 @@ def open_conductor(config: Optional[dict] = None):
         role=config.get("AGENT_ROLE") or None,
         instance_id=config.get("AGENT_INSTANCE_ID") or None,
     )
-    bridge = open_bridge(get_database(config), get_artifact_root(config))
-    return Conductor(bridge, board_for(client))
+    # Off by default, matching CLI --live-repository-write. Never infer this
+    # authority from a task supplied by an agent or from a nonempty string.
+    setting = config.get("MCO_SCORE_LIVE_REPOSITORY_WRITE", "false")
+    if not isinstance(setting, (str, bool)) or str(setting).lower() not in ("true", "false", ""):
+        raise ValueError("MCO_SCORE_LIVE_REPOSITORY_WRITE must be true or false")
+    return configured_conductor(
+        get_database(config), get_artifact_root(config), client,
+        live_repository_write=str(setting).lower() == "true",
+    )

@@ -6,6 +6,7 @@ No production mutation, budgeted tasks or human-gate authorization supported.
 import hashlib
 import json
 import logging
+import re
 import sqlite3
 import subprocess
 import time
@@ -243,7 +244,7 @@ class ScoreBridge:
                             job_id = score_job_id(run["org"], run_id, run["digest"], key, "work")
                             contract = dict(protocol="score-v1", score_id=score["id"], run_id=run_id, digest=run["digest"], task=key, attempt=1, phase="work", artifact_root=str(self.root), required_evidence=t["evidence"], review_of=None, constraints=score["constraints"])
                             prompt = t["instructions"] + " Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets."
-                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract}, max_retries=0, requires_approval=False, priority=0)
+                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=0)
                             db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'waiting_on_gate',NULL,?)", (run_id, key, "work", job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
                             self.event(db, run_id, "waiting_on_gate", {"task": key, "reason": "no gate service configured"})
                             rows[(key, "work")] = {"task": key, "phase": "work", "job_id": job_id, "status": "waiting_on_gate"}
@@ -278,7 +279,7 @@ class ScoreBridge:
                         if work is None:
                             contract = dict(protocol="score-v1", score_id=score["id"], run_id=run_id, digest=run["digest"], task=key, attempt=1, phase="work", artifact_root=str(self.root), required_evidence=t["evidence"], review_of=None, constraints=score["constraints"])
                             prompt = t["instructions"]
-                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract}, max_retries=0, requires_approval=False, priority=0)
+                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=0)
                             db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'rejected',NULL,?)", (run_id, key, "work", job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
                         else:
                             db.execute("UPDATE dispatch SET status='rejected' WHERE run=? AND task=? AND phase='work'", (run_id, key))
@@ -293,7 +294,7 @@ class ScoreBridge:
                             job_id = score_job_id(run["org"], run_id, run["digest"], key, "work")
                             contract = dict(protocol="score-v1", score_id=score["id"], run_id=run_id, digest=run["digest"], task=key, attempt=1, phase="work", artifact_root=str(self.root), required_evidence=t["evidence"], review_of=None, constraints=score["constraints"])
                             prompt = t["instructions"] + " Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets."
-                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract}, max_retries=0, requires_approval=False, priority=0)
+                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=0)
                             db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'waiting_on_gate',NULL,?)", (run_id, key, "work", job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
                             self.event(db, run_id, "waiting_on_gate", {"task": key, "gate_id": gate["id"]})
                             rows[(key, "work")] = {"task": key, "phase": "work", "job_id": job_id, "status": "waiting_on_gate"}
@@ -406,7 +407,7 @@ class ScoreBridge:
                                 target_agent_role=role,
                                 target_agent_id=candidates[0] if candidates else "",
                                 depends_on=[],
-                                input_payload={"prompt": prompt, "score": contract},
+                                input_payload={"prompt": prompt, "score": contract, "no_reroute": True},
                                 max_retries=0,
                                 requires_approval=False,
                                 priority=0,
@@ -434,7 +435,7 @@ class ScoreBridge:
                             target_agent_role=role,
                             target_agent_id=target_agent_id,
                             depends_on=[],
-                            input_payload={"prompt": prompt, "score": contract},
+                            input_payload={"prompt": prompt, "score": contract, "no_reroute": True},
                             max_retries=0,
                             requires_approval=False,
                             priority=0,
@@ -451,7 +452,7 @@ class ScoreBridge:
                 else:
                     target_agent_id = targets[role][0] if isinstance(targets[role], (list, tuple)) else targets[role]
 
-                payload = dict(id=job_id, title=f"Score {run_id} {key} {phase}", description=prompt, target_agent_role=role, target_agent_id=target_agent_id, depends_on=[], input_payload={"prompt": prompt, "score": contract}, max_retries=0, requires_approval=False, priority=0)
+                payload = dict(id=job_id, title=f"Score {run_id} {key} {phase}", description=prompt, target_agent_role=role, target_agent_id=target_agent_id, depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=0)
                 db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'planned',NULL,?)", (run_id, key, phase, job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
                 self.event(db, run_id, "planned", {"job_id": job_id, "task": key, "phase": phase})
                 created.append(job_id)
@@ -517,6 +518,8 @@ class ScoreBridge:
         for ref in artifacts.values():
             if not isinstance(ref, dict) or set(ref) != {"path", "sha256"} or not isinstance(ref["path"], str) or Path(ref["path"]).is_absolute():
                 raise ScoreError("Invalid relative artifact reference")
+            if not isinstance(ref["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", ref["sha256"]):
+                raise ScoreError("Invalid artifact SHA-256")
             path = (self.root / ref["path"]).resolve()
             if self.root not in path.parents or not path.is_file() or path.stat().st_size > 16 * 1024 * 1024:
                 raise ScoreError("Evidence missing/outside root/oversized")

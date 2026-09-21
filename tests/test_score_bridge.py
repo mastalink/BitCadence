@@ -88,6 +88,27 @@ def test_lost_ack_retries_exact_id_after_restart(setup):
     assert b.status("run")["dispatches"][0]["status"]=="submitted"
 
 
+def test_score_job_is_not_reroutable(setup):
+    b, g, _ = setup
+    job_id = b.plan("run")[0]
+    b.dispatch("run", g)
+    payload = g.jobs[job_id]
+    assert job_id == payload["id"]
+    # A Score binds the selected author/reviewer identity. The generic delivery
+    # watchdog must re-kick this job, never rewrite it to a fallback agent.
+    assert payload["input_payload"]["no_reroute"] is True
+
+
+def test_malformed_artifact_digest_is_rejected_before_file_hashing(setup):
+    b, g, e = setup
+    job = b.plan("run")[0]
+    b.dispatch("run", g)
+    e["report"]["sha256"] = "not-a-sha256"
+    g.complete(job, {"artifacts": e})
+    with pytest.raises(ScoreError, match="Invalid artifact SHA-256"):
+        b.poll("run", g)
+
+
 def test_concurrent_planners_create_one_intent(setup):
     b,g,e=setup
     with ThreadPoolExecutor(4) as pool:

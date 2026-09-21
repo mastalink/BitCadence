@@ -116,6 +116,29 @@ def test_outbox_survives_failed_event_delivery_and_retries_once(db, monkeypatch)
     assert audit.verify_chain(db,j['id'])['ok']
 
 
+def test_drain_checks_materialized_outbox_ids_in_bounded_queries(tmp_path, monkeypatch):
+    store = LocalStore(tmp_path / 'linear-drain.db')
+    try:
+        for _ in range(12):
+            job(store)
+        audit.drain_outbox(store)
+
+        original_table = store.table
+        event_queries = 0
+
+        def counted_table(name):
+            nonlocal event_queries
+            if name == audit.EVENTS_TABLE:
+                event_queries += 1
+            return original_table(name)
+
+        monkeypatch.setattr(store, 'table', counted_table)
+        assert audit.drain_outbox(store) == 0
+        assert event_queries == 1
+    finally:
+        store.close()
+
+
 def test_http_worker_proof_and_cancel_race(db, monkeypatch):
     monkeypatch.setattr(routes,'get_db_client',lambda: db)
     monkeypatch.setattr(routes,'kill_switch_active',lambda:False)
