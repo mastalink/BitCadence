@@ -57,7 +57,7 @@ review before live use.
 
 ## J03 shadow operations
 
-Three BitCadence paths may ask Jev for an annotation after deterministic code
+BitCadence paths may ask Jev for an annotation after deterministic code
 has already produced an outcome. Even if the global mode is `assist` or
 `active`, these paths treat Jev as annotation-only: `applied` is always false,
 and no Jev answer mutates durable truth or authorizes an effect.
@@ -76,3 +76,29 @@ not disabled. Persist failure is logged and ignored; receipts are never rewritte
 cannot postpone rekick, reroute, or escalate. Disabled mode records process-level
 metrics only and performs no network request and no audit write, so durable state
 matches today's deterministic tests.
+
+## Codex task routing
+
+`mco_jev_route` is the Codex-facing MCP tool. It sends the current task and a
+bounded context summary to the frozen `codex-task-route` registry. Jev may
+describe task kind, semantic complexity, reasoning need, execution shape, and
+whether the eventual task packet needs current information, workspace evidence,
+acceptance criteria, or a material clarification.
+
+The MCP server forwards this request to the gateway's `POST /api/jev/route`
+endpoint using the narrow `jev:route` capability. This keeps the decision on
+the tenant's configured SecretVault provider; if the gateway is unavailable,
+the MCP tool falls back to the local deterministic route.
+
+Jev does not select spend. Deterministic policy combines those annotations with
+verified five-hour and weekly Codex capacity plus a caller-supplied context-
+pressure label. The policy recommends Luna, Terra, Sol, or Astra, reasoning
+effort, maximum parallelism, and root/subagent/BitCadence/hybrid execution.
+Astra is ineligible when capacity is unknown, five-hour remaining is below 30%,
+weekly remaining is below 20%, or context pressure is high. Below 15% five-hour
+remaining, the policy conserves usage and suppresses parallel subagents.
+
+The result remains advisory (`applied=false`). It cannot switch the already-
+running root model, spawn a subagent, or create a BitCadence job. Codex applies
+the recommendation through explicit spawn parameters or `mco_send`, preserving
+the user's original scope and all existing authority boundaries.

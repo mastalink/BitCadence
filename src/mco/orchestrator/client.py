@@ -587,6 +587,13 @@ class GatewayClient:
             r.raise_for_status()
             return r.json()
 
+    def jev_route(self, payload: dict) -> dict:
+        """Ask the gateway's configured Jev provider for a Codex route."""
+        with self._client() as c:
+            r = c.post("/api/jev/route", json=payload)
+            r.raise_for_status()
+            return r.json()
+
     def orgs(self) -> dict:
         """Orgs available for registration, which are already in use, and host-operator status."""
         with self._client() as c:

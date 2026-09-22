@@ -1336,6 +1336,38 @@ def score_list(database: Path = typer.Option(DEFAULT_SCORE_DB, "--db")):
     console.print(table)
 
 
+jev_app = typer.Typer(help="Ask Jev bounded, annotation-only questions. Never authorizes an effect.")
+app.add_typer(jev_app, name="jev")
+
+
+@jev_app.command("route-model")
+def jev_route_model(
+    task: str = typer.Option(..., "--task", help="Short description of the upcoming task."),
+    context: str = typer.Option("", "--context", help="Optional recent-conversation excerpt for scope."),
+    deterministic_tier: str = typer.Option("sonnet", "--deterministic-tier",
+                                           help="Tier used if Jev is disabled, unavailable, or times out."),
+):
+    """Suggest a Claude Code model tier (haiku/sonnet/opus) for a task.
+
+    Always advisory: prints a JSON suggestion and exits 0 even on any failure
+    (disabled, unconfigured, network error, timeout). Never switches a
+    running session or spawns anything - a session, or a person via
+    /model, still decides. Safe to call from a hook on every prompt.
+    """
+    result = {"tier": None, "outcome": "disabled", "reason": None}
+    try:
+        from mco.orchestrator.jev_ops import annotate_model_route
+
+        outcome = annotate_model_route(
+            None, task=task, context=context or None, deterministic_tier=deterministic_tier,
+        )
+        result["tier"] = outcome.get("tier")
+        result["outcome"] = outcome["receipt"].outcome
+    except Exception as exc:  # never fail the caller's prompt on this
+        result["reason"] = type(exc).__name__
+    print(json.dumps(result))
+
+
 def _print_score_status(status: dict):
     console.print(f"[bold]{status['score_id']}[/bold] run [cyan]{status['run_id']}[/cyan] "
                   f"digest {status['digest'][:12]} - status [bold]{status['status']}[/bold]")

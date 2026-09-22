@@ -50,6 +50,7 @@ KNOWN_SCOPES = {
     "agents:manage",
     "integrations:read",
     "integrations:manage",
+    "jev:route",
     "admin",
 }
 

@@ -852,6 +852,34 @@ async def test_jev_configuration(caller: dict = Depends(require_scopes("admin"))
     return provider.health()
 
 
+@jev_router.post("/route")
+async def route_jev_codex_task(payload: dict, caller: dict = Depends(require_scopes("jev:route"))):
+    """Route a Codex task through Jev; this endpoint authorizes no effect."""
+    if not isinstance(payload, dict) or not str(payload.get("task") or "").strip():
+        raise HTTPException(status_code=400, detail="task is required")
+    from mco.orchestrator.codex_route import route_codex_task
+
+    def _number(name: str):
+        value = payload.get(name)
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail=f"{name} must be numeric")
+
+    return route_codex_task(
+        task=str(payload.get("task"))[:6000],
+        context=str(payload.get("context") or "")[:3000],
+        current_model=str(payload.get("current_model") or ""),
+        context_pressure=str(payload.get("context_pressure") or "unknown"),
+        five_hour_remaining_percent=_number("five_hour_remaining_percent"),
+        weekly_remaining_percent=_number("weekly_remaining_percent"),
+        available_models=payload.get("available_models"),
+        db=_db(),
+    )
+
+
 @jev_router.get("/metrics")
 async def get_jev_metrics_endpoint(caller: dict = Depends(require_scopes("admin"))):
     """Additive Jev decision metrics: calls, latency, low-confidence, disagreements, fallbacks, errors."""

@@ -8,6 +8,7 @@ from mco.mcp_server import (
     mco_inbox,
     mco_lease,
     mco_lease_next,
+    mco_jev_route,
     mco_renew,
     mco_send,
 )
@@ -209,6 +210,27 @@ def test_each_tool_call_resolves_the_configured_client(monkeypatch):
     assert call_count == 2
 
 
+def test_mco_jev_route_passes_verified_capacity_to_policy(monkeypatch):
+    import mco.orchestrator.codex_route as codex_route
+
+    captured = {}
+
+    def fake_route(**kwargs):
+        captured.update(kwargs)
+        return {"recommended_model": "gpt-5.6-terra", "applied": False}
+
+    monkeypatch.setattr(codex_route, "route_codex_task", fake_route)
+    result = mco_jev_route(
+        "fix it", current_model="gpt-5.6-sol",
+        five_hour_remaining_percent=25, weekly_remaining_percent=66,
+        available_models="gpt-5.6-terra,gpt-5.6-sol",
+    )
+    assert result["recommended_model"] == "gpt-5.6-terra"
+    assert captured["five_hour_remaining_percent"] == 25
+    assert captured["weekly_remaining_percent"] == 66
+    assert captured["available_models"] == ["gpt-5.6-terra", "gpt-5.6-sol"]
+
+
 def test_mco_approve_delegates(monkeypatch):
     from mco.mcp_server import mco_approve
     fake = _fake(monkeypatch, approve={"success": True, "job": {"status": "pending"}})
@@ -254,7 +276,7 @@ def test_every_governance_tool_is_registered():
     tools = asyncio.run(mcp_server.mcp.list_tools())
     names = {t.name for t in tools}
     # Losing any of these silently would strand every configured worker.
-    for required in ("mco_inbox", "mco_lease", "mco_complete", "mco_fail", "mco_send"):
+    for required in ("mco_inbox", "mco_lease", "mco_complete", "mco_fail", "mco_send", "mco_jev_route"):
         assert required in names, f"{required} missing from the MCP tool surface"
 
 

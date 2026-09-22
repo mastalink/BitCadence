@@ -256,6 +256,41 @@ def mco_platform_action(name: str, action: str, params: dict = None) -> dict:
     return _client().platform_action(name, action, params or {})
 
 
+@mcp.tool()
+def mco_jev_route(
+    task: str,
+    context: str = "",
+    current_model: str = "",
+    context_pressure: str = "unknown",
+    five_hour_remaining_percent: float = -1,
+    weekly_remaining_percent: float = -1,
+    available_models: str = "gpt-5.6-luna,gpt-5.6-terra,gpt-5.6-sol,gpt-6-astra",
+) -> dict:
+    """Ask Jev to describe a Codex task, then apply deterministic usage policy.
+
+    The result is advisory. It never switches the running root model, spawns a
+    subagent, sends a BitCadence job, or authorizes spend. Pass verified
+    remaining percentages from the Codex usage surface; use -1 when unknown.
+    `available_models` is a comma-separated allowlist supplied by the caller.
+    """
+    models = [item.strip() for item in available_models.split(",") if item.strip()]
+    payload = {
+        "task": task,
+        "context": context,
+        "current_model": current_model,
+        "context_pressure": context_pressure,
+        "five_hour_remaining_percent": (None if five_hour_remaining_percent < 0 else five_hour_remaining_percent),
+        "weekly_remaining_percent": (None if weekly_remaining_percent < 0 else weekly_remaining_percent),
+        "available_models": models,
+    }
+    try:
+        return _client().jev_route(payload)
+    except Exception:
+        # Keep the MCP surface usable while the gateway is unavailable.
+        from mco.orchestrator.codex_route import route_codex_task
+        return route_codex_task(**payload)
+
+
 def run() -> None:
     """Run the MCP server over stdio."""
     mcp.run()

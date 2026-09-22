@@ -18,11 +18,15 @@ from mco.orchestrator.jev import (
     build_provider,
 )
 from mco.orchestrator.jev_questions import (
+    CLAUDE_CODE_MODEL_ROUTE,
+    CODEX_TASK_ROUTE,
     DRUMLINE_OPS,
     NOTIFY_QUALITY,
     WATCHDOG_SYMPTOM,
     get_registry,
 )
+
+MODEL_TIERS = ("haiku", "sonnet", "opus")
 
 logger = logging.getLogger("mco.jev_ops")
 
@@ -273,6 +277,95 @@ def annotate_notification(
         "urgency": urgency,
         "impact": impact,
         "suggested_priority": suggested_priority,
+        "receipt": receipt,
+        "applied": False,
+    }
+
+
+def annotate_model_route(
+    provider: Optional[JevProvider],
+    *,
+    task: str,
+    context: Optional[str] = None,
+    deterministic_tier: str = "sonnet",
+    job_id: Optional[str] = None,
+    db: Any = None,
+) -> dict:
+    """Suggest a Claude Code model tier for an upcoming task. Never switches
+    a running session or spawns anything; a session (or /model) still
+    decides. An out-of-set answer is treated as no suggestion."""
+    state = {
+        "task": task,
+        "context": context,
+        "deterministic_tier": deterministic_tier,
+    }
+    resolved, receipt, live = _decide(provider, CLAUDE_CODE_MODEL_ROUTE, state, job_id=job_id, db=db)
+    tier = _choice(receipt, "tier") if live else None
+    if tier not in MODEL_TIERS:
+        tier = None
+    suggestion = {"tier": tier} if live else None
+    disagreed = bool(tier and tier != deterministic_tier)
+    _note(receipt.outcome, receipt.latency_ms, disagreed)
+    _persist(resolved, db, job_id, receipt, suggestion)
+    return {
+        "tier": tier,
+        "receipt": receipt,
+        "applied": False,
+    }
+
+
+def _answer_confidence(receipt: DecisionReceipt, name: str) -> Optional[float]:
+    answer = (receipt.answers or {}).get(name) or {}
+    value = answer.get("confidence")
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def annotate_codex_task_route(
+    provider: Optional[JevProvider],
+    *,
+    task: str,
+    context: Optional[str] = None,
+    current_model: Optional[str] = None,
+    context_pressure: str = "unknown",
+    job_id: Optional[str] = None,
+    db: Any = None,
+) -> dict:
+    """Describe a Codex task without choosing spend or authorizing execution.
+
+    Jev judges semantic complexity, prompt gaps, and coordination shape. A
+    deterministic policy outside this function owns model eligibility, usage
+    limits, budgets, concurrency, and every actual spawn or BitCadence send.
+    """
+    state = {
+        "task": task,
+        "context": context,
+        "current_model": current_model,
+        "context_pressure": context_pressure,
+    }
+    resolved, receipt, live = _decide(provider, CODEX_TASK_ROUTE, state, job_id=job_id, db=db)
+    choices = {
+        name: _choice(receipt, name) if live else None
+        for name in ("task_kind", "complexity", "reasoning_need", "execution_shape")
+    }
+    flags = {
+        name: _noul(receipt, name) if live else None
+        for name in (
+            "needs_current_information",
+            "needs_workspace_evidence",
+            "needs_acceptance_criteria",
+            "needs_clarification",
+        )
+    }
+    suggestion = {**choices, **flags} if live else None
+    _note(receipt.outcome, receipt.latency_ms, False)
+    _persist(resolved, db, job_id, receipt, suggestion)
+    return {
+        **choices,
+        **flags,
+        "confidence": {
+            name: _answer_confidence(receipt, name) if live else None
+            for name in choices
+        },
         "receipt": receipt,
         "applied": False,
     }

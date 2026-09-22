@@ -17,6 +17,7 @@ from mco.orchestrator.drumline import KINDS, distill_job, recall, remember
 from mco.orchestrator.jev import JevConfig, JevProvider, _digest
 from mco.orchestrator.jev_ops import (
     annotate_drumline_output,
+    annotate_model_route,
     annotate_notification,
     annotate_watchdog,
     metrics_snapshot,
@@ -25,6 +26,8 @@ from mco.orchestrator.jev_ops import (
     suggestion_must_not_authorize,
 )
 from mco.orchestrator.jev_questions import (
+    CLAUDE_CODE_MODEL_ROUTE,
+    CODEX_TASK_ROUTE,
     DRUMLINE_OPS,
     NOTIFY_QUALITY,
     WATCHDOG_SYMPTOM,
@@ -99,6 +102,17 @@ def _drumline_payload(kind="incident", inject="skip", relevance=0.1):
             },
         },
         "usage": {"input_tokens": 10, "output_tokens": 4},
+    }
+
+
+def _model_route_payload(tier="haiku"):
+    probabilities = {t: (0.8 if t == tier else 0.1) for t in ("haiku", "sonnet", "opus")}
+    return {
+        "model": "jev-1.13.0",
+        "answers": {
+            "tier": {"type": "choice", "choice": tier, "confidence": 0.85, "probabilities": probabilities},
+        },
+        "usage": {"input_tokens": 12, "output_tokens": 2},
     }
 
 
@@ -331,6 +345,48 @@ class TestShadowDoesNotApply:
         assert ntfy.notify("hello", title="BitCadence", jev_provider=provider) is False
 
 
+class TestModelRoute:
+    """claude-code-model-route: advisory only, no answer ever applies itself."""
+
+    def test_disabled_mode_suggests_nothing(self):
+        provider = JevProvider(JevConfig(mode="disabled"))
+        outcome = annotate_model_route(provider, task="Fix a typo in README.md")
+        assert outcome["tier"] is None
+        assert outcome["applied"] is False
+        assert outcome["receipt"].outcome == "disabled"
+        assert metrics_snapshot()["disabled"] >= 1
+
+    def test_shadow_suggestion_is_advisory_only_and_persisted(self, db):
+        provider = _shadow_provider(_model_route_payload(tier="haiku"))
+        outcome = annotate_model_route(
+            provider, task="Rename a variable in one file", job_id="job-mr", db=db,
+        )
+        assert outcome["tier"] == "haiku"
+        assert outcome["applied"] is False
+        assert suggestion_must_not_authorize(outcome) is True
+        assert outcome["receipt"].outcome == "shadow"
+        assert _events(db, "job-mr").count("jev_decision") == 1
+
+    def test_disagreement_with_deterministic_tier_is_counted(self):
+        provider = _shadow_provider(_model_route_payload(tier="opus"))
+        outcome = annotate_model_route(provider, task="hard task", deterministic_tier="sonnet")
+        assert outcome["tier"] == "opus"
+        snap = metrics_snapshot()
+        assert snap["disagreement"] >= 1
+
+    def test_out_of_set_answer_is_treated_as_no_suggestion(self):
+        provider = _shadow_provider(_model_route_payload(tier="gpt-5"))
+        outcome = annotate_model_route(provider, task="anything")
+        assert outcome["tier"] is None
+
+    def test_provider_failure_falls_back_to_no_suggestion(self):
+        provider, _calls = _failing_provider(status=429)
+        outcome = annotate_model_route(provider, task="anything")
+        assert outcome["tier"] is None
+        assert outcome["receipt"].outcome == "fallback"
+        assert outcome["applied"] is False
+
+
 # ── 3. Jev cannot delete or rewrite history ──────────────────────────────────
 
 
@@ -442,9 +498,12 @@ class TestQuestionSetVersioning:
         bound = {"version": registry["version"], "questions": registry["questions"]}
         assert _digest({**bound, "version": "2"}) != _digest(bound)
 
-    def test_all_three_registries_are_frozen(self):
+    def test_all_registries_are_frozen(self):
         registries = all_registries()
-        assert set(registries) == {DRUMLINE_OPS, WATCHDOG_SYMPTOM, NOTIFY_QUALITY}
+        assert set(registries) == {
+            DRUMLINE_OPS, WATCHDOG_SYMPTOM, NOTIFY_QUALITY,
+            CLAUDE_CODE_MODEL_ROUTE, CODEX_TASK_ROUTE,
+        }
         for registry in registries.values():
             assert registry["version"] == "1"
             assert registry["questions"]

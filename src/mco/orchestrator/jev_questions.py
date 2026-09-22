@@ -16,6 +16,8 @@ from mco.orchestrator.jev import _digest
 DRUMLINE_OPS = "drumline-ops"
 WATCHDOG_SYMPTOM = "watchdog-symptom"
 NOTIFY_QUALITY = "notify-quality"
+CLAUDE_CODE_MODEL_ROUTE = "claude-code-model-route"
+CODEX_TASK_ROUTE = "codex-task-route"
 
 
 _DRUMLINE_OPS_V1: Dict[str, Any] = {
@@ -128,10 +130,118 @@ _NOTIFY_QUALITY_V1: Dict[str, Any] = {
 }
 
 
+_CLAUDE_CODE_MODEL_ROUTE_V1: Dict[str, Any] = {
+    "use_case_id": CLAUDE_CODE_MODEL_ROUTE,
+    "version": "1",
+    "questions": {
+        "tier": {
+            "type": "choice",
+            "instructions": (
+                "A Claude Code session is about to work on the given task "
+                "description (and, when present, a short excerpt of recent "
+                "conversation for scope). Recommend the cheapest model tier "
+                "adequate for the task. This is advisory only: the session, "
+                "or a person via /model, still chooses the actual model; no "
+                "answer switches a running session or spawns anything."
+            ),
+            "criteria": {
+                "haiku": (
+                    "Small, mechanical, or narrow: quick lookups, formatting, "
+                    "short summaries, simple file edits, routine status checks"
+                ),
+                "sonnet": (
+                    "Typical day-to-day engineering: multi-file changes, "
+                    "debugging, code review, moderate design decisions"
+                ),
+                "opus": (
+                    "High-stakes or heavily ambiguous: architecture decisions, "
+                    "security-sensitive changes, long multi-step autonomous "
+                    "work, or anything with a costly failure mode"
+                ),
+            },
+        },
+    },
+}
+
+
+_CODEX_TASK_ROUTE_V1: Dict[str, Any] = {
+    "use_case_id": CODEX_TASK_ROUTE,
+    "version": "1",
+    "questions": {
+        "task_kind": {
+            "type": "choice",
+            "instructions": "What kind of work does `task` primarily require?",
+            "criteria": {
+                "answer": "Answer, explain, summarize, or advise without changing an external system.",
+                "research": "Inspect current facts, documentation, logs, or a codebase before answering.",
+                "implementation": "Create or modify code, configuration, documents, or other artifacts.",
+                "review": "Independently evaluate correctness, security, evidence, or readiness.",
+                "operations": "Change or diagnose a running service, deployment, account, or infrastructure.",
+                "monitoring": "Wait for, watch, or repeatedly reconcile changing external state.",
+            },
+        },
+        "complexity": {
+            "type": "choice",
+            "instructions": (
+                "How much semantic and technical complexity does the requested outcome require, "
+                "independent of model cost or remaining account usage?"
+            ),
+            "criteria": {
+                "small": "Narrow, mechanical, reversible, or answerable from one clear source.",
+                "standard": "Ordinary professional work with several steps or a modest amount of context.",
+                "complex": "Ambiguous or cross-cutting work requiring planning, tools, validation, and edge cases.",
+                "frontier": "Exceptionally difficult architecture, incident, security, or long-horizon work where failure is costly.",
+            },
+        },
+        "reasoning_need": {
+            "type": "choice",
+            "instructions": "What depth of reasoning is needed to complete `task` reliably?",
+            "criteria": {
+                "low": "Direct execution or lookup with little ambiguity.",
+                "medium": "Several connected decisions with normal verification.",
+                "high": "Complex logic, competing hypotheses, important edge cases, or independent review.",
+                "extreme": "The hardest multi-system or high-stakes reasoning where additional depth materially reduces risk.",
+            },
+        },
+        "execution_shape": {
+            "type": "choice",
+            "instructions": (
+                "Which execution shape best fits `task`? Judge decomposability and duration, not account usage. "
+                "BitCadence means durable work that should survive this conversational turn."
+            ),
+            "criteria": {
+                "root_only": "One agent can complete it efficiently in the current conversation.",
+                "subagents": "Two or more bounded independent investigations or implementation tracks can run in parallel.",
+                "bitcadence": "The work is long-running, unattended, cross-provider, queued, or needs durable lease and receipt tracking.",
+                "hybrid": "The current agent should coordinate immediate work plus durable BitCadence execution or independent review.",
+            },
+        },
+        "needs_current_information": {
+            "type": "noul",
+            "instructions": "Does a correct response require information that may have changed recently?",
+        },
+        "needs_workspace_evidence": {
+            "type": "noul",
+            "instructions": "Must the agent inspect the actual workspace, repository, logs, or runtime before deciding?",
+        },
+        "needs_acceptance_criteria": {
+            "type": "noul",
+            "instructions": "Would an explicit success condition materially improve execution of `task`?",
+        },
+        "needs_clarification": {
+            "type": "noul",
+            "instructions": "Is a missing user choice likely to change the requested outcome materially?",
+        },
+    },
+}
+
+
 _REGISTRIES: Dict[str, Dict[str, Any]] = {
     DRUMLINE_OPS: _DRUMLINE_OPS_V1,
     WATCHDOG_SYMPTOM: _WATCHDOG_SYMPTOM_V1,
     NOTIFY_QUALITY: _NOTIFY_QUALITY_V1,
+    CLAUDE_CODE_MODEL_ROUTE: _CLAUDE_CODE_MODEL_ROUTE_V1,
+    CODEX_TASK_ROUTE: _CODEX_TASK_ROUTE_V1,
 }
 
 
