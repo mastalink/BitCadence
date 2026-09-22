@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import sys
+import getpass
 import asyncio
 import secrets
 import hashlib
@@ -16,7 +17,7 @@ import hmac
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -1179,6 +1180,95 @@ def score_start(
         raise typer.Exit(code=1)
     console.print(f"[green][OK][/green] Run '{info['run_id']}' ready for score '{info['score_id']}'")
     console.print(f"[dim]Advance it with: mco score tick --run-id {info['run_id']} --watch[/dim]")
+
+
+def _local_human_platform_supported() -> bool:
+    return os.name == "nt"
+
+
+def _local_human_terminal_is_interactive() -> bool:
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _local_human_principal() -> str:
+    """Return an auditable principal for an explicitly enabled local approval.
+
+    This is deliberately narrower than the API's session-based human identity:
+    it is only for an interactive Windows operator on the local SQLite store.
+    It must never make an agent bearer token eligible to approve a Score grant.
+    """
+    enabled = str(get_config().get("MCO_LOCAL_HUMAN_GRANTS", "false")).strip().lower()
+    if enabled not in {"1", "true", "yes", "on"}:
+        raise RuntimeError(
+            "Local human grants are disabled. Set MCO_LOCAL_HUMAN_GRANTS=true "
+            "only for this interactive operator command."
+        )
+    if not _local_human_platform_supported():
+        raise RuntimeError("Local human grants are supported only on an interactive Windows desktop.")
+    if not _local_human_terminal_is_interactive():
+        raise RuntimeError("Local human grants require an interactive terminal; piped or background use is refused.")
+
+    from mco.localstore import LocalStore
+    from mco.orchestrator.routes import get_db_client
+
+    if not isinstance(get_db_client(), LocalStore):
+        raise RuntimeError("Local human grants are limited to the local SQLite store; use an authenticated human session instead.")
+    return f"local-windows:{getpass.getuser()}"
+
+
+@score_app.command("grant-local")
+def score_grant_local(
+    score_file: Path = typer.Argument(..., exists=True, readable=True,
+                                      help="Score JSON file whose canonical digest will be authorized."),
+    run_id: str = typer.Option(..., "--run-id", help="Run ID this grant may authorize."),
+    action: List[str] = typer.Option(..., "--action", help="Allowed capability; repeat for more than one."),
+    resource: List[str] = typer.Option(..., "--resource", help="Exact allowed resource; repeat for more than one."),
+    environment: str = typer.Option("test", "--environment"),
+    expires_minutes: int = typer.Option(240, "--expires-minutes", min=1, max=480),
+    budget_cents: int = typer.Option(0, "--budget-cents", min=0),
+):
+    """Issue a locally auditable, interactive Score grant on Windows SQLite only.
+
+    The command never accepts a bearer token, is off by default, and requires a
+    terminal confirmation after displaying the exact authority being granted.
+    """
+    try:
+        principal = _local_human_principal()
+        from mco.orchestrator.scores import digest, load_score
+        from mco.orchestrator.score_authority import GrantService
+        from mco.orchestrator.routes import get_db_client
+
+        score = load_score(score_file.read_text(encoding="utf-8"))
+        score_digest = digest(score)
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(minutes=expires_minutes)
+        console.print(Panel.fit(
+            "[bold yellow]Local human Score grant[/bold yellow]\n"
+            f"Run: {run_id}\nDigest: {score_digest}\n"
+            f"Actions: {', '.join(action)}\nResources: {', '.join(resource)}\n"
+            f"Environment: {environment}\nExpires: {expires_at.isoformat()}",
+            border_style="yellow",
+        ))
+        phrase = f"ISSUE LOCAL GRANT {run_id}"
+        typed = typer.prompt(f"Type exactly: {phrase}", default="", show_default=False)
+        if typed != phrase:
+            raise RuntimeError("Confirmation did not match; no grant was issued.")
+        saved = GrantService(get_db_client()).issue({
+            "org_id": "default",
+            "run_id": run_id,
+            "digest": score_digest,
+            "actions": list(action),
+            "resources": list(resource),
+            "env": environment,
+            "not_before": now.isoformat(),
+            "expires_at": expires_at.isoformat(),
+            "budget_cents": budget_cents,
+            "human_principal": principal,
+        })
+    except Exception as exc:
+        console.print(f"[red][X] Local grant was not issued:[/red] {exc}")
+        raise typer.Exit(code=1)
+    console.print(f"[green][OK][/green] Local human grant issued for '{saved['run_id']}' as {principal}.")
 
 
 @score_app.command("tick")
