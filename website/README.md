@@ -25,6 +25,14 @@ Deploy (from the repo root):
 wrangler pages deploy website --project-name bitcadence
 ```
 
+For a release, deploy a preview branch first with
+`wrangler pages deploy website --project-name bitcadence --branch preview/<release>`.
+Check the preview on desktop and mobile, verify installation links and Jev
+claims against the exact release commit, then deploy `--branch main` for the
+production custom domain. Record the previous production deployment ID from
+`wrangler pages deployment list --project-name bitcadence` so it can be rolled
+back in Cloudflare Pages if the new deployment is unhealthy.
+
 First run creates the project and prints the live URL
 (`https://bitcadence.pages.dev`). Subsequent runs deploy in seconds.
 

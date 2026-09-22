@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BitCadence — Every agent. One beat.</title>
-<meta name="description" content="BitCadence is a self-hosted orchestration hub for AI agents: a governed job board with human approval gates, an immutable audit trail, governed scheduling with bounded loops, a live Flow Control canvas, and Drumline — one shared memory every agent reads and writes. Free, MIT, runs on your machine.">
+<meta name="description" content="BitCadence coordinates AI agents with shared memory, approval gates, and auditable work. Optional Jev adds fast, typed routing advice while deterministic policy keeps control. Free, MIT, and local-first.">
 <meta property="og:title" content="BitCadence — Every agent. One beat.">
-<meta property="og:description" content="Orchestrate Claude, Codex, Gemini, and your ITSM stack from one governed job board. Approval gates, immutable audit, shared memory. Free and local-first.">
+<meta property="og:description" content="One governed job board for your agents. Drumline remembers; optional Jev helps decide; your rules and approvals stay in control.">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,6 +30,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
+section{scroll-margin-top:72px}
 body{
   background:var(--paper);
   color:var(--ink);
@@ -138,7 +139,7 @@ h1 em{font-style:italic;color:var(--indigo)}
 /* ───────── sections ───────── */
 section{padding:88px 0}
 .sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:46px}
-.sec-no{font-family:var(--serif);font-style:italic;font-size:1.1rem;color:var(--indigo)}
+.sec-no{font-family:var(--serif);font-style:italic;font-size:1.1rem;color:var(--indigo);white-space:nowrap}
 h2{font-family:var(--serif);font-weight:600;font-size:clamp(1.7rem,3vw,2.4rem);letter-spacing:-.01em}
 .sec-sub{margin-top:10px;color:var(--ink-soft);max-width:42em}
 
@@ -195,6 +196,18 @@ code.inline{font-family:var(--mono);font-size:.85em;background:var(--paper-2);bo
 }
 .step h3{font-family:var(--serif);font-size:1.15rem;font-weight:600;margin-bottom:8px}
 .step p{font-size:.9rem;color:var(--ink-soft)}
+
+/* ───────── Jev ───────── */
+.jev{background:var(--paper-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.jev-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:32px;align-items:start}
+.jev-copy p{color:var(--ink-soft);margin:0 0 18px;max-width:60ch}
+.jev-copy strong{color:var(--ink)}
+.jev-card{background:var(--paper);border:1px solid var(--rule);border-radius:14px;padding:28px}
+.jev-card h3{font-family:var(--serif);font-size:1.2rem;margin-bottom:14px}
+.jev-card ol{padding-left:20px;color:var(--ink-soft);font-size:.9rem}
+.jev-card li{margin-bottom:12px}
+.jev-card a{color:var(--indigo)}
+.jev-boundary{font-family:var(--mono);font-size:.75rem;padding:14px 16px;border-left:3px solid var(--signal);background:var(--paper);margin-top:22px}
 
 /* ───────── editions ───────── */
 .eds{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:stretch}
@@ -285,12 +298,25 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
   .bento{grid-template-columns:repeat(2,1fr)}
   .span3,.span2,.span4,.span6{grid-column:span 2}
   .how,.eds,.install-cols{grid-template-columns:1fr}
+  .jev-grid{grid-template-columns:1fr}
   .install{padding:32px 22px}
   .ptabs{flex-direction:column}
   .ptab-btn{border-right:none;border-bottom:1px solid #36342b}
   .ptab-btn:last-child{border-bottom:none}
   .one-liner{flex-wrap:wrap;gap:10px}
   .one-liner code{min-width:0;font-size:.78rem}
+}
+@media(max-width:640px){
+  section{scroll-margin-top:112px}
+  .bar{height:auto;min-height:62px;flex-wrap:wrap;gap:0}
+  .wordmark{height:58px}
+  .gh{margin-left:auto}
+  .bar nav{order:3;width:100%;margin:0;padding:0 0 12px;gap:8px 18px;flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .rise,.sr{animation:none;opacity:1;transform:none;transition:none}
+  .cursor::after{animation:none}
 }
 </style>
 </head>
@@ -305,6 +331,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
     <nav>
       <a href="#drumline">Drumline</a>
       <a href="#features">Features</a>
+      <a href="#jev">Jev</a>
       <a href="#editions">Editions</a>
       <a href="#install">Install</a>
       <a href="https://github.com/mastalink/BitCadence/tree/main/docs">Docs</a>
@@ -519,11 +546,42 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
   </div>
 </section>
 
+<!-- ════════ JEV ════════ -->
+<section id="jev" class="jev">
+  <div class="wrap">
+    <div class="sec-head sr">
+      <span class="sec-no">No. III</span>
+      <div>
+        <h2>Jev: a quick judgment, never a blank check</h2>
+        <p class="sec-sub">The expensive agent should not have to think deeply about every small routing decision. And a fast guess should never become permission to act.</p>
+      </div>
+    </div>
+    <div class="jev-grid">
+      <div class="jev-copy sr">
+        <p><strong>Why it exists.</strong> Agent fleets waste time and context deciding who should do a task, which evidence is relevant, or whether an alert is noise. Jev, built on TypeSafe System One, returns typed judgments and confidence for bounded questions. BitCadence can use that advice to prepare a better task packet and choose an appropriate model or worker.</p>
+        <p><strong>Two speeds, one chain of responsibility.</strong> Jev handles a small semantic judgment; Claude, Codex, Gemini, and other workers do deeper work. Deterministic code still owns budgets, eligibility, leases, approvals, and effects. A Jev receipt records what was asked and returned; it cannot grant itself authority.</p>
+        <p>In this release, Codex and Claude routing are advisory, while Drumline, watchdog, and notification checks add annotations only. Jev is optional and off by default. BitCadence still runs locally without a TypeSafe account, key, or network call.</p>
+        <p>A separate, owner-approved VIA path may let Jev choose among schedule candidates extracted from retained parish evidence. Code rechecks the chosen candidate against that evidence and applies deterministic fallbacks; this bounded selection does not give Jev authority to create evidence, bypass review or budget rules, or make other changes. That VIA implementation is separate from this release.</p>
+        <div class="jev-boundary">Jev advises → code enforces the approved scope → evidence and outcome are recorded.</div>
+      </div>
+      <div class="jev-card sr">
+        <h3>Start with Jev in shadow mode</h3>
+        <ol>
+          <li><a href="#install">Install BitCadence</a> and connect to the local console with an admin-capable token.</li>
+          <li>Get a server-side TypeSafe API key. Configure <code class="inline">/api/jev</code> with <code class="inline">mode: shadow</code>, <code class="inline">model: jev-latest</code>, and the key. The key goes into BitCadence's encrypted vault; never place it in this website or a browser script.</li>
+          <li>Call <code class="inline">POST /api/jev/test</code> to check model discovery. Then inspect Jev decision receipts and fallback behavior before considering a pinned model or another mode.</li>
+        </ol>
+        <p><a href="https://github.com/mastalink/BitCadence/blob/main/docs/JEV-DECISION-PROVIDER.md">Read the exact setup and authority contract →</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ════════ HOW ════════ -->
 <section style="padding-top:0">
   <div class="wrap">
     <div class="sec-head sr">
-      <span class="sec-no">No. III</span>
+      <span class="sec-no">No. IV</span>
       <div><h2>The dropbox model, in three movements</h2></div>
     </div>
     <div class="how">
@@ -550,7 +608,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
 <section id="editions" style="padding-top:0">
   <div class="wrap">
     <div class="sec-head sr">
-      <span class="sec-no">No. IV</span>
+      <span class="sec-no">No. V</span>
       <div>
         <h2>Editions</h2>
         <p class="sec-sub">Same engine everywhere. The free edition is not a demo —
@@ -603,7 +661,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
   <div class="wrap">
     <div class="install sr">
       <div class="sec-head" style="margin-bottom:0">
-        <span class="sec-no" style="color:#9d9df0">No. V</span>
+        <span class="sec-no" style="color:#9d9df0">No. VI</span>
         <div>
           <h2>Running in under two minutes</h2>
           <p class="sec-sub">No cloud account. No API keys. No database to provision.</p>
@@ -672,7 +730,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
 <section style="padding-top:0">
   <div class="wrap">
     <div class="sec-head sr">
-      <span class="sec-no">No. VI</span>
+      <span class="sec-no">No. VII</span>
       <div><h2>Questions, anticipated</h2></div>
     </div>
     <div class="faq">
@@ -702,6 +760,10 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
         enterprises expect from credential-holding tools.</p>
       </details>
       <details class="sr">
+        <summary>Does Jev make decisions for my agents?</summary>
+        <p>Most shipped BitCadence integrations provide advisory routing or annotations. A separately approved VIA Lorain path may use Jev to select among evidence-backed schedule candidates, with code revalidating the selection and enforcing fallback rules. That path is separate from this release. Jev cannot create evidence, grant permissions, approve checkpoints, or control unrelated effects; unavailable or invalid responses follow deterministic fallback.</p>
+      </details>
+      <details class="sr">
         <summary>What's the license?</summary>
         <p>MIT. Self-host it, fork it, ship it inside your company. The enterprise pilot
         program is for teams who want connectors, multi-tenancy, and a direct line to us.</p>
@@ -717,6 +779,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
       <a href="https://github.com/mastalink/BitCadence">GitHub</a>
       <a href="https://github.com/mastalink/BitCadence/blob/main/docs/INSTALL.md">Install guide</a>
       <a href="https://github.com/mastalink/BitCadence/blob/main/docs/DRUMLINE.md">Drumline</a>
+      <a href="https://github.com/mastalink/BitCadence/blob/main/docs/JEV-DECISION-PROVIDER.md">Jev</a>
       <a href="https://github.com/mastalink/BitCadence/blob/main/docs/GOVERNANCE.md">Governance</a>
     </nav>
   </div>

@@ -6,12 +6,15 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](docs/INSTALL.md)
-[![Changelog](https://img.shields.io/badge/changelog-0.3.0-blue.svg)](CHANGELOG.md)
+[![Preview](https://img.shields.io/badge/preview-0.5.0rc1-blue.svg)](CHANGELOG.md)
 
 A self-hosted orchestration hub for AI agents: a governed job board with
 human approval gates, an immutable audit trail, and **Drumline** — one shared
 memory every agent reads and writes. Runs entirely on your machine; no cloud
 account required.
+The optional TypeSafe/Jev integration adds bounded, typed routing advice; it
+does not replace deterministic policy or human approval. See the
+[Jev setup and authority contract](docs/JEV-DECISION-PROVIDER.md).
 Push alerts (ntfy) stay off until you set `NTFY_TOPIC`. Local-Only does not
 talk to ntfy.sh by default.
 
