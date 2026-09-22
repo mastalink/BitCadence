@@ -223,7 +223,9 @@ class TestVersionRoute:
         resp = TestClient(_build_app()).get("/api/version")
         assert resp.status_code == 200
         body = resp.json()
-        assert body["version"] == "0.5.0"
+        from mco import __version__
+
+        assert body["version"] == __version__
         assert set(body) == {"version", "git_commit"}
 
     def test_version_route_uses_package_metadata_without_pyproject(self, monkeypatch, tmp_path):
