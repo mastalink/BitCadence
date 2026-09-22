@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import httpx
 
+from mco import __version__
 from mco.secret_vault import (
     SecretNotFoundError,
     SecretRef,
@@ -592,7 +593,7 @@ class JevProvider:
             "Authorization": "Bearer " + str(self._api_key),
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "User-Agent": "BitCadence/0.5.0",
+            "User-Agent": f"BitCadence/{__version__}",
         }
 
     def _request(self, method: str, path: str, json_body: Optional[dict] = None) -> httpx.Response:

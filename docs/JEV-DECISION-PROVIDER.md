@@ -37,8 +37,8 @@ name, and a response from any other model becomes a deterministic fallback.
 
 ### First-time setup on Windows PowerShell
 
-Use a local operator/admin token from the BitCadence installation, **not** a
-worker's agent token. The usual local token is `MCO_LOCAL_TOKEN` in the
+Use an admin-scoped token from the BitCadence installation, **not** an ordinary
+worker token. The usual local token is `MCO_LOCAL_TOKEN` in the
 installation's `.env` or `~/.mco/.env`; do not paste it into logs or a ticket.
 The dedicated Jev credential is stored in the server-side encrypted vault.
 Run the following in one PowerShell session, with the gateway already running:
@@ -58,8 +58,10 @@ Remove-Variable adminSecret, typesafeSecret, adminToken, typesafeKey, headers, b
 The test response should report `configured: true`, `available: true`,
 `ok: true`. It tests connectivity/model discovery, not a live Jev judgment;
 `live_invocation: false` is expected in shadow mode. An `Invalid or missing
-agent token` response means the bearer value is absent, wrong, or not accepted
-by this gateway. An agent bearer token cannot stand in for the operator token.
+agent token` response (401) means the bearer value is absent, wrong, or not
+accepted by this gateway. A 403 means the token is valid but lacks the `admin`
+scope. An admin-scoped agent token is accepted by this Jev configuration API;
+Score's human-only grant endpoints are a separate, stricter boundary.
 The Admin Console's generic settings expose mode/model fields, but the
 credential and explicit connection test currently use this API; there is no
 dedicated Jev key form yet. This is a product gap, not a reason to put the key
