@@ -1,6 +1,6 @@
 [project]
 name = "bitcadence"
-version = "0.5.0"
+version = "0.5.0rc1"
 description = "BitCadence: a governed job board for AI agents - approval gates, immutable audit, and Drumline shared memory. Every agent. One beat."
 readme = "README.md"
 requires-python = ">=3.9"
