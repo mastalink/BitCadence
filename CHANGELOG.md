@@ -8,9 +8,11 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 
 Public preview of the new Jev-enabled BitCadence. This is a release candidate,
 not the stable 0.5.0 release: the live AWS release-candidate chaos board remains
-a separate gate. Jev is optional, disabled by default, and its shipped routing
-and operational integrations remain advisory or annotation-only. The website
-and Jev setup guide now explain the two-speed design and authority boundaries.
+a separate gate. Jev is optional and disabled by default. The shipped routing
+and operational integrations are advisory or annotation-only; a separately
+owner-approved VIA Lorain candidate-selection path has its own code-side
+evidence revalidation and fallback and is not part of this release candidate.
+The website and Jev setup guide explain the two-speed design and scope boundary.
 
 ### Added
 - **B01: BitCadence can now build itself, under governance.** Score v1 gained a

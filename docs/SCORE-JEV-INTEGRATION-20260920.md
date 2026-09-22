@@ -53,10 +53,13 @@ three governed lanes with explicit hand-off artifacts:
 
 - Jev is optional and off by default. A no-token install must make no TypeSafe
   network request and retain complete deterministic BitCadence/VIA behavior.
-- Jev may classify, score, rank, verify, or route surviving candidates. It may
-  not create grants, approve checkpoints, choose an ineligible reviewer, weaken
-  robots/publisher permits, perform arithmetic or recurrence expansion, merge
-  church identities, or publish a schedule fact.
+- Jev may classify, score, rank, verify, or route surviving candidates. The
+  owner-approved Lorain schedule path is a narrow exception: Jev chooses only
+  among schedule candidates extracted from retained evidence, and code
+  revalidates the answer and applies deterministic fallback before publication.
+  Jev may not create grants, approve checkpoints, choose an ineligible reviewer,
+  weaken robots/publisher permits, perform arithmetic or recurrence expansion,
+  or merge church identities.
 - Every production-capable question set is versioned and digest-bound. Receipts
   retain the use-case, question-set version/digest, exact model, state digest,
   typed answer, probabilities/confidence, latency, usage, mode, and outcome.

@@ -9,8 +9,12 @@ The agent doing deep work should not spend its context on every small routing
 or relevance judgment. BitCadence now has an optional two-speed path: TypeSafe
 Jev returns typed, bounded semantic advice; Codex, Claude, and other workers
 handle the longer work. Deterministic policy still owns capacity eligibility,
-leases, budgets, human approval, and side effects. Jev is not an approver or an
-autonomous conductor, and we are not claiming a measured speed or cost gain.
+leases, budgets, human approval, and effects. Jev is not an approver or
+autonomous conductor. A separately owner-approved VIA Lorain path may use Jev
+to select among schedule candidates extracted from retained parish evidence,
+with code revalidation and deterministic fallback. That implementation is not
+part of this release candidate. We are not claiming a measured speed or cost
+gain.
 
 ## What is in this preview
 
