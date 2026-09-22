@@ -33,6 +33,10 @@ gateway never silently starts driving score runs.
 from __future__ import annotations
 
 import logging
+import json
+import os
+import tempfile
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -50,6 +54,7 @@ DEFAULT_SWEEP_SECONDS = 0
 # tests/test_score_sweep.py asserts the two stay equal.
 DEFAULT_SCORE_DB = Path.home() / ".mco" / "score-runs.db"
 DEFAULT_SCORE_ROOT = Path.home() / ".mco" / "score-artifacts"
+PAUSE_STATE_FILENAME = "autonomy-pause.json"
 
 # Why a run was passed over. Anything here means "left exactly as it was".
 SKIP_OTHER_CREDENTIAL = "other_credential"
@@ -146,15 +151,73 @@ def failing_runs(bridge) -> dict[str, str]:
 _sweep_paused: bool = False
 
 
+def _pause_state_path(config: Optional[dict] = None) -> Path:
+    return get_artifact_root(config) / PAUSE_STATE_FILENAME
+
+
+def _read_pause_state(config: Optional[dict] = None) -> dict | None:
+    path = _pause_state_path(config)
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            state = json.load(handle)
+    except FileNotFoundError:
+        return None
+    except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        logger.warning("Unable to read score sweep pause state at %s: %s", path, exc)
+        return None
+    if not isinstance(state, dict):
+        logger.warning("Invalid score sweep pause state at %s: expected a JSON object", path)
+        return None
+    return state
+
+
+def _write_pause_state(state: dict, config: Optional[dict] = None) -> None:
+    path = _pause_state_path(config)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.",
+            suffix=".tmp", delete=False,
+        ) as handle:
+            temp_path = Path(handle.name)
+            json.dump(state, handle, sort_keys=True)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
+
+
 def is_sweep_paused() -> bool:
     """Whether autonomous conductor sweep execution has been paused by an operator."""
-    return _sweep_paused
+    state = _read_pause_state()
+    if state is not None:
+        return state.get("paused") is True
+    return False
 
 
-def set_sweep_paused(paused: bool) -> bool:
+def set_sweep_paused(paused: bool, paused_by: Optional[str] = None) -> bool:
     """Pause or unpause autonomous conductor sweeps."""
     global _sweep_paused
     _sweep_paused = bool(paused)
+    if _sweep_paused:
+        state = {
+            "paused": True,
+            "paused_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if paused_by:
+            state["paused_by"] = paused_by
+        _write_pause_state(state)
+    else:
+        path = _pause_state_path()
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            logger.warning("Unable to clear score sweep pause state at %s: %s", path, exc)
     return _sweep_paused
 
 

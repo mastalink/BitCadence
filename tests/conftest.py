@@ -393,9 +393,14 @@ def _jev_shadow_hooks_disabled():
 
 
 @pytest.fixture(autouse=True)
-def _reset_score_sweep_pause():
-    """The sweep pause flag is process-global; never let one test's pause leak."""
+def _reset_score_sweep_pause(monkeypatch, tmp_path_factory):
+    """Keep durable sweep pause state isolated and never let it leak."""
     from mco.orchestrator import score_sweep
+    artifact_root = tmp_path_factory.mktemp("score-artifacts")
+    monkeypatch.setattr(
+        score_sweep, "get_config",
+        lambda: {"MCO_SCORE_ARTIFACT_ROOT": str(artifact_root)},
+    )
     score_sweep.set_sweep_paused(False)
     yield
     score_sweep.set_sweep_paused(False)

@@ -299,7 +299,7 @@ async def pause_autonomy(caller: dict = Depends(require_scopes("jobs:approve")))
     from mco.orchestrator.audit import record_event
     from mco.orchestrator.routes import get_db_client
 
-    score_sweep.set_sweep_paused(True)
+    score_sweep.set_sweep_paused(True, paused_by=caller.get("instance_id"))
     db = get_db_client()
     if db:
         record_event(db, "system:autonomy", "autonomy_paused", caller.get("instance_id"),
