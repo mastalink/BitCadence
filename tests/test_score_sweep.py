@@ -222,6 +222,8 @@ class TestConfiguration:
 
         assert score_sweep.is_sweep_paused() is True
         assert "Unable to read score sweep pause state" in caplog.text
+        assert str(path) not in caplog.text
+        assert "not json" not in caplog.text
 
 
 # ─── Requirements 1 and 2: isolation between runs, and settled means settled ──

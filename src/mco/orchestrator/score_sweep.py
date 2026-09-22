@@ -163,10 +163,10 @@ def _read_pause_state(config: Optional[dict] = None) -> dict | None:
     except FileNotFoundError:
         return None
     except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
-        logger.warning("Unable to read score sweep pause state at %s: %s", path, exc)
+        logger.warning("Unable to read score sweep pause state (%s)", type(exc).__name__)
         return None
     if not isinstance(state, dict):
-        logger.warning("Invalid score sweep pause state at %s: expected a JSON object", path)
+        logger.warning("Invalid score sweep pause state: expected a JSON object")
         return None
     return state
 
@@ -221,7 +221,7 @@ def set_sweep_paused(paused: bool, paused_by: Optional[str] = None) -> bool:
         except FileNotFoundError:
             pass
         except OSError as exc:
-            logger.warning("Unable to clear score sweep pause state at %s: %s", path, exc)
+            logger.warning("Unable to clear score sweep pause state (%s)", type(exc).__name__)
     return _sweep_paused
 
 
