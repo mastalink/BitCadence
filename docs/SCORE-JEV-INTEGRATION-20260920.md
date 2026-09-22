@@ -87,6 +87,23 @@ tasks that therefore need staging before execution:
 - The active VIA run must reach an exact-head review result before J04-J06 are
   allowed to touch a VIA worktree.
 
+## Owner amendment 2026-09-22: Jev-authoritative Lorain schedule times
+
+Joseph approved making Jev authoritative for one path: choosing which
+evidence-backed schedule candidate VIA publishes for a Lorain County campus.
+This supersedes the "may not publish a schedule fact" rule above for that path
+only, and replaces the J07/J09 qualification-then-canary gate for it ("we do it
+live"). Evidence priority: a direct call to the parish is final (reserved; no
+automated calling until Lorain succeeds), then the most recent dated bulletin,
+then other first-party pages/calendars, then the previously published value.
+
+Hard guards stay in code: Jev picks only among candidates extracted from
+retained evidence, every pick is revalidated against the evidence text, and
+any Jev failure or out-of-set answer falls back to an uncontested newest
+bulletin candidate or a hold that lands on the outreach call list. Total cloud
+spend stays inside 15000 cents/month. Execution: Score `via-lorain-live`
+(L1-L6) at `C:/AI/score-runtime/via-lorain-live/lorain-live.score.json`.
+
 ## Acceptance order
 
 The integration is complete only when the following evidence exists in order:
