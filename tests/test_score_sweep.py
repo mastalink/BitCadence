@@ -189,6 +189,42 @@ class TestConfiguration:
             score_sweep.open_conductor()
         assert not (tmp_path / "n.db").exists()
 
+    def test_pause_survives_a_simulated_restart(self, monkeypatch, tmp_path):
+        config = {"MCO_SCORE_ARTIFACT_ROOT": str(tmp_path / "evidence")}
+        monkeypatch.setattr(score_sweep, "get_config", lambda: config)
+
+        assert score_sweep.set_sweep_paused(True, paused_by="operator-1") is True
+        monkeypatch.setattr(score_sweep, "_sweep_paused", False)
+        assert score_sweep.is_sweep_paused() is True
+
+        state = json.loads((tmp_path / "evidence" / score_sweep.PAUSE_STATE_FILENAME).read_text())
+        assert state["paused"] is True
+        assert state["paused_by"] == "operator-1"
+        assert "paused_at" in state
+
+    def test_resume_clears_persisted_pause(self, monkeypatch, tmp_path):
+        config = {"MCO_SCORE_ARTIFACT_ROOT": str(tmp_path / "evidence")}
+        monkeypatch.setattr(score_sweep, "get_config", lambda: config)
+        score_sweep.set_sweep_paused(True)
+
+        assert score_sweep.set_sweep_paused(False) is False
+        monkeypatch.setattr(score_sweep, "_sweep_paused", False)
+        assert score_sweep.is_sweep_paused() is False
+        assert not (tmp_path / "evidence" / score_sweep.PAUSE_STATE_FILENAME).exists()
+
+    def test_corrupt_pause_state_retains_in_memory_pause(self, monkeypatch, tmp_path, caplog):
+        config = {"MCO_SCORE_ARTIFACT_ROOT": str(tmp_path / "evidence")}
+        monkeypatch.setattr(score_sweep, "get_config", lambda: config)
+        path = tmp_path / "evidence" / score_sweep.PAUSE_STATE_FILENAME
+        path.parent.mkdir()
+        path.write_text("not json", encoding="utf-8")
+        monkeypatch.setattr(score_sweep, "_sweep_paused", True)
+
+        assert score_sweep.is_sweep_paused() is True
+        assert "Unable to read score sweep pause state" in caplog.text
+        assert str(path) not in caplog.text
+        assert "not json" not in caplog.text
+
 
 # ─── Requirements 1 and 2: isolation between runs, and settled means settled ──
 

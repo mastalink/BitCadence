@@ -393,9 +393,23 @@ def _jev_shadow_hooks_disabled():
 
 
 @pytest.fixture(autouse=True)
-def _reset_score_sweep_pause():
-    """The sweep pause flag is process-global; never let one test's pause leak."""
+def _reset_score_sweep_pause(monkeypatch, tmp_path_factory):
+    """Keep durable sweep pause state isolated and never let it leak."""
     from mco.orchestrator import score_sweep
+    artifact_root = tmp_path_factory.mktemp("score-artifacts")
+    monkeypatch.setattr(
+        score_sweep, "get_config",
+        lambda: {"MCO_SCORE_ARTIFACT_ROOT": str(artifact_root)},
+    )
     score_sweep.set_sweep_paused(False)
     yield
-    score_sweep.set_sweep_paused(False)
+    # Test monkeypatches are still active during fixture teardown.  Several
+    # platform tests temporarily set the shared sys.platform to ``linux``;
+    # calling the production path helper here would then ask pathlib for a
+    # PosixPath on Windows.  Clean the known isolated path directly instead.
+    score_sweep._sweep_paused = False
+    pause_path = artifact_root / score_sweep.PAUSE_STATE_FILENAME
+    try:
+        pause_path.unlink()
+    except FileNotFoundError:
+        pass
