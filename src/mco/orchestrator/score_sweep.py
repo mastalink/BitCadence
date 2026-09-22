@@ -195,7 +195,11 @@ def is_sweep_paused() -> bool:
     state = _read_pause_state()
     if state is not None:
         return state.get("paused") is True
-    return False
+    # Missing or unreadable durable state normally means "not paused" after a
+    # process restart, because the module default is False.  While the process
+    # is still alive, however, retain the last operator decision in memory so a
+    # deleted/corrupt file cannot silently release the autonomy brake.
+    return _sweep_paused
 
 
 def set_sweep_paused(paused: bool, paused_by: Optional[str] = None) -> bool:

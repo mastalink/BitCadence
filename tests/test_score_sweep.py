@@ -208,18 +208,19 @@ class TestConfiguration:
         score_sweep.set_sweep_paused(True)
 
         assert score_sweep.set_sweep_paused(False) is False
-        monkeypatch.setattr(score_sweep, "_sweep_paused", True)
+        monkeypatch.setattr(score_sweep, "_sweep_paused", False)
         assert score_sweep.is_sweep_paused() is False
         assert not (tmp_path / "evidence" / score_sweep.PAUSE_STATE_FILENAME).exists()
 
-    def test_corrupt_pause_state_reads_as_not_paused(self, monkeypatch, tmp_path, caplog):
+    def test_corrupt_pause_state_retains_in_memory_pause(self, monkeypatch, tmp_path, caplog):
         config = {"MCO_SCORE_ARTIFACT_ROOT": str(tmp_path / "evidence")}
         monkeypatch.setattr(score_sweep, "get_config", lambda: config)
         path = tmp_path / "evidence" / score_sweep.PAUSE_STATE_FILENAME
         path.parent.mkdir()
         path.write_text("not json", encoding="utf-8")
+        monkeypatch.setattr(score_sweep, "_sweep_paused", True)
 
-        assert score_sweep.is_sweep_paused() is False
+        assert score_sweep.is_sweep_paused() is True
         assert "Unable to read score sweep pause state" in caplog.text
 
 

@@ -403,4 +403,13 @@ def _reset_score_sweep_pause(monkeypatch, tmp_path_factory):
     )
     score_sweep.set_sweep_paused(False)
     yield
-    score_sweep.set_sweep_paused(False)
+    # Test monkeypatches are still active during fixture teardown.  Several
+    # platform tests temporarily set the shared sys.platform to ``linux``;
+    # calling the production path helper here would then ask pathlib for a
+    # PosixPath on Windows.  Clean the known isolated path directly instead.
+    score_sweep._sweep_paused = False
+    pause_path = artifact_root / score_sweep.PAUSE_STATE_FILENAME
+    try:
+        pause_path.unlink()
+    except FileNotFoundError:
+        pass
