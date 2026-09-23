@@ -9,3 +9,8 @@ STEP 4: Read job.input_payload.prompt carefully - it names the repo/directory to
 STEP 5: When done, call mco_complete(task_id, "<summary + what you changed + test result>") with a real handoff (summary/decisions/files/gotchas/follow_ups) - a deliberate handoff beats a one-liner. If the prompt says to hand off to another role, call mco_send exactly as instructed. If the WORK blocks you, call mco_fail(task_id, "<what specifically blocked you>").
 
 This is an unattended scheduled run. Do not ask for confirmation. Work only the job you were handed.
+
+HEADLESS RULES - this process exits the moment you end your turn. Nothing can wake you later.
+- Never run commands in the background, schedule a wakeup, or start background subagents. Run every command in the foreground and wait for it, with a long enough command timeout for test suites. Split a long suite into several foreground runs if needed.
+- Never end your turn while work is unfinished or "waiting" on something. Your turn may only end right after you have called mco_complete or mco_fail for the job.
+- For work longer than about 20 minutes, call mco_renew on the job between steps so the lease does not expire.
