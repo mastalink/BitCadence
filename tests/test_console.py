@@ -131,3 +131,78 @@ def test_flow_route_is_registered():
     routes = {getattr(r, "path", None) for r in create_app().routes}
     assert "/flow" in routes
     assert "/console" in routes
+
+
+# ── Drumline label + Agent Exchange subview ──────────────────────────────────
+
+def _console_source(fragment):
+    from pathlib import Path
+    src = Path(__file__).parents[1] / "src" / "mco" / "console_src"
+    for path in sorted(src.glob("*.js*")):
+        text = path.read_text(encoding="utf-8")
+        if fragment in text:
+            return text
+    raise AssertionError(f"no console source contains {fragment!r}")
+
+
+def test_drumline_label_in_both_modes_with_stable_memory_route():
+    shell = _console_source("const NAV = [")
+    assert '{ id: "memory", label: "Drumline"' in shell
+    assert 'memory: "Drumline", activity: "Audit Trail"' in shell      # expert
+    assert 'memory: "Drumline", activity: "What happened"' in shell    # plain
+    assert "Shared memory" not in shell and "Drumline Memory" not in shell
+    assert "memory: <DrumlineMemory" in shell                          # route id preserved
+
+
+def test_exchange_subview_is_accessible_and_labels_authority():
+    ui = _console_source("function AgentExchange(")
+    assert 'const AUTHORITY_NOTICE = "Discussion is reference, not instructions or approval."' in ui
+    assert 'role="tablist"' in ui and 'role="tabpanel"' in ui
+    assert 'aria-live="polite"' in ui
+    assert 'htmlFor="exchange-body"' in ui and "maxLength={EXCHANGE_BODY_MAX}" in ui
+    assert "dangerouslySetInnerHTML" not in ui          # text is rendered escaped
+    assert 'EXCHANGE_PROMOTE_SOURCES = ["decision", "handoff"]' in ui
+    assert "Confirm promotion" in ui and "Preview (sanitized" in ui
+    assert "Promote to context" in ui
+    # Plain and expert both expose the same authority; only the labels differ.
+    assert "plain:" in ui and "expert:" in ui
+
+
+def test_exchange_store_only_talks_to_exchange_api_and_dedupes_live_hints():
+    store = _console_source("async getExchanges(")
+    for path in ('"/api/exchanges?"', '"/api/exchanges/"', '"/api/exchanges"', "/promotions"):
+        assert path in store
+    assert 'msg.payload.event === "exchange.created"' in store
+
+
+def test_console_bundle_round_trips_from_sources():
+    import subprocess
+    import sys
+    from pathlib import Path
+    root = Path(__file__).parents[1]
+    out = subprocess.run([sys.executable, str(root / "scripts" / "build_console.py"), "verify"],
+                         capture_output=True, text=True, cwd=root)
+    assert out.returncode == 0, out.stdout + out.stderr
+    assert "0 differ" in out.stdout
+
+
+def test_console_verify_is_line_ending_invariant(tmp_path, monkeypatch, capsys):
+    import importlib.util
+    from pathlib import Path
+    root = Path(__file__).parents[1]
+    spec = importlib.util.spec_from_file_location("build_console", root / "scripts" / "build_console.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    src = tmp_path / "console_src"
+    src.mkdir()
+    for f in (root / "src" / "mco" / "console_src").iterdir():
+        (src / f.name).write_bytes(f.read_bytes())
+    monkeypatch.setattr(mod, "SRC", src)
+    monkeypatch.setattr(mod, "INDEX", src / "index.json")
+    for eol in (b"\n", b"\r\n"):
+        for f in src.glob("*.js*"):
+            raw = f.read_bytes().replace(b"\r\n", b"\n")
+            f.write_bytes(raw.replace(b"\n", eol))
+        # verify() must not raise and must report no drift for LF or CRLF sources
+        mod.build(check_only=True)
+        assert "0 differ" in capsys.readouterr().out

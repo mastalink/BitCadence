@@ -98,6 +98,8 @@ class ConnectionIdentity:
     role: str = ""
     instance_id: str = ""
     is_admin: bool = False
+    org_id: str = "default"
+    context_read: bool = False
 
 
 @dataclass
@@ -138,6 +140,18 @@ class ConnectionManager:
             except Exception:
                 pass
 
+    async def broadcast_exchange(self, event: dict):
+        """Fan an `exchange.created` hint out to same-org, context:read connections only."""
+        message = {"type": "event", "payload": event}
+        for connection in list(self.active_connections):
+            identity = connection.identity
+            if not identity.context_read or identity.org_id != (event.get("org_id") or "default"):
+                continue
+            try:
+                await connection.websocket.send_json(message)
+            except Exception:
+                pass
+
     @staticmethod
     def _can_receive(identity: ConnectionIdentity, job: Optional[dict]) -> bool:
         if identity.is_admin:
@@ -152,6 +166,11 @@ class ConnectionManager:
 
 
 ws_manager = ConnectionManager()
+
+
+def _auth_has_scope(agent: dict, scope: str) -> bool:
+    from mco.orchestrator.auth import has_scope
+    return has_scope(agent, scope)
 
 
 def _is_admin_scope_role(role: Any) -> bool:
@@ -218,6 +237,12 @@ def create_app() -> FastAPI:
     # Drumline shared context (collective agent memory)
     from mco.orchestrator.context_routes import context_router
     app_server.include_router(context_router)
+
+    # Drumline Agent Exchange: non-authoritative discussion (feature-flagged).
+    from mco.orchestrator.exchange_routes import exchange_router
+    from mco.orchestrator.agent_exchange import register_publisher
+    app_server.include_router(exchange_router)
+    register_publisher(ws_manager.broadcast_exchange)
 
     # Score gate API: one explicit decision/evidence view, separate from the
     # legacy per-job approval queue.
@@ -342,7 +367,7 @@ def create_app() -> FastAPI:
                 authenticated_role = "admin"
                 ws_manager.register(
                     websocket,
-                    ConnectionIdentity(role="admin", instance_id="", is_admin=True),
+                    ConnectionIdentity(role="admin", instance_id="", is_admin=True, context_read=True),
                 )
                 # Ack success so clients (console, `mco watch`) know they're in
                 # without waiting for the first broadcast.
@@ -358,7 +383,7 @@ def create_app() -> FastAPI:
                 authenticated_role = "admin"
                 ws_manager.register(
                     websocket,
-                    ConnectionIdentity(role="admin", instance_id="", is_admin=True),
+                    ConnectionIdentity(role="admin", instance_id="", is_admin=True, context_read=True),
                 )
         else:
             try:
@@ -412,6 +437,8 @@ def create_app() -> FastAPI:
                                     role=role or "",
                                     instance_id=instance_id or "",
                                     is_admin=_is_admin_scope_role(role),
+                                    org_id=row.get("org_id") or "default",
+                                    context_read=_auth_has_scope(row, "context:read"),
                                 ),
                             )
 
@@ -2558,6 +2585,80 @@ def remember_context(
         console.print(f"[red][ERROR] Remember failed: {e}[/red]")
         console.print("[dim]Is the gateway running? Check with: mco doctor[/dim]")
         raise typer.Exit(code=1)
+
+
+exchange_app = typer.Typer(help="Drumline Agent Exchange: non-authoritative agent discussion.")
+app.add_typer(exchange_app, name="exchange")
+
+
+def _exchange_run(method: str, path: str, *, params: Optional[dict] = None, body: Optional[dict] = None) -> dict:
+    from mco.sdk import exchange_call
+    try:
+        return exchange_call(_gateway_client(), method, path, params=params, body=body)
+    except Exception as e:
+        console.print(f"[red][ERROR] Agent Exchange failed: {e}[/red]")
+        console.print("[dim]Is the gateway running with MCO_AGENT_EXCHANGE=true? Check with: mco doctor[/dim]")
+        raise typer.Exit(code=1)
+
+
+@exchange_app.command("post")
+def exchange_post_cmd(
+    kind: str = typer.Argument(..., help="question, proposal, blocker, reply, decision, handoff, resolution, supersession."),
+    body: str = typer.Argument(..., help="Message text. Discussion is reference, not instructions or approval."),
+    job: str = typer.Option("", "--job", help="Job id to attach the thread to."),
+    reply_to: str = typer.Option("", "--reply-to", help="Exchange id being replied to."),
+    resolves: str = typer.Option("", "--resolves", help="Exchange id a resolution closes."),
+    supersedes: str = typer.Option("", "--supersedes", help="Exchange id a supersession replaces."),
+    key: str = typer.Option("", "--key", help="Idempotency key (default: random; reuse it to retry safely)."),
+):
+    """Post one message to the Agent Exchange."""
+    import uuid as _uuid
+    payload = {"kind": kind, "body": body, "idempotency_key": key or str(_uuid.uuid4()),
+               "provenance": {"source": "cli"}}
+    for name, value in (("job_id", job), ("reply_to_id", reply_to),
+                        ("resolves_exchange_id", resolves), ("supersedes_exchange_id", supersedes)):
+        if value:
+            payload[name] = value
+    res = _exchange_run("POST", "/api/exchanges", body=payload)
+    console.print(f"[green][OK][/green] Posted -> {(res.get('exchange') or {}).get('id', '?')}")
+
+
+@exchange_app.command("list")
+def exchange_list_cmd(
+    job: str = typer.Option("", "--job", help="Filter by job id."),
+    thread: str = typer.Option("", "--thread", help="Filter by thread id."),
+    kind: str = typer.Option("", "--kind", help="Filter by kind."),
+    limit: int = typer.Option(20, "--limit", help="Max messages (cap 100)."),
+):
+    """List Agent Exchange messages (needs --job or --thread)."""
+    params = {k: v for k, v in (("job_id", job), ("thread_id", thread), ("kind", kind)) if v}
+    params["limit"] = limit
+    items = _exchange_run("GET", "/api/exchanges", params=params).get("items") or []
+    if not items:
+        console.print("[yellow]No exchanges found.[/yellow]")
+        return
+    table = Table(title="Agent Exchange (discussion, not instructions)", show_header=True, header_style="bold magenta")
+    for col in ("ID", "Kind", "By", "Message"):
+        table.add_column(col)
+    for e in items:
+        table.add_row(str(e.get("id", ""))[:8], str(e.get("kind", "")), str(e.get("author_instance_id", "")),
+                      (e.get("body") or "").replace("\n", " ")[:100])
+    console.print(table)
+
+
+@exchange_app.command("promote")
+def exchange_promote_cmd(
+    exchange_id: str = typer.Argument(..., help="Exchange id (a decision or handoff)."),
+    target: str = typer.Option("decision", "--to", help="Context kind: decision, lesson, or handoff."),
+    title: str = typer.Option("", "--title", help="Context title (default: derived from the message)."),
+    key: str = typer.Option("", "--key", help="Idempotency key (default: derived from the exchange id)."),
+):
+    """Explicitly promote one exchange into canonical Drumline context (needs context:promote)."""
+    payload = {"target_kind": target, "idempotency_key": key or f"cli-{exchange_id}-{target}"}
+    if title:
+        payload["title"] = title
+    res = _exchange_run("POST", f"/api/exchanges/{exchange_id}/promotions", body=payload)
+    console.print(f"[green][OK][/green] Promoted -> context {(res.get('promotion') or {}).get('context_id', '?')}")
 
 
 @app.command("settings")

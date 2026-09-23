@@ -292,3 +292,27 @@ def test_tool_schemas_mark_the_right_args_required():
 
     assert schema(tools["mco_lease"]).get("required") == ["task_id"]
     assert set(schema(tools["mco_complete"]).get("required", [])) == {"task_id", "output"}
+
+
+# ── Agent Exchange tools (additive) ───────────────────────────────────────────
+
+def test_exchange_tools_call_exchange_api(monkeypatch):
+    import json
+    import httpx
+    from mco.orchestrator.client import GatewayClient
+    seen = []
+
+    def handler(request: httpx.Request):
+        seen.append((request.method, request.url.path, dict(request.url.params),
+                     json.loads(request.content) if request.content else None))
+        return httpx.Response(200, json={"success": True, "items": []})
+
+    gw = GatewayClient(base_url="http://gw", token="t", transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(mcp_mod, "_client", lambda: gw)
+    mcp_mod.mco_exchange_post("blocker", "stuck", "key-1", job_id="j1")
+    mcp_mod.mco_exchange_list(job_id="j1", limit=10)
+    assert seen[0][:2] == ("POST", "/api/exchanges")
+    assert seen[0][3]["provenance"] == {"source": "mcp"} and seen[0][3]["kind"] == "blocker"
+    assert seen[1][:2] == ("GET", "/api/exchanges") and seen[1][2]["job_id"] == "j1"
+    # No promotion tool is exposed to agents over MCP.
+    assert not hasattr(mcp_mod, "mco_exchange_promote")

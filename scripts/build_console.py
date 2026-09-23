@@ -72,6 +72,11 @@ def _encode(raw: bytes, compressed: bool) -> str:
     return base64.b64encode(data).decode("ascii")
 
 
+def _source_bytes(path: Path) -> bytes:
+    """Read a console source with LF endings so CRLF checkouts round-trip identically."""
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
 def extract() -> None:
     html = HTML.read_text(encoding="utf-8")
     manifest = _read_manifest(html)
@@ -98,7 +103,7 @@ def build(check_only: bool = False) -> None:
     index = json.loads(INDEX.read_text(encoding="utf-8"))
     changed = 0
     for fname, meta in index.items():
-        raw = (SRC / fname).read_bytes()
+        raw = _source_bytes(SRC / fname)
         uuid = meta["uuid"]
         if _decode(manifest[uuid]) != raw:
             changed += 1
@@ -109,7 +114,7 @@ def build(check_only: bool = False) -> None:
         # Decode every patched entry back out and confirm it matches the source.
         rebuilt = _read_manifest(out)
         for fname, meta in index.items():
-            if _decode(rebuilt[meta["uuid"]]) != (SRC / fname).read_bytes():
+            if _decode(rebuilt[meta["uuid"]]) != _source_bytes(SRC / fname):
                 raise SystemExit(f"Round-trip mismatch for {fname}")
         print(f"verify OK — {len(index)} sources round-trip; {changed} differ from current HTML")
         return

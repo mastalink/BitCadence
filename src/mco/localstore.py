@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Tables whose history must never be rewritten (mirrors the Postgres trigger).
-APPEND_ONLY_TABLES = {"agent_job_events", "mco_audit_outbox", "mco_attempt_receipts", "score_events", "score_checkpoint_decisions"}
+APPEND_ONLY_TABLES = {"agent_job_events", "mco_audit_outbox", "mco_attempt_receipts", "score_events", "score_checkpoint_decisions", "agent_exchanges", "agent_exchange_promotions"}
 
 # Natural primary key per table (upsert conflict target).
 PRIMARY_KEYS = {
@@ -67,6 +67,8 @@ UNIQUE_CONSTRAINTS = {
     "score_grants": ("org_id", "run_id", "digest"),
     "score_gate_requests": ("org_id", "run_id", "digest", "task_id", "kind"),
     "score_checkpoint_decisions": ("gate_id",),
+    "agent_exchanges": ("org_id", "author_instance_id", "idempotency_key"),
+    "agent_exchange_promotions": ("org_id", "exchange_id", "target_kind"),
 }
 
 # Dedicated Score tables mirrored in LocalStore.
