@@ -74,6 +74,50 @@ def test_local_grant_issues_signed_authority_after_exact_confirmation(tmp_path, 
     assert saved[0]["resources"] == ["C:/AI/worktree"]
 
 
+def _grant_hours(saved):
+    from datetime import datetime
+    start = datetime.fromisoformat(saved["not_before"].replace("Z", "+00:00"))
+    end = datetime.fromisoformat(saved["expires_at"].replace("Z", "+00:00"))
+    return (end - start).total_seconds() / 3600
+
+
+def test_local_grant_lifetime_is_variable_up_to_316_hours(tmp_path, monkeypatch):
+    store = LocalStore(tmp_path / "local.db")
+    score_file = tmp_path / "score.json"
+    _score(score_file)
+    _enable_local_human(monkeypatch, store)
+
+    result = CliRunner().invoke(cli.app, [
+        "score", "grant-local", str(score_file),
+        "--run-id", "run-local-3",
+        "--action", "repository:write",
+        "--resource", "C:/AI/worktree",
+        "--expires-hours", "316",
+    ], input="ISSUE LOCAL GRANT run-local-3\n")
+
+    assert result.exit_code == 0, result.output
+    saved = store.table("score_grants").select("*").execute().data
+    assert round(_grant_hours(saved[0])) == 316
+
+
+def test_local_grant_refuses_lifetime_beyond_316_hours(tmp_path, monkeypatch):
+    store = LocalStore(tmp_path / "local.db")
+    score_file = tmp_path / "score.json"
+    _score(score_file)
+    _enable_local_human(monkeypatch, store)
+
+    for flag, value in (("--expires-hours", "317"), ("--expires-minutes", str(316 * 60 + 1))):
+        result = CliRunner().invoke(cli.app, [
+            "score", "grant-local", str(score_file),
+            "--run-id", "run-local-4",
+            "--action", "repository:write",
+            "--resource", "C:/AI/worktree",
+            flag, value,
+        ], input="ISSUE LOCAL GRANT run-local-4\n")
+        assert result.exit_code != 0
+    assert store.table("score_grants").select("*").execute().data == []
+
+
 def test_local_grant_refuses_wrong_confirmation(tmp_path, monkeypatch):
     store = LocalStore(tmp_path / "local.db")
     score_file = tmp_path / "score.json"

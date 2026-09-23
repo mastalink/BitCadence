@@ -1182,6 +1182,9 @@ def score_start(
     console.print(f"[dim]Advance it with: mco score tick --run-id {info['run_id']} --watch[/dim]")
 
 
+LOCAL_GRANT_MAX_HOURS = 316
+
+
 def _local_human_platform_supported() -> bool:
     return os.name == "nt"
 
@@ -1224,7 +1227,10 @@ def score_grant_local(
     action: List[str] = typer.Option(..., "--action", help="Allowed capability; repeat for more than one."),
     resource: List[str] = typer.Option(..., "--resource", help="Exact allowed resource; repeat for more than one."),
     environment: str = typer.Option("test", "--environment"),
-    expires_minutes: int = typer.Option(240, "--expires-minutes", min=1, max=480),
+    expires_minutes: int = typer.Option(240, "--expires-minutes", min=1, max=LOCAL_GRANT_MAX_HOURS * 60),
+    expires_hours: Optional[int] = typer.Option(
+        None, "--expires-hours", min=1, max=LOCAL_GRANT_MAX_HOURS,
+        help=f"Grant lifetime in hours (1-{LOCAL_GRANT_MAX_HOURS}); overrides --expires-minutes."),
     budget_cents: int = typer.Option(0, "--budget-cents", min=0),
 ):
     """Issue a locally auditable, interactive Score grant on Windows SQLite only.
@@ -1241,7 +1247,8 @@ def score_grant_local(
         score = load_score(score_file.read_text(encoding="utf-8"))
         score_digest = digest(score)
         now = datetime.now(timezone.utc)
-        expires_at = now + timedelta(minutes=expires_minutes)
+        lifetime = timedelta(hours=expires_hours) if expires_hours else timedelta(minutes=expires_minutes)
+        expires_at = now + lifetime
         console.print(Panel.fit(
             "[bold yellow]Local human Score grant[/bold yellow]\n"
             f"Run: {run_id}\nDigest: {score_digest}\n"
