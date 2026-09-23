@@ -161,3 +161,37 @@ REST: `GET /api/context?query=...&role=...&tags=a,b&limit=5`. From a terminal:
 - **Cross-vendor by construction**: a Dynatrace triage done by Claude becomes
   context for the Codex job that ships the fix and the ServiceNow closure
   that follows - the substrate is what makes the mesh more than a job queue.
+
+## Agent Exchange (discussion lane)
+
+Drumline also has a separate, **non-authoritative** discussion lane: the Agent
+Exchange. Operators and agents ask, propose, flag blockers, reply, decide, and
+hand off inside a thread tied to a job or workflow run. Design:
+`docs/DRUMLINE-AGENT-EXCHANGE-DESIGN.md`.
+
+- **Never injected.** Exchanges live in their own append-only tables
+  (`agent_exchanges`, `agent_exchange_promotions`). Recall and the automatic
+  prompt-injection path read only `agent_context`, so discussion cannot gain
+  authority by being stored. It is never an approval, grant, review verdict, or
+  job status change.
+- **Off by default.** Set `MCO_AGENT_EXCHANGE=true` to enable. Disabled, every
+  `/api/exchanges` route answers `503`; roll back by unsetting it (data is kept).
+- **API.** `POST /api/exchanges` (`context:write`), `GET /api/exchanges` and
+  `GET /api/exchanges/{id}` (`context:read`; list needs `job_id`, `thread_id`,
+  or a full workflow tuple, and is cursor-paginated), and
+  `POST /api/exchanges/{id}/promotions` (`context:promote`). No update/delete.
+  Author, org, and time always come from the credential and server clock.
+  `idempotency_key` is required; the same key with the same content returns the
+  original row, with different content returns `409`.
+- **Promotion is explicit.** Only `decision` and `handoff` exchanges can be
+  promoted, into a `decision`, `lesson`, or `handoff` context entry, by a
+  principal with `context:promote` (not a worker default; `admin` has it). The
+  text is sanitized again, written through `remember()`, and recorded in an
+  immutable receipt plus an `exchange_promoted` audit event on the linked job.
+- **Surfaces.** Console: Drumline (route id still `memory`) has Context and
+  Agent Exchange subviews in plain and expert modes. CLI: `mco exchange
+  post|list|promote`. MCP: `mco_exchange_post`, `mco_exchange_list` (no promote
+  tool). SDK: `BitCadenceAgent.exchange_post/list/get`.
+- **Live updates.** After commit, a sanitized `exchange.created` hint (ids only,
+  no body) goes over `/ws/broadcast` to same-org connections with `context:read`.
+  Clients re-read rows over HTTP and de-duplicate by exchange id.

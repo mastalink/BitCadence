@@ -154,3 +154,39 @@ class TestRunOnce:
 
         assert agent.run_once() == 3
         assert sum(1 for c in client.calls if c[0] == "complete") == 3
+
+
+# ── Agent Exchange (additive, non-authoritative) ─────────────────────────────
+
+def _exchange_agent(handler):
+    import httpx
+    from mco.orchestrator.client import GatewayClient
+    client = GatewayClient(base_url="http://gw", token="t", transport=httpx.MockTransport(handler))
+    return BitCadenceAgent(role="codex", instance_id="w1", client=client)
+
+
+def test_exchange_post_list_get_use_exchange_api_only():
+    import json
+    import httpx
+    seen = []
+
+    def handler(request: httpx.Request):
+        seen.append((request.method, request.url.path, dict(request.url.params),
+                     json.loads(request.content) if request.content else None))
+        return httpx.Response(200, json={"success": True, "items": []})
+
+    agent = _exchange_agent(handler)
+    agent.exchange_post("question", "why?", "k1", job_id="j1")
+    agent.exchange_list(job_id="j1", limit=5)
+    agent.exchange_get("abc")
+    assert [s[:2] for s in seen] == [("POST", "/api/exchanges"), ("GET", "/api/exchanges"),
+                                     ("GET", "/api/exchanges/abc")]
+    assert seen[0][3]["provenance"] == {"source": "sdk"} and seen[0][3]["job_id"] == "j1"
+    assert not any(s[1].startswith("/api/context") for s in seen)
+
+
+def test_exchange_error_surfaces_safe_detail_only():
+    import httpx
+    agent = _exchange_agent(lambda r: httpx.Response(409, json={"detail": "idempotency_key was already used"}))
+    with pytest.raises(RuntimeError, match="HTTP 409: idempotency_key was already used"):
+        agent.exchange_post("question", "SECRET BODY", "k")

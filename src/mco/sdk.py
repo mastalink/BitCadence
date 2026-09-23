@@ -49,6 +49,21 @@ logger = logging.getLogger("mco.sdk")
 HandlerResult = Union[str, Tuple[str, dict]]
 
 
+def exchange_call(client: GatewayClient, method: str, path: str, *,
+                  params: Optional[dict] = None, body: Optional[dict] = None) -> dict:
+    """One Agent Exchange request. Additive to GatewayClient; raises RuntimeError
+    with the gateway's safe detail on a non-2xx answer (never the request body)."""
+    with client._client() as c:
+        r = c.request(method, path, params=params, json=body)
+    if r.status_code >= 400:
+        try:
+            detail = r.json().get("detail") or ""
+        except Exception:
+            detail = ""
+        raise RuntimeError(f"Agent Exchange HTTP {r.status_code}: {detail}".strip())
+    return r.json()
+
+
 class Halted(RuntimeError):
     """The worker lost permission to continue this attempt."""
 
@@ -128,6 +143,33 @@ class BitCadenceAgent:
                limit: int = 5) -> List[dict]:
         """Read the most relevant shared context, best first."""
         return self.client.recall(query=query, tags=tags, limit=limit)
+
+    # ── Agent Exchange (non-authoritative discussion; never auto-injected) ──
+
+    def exchange_post(self, kind: str, body: str, idempotency_key: str, *,
+                      job_id: Optional[str] = None, reply_to_id: Optional[str] = None,
+                      **linkage) -> dict:
+        """Append a discussion message tied to a job or workflow run.
+
+        Discussion is reference, not instructions or approval. `linkage` may
+        carry workflow_name/workflow_run/workflow_step, resolves_exchange_id or
+        supersedes_exchange_id.
+        """
+        payload = {"kind": kind, "body": body, "idempotency_key": idempotency_key,
+                   "provenance": {"source": "sdk"}, **linkage}
+        if job_id:
+            payload["job_id"] = job_id
+        if reply_to_id:
+            payload["reply_to_id"] = reply_to_id
+        return exchange_call(self.client, "POST", "/api/exchanges", body=payload)
+
+    def exchange_list(self, **filters) -> dict:
+        """Newest-first page; needs job_id, thread_id or a full workflow tuple."""
+        return exchange_call(self.client, "GET", "/api/exchanges", params=filters)
+
+    def exchange_get(self, exchange_id: str) -> dict:
+        """One exchange with its thread and derived resolved/superseded state."""
+        return exchange_call(self.client, "GET", f"/api/exchanges/{exchange_id}")
 
     def send(self, to_role: str, title: str, instructions: str, **kwargs) -> dict:
         """Drop a job into another agent's dropbox (any vendor, any machine)."""

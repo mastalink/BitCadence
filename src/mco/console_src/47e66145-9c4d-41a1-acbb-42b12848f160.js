@@ -63,6 +63,8 @@
     return res.json();
   }
 
+  const exchangeFns = new Set();
+
   const TOAST_FOR = {
     completed: ["ok", "Completed"],
     failed: ["err", "Failed"],
@@ -134,6 +136,11 @@
       }
       if (msg.type === "event") {
         if (!wsOk) { wsOk = true; wsBackoff = 2000; startPolling(); } // zero-config gateways send no ack
+        if (msg.payload && msg.payload.event === "exchange.created") {
+          // A hint only: subscribers re-read authoritative rows over HTTP.
+          exchangeFns.forEach((fn) => { try { fn(msg.payload); } catch (e) { /* ignore */ } });
+          return;
+        }
         poll(); // refresh state now; poll() synthesizes toasts + activity
       }
     };
@@ -388,6 +395,27 @@
       if (!isLive()) throw new Error("Connect to your orchestrator first.");
       return api("/api/context", { method: "POST", body: JSON.stringify(payload) });
     },
+
+    // ---- Drumline Agent Exchange (live only; non-authoritative discussion) ----
+    async getExchanges(opts) {
+      if (!isLive()) throw new Error("Connect to your orchestrator first.");
+      const params = new URLSearchParams();
+      Object.keys(opts || {}).forEach((k) => { if (opts[k] !== undefined && opts[k] !== "") params.set(k, String(opts[k])); });
+      return api("/api/exchanges?" + params.toString());
+    },
+    async getExchange(id) {
+      if (!isLive()) throw new Error("Connect to your orchestrator first.");
+      return api("/api/exchanges/" + encodeURIComponent(id));
+    },
+    async addExchange(payload) {
+      if (!isLive()) throw new Error("Connect to your orchestrator first.");
+      return api("/api/exchanges", { method: "POST", body: JSON.stringify(payload) });
+    },
+    async promoteExchange(id, payload) {
+      if (!isLive()) throw new Error("Connect to your orchestrator first.");
+      return api("/api/exchanges/" + encodeURIComponent(id) + "/promotions", { method: "POST", body: JSON.stringify(payload) });
+    },
+    onExchange(fn) { exchangeFns.add(fn); return () => exchangeFns.delete(fn); },
 
     // ---- autonomy & score conductor controls ----
     async getAutonomy() {
