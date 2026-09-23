@@ -561,7 +561,6 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
         <p><strong>Why it exists.</strong> Agent fleets waste time and context deciding who should do a task, which evidence is relevant, or whether an alert is noise. Jev, built on TypeSafe System One, returns typed judgments and confidence for bounded questions. BitCadence can use that advice to prepare a better task packet and choose an appropriate model or worker.</p>
         <p><strong>Two speeds, one chain of responsibility.</strong> Jev handles a small semantic judgment; Claude, Codex, Gemini, and other workers do deeper work. Deterministic code still owns budgets, eligibility, leases, approvals, and effects. A Jev receipt records what was asked and returned; it cannot grant itself authority.</p>
         <p>In this release, Codex and Claude routing are advisory, while Drumline, watchdog, and notification checks add annotations only. Jev is optional and off by default. BitCadence still runs locally without a TypeSafe account, key, or network call.</p>
-        <p>A separate, owner-approved VIA path may let Jev choose among schedule candidates extracted from retained parish evidence. Code rechecks the chosen candidate against that evidence and applies deterministic fallbacks; this bounded selection does not give Jev authority to create evidence, bypass review or budget rules, or make other changes. That VIA implementation is separate from this release.</p>
         <div class="jev-boundary">Jev advises → code enforces the approved scope → evidence and outcome are recorded.</div>
       </div>
       <div class="jev-card sr">
@@ -761,7 +760,7 @@ footer{border-top:1px solid var(--rule);padding:46px 0 60px;background:var(--pap
       </details>
       <details class="sr">
         <summary>Does Jev make decisions for my agents?</summary>
-        <p>Most shipped BitCadence integrations provide advisory routing or annotations. A separately approved VIA Lorain path may use Jev to select among evidence-backed schedule candidates, with code revalidating the selection and enforcing fallback rules. That path is separate from this release. Jev cannot create evidence, grant permissions, approve checkpoints, or control unrelated effects; unavailable or invalid responses follow deterministic fallback.</p>
+        <p>In BitCadence, Jev provides advisory routing or annotations. It does not grant permissions or approve checkpoints. If Jev is unavailable or returns an invalid answer, BitCadence follows its deterministic fallback.</p>
       </details>
       <details class="sr">
         <summary>What's the license?</summary>
