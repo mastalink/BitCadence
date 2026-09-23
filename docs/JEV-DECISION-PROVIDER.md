@@ -1,12 +1,8 @@
 # Jev decision-provider contract
 
 BitCadence integrates TypeSafe/Jev as an optional semantic decision primitive,
-not as an agent or general authority system. One separately owner-approved VIA
-path may use Jev's bounded selection among existing Lorain schedule candidates
-as authoritative for that selection, subject to code-side evidence revalidation
-and deterministic fallback. This is not a general permission to publish facts
-or execute effects. The provider is disabled by default and ordinary BitCadence
-startup performs no TypeSafe network request.
+not as an agent or general authority system. The provider is disabled by
+default and ordinary BitCadence startup performs no TypeSafe network request.
 
 ## Why Jev is here
 
@@ -16,18 +12,13 @@ judgments for bounded questions; Claude, Codex, and other workers handle the
 longer reasoning and execution. This is a two-speed workflow, not a second
 authority system. Jev can suggest what a task *means*. Deterministic policy
 still decides which models are eligible, how much work may run, whether a lease
-is valid, and whether an effect needs a human grant or review. The narrowly
-approved VIA exception lets Jev choose only among already-extracted Lorain
-schedule candidates; code revalidates the choice against retained evidence and
-uses a deterministic fallback on failure. It does not allow Jev to invent
-candidates, create grants, approve checkpoints, or control unrelated effects.
+is valid, and whether an effect needs a human grant or review. Jev does not
+create grants, approve checkpoints, or authorize effects.
 No speed or cost improvement is claimed without a measured BitCadence benchmark.
 
 The shipped Codex and Claude task/model routes are advisory. Drumline,
-watchdog, and notification use Jev only for annotations. The VIA Lorain
-candidate-selection authorization is a separate path and is not implemented by
-this release candidate. A Jev outage or abstention returns a deterministic
-fallback, not permission to skip a gate.
+watchdog, and notification use Jev only for annotations. A Jev outage or
+abstention returns a deterministic fallback, not permission to skip a gate.
 
 ## Configuration
 
@@ -96,28 +87,12 @@ contains:
 Receipts intentionally contain neither the source state nor the API key. A
 receipt is evidence of a judgment, not permission to act.
 
-## VIA boundary
+## BitCadence effects boundary
 
-The separately approved Lorain path may let Jev choose which already-extracted,
-evidence-backed schedule candidate VIA publishes. The choice is authoritative
-only within that candidate set and must be revalidated against retained source
-text. A Jev failure or out-of-set answer falls back to an uncontested newest
-bulletin candidate or a hold for outreach. The implementation is outside this
-release candidate. Deterministic code remains responsible for source permits,
-campus identity, candidate extraction and validation, dates, recurrence
-expansion, budgets, grants, reviewer eligibility, and publication mechanics.
-
-Each VIA use case owns a versioned question registry. Changing instructions,
-criteria, or candidate meanings creates a new version and digest. A caller
-must retain the receipt alongside the artifact/evidence identifiers it used.
-If Jev is disabled, unconfigured, unavailable, rate-limited, times out, returns
-malformed data, or violates a pinned model, the provider returns a sanitized
-fallback receipt and the caller follows its existing deterministic path.
-
-No current Score capability permits Jev to create grants, approve checkpoints,
-or execute cloud/repository effects. Any future `typesafe:invoke` Score adapter
-requires its own digest-bound grant, budget, effect receipt, and adversarial
-review before live use.
+No current BitCadence Score capability lets Jev create grants, approve
+checkpoints, or execute cloud/repository effects. Any future `typesafe:invoke`
+Score adapter requires its own digest-bound grant, budget, effect receipt, and
+adversarial review before live use.
 
 ## J03 shadow operations
 
