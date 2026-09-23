@@ -1,0 +1,272 @@
+{
+  "score_version": 1,
+  "id": "drumline-agent-exchange",
+  "revision": 2,
+  "objective": "Design, independently review, implement, verify, merge, and locally deploy the Drumline Agent Exchange without allowing discussion to become authority or durable truth implicitly.",
+  "constraints": [
+    "The dirty human checkout at C:/AI/baton/Batoncadence is read-only and is never staged, cleaned, reset, stashed, committed, or used as release evidence.",
+    "All repository work uses isolated worktrees based on freshly fetched origin/main; reviewers inspect the exact commit named in the evidence.",
+    "Agent Exchange discussion is non-authoritative, never automatically injected into worker prompts, never an effect authorization, and reaches agent_context only through an authenticated audited sanitized tenant-scoped idempotent promotion.",
+    "Existing mco and MCO_* names, ~/.mco paths, bearer-token format, AES-256-GCM vault AAD, UUID5 recipes, API, database, CLI, and console compatibility remain intact.",
+    "R01 and R02 rejection, missing required security evidence, or a failed CI or CodeQL check blocks merge; there is no manual merge-around.",
+    "No cloud or AWS work is authorized. Deployment is limited to the local BitCadence gateway after merge and with a proven rollback target.",
+    "Jev is advisory only; deterministic policy controls reviewer independence, authority, merge, deployment, and spend.",
+    "Every phase failure exhausts its bounded attempts and escalates to the mission owner with evidence; it never silently releases a dependent phase."
+  ],
+  "budget_cents": 0,
+  "max_parallel": 1,
+  "launch_requires": [
+    "D02"
+  ],
+  "tasks": [
+    {
+      "id": "D01",
+      "goal": "D01",
+      "title": "Author the Drumline Agent Exchange design and governed Score",
+      "instructions": "ALLOWED PATHS: docs/DRUMLINE-AGENT-EXCHANGE-DESIGN.md, examples/scores/drumline-agent-exchange.score.json, tests/test_drumline_agent_exchange_score.py. Work only in the isolated D01 worktree. Reconcile origin/main, queue, live gateway executable/CWD evidence, GitHub, current docs, and the dirty prototype read-only. Author the smallest coherent design, validate the Score, run focused tests including the negative R01 gate proof, commit only the allowed paths, and return the exact commit, base SHA, test receipt, drift report, Jev receipt, and no-secret receipt. One failed attempt is terminal and escalates to the mission owner; do not implement B01, open a PR, merge, deploy, or perform cloud work.",
+      "role": "codex",
+      "review_role": "antigravity",
+      "depends_on": [],
+      "resources": [
+        "C:/AI/baton/wt/drumline-d01-codex-beast-r3",
+        "docs/DRUMLINE-AGENT-EXCHANGE-DESIGN.md",
+        "examples/scores/drumline-agent-exchange.score.json",
+        "tests/test_drumline_agent_exchange_score.py"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write"
+      ],
+      "commit": {
+        "worktree_path": "C:/AI/baton/wt/drumline-d01-codex-beast-r3",
+        "target_branch": "score/drumline-agent-exchange-d01-r3",
+        "allowed_paths": [
+          "docs/DRUMLINE-AGENT-EXCHANGE-DESIGN.md",
+          "examples/scores/drumline-agent-exchange.score.json",
+          "tests/test_drumline_agent_exchange_score.py"
+        ],
+        "commit_message": "docs(drumline): design governed agent exchange",
+        "expected_before_sha": "0b9104d2056432726fedeb268a500057d42abc03"
+      },
+      "evidence": [
+        "commit_sha",
+        "base_sha",
+        "score_digest",
+        "focused_tests",
+        "negative_gate_test",
+        "drift_report",
+        "jev_receipt",
+        "secret_scan"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 7200,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "R01",
+      "goal": "R01",
+      "title": "Independently review the exact D01 design and Score commit",
+      "instructions": "ALLOWED PATHS: read-only inspection of the exact D01 revision 2 commit and its parent, limited to docs/DRUMLINE-AGENT-EXCHANGE-DESIGN.md, examples/scores/drumline-agent-exchange.score.json, tests/test_drumline_agent_exchange_score.py plus current Score/runtime/auth/storage/console code needed to validate claims. The reviewer must not be a D01 author. Verify product need, dedicated-table decision, trust boundary, compatibility, security, migration/rollback, accessibility, live updates, acceptance coverage, Score path bounds, evidence, retries, escalation, and the negative gate test. Explicitly report any earlier D01/R01/B01/R02 receipts as stale rather than accepting evidence bound to another D01 commit. Return strict JSON with verdict pass|fail, review_of_commit, blocking_findings, non_blocking_findings, and tests. A fail or malformed/mismatched verdict is terminal and blocks B01 and M01; escalate to the mission owner for a new governed revision.",
+      "role": "antigravity",
+      "review_role": "chief",
+      "depends_on": [
+        "D01"
+      ],
+      "resources": [
+        "docs/DRUMLINE-AGENT-EXCHANGE-DESIGN.md",
+        "examples/scores/drumline-agent-exchange.score.json",
+        "tests/test_drumline_agent_exchange_score.py"
+      ],
+      "capabilities": [
+        "repository:read",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "verdict",
+        "review_of_commit",
+        "blocking_findings",
+        "tests"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 3600,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "B01",
+      "goal": "B01",
+      "title": "Implement the independently accepted Agent Exchange design",
+      "instructions": "ALLOWED PATHS: src/mco/orchestrator/agent_exchange.py, src/mco/orchestrator/exchange_routes.py, src/mco/orchestrator/auth.py, src/mco/cli.py, src/mco/localstore.py, src/mco/mcp_server.py, src/mco/sdk.py, src/mco/console_src/*, src/mco/static/console.html, src/mco/migrations/*agent_exchange*, docs/migrations/*agent_exchange*, docs/DRUMLINE.md, scripts/build_console.py, tests/test_agent_exchange.py, tests/test_console.py, tests/test_mcp_server.py, tests/test_sdk.py. Start only from an accepted R01 receipt bound to the exact D01 revision 2 commit; an earlier implementation or review receipt is stale evidence until the mission owner explicitly reconciles it through this gate. Implement only the accepted revision, in an isolated feature worktree. Run focused API/storage/UI/auth tests, scripts/build_console.py build and verify with LF and CRLF comparison fixtures, and relevant full suites. Commit only allowed paths and return the exact head and evidence. At most one bounded correction attempt is permitted before R02; an R02 rejection blocks M01 and requires mission-owner escalation plus a new governed Score revision/run rather than an automatic loop. Do not open a PR, merge, deploy, or perform cloud work.",
+      "role": "codex",
+      "review_role": "antigravity",
+      "depends_on": [
+        "R01"
+      ],
+      "resources": [
+        "src/mco/orchestrator/agent_exchange.py",
+        "src/mco/orchestrator/exchange_routes.py",
+        "src/mco/orchestrator/auth.py",
+        "src/mco/cli.py",
+        "src/mco/localstore.py",
+        "src/mco/mcp_server.py",
+        "src/mco/sdk.py",
+        "src/mco/console_src/*",
+        "src/mco/static/console.html",
+        "src/mco/migrations/*agent_exchange*",
+        "docs/migrations/*agent_exchange*",
+        "docs/DRUMLINE.md",
+        "scripts/build_console.py",
+        "tests/test_agent_exchange.py",
+        "tests/test_console.py",
+        "tests/test_mcp_server.py",
+        "tests/test_sdk.py"
+      ],
+      "capabilities": [
+        "repository:write",
+        "evidence:write"
+      ],
+      "commit": {
+        "worktree_path": "C:/AI/baton/wt/drumline-agent-exchange-b01",
+        "target_branch": "feat/drumline-agent-exchange",
+        "allowed_paths": [
+          "src/mco/orchestrator/agent_exchange.py",
+          "src/mco/orchestrator/exchange_routes.py",
+          "src/mco/orchestrator/auth.py",
+          "src/mco/cli.py",
+          "src/mco/localstore.py",
+          "src/mco/mcp_server.py",
+          "src/mco/sdk.py",
+          "src/mco/console_src/*",
+          "src/mco/static/console.html",
+          "src/mco/migrations/*agent_exchange*",
+          "docs/migrations/*agent_exchange*",
+          "docs/DRUMLINE.md",
+          "scripts/build_console.py",
+          "tests/test_agent_exchange.py",
+          "tests/test_console.py",
+          "tests/test_mcp_server.py",
+          "tests/test_sdk.py"
+        ],
+        "commit_message": "feat(drumline): add governed agent exchange"
+      },
+      "evidence": [
+        "commit_sha",
+        "r01_receipt",
+        "focused_tests",
+        "relevant_full_tests",
+        "console_build_verify",
+        "secret_scan"
+      ],
+      "max_attempts": 2,
+      "timeout_seconds": 10800,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "R02",
+      "goal": "R02",
+      "title": "Independently review exact-head implementation security and authority",
+      "instructions": "ALLOWED PATHS: read-only inspection of the exact B01 commit, its diff, all B01 allowed paths, CI definitions, security policy, Score evidence verifier, and generated console consistency. The reviewer must not be a B01 author and must bind the verdict to the exact head. Verify append-only behavior, auth/scopes, org isolation, linkage, caps/sanitization, cursor pagination, idempotency, audit, safe failure, promotion boundary, no automatic injection, compatibility contracts, accessibility, live updates, focused/full tests, console build verification, secret scan, and CodeQL eligibility. Return strict JSON with verdict pass|fail, review_of_commit, blocking_findings, security_findings, authority_findings, tests, and codeql_requirement. Any fail, skipped mandatory suite, author overlap, stale SHA, missing security receipt, or malformed verdict is terminal and blocks M01; escalate to the mission owner for a new B01 revision.",
+      "role": "antigravity",
+      "review_role": "chief",
+      "depends_on": [
+        "B01"
+      ],
+      "resources": [
+        "feat/drumline-agent-exchange",
+        ".github/workflows/*",
+        "src/mco/orchestrator/score_evidence.py"
+      ],
+      "capabilities": [
+        "repository:read",
+        "evidence:write",
+        "evidence:review"
+      ],
+      "evidence": [
+        "verdict",
+        "review_of_commit",
+        "blocking_findings",
+        "security_findings",
+        "authority_findings",
+        "tests",
+        "codeql_requirement"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 5400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "M01",
+      "goal": "M01",
+      "title": "Open the PR, enforce exact-head CI gates, and merge safely",
+      "instructions": "ALLOWED PATHS: GitHub PR metadata and the already reviewed feat/drumline-agent-exchange commit only; no source edits, force-push, branch rewrite, generated-file change, or merge-around. Start only from an accepted R02 receipt bound to the exact head. Open the feature PR, request an independent review, and require CI, focused/full relevant tests, PostgreSQL acceptance when selected by the workflow, security tests, secret scan, and CodeQL to pass on that same head. Reconcile origin/main before merge. Merge only the reviewed head, record PR URL/number, review receipt, check names/conclusions/SHAs, merge SHA, and prior rollback SHA. A failure or stale head is terminal and blocks D02; fixes require a new B01/R02 cycle and mission-owner escalation.",
+      "role": "codex",
+      "review_role": "chief",
+      "depends_on": [
+        "R02"
+      ],
+      "resources": [
+        "github:mastalink/BitCadence",
+        "branch:feat/drumline-agent-exchange"
+      ],
+      "capabilities": [
+        "github:pr:write",
+        "github:checks:read",
+        "github:merge"
+      ],
+      "evidence": [
+        "pr_url",
+        "reviewed_head_sha",
+        "independent_review_receipt",
+        "ci_receipt",
+        "security_receipt",
+        "codeql_receipt",
+        "merge_sha",
+        "rollback_sha"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 10800,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    },
+    {
+      "id": "D02",
+      "goal": "D02",
+      "title": "Deploy the merged SHA locally and prove the real console",
+      "instructions": "ALLOWED PATHS: a clean merged checkout or installed package, the local BitCadence gateway service definition, bounded service logs, health/API endpoints, and the real /console browser surface; never modify or clean C:/AI/baton/Batoncadence. Verify the local service source, executable, and CWD/package before reload. Record current rollback SHA and exact bounded rollback procedure. Deploy/reload only the M01 merge SHA, verify /healthz, version/commit evidence, Agent Exchange API behavior, and in a real browser that the served DOM shows Drumline and the Agent Exchange flows in plain and expert modes. Roll back on failed health or acceptance. Return deployment, browser, and rollback receipts. Failure is terminal and escalates to the mission owner; no cloud/AWS work.",
+      "role": "codex",
+      "review_role": "antigravity",
+      "depends_on": [
+        "M01"
+      ],
+      "resources": [
+        "local-gateway:127.0.0.1:18789",
+        "clean-merged-checkout",
+        "browser:/console"
+      ],
+      "capabilities": [
+        "local:service:reload",
+        "local:http:verify",
+        "browser:use",
+        "evidence:write"
+      ],
+      "evidence": [
+        "merge_sha",
+        "deployed_sha",
+        "service_executable_and_source",
+        "health_receipt",
+        "api_receipt",
+        "browser_receipt",
+        "rollback_target",
+        "rollback_proof"
+      ],
+      "max_attempts": 1,
+      "timeout_seconds": 5400,
+      "max_cost_cents": 0,
+      "checkpoint": null
+    }
+  ]
+}
