@@ -113,13 +113,14 @@ def test_question_sets_registry_completeness():
     ]
     for uc in required_use_cases:
         assert uc in QUESTION_SET_REGISTRY, f"Missing registered use case: {uc}"
-        qset = get_question_set(uc, QUESTION_SET_VERSION)
+        version = next(iter(QUESTION_SET_REGISTRY[uc]))
+        qset = get_question_set(uc, version)
         assert isinstance(qset, dict) and len(qset) > 0
         # Validate wire schema requirements (choice/score have criteria, noul has instructions)
         _validate_questions(qset)
         # Digest is a reproducible 64-character sha256 hex string
-        digest1 = get_question_set_digest(uc, QUESTION_SET_VERSION)
-        digest2 = get_question_set_digest(uc, QUESTION_SET_VERSION)
+        digest1 = get_question_set_digest(uc, version)
+        digest2 = get_question_set_digest(uc, version)
         assert len(digest1) == 64
         assert digest1 == digest2
 

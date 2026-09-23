@@ -344,6 +344,8 @@ def record_disagreement() -> None:
 # ── Atomic, Versioned Question Sets (J02) ───────────────────────────────────
 
 QUESTION_SET_VERSION = "2026-09-20"
+# TypeSafe requires score criteria as an ordered list; the dict form was rejected upstream.
+HANDLER_FIT_VERSION = "2026-09-23"
 
 INCOMING_JOB_INTENT_QUESTIONS: Dict[str, Dict[str, Any]] = {
     "work_class": {
@@ -423,9 +425,10 @@ HANDLER_SHORTLIST_FIT_QUESTIONS: Dict[str, Dict[str, Any]] = {
     "fit_score": {
         "type": "score",
         "instructions": "Rate the semantic fit of the proposed handler for the specified task requirements on a scale from 0.0 to 1.0.",
-        "criteria": {
-            "semantic_alignment": "Degree of task expertise, domain match, and capability alignment",
-        },
+        "criteria": [
+            "No meaningful fit: wrong domain or missing required capability",
+            "Strong fit: task expertise, domain match, and capabilities all align",
+        ],
     },
 }
 
@@ -442,7 +445,7 @@ QUESTION_SET_REGISTRY: Dict[str, Dict[str, Dict[str, Any]]] = {
     "job_retryability": {QUESTION_SET_VERSION: JOB_RETRYABILITY_QUESTIONS},
     "operator_attention": {QUESTION_SET_VERSION: OPERATOR_ATTENTION_QUESTIONS},
     "prompt_injection_risk": {QUESTION_SET_VERSION: PROMPT_INJECTION_RISK_QUESTIONS},
-    "handler_shortlist_fit": {QUESTION_SET_VERSION: HANDLER_SHORTLIST_FIT_QUESTIONS},
+    "handler_shortlist_fit": {HANDLER_FIT_VERSION: HANDLER_SHORTLIST_FIT_QUESTIONS},
     "incoming_job_triage": {QUESTION_SET_VERSION: INCOMING_JOB_TRIAGE_QUESTIONS},
 }
 
@@ -480,9 +483,10 @@ def build_shortlist_choice_questions(
         "fit_score": {
             "type": "score",
             "instructions": "Rate the semantic fit of the top selected handler on a scale from 0.0 to 1.0.",
-            "criteria": {
-                "semantic_alignment": "Degree of task expertise, domain match, and capability alignment",
-            },
+            "criteria": [
+                "No meaningful fit: wrong domain or missing required capability",
+                "Strong fit: task expertise, domain match, and capabilities all align",
+            ],
         },
     }
 
@@ -525,6 +529,10 @@ def _validate_questions(questions: Mapping[str, Any]) -> None:
             raise JevProtocolError("question type must be choice, noul, or score")
         if kind in {"choice", "score"} and not question.get("criteria"):
             raise JevProtocolError("choice and score questions require criteria")
+        if kind == "score":
+            criteria = question.get("criteria")
+            if not isinstance(criteria, (list, tuple)) or len(criteria) < 2:
+                raise JevProtocolError("score criteria must be an ordered list of at least two rubric levels")
 
 
 def _validated_response(payload: Any, questions: Mapping[str, Any]) -> Dict[str, Any]:
@@ -850,7 +858,7 @@ def evaluate_shadow_shortlist(
     try:
         receipt = provider.decide(
             use_case_id="handler_shortlist_fit",
-            question_set_version=QUESTION_SET_VERSION,
+            question_set_version=HANDLER_FIT_VERSION,
             state=state,
             questions=questions,
         )

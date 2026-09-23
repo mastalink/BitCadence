@@ -489,14 +489,14 @@ class TestQuestionSetVersioning:
         assert d1 == d2
         assert len(d1) == 64
         registry = get_registry(DRUMLINE_OPS)
-        assert registry["version"] == "1"
+        assert registry["version"] == "2"
         assert registry["use_case_id"] == DRUMLINE_OPS
         assert _digest(registry["questions"]) == d1
         mutated = copy.deepcopy(registry["questions"])
         mutated["kind"]["instructions"] = "CHANGED"
         assert _digest(mutated) != d1
         bound = {"version": registry["version"], "questions": registry["questions"]}
-        assert _digest({**bound, "version": "2"}) != _digest(bound)
+        assert _digest({**bound, "version": "3"}) != _digest(bound)
 
     def test_all_registries_are_frozen(self):
         registries = all_registries()
@@ -505,7 +505,8 @@ class TestQuestionSetVersioning:
             CLAUDE_CODE_MODEL_ROUTE, CODEX_TASK_ROUTE,
         }
         for registry in registries.values():
-            assert registry["version"] == "1"
+            expected = "2" if registry["use_case_id"] == DRUMLINE_OPS else "1"
+            assert registry["version"] == expected
             assert registry["questions"]
             assert "incident" not in KINDS
 
@@ -627,7 +628,7 @@ class TestReceiptSchema:
         ):
             assert key in data
         assert data["use_case_id"] == DRUMLINE_OPS
-        assert data["question_set_version"] == "1"
+        assert data["question_set_version"] == "2"
         assert data["question_set_digest"] == registry_digest(DRUMLINE_OPS)
         assert data["mode"] == "shadow"
         blob = json.dumps(data)
@@ -682,3 +683,21 @@ class TestReceiptSchema:
         assert snap["disabled"] == 1
         reset_metrics()
         assert metrics_snapshot()["calls"] == 0
+
+
+class TestTypeSafeWireSchema:
+    """Every registered question set must pass the same shape rules TypeSafe enforces."""
+
+    def test_every_registry_passes_the_wire_schema(self):
+        from mco.orchestrator.jev import _validate_questions
+        for registry in all_registries().values():
+            _validate_questions(registry["questions"])
+
+    def test_score_criteria_must_be_an_ordered_list(self):
+        from mco.orchestrator.jev import JevProtocolError, _validate_questions
+        bad = {"relevance": {"type": "score", "instructions": "x", "criteria": {"0": "low", "1": "high"}}}
+        with pytest.raises(JevProtocolError, match="ordered list"):
+            _validate_questions(bad)
+        with pytest.raises(JevProtocolError, match="ordered list"):
+            _validate_questions({"fit": {"type": "score", "instructions": "x", "criteria": ["only one"]}})
+        _validate_questions({"fit": {"type": "score", "instructions": "x", "criteria": ["low", "high"]}})

@@ -20,9 +20,10 @@ CLAUDE_CODE_MODEL_ROUTE = "claude-code-model-route"
 CODEX_TASK_ROUTE = "codex-task-route"
 
 
-_DRUMLINE_OPS_V1: Dict[str, Any] = {
+# Version 2: TypeSafe requires score criteria as an ordered list; v1's dict form was rejected.
+_DRUMLINE_OPS_V2: Dict[str, Any] = {
     "use_case_id": DRUMLINE_OPS,
-    "version": "1",
+    "version": "2",
     "questions": {
         "kind": {
             "type": "choice",
@@ -64,10 +65,10 @@ _DRUMLINE_OPS_V1: Dict[str, Any] = {
         "relevance": {
             "type": "score",
             "instructions": "How relevant is this entry to the current recall query?",
-            "criteria": {
-                "0": "Unrelated to the recall query",
-                "1": "Directly answers or strongly informs the recall query",
-            },
+            "criteria": [
+                "Unrelated to the recall query",
+                "Directly answers or strongly informs the recall query",
+            ],
         },
     },
 }
@@ -237,7 +238,7 @@ _CODEX_TASK_ROUTE_V1: Dict[str, Any] = {
 
 
 _REGISTRIES: Dict[str, Dict[str, Any]] = {
-    DRUMLINE_OPS: _DRUMLINE_OPS_V1,
+    DRUMLINE_OPS: _DRUMLINE_OPS_V2,
     WATCHDOG_SYMPTOM: _WATCHDOG_SYMPTOM_V1,
     NOTIFY_QUALITY: _NOTIFY_QUALITY_V1,
     CLAUDE_CODE_MODEL_ROUTE: _CLAUDE_CODE_MODEL_ROUTE_V1,
