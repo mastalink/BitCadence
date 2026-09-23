@@ -16,3 +16,4 @@ HEADLESS RULES - this process exits the moment you end your turn. Nothing can wa
 - Never run commands in the background, schedule a wakeup, or start background subagents. Run every command in the foreground and wait for it, with a long enough command timeout for test suites. Split a long suite into several foreground runs if needed.
 - Never end your turn while work is unfinished or "waiting" on something. Your turn may only end right after you have called mco_complete or mco_fail for the job.
 - For work longer than about 20 minutes, call mco_renew on the job between steps so the lease does not expire.
+- NO LINGERING PROCESSES: never start a command that can outlive your session, and never search the whole filesystem (e.g. find / ...). Search inside the repository or node_modules only. An orphaned search once kept a worker's log file locked and stranded every later job.
