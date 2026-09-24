@@ -1353,6 +1353,32 @@ def score_status(
         raise typer.Exit(code=1)
 
 
+@score_app.command("scaffold")
+def score_scaffold(
+    spec: Path = typer.Argument(..., exists=True, readable=True,
+                                help="JSON spec: score_id, objective, steps[{id,title,brief}], worktree_path, "
+                                     "target_branch, expected_before_sha, and optional builders, third_reviewer, "
+                                     "allowed_paths, test_command, constraints."),
+    out: Path = typer.Option(..., "--out", help="Where to write the Score document."),
+):
+    """Turn a plain-language brief into a validated Score with build, review, and two fix attempts per step."""
+    from mco.orchestrator.score_scaffold import scaffold_score
+    from mco.orchestrator.scores import compile_score, digest, load_score
+
+    try:
+        data = json.loads(spec.read_text(encoding="utf-8"))
+        if "builders" in data:
+            data["builders"] = tuple(data["builders"])
+        document = scaffold_score(**data)
+        text = json.dumps(document, indent=2)
+        compile_score(load_score(text))
+    except (ValueError, TypeError, KeyError) as exc:
+        console.print(f"[red][X] Could not scaffold the score:[/red] {exc}")
+        raise typer.Exit(code=1)
+    out.write_text(text + "\n", encoding="utf-8")
+    console.print(f"[green][OK][/green] Wrote {out} ({len(document['tasks'])} tasks), digest {digest(load_score(text))}")
+
+
 @score_app.command("list")
 def score_list(database: Path = typer.Option(DEFAULT_SCORE_DB, "--db")):
     """Runs in this conductor database."""
