@@ -3,6 +3,9 @@
 Hard filters represent non-negotiable boundaries (employment conflicts, legal
 and terms-of-service compliance, ethical boundaries, and fleet capabilities).
 They are evaluated deterministically in code and are NEVER delegated to Jev.
+
+The `\\bbank\\b` filter is deliberately conservative (it may exclude benign
+"bank statement parser" jobs), because Joseph works at the Federal Reserve.
 """
 
 from __future__ import annotations
@@ -48,58 +51,59 @@ REASON_FLAG_NO_BUDGET = (
 MIN_FIXED_BUDGET = 300.0
 MIN_HOURLY_BUDGET = 35.0
 
+_RE_FLAGS = re.IGNORECASE | re.DOTALL
 
-# Regex patterns for deterministic matching (case-insensitive)
+# Regex patterns for deterministic matching (case-insensitive, dotall for multi-line support)
 _FINANCIAL_PATTERNS = [
-    re.compile(r"\b(?:credit\s+union|fintech\s+lender|mortgage\s+lender|commercial\s+bank|investment\s+bank|retail\s+bank|depository\s+institution|federal\s+reserve)\b", re.IGNORECASE),
-    re.compile(r"\b(?:first\s+national\s+bank|wells\s+fargo|chase\s+bank|bank\s+of\s+america|citibank|capital\s+one|goldman\s+sachs|morgan\s+stanley)\b", re.IGNORECASE),
-    re.compile(r"\b(?:bank|banking)\b", re.IGNORECASE),
+    re.compile(r"\b(?:credit\s+union|fintech\s+lender|mortgage\s+lender|commercial\s+bank|investment\s+bank|retail\s+bank|depository\s+institution|federal\s+reserve)\b", _RE_FLAGS),
+    re.compile(r"\b(?:first\s+national\s+bank|wells\s+fargo|chase\s+bank|bank\s+of\s+america|citibank|capital\s+one|goldman\s+sachs|morgan\s+stanley)\b", _RE_FLAGS),
+    re.compile(r"\b(?:bank|banking)\b", _RE_FLAGS),
 ]
 
 _FINANCIAL_SAFE_EXCLUSIONS = re.compile(
     r"\b(?:memory\s+bank|question\s+bank|word\s+bank|blood\s+bank|food\s+bank|power\s+bank|battery\s+bank)\b",
-    re.IGNORECASE,
+    _RE_FLAGS,
 )
 
 _LOGIN_SCRAPING_PATTERNS = [
-    re.compile(r"\b(?:scrape|scraping|crawler|crawling|extractor|extract)\b.*\b(?:behind\s+login|after\s+login|authenticated|with\s+login|login\s+session|session\s+cookie|logged\s+in|bypassing\s+login|bypass\s+login|login\s+screen|login\s+wall|behind\s+paywall|paywall)\b", re.IGNORECASE),
-    re.compile(r"\b(?:behind\s+login|after\s+login|login\s+session|logged\s+in|behind\s+paywall|paywall)\b.*\b(?:scrape|scraping|crawler|crawling|extract)\b", re.IGNORECASE),
-    re.compile(r"\b(?:bypass|bypassing|solve|solving|crack|handle|circumvent)\b.*\b(?:login|auth|authentication|captcha|recaptcha|hcaptcha|cloudflare|datadome|bot\s+challenge|anti-bot|paywall)\b", re.IGNORECASE),
-    re.compile(r"\b(?:paywall|bot\s+challenge|anti-bot|cloudflare|captcha|login\s+wall)\b.*\b(?:bypass|bypassing|circumvent|cracker|scrape|scraping)\b", re.IGNORECASE),
-    re.compile(r"\b(?:scrape|scraping)\b.*\b(?:linkedin|instagram|facebook|tiktok)\b", re.IGNORECASE),
-    re.compile(r"\b(?:behind\s+paywall|behind\s+login)\b", re.IGNORECASE),
+    re.compile(r"\b(?:scrape|scraping|crawler|crawling|extractor|extract)\b.*\b(?:behind\s+login|after\s+login|authenticated|with\s+login|login\s+session|session\s+cookie|logged\s+in|bypassing\s+login|bypass\s+login|login\s+screen|login\s+wall|behind\s+paywall|paywall)\b", _RE_FLAGS),
+    re.compile(r"\b(?:behind\s+login|after\s+login|login\s+session|logged\s+in|behind\s+paywall|paywall)\b.*\b(?:scrape|scraping|crawler|crawling|extract)\b", _RE_FLAGS),
+    re.compile(r"\b(?:bypass|bypassing|solve|solving|crack|handle|circumvent)\b.*\b(?:login|auth|authentication|captcha|recaptcha|hcaptcha|cloudflare|datadome|bot\s+challenge|anti-bot|paywall)\b", _RE_FLAGS),
+    re.compile(r"\b(?:paywall|bot\s+challenge|anti-bot|cloudflare|captcha|login\s+wall)\b.*\b(?:bypass|bypassing|circumvent|cracker|scrape|scraping)\b", _RE_FLAGS),
+    re.compile(r"\b(?:scrape|scraping)\b.*\b(?:linkedin|instagram|facebook|tiktok)\b", _RE_FLAGS),
+    re.compile(r"\b(?:behind\s+paywall|behind\s+login)\b", _RE_FLAGS),
 ]
 
 _SPAM_FAKE_REVIEWS_PATTERNS = [
-    re.compile(r"\b(?:fake|paid|fictitious|manipulate[d]?|post[ing]?)\b.*\b(?:reviews?|ratings?|testimonials?)\b", re.IGNORECASE),
-    re.compile(r"\b(?:trustpilot|amazon|google\s+maps|yelp)\b.*\b(?:reviews?|ratings?)\b.*\b(?:post|bot|boost|fake|generate)\b", re.IGNORECASE),
-    re.compile(r"\b(?:mass|bulk|unsolicited)\b.*\b(?:dm|dms|direct\s+messages?|messages?|messaging|emails?|cold\s+outreach)\b", re.IGNORECASE),
-    re.compile(r"\b(?:cold\s+dm\s+bot|spam\s+bot|telegram\s+mass|whatsapp\s+mass|sms\s+blast)\b", re.IGNORECASE),
+    re.compile(r"\b(?:fake|paid|fictitious|manipulate[d]?|post[ing]?)\b.*\b(?:reviews?|ratings?|testimonials?)\b", _RE_FLAGS),
+    re.compile(r"\b(?:trustpilot|amazon|google\s+maps|yelp)\b.*\b(?:reviews?|ratings?)\b.*\b(?:post|bot|boost|fake|generate)\b", _RE_FLAGS),
+    re.compile(r"\b(?:mass|bulk|unsolicited)\b.*\b(?:dm|dms|direct\s+messages?|messages?|messaging|emails?|cold\s+outreach)\b", _RE_FLAGS),
+    re.compile(r"\b(?:cold\s+dm\s+bot|spam\s+bot|telegram\s+mass|whatsapp\s+mass|sms\s+blast)\b", _RE_FLAGS),
 ]
 
 _ACADEMIC_DISHONESTY_PATTERNS = [
-    re.compile(r"\b(?:do\s+my|finish\s+my|write\s+my|take\s+my)\b.*\b(?:homework|assignment|exam|quiz|test|thesis|dissertation)\b", re.IGNORECASE),
-    re.compile(r"\b(?:homework|assignment|exam|quiz|test|thesis|dissertation)\b.*\b(?:for\s+class|for\s+university|for\s+college|for\s+school|take\s+it\s+for\s+me)\b", re.IGNORECASE),
-    re.compile(r"\b(?:academic\s+dishonesty|cheating\s+software|exam\s+bypass)\b", re.IGNORECASE),
+    re.compile(r"\b(?:do\s+my|finish\s+my|write\s+my|take\s+my)\b.*\b(?:homework|assignment|exam|quiz|test|thesis|dissertation)\b", _RE_FLAGS),
+    re.compile(r"\b(?:homework|assignment|exam|quiz|test|thesis|dissertation)\b.*\b(?:for\s+class|for\s+university|for\s+college|for\s+school|take\s+it\s+for\s+me)\b", _RE_FLAGS),
+    re.compile(r"\b(?:academic\s+dishonesty|cheating\s+software|exam\s+bypass)\b", _RE_FLAGS),
 ]
 
 _CREDENTIAL_TAKEOVER_PATTERNS = [
-    re.compile(r"\b(?:account\s+takeover|credential\s+stuffing|session\s+hijack(?:ing)?|steal\s+cookie[s]?|steal\s+token[s]?)\b", re.IGNORECASE),
-    re.compile(r"\b(?:bypass|intercept)\b.*\b(?:2fa|mfa|otp|two-factor|one-time\s+password)\b", re.IGNORECASE),
-    re.compile(r"\b(?:buy|rent|share|borrow)\b.*\b(?:upwork|fiverr|freelancer)\s+account\b", re.IGNORECASE),
-    re.compile(r"\b(?:give\s+me\s+your|send\s+me\s+your|need\s+your)\b.*\b(?:credentials|passwords?|login\s+details|bank\s+login)\b", re.IGNORECASE),
+    re.compile(r"\b(?:account\s+takeover|credential\s+stuffing|session\s+hijack(?:ing)?|steal\s+cookie[s]?|steal\s+token[s]?)\b", _RE_FLAGS),
+    re.compile(r"\b(?:bypass|intercept)\b.*\b(?:2fa|mfa|otp|two-factor|one-time\s+password)\b", _RE_FLAGS),
+    re.compile(r"\b(?:buy|rent|share|borrow)\b.*\b(?:upwork|fiverr|freelancer)\s+account\b", _RE_FLAGS),
+    re.compile(r"\b(?:give\s+me\s+your|send\s+me\s+your|need\s+your)\b.*\b(?:credentials|passwords?|login\s+details|bank\s+login)\b", _RE_FLAGS),
 ]
 
 _ADULT_GAMBLING_PATTERNS = [
-    re.compile(r"\b(?:porn|pornography|adult\s+entertainment|adult\s+website|erotic|escort\s+service|nsfw|onlyfans)\b", re.IGNORECASE),
-    re.compile(r"\b(?:casino|gambling|sports\s+betting|betting\s+bot|poker\s+bot|roulette\s+bot|slot\s+machine)\b", re.IGNORECASE),
+    re.compile(r"\b(?:porn|pornography|adult\s+entertainment|adult\s+website|erotic|escort\s+service|nsfw|onlyfans)\b", _RE_FLAGS),
+    re.compile(r"\b(?:casino|gambling|sports\s+betting|betting\s+bot|poker\s+bot|roulette\s+bot|slot\s+machine)\b", _RE_FLAGS),
 ]
 
 _PHYSICAL_HARDWARE_PATTERNS = [
-    re.compile(r"\b(?:on-site\s+only|onsite\s+only|in-person\s+only|physical\s+presence\s+required)\b", re.IGNORECASE),
-    re.compile(r"\b(?:client(?:'s)?\s+physical\s+hardware|physical\s+hardware\s+we\s+don't\s+have)\b", re.IGNORECASE),
-    re.compile(r"\b(?:test\s+on|must\s+have)\b.*\b(?:physical\s+iphone|physical\s+android|physical\s+device|physical\s+car|physical\s+vehicle|server\s+rack|on-premise\s+hardware)\b", re.IGNORECASE),
-    re.compile(r"\b(?:rack\s+mount|hardware\s+lab|physical\s+soldering|breadboard)\b", re.IGNORECASE),
+    re.compile(r"\b(?:on-site\s+only|onsite\s+only|in-person\s+only|physical\s+presence\s+required)\b", _RE_FLAGS),
+    re.compile(r"\b(?:client(?:'s)?\s+physical\s+hardware|physical\s+hardware\s+we\s+don't\s+have)\b", _RE_FLAGS),
+    re.compile(r"\b(?:test\s+on|must\s+have)\b.*\b(?:physical\s+iphone|physical\s+android|physical\s+device|physical\s+car|physical\s+vehicle|server\s+rack|on-premise\s+hardware)\b", _RE_FLAGS),
+    re.compile(r"\b(?:rack\s+mount|hardware\s+lab|physical\s+soldering|breadboard)\b", _RE_FLAGS),
 ]
 
 

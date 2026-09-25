@@ -211,6 +211,25 @@ def compute_composite_rank(scores: Mapping[str, float]) -> float:
     return max(0.0, min(raw * 100.0, 100.0))
 
 
+# ── Rubric Score Normalization ───────────────────────────────────────────────
+# TypeSafe's score primitive rates content on an ordered spectrum of descriptive levels.
+# The returned score is a position along level indices 0 .. (N - 1), computed as
+# sum(level_index * probability) across all levels.
+# For service_job_fit, all 6 rubric questions have exactly 5 levels (indices 0 to 4),
+# meaning TypeSafe returns raw scores on the [0.0, 4.0] scale.
+#
+# To combine these with documented weights into a 0-100 composite rank, we normalize
+# raw rubric scores to [0.0, 1.0] by dividing explicitly by RUBRIC_SCORE_MAX = 4.0.
+RUBRIC_SCORE_MAX = 4.0
+
+
+def normalize_rubric_score(raw_score: float, max_level: float = RUBRIC_SCORE_MAX) -> float:
+    """Normalize a TypeSafe rubric score from [0.0, max_level] to [0.0, 1.0]."""
+    if max_level <= 0.0:
+        return 0.0
+    return max(0.0, min(1.0, float(raw_score) / max_level))
+
+
 class JobRanker:
     """Ranks job postings using Jev when available with deterministic heuristic fallback."""
 
@@ -241,14 +260,20 @@ class JobRanker:
                 )
                 receipt_dict = receipt.to_dict()
 
-                if receipt.outcome in {"success", "shadow"} and receipt.answers:
+                # Shadow-mode answers must not rank.
+                # Use Jev answers only when mode is assist or active.
+                if receipt.mode not in {"assist", "active"}:
+                    fallback_reason = (
+                        f"Jev mode '{receipt.mode}' answers must not rank; "
+                        "falling back to heuristic"
+                    )
+                elif receipt.outcome == "success" and receipt.answers:
                     parsed_scores: Dict[str, float] = {}
                     for qname in ("fleet_fit", "value", "clarity", "client_quality", "competition", "delivery_risk"):
                         ans = receipt.answers.get(qname)
                         if isinstance(ans, dict) and "score" in ans:
-                            s = float(ans["score"])
-                            # Normalize if on a 0-4 rubric scale
-                            parsed_scores[qname] = s if s <= 1.0 else s / 4.0
+                            raw_s = float(ans["score"])
+                            parsed_scores[qname] = normalize_rubric_score(raw_s)
 
                     if len(parsed_scores) == 6:
                         scores = parsed_scores

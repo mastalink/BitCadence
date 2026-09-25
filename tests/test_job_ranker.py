@@ -27,6 +27,7 @@ from mco.jobs.filters import (
 from mco.jobs.importers import import_from_csv, import_from_json, load_postings_from_file
 from mco.jobs.models import ClientInfo, JobPosting, RankedJob
 from mco.jobs.ranker import (
+    RUBRIC_SCORE_MAX,
     WEIGHT_CLARITY,
     WEIGHT_CLIENT_QUALITY,
     WEIGHT_COMPETITION,
@@ -36,6 +37,7 @@ from mco.jobs.ranker import (
     JobRanker,
     compute_composite_rank,
     deterministic_heuristic_scores,
+    normalize_rubric_score,
 )
 from mco.jobs.upwork import (
     UpworkAuthenticationError,
@@ -545,7 +547,7 @@ def test_cli_jobs_rank_command(tmp_path):
 
     assert result.exit_code == 0
     # Check Markdown table columns
-    assert "| Rank | Title | Budget | Fit | Value | Risk | Reasons | URL |" in result.output
+    assert "| Rank | Title | Budget | Fit | Value | Safety | Reasons | URL |" in result.output
     assert "Automated Test Suite in Pytest" in result.output
 
     # Check output JSON file
@@ -561,3 +563,183 @@ def test_cli_jobs_rank_command(tmp_path):
     assert "eligible" in top_item
     assert "receipt" in top_item
     assert top_item["posting"]["id"] == "job-101"
+
+
+# ── 8. Review Findings Regression Tests (PR #114) ────────────────────────────
+
+def test_hard_filter_evasion_multiline_description_excluded():
+    """Multi-line descriptions asking to scrape behind login or paywalls must be EXCLUDED."""
+    multiline_scrape_job = JobPosting(
+        source="upwork",
+        id="multi-scrape-1",
+        title="Python Data Extractor",
+        description=(
+            "We need a developer to write a scraping script in Python.\n"
+            "The data is located behind login pages and protected by Cloudflare.\n"
+            "You will need to pass session cookies to extract the records."
+        ),
+        budget_type="fixed",
+        budget_min=1000.0,
+        budget_max=1000.0,
+        skills=["Python", "Scraping"],
+        client=ClientInfo(country="United States", payment_verified=True, rating=5.0),
+    )
+    result = HardFilterEngine.evaluate(multiline_scrape_job)
+    assert result.eligible is False
+    assert any(REASON_EXCLUDE_LOGIN_SCRAPING in r for r in result.reasons)
+
+
+def test_score_normalization_explicit_scale_and_realistic_receipt():
+    """Score normalization must explicitly use 0-4 rubric scale (divide by 4.0), not ambiguous threshold."""
+    assert RUBRIC_SCORE_MAX == 4.0
+    assert normalize_rubric_score(0.0) == 0.0
+    assert normalize_rubric_score(1.0) == 0.25
+    assert normalize_rubric_score(2.0) == 0.50
+    assert normalize_rubric_score(3.0) == 0.75
+    assert normalize_rubric_score(4.0) == 1.00
+    assert normalize_rubric_score(2.5) == 0.625
+
+    posting = JobPosting(
+        source="upwork",
+        id="norm-1",
+        title="FastAPI Automation Service",
+        description="Build and test a well-defined FastAPI automation service with pytest.",
+        budget_type="fixed",
+        budget_min=2000.0,
+        budget_max=2000.0,
+        skills=["Python", "FastAPI"],
+        client=ClientInfo(country="United States", payment_verified=True, rating=5.0),
+    )
+
+    realistic_receipt = DecisionReceipt(
+        use_case_id=SERVICE_JOB_FIT,
+        question_set_version=SERVICE_JOB_FIT_VERSION,
+        question_set_digest="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        model="jev-1.13.0",
+        state_digest="a1b2c3d4e5f6",
+        answers={
+            "fleet_fit": {
+                "type": "score",
+                "score": 4.0,  # Level 4 -> normalized 1.00
+                "confidence": 0.95,
+                "legend": {str(i): f"level {i}" for i in range(5)},
+                "probabilities": {"0": 0.0, "1": 0.0, "2": 0.0, "3": 0.0, "4": 1.0},
+            },
+            "value": {
+                "type": "score",
+                "score": 3.0,  # Level 3 -> normalized 0.75
+                "confidence": 0.88,
+                "legend": {str(i): f"level {i}" for i in range(5)},
+                "probabilities": {"0": 0.0, "1": 0.0, "2": 0.0, "3": 1.0, "4": 0.0},
+            },
+            "clarity": {
+                "type": "score",
+                "score": 2.0,  # Level 2 -> normalized 0.50
+                "confidence": 0.75,
+                "legend": {str(i): f"level {i}" for i in range(5)},
+                "probabilities": {"0": 0.0, "1": 0.0, "2": 1.0, "3": 0.0, "4": 0.0},
+            },
+            "client_quality": {
+                "type": "score",
+                "score": 1.0,  # Level 1 -> normalized 0.25 (previously would have been 1.0!)
+                "confidence": 0.80,
+                "legend": {str(i): f"level {i}" for i in range(5)},
+                "probabilities": {"0": 0.0, "1": 1.0, "2": 0.0, "3": 0.0, "4": 0.0},
+            },
+            "competition": {
+                "type": "score",
+                "score": 2.5,  # 2.5 -> normalized 0.625
+                "confidence": 0.65,
+                "legend": {str(i): f"level {i}" for i in range(5)},
+                "probabilities": {"0": 0.0, "1": 0.0, "2": 0.5, "3": 0.5, "4": 0.0},
+            },
+            "delivery_risk": {
+                "type": "score",
+                "score": 3.5,  # 3.5 -> normalized 0.875
+                "confidence": 0.70,
+                "legend": {str(i): f"level {i}" for i in range(5)},
+                "probabilities": {"0": 0.0, "1": 0.0, "2": 0.0, "3": 0.5, "4": 0.5},
+            },
+        },
+        probabilities={
+            q: {"0": 0.0, "1": 0.0, "2": 0.0, "3": 0.0, "4": 1.0}
+            for q in ("fleet_fit", "value", "clarity", "client_quality", "competition", "delivery_risk")
+        },
+        confidence={
+            q: 0.90 for q in ("fleet_fit", "value", "clarity", "client_quality", "competition", "delivery_risk")
+        },
+        latency_ms=120,
+        usage={"input_tokens": 420, "output_tokens": 85},
+        request_id="req_realistic_test_123",
+        mode="assist",
+        outcome="success",
+    )
+
+    class RealisticJevProvider(JevProvider):
+        def __init__(self):
+            super().__init__(JevConfig(mode="assist", model="jev-1.13.0"))
+
+        def decide(self, **kwargs) -> DecisionReceipt:
+            return realistic_receipt
+
+    ranker = JobRanker(provider=RealisticJevProvider())
+    ranked = ranker.rank_posting(posting)
+
+    assert ranked.rank_source == "jev"
+    assert ranked.scores["fleet_fit"] == 1.00
+    assert ranked.scores["value"] == 0.75
+    assert ranked.scores["clarity"] == 0.50
+    assert ranked.scores["client_quality"] == 0.25
+    assert ranked.scores["competition"] == 0.625
+    assert ranked.scores["delivery_risk"] == 0.875
+    assert ranked.receipt["request_id"] == "req_realistic_test_123"
+
+
+def test_shadow_mode_answers_must_not_rank():
+    """Shadow-mode answers must not rank: fall back to heuristic, record reason on row, keep receipt."""
+    posting = JobPosting(
+        source="upwork",
+        id="shadow-1",
+        title="Python Automation Tool",
+        description="Build an automation script with pytest test suite.",
+        budget_type="fixed",
+        budget_min=1000.0,
+        budget_max=1000.0,
+        skills=["Python"],
+        client=ClientInfo(country="United States", payment_verified=True, rating=5.0),
+    )
+
+    shadow_receipt = DecisionReceipt(
+        use_case_id=SERVICE_JOB_FIT,
+        question_set_version=SERVICE_JOB_FIT_VERSION,
+        question_set_digest="dummy",
+        model="jev-pinned-1",
+        state_digest="dummy",
+        answers={
+            q: {"type": "score", "score": 4.0, "probabilities": {"4": 1.0}, "confidence": 0.99}
+            for q in ("fleet_fit", "value", "clarity", "client_quality", "competition", "delivery_risk")
+        },
+        mode="shadow",
+        outcome="shadow",
+    )
+
+    class ShadowMockProvider(JevProvider):
+        def __init__(self):
+            super().__init__(JevConfig(mode="shadow", model="jev-pinned-1"))
+
+        def decide(self, **kwargs) -> DecisionReceipt:
+            return shadow_receipt
+
+    ranker = JobRanker(provider=ShadowMockProvider())
+    ranked = ranker.rank_posting(posting)
+
+    assert ranked.rank_source == "heuristic_fallback"
+    assert ranked.fallback_reason is not None
+    assert "shadow" in ranked.fallback_reason.lower()
+    # Scores must match heuristic, not the 4.0 Jev scores
+    heuristic = deterministic_heuristic_scores(posting)
+    assert ranked.scores == heuristic
+    # Receipt must still be preserved for audit
+    assert ranked.receipt is not None
+    assert ranked.receipt["mode"] == "shadow"
+    assert ranked.receipt["outcome"] == "shadow"

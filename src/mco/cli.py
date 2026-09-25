@@ -814,7 +814,6 @@ from mco.jobs.cli import jobs_app
 app.add_typer(jobs_app, name="jobs")
 
 
-
 def _print_schedules_missing(path):
     from mco import scheduler
     console.print(f"[yellow]No schedules config found at {path}.[/yellow]")

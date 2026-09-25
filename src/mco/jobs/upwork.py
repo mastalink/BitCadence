@@ -120,17 +120,24 @@ class UpworkGraphQLAdapter(JobPostingsSource):
                 if val and str(val).strip():
                     return str(val).strip()
 
-        try:
-            vault = build_secret_vault(config, db)
-            return vault.get(SecretRef(org_id=org_id, scope="upwork", name="token"))
-        except (SecretNotFoundError, VaultError, Exception):
-            pass
+        vault_config = config
+        if vault_config is None:
+            try:
+                from mco.config import get_config
+                vault_config = get_config()
+            except Exception:
+                vault_config = {}
 
         try:
-            vault = build_secret_vault(config, db)
-            return vault.get(SecretRef(org_id=org_id, scope="upwork", name="api_key"))
-        except (SecretNotFoundError, VaultError, Exception):
-            pass
+            vault = build_secret_vault(vault_config, db)
+        except (SecretNotFoundError, VaultError):
+            return None
+
+        for name in ("token", "api_key"):
+            try:
+                return vault.get(SecretRef(org_id=org_id, scope="upwork", name=name))
+            except (SecretNotFoundError, VaultError):
+                pass
 
         return None
 

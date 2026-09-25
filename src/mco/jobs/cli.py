@@ -24,7 +24,7 @@ console = Console()
 
 def format_markdown_table(ranked_jobs: List[RankedJob], limit: int = 20) -> str:
     """Format ranked job listings as a clean GitHub-flavored Markdown table."""
-    headers = ["Rank", "Title", "Budget", "Fit", "Value", "Risk", "Reasons", "URL"]
+    headers = ["Rank", "Title", "Budget", "Fit", "Value", "Safety", "Reasons", "URL"]
     separator = ["---"] * len(headers)
 
     rows: List[List[str]] = [headers, separator]
@@ -109,12 +109,12 @@ def rank_command(
 ):
     """Score every available client job for fit, value and risk using Jev and hard filters."""
     postings: List[JobPosting] = []
+    cfg = get_config()
+    db = get_db_client()
 
     src_lower = (source or "").strip().lower()
 
     if src_lower == "upwork":
-        cfg = get_config()
-        db = get_db_client()
         adapter = UpworkGraphQLAdapter(config=cfg, db=db)
         if not adapter.is_configured:
             console.print("[bold red]Upwork OAuth2 token is not configured.[/bold red]")
@@ -146,8 +146,6 @@ def rank_command(
         raise typer.Exit(code=0)
 
     # Initialize Jev provider (falls back deterministically if disabled/unconfigured/timeout)
-    cfg = get_config()
-    db = get_db_client()
     provider = build_provider(cfg, db)
 
     ranker = JobRanker(provider=provider)
