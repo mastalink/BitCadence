@@ -810,6 +810,10 @@ app.add_typer(fleet_app, name="fleet")
 schedule_app = typer.Typer(help="Schedules and loops: what work gets created, and when.")
 app.add_typer(schedule_app, name="schedule")
 
+from mco.jobs.cli import jobs_app
+app.add_typer(jobs_app, name="jobs")
+
+
 
 def _print_schedules_missing(path):
     from mco import scheduler

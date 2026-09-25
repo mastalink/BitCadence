@@ -1,0 +1,144 @@
+{
+  "data": {
+    "marketplaceJobPostingsSearch": {
+      "totalCount": 4,
+      "edges": [
+        {
+          "node": {
+            "id": "~01a1b2c3d4e5f6g7h8",
+            "ciphertext": "~01a1b2c3d4e5f6g7h8",
+            "title": "Python Automation & API Integration Script with Pytest",
+            "description": "We need an experienced Python developer to build an automated data synchronization script. Deliverables: 1. Python script using httpx and pydantic. 2. Automated test suite with pytest. 3. GitHub Actions workflow. Explicit acceptance criteria will be provided in swagger/openapi docs.",
+            "budget": {
+              "amount": 800.0,
+              "currencyCode": "USD"
+            },
+            "hourlyBudget": null,
+            "skills": [
+              {"name": "Python"},
+              {"name": "API Integration"},
+              {"name": "pytest"},
+              {"name": "Automation"}
+            ],
+            "client": {
+              "location": {
+                "country": "United States"
+              },
+              "paymentVerificationStatus": "VERIFIED",
+              "totalSpent": {
+                "amount": 12500.0
+              },
+              "hireRate": 0.85,
+              "feedback": {
+                "score": 4.95
+              }
+            },
+            "proposalsCount": 3,
+            "publishedOn": "2026-09-24T18:00:00Z",
+            "url": "https://www.upwork.com/jobs/~01a1b2c3d4e5f6g7h8"
+          }
+        },
+        {
+          "node": {
+            "id": "~02b2c3d4e5f6g7h8i9",
+            "ciphertext": "~02b2c3d4e5f6g7h8i9",
+            "title": "First National Bank API Microservice Integration",
+            "description": "Integration tool for our retail bank account processing systems. Work with commercial banking APIs.",
+            "budget": {
+              "amount": 1500.0,
+              "currencyCode": "USD"
+            },
+            "hourlyBudget": null,
+            "skills": [
+              {"name": "Python"},
+              {"name": "Banking API"}
+            ],
+            "client": {
+              "location": {
+                "country": "United States"
+              },
+              "paymentVerificationStatus": "VERIFIED",
+              "totalSpent": {
+                "amount": 50000.0
+              },
+              "hireRate": 0.90,
+              "feedback": {
+                "score": 4.9
+              }
+            },
+            "proposalsCount": 8,
+            "publishedOn": "2026-09-24T17:30:00Z",
+            "url": "https://www.upwork.com/jobs/~02b2c3d4e5f6g7h8i9"
+          }
+        },
+        {
+          "node": {
+            "id": "~03c3d4e5f6g7h8i9j0",
+            "ciphertext": "~03c3d4e5f6g7h8i9j0",
+            "title": "Scrape LinkedIn profiles behind login bypassing Cloudflare",
+            "description": "Need a crawler to scrape LinkedIn profiles after login session. Must bypass Cloudflare bot challenge and captcha.",
+            "budget": {
+              "amount": 600.0,
+              "currencyCode": "USD"
+            },
+            "hourlyBudget": null,
+            "skills": [
+              {"name": "Web Scraping"},
+              {"name": "Python"}
+            ],
+            "client": {
+              "location": {
+                "country": "United Kingdom"
+              },
+              "paymentVerificationStatus": "VERIFIED",
+              "totalSpent": {
+                "amount": 3000.0
+              },
+              "hireRate": 0.50,
+              "feedback": {
+                "score": 4.5
+              }
+            },
+            "proposalsCount": 12,
+            "publishedOn": "2026-09-24T16:00:00Z",
+            "url": "https://www.upwork.com/jobs/~03c3d4e5f6g7h8i9j0"
+          }
+        },
+        {
+          "node": {
+            "id": "~04d4e5f6g7h8i9j0k1",
+            "ciphertext": "~04d4e5f6g7h8i9j0k1",
+            "title": "Hourly Backend DevOps Automation",
+            "description": "Ongoing hourly work setting up CI/CD pipelines, Docker containers, and test suites.",
+            "budget": null,
+            "hourlyBudget": {
+              "min": 45.0,
+              "max": 65.0
+            },
+            "skills": [
+              {"name": "Docker"},
+              {"name": "CI/CD"},
+              {"name": "Python"}
+            ],
+            "client": {
+              "location": {
+                "country": "Canada"
+              },
+              "paymentVerificationStatus": "VERIFIED",
+              "totalSpent": {
+                "amount": 8000.0
+              },
+              "hireRate": 0.75,
+              "feedback": {
+                "score": 4.8
+              }
+            },
+            "proposalsCount": 4,
+            "publishedOn": "2026-09-24T15:00:00Z",
+            "url": "https://www.upwork.com/jobs/~04d4e5f6g7h8i9j0k1"
+          }
+        }
+      ]
+    }
+  }
+}
