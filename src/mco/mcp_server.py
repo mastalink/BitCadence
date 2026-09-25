@@ -331,6 +331,61 @@ def run() -> None:
     mcp.run()
 
 
+def bearer_guard(app, token: str):
+    """ASGI middleware: every HTTP request must carry ``Authorization: Bearer <token>``.
+
+    The HTTP transport acts with this server's agent identity, so it is never
+    reachable without the same token that identity uses at the gateway.
+    """
+    import hmac
+
+    expected = f"Bearer {token}".encode()
+
+    async def guarded(scope, receive, send):
+        if scope["type"] == "websocket":
+            # No websocket route exists; refuse outright rather than pass an unauthenticated scope through.
+            await send({"type": "websocket.close", "code": 1008})
+            return
+        if scope["type"] == "http":
+            # Exactly one Authorization header, matching exactly; duplicates are refused.
+            values = [v for k, v in (scope.get("headers") or []) if k.lower() == b"authorization"]
+            supplied = values[0] if len(values) == 1 else b""
+            if not hmac.compare_digest(supplied, expected):
+                await send({"type": "http.response.start", "status": 401,
+                            "headers": [(b"content-type", b"text/plain"), (b"www-authenticate", b"Bearer")]})
+                await send({"type": "http.response.body", "body": b"Unauthorized"})
+                return
+        await app(scope, receive, send)
+
+    return guarded
+
+
+def run_http(host: str, port: int) -> None:
+    """Serve MCP over streamable HTTP for a remote agent (e.g. Muse over Tailscale).
+
+    Requires MCO_AGENT_TOKEN (the agent this endpoint acts as); callers must
+    present that token as a bearer. Binding beyond loopback is the caller's
+    explicit choice (a private address such as a Tailscale IP), never a default.
+    """
+    import os
+    import uvicorn
+
+    token = os.environ.get("MCO_AGENT_TOKEN", "")
+    if not token:
+        raise SystemExit("MCO_AGENT_TOKEN is required for the HTTP transport")
+    # An empty host binds every interface in uvicorn too (reported by Muse's review of PR #115).
+    if not host.strip() or host.strip() in {"0.0.0.0", "::", "[::]"}:
+        raise SystemExit("Refusing to bind every interface; give a specific private address")
+    # Keep the SDK's DNS-rebinding protection on; allow exactly the address being served.
+    from mcp.server.transport_security import TransportSecuritySettings
+    mcp.settings.transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=[f"{host}:{port}", f"127.0.0.1:{port}", f"localhost:{port}"],
+        allowed_origins=[f"http://{host}:{port}"],
+    )
+    uvicorn.run(bearer_guard(mcp.streamable_http_app(), token), host=host, port=port, log_level="warning")
+
+
 
 
 @mcp.tool()

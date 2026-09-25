@@ -1771,9 +1771,17 @@ def stop(
 # 2b. MCP Server (for IDE/agent GUI integration)
 # ─────────────────────────────────────────────────────────────────────────────
 @app.command("mcp")
-def mcp_serve():
-    """Run the MCO dropbox as an MCP stdio server (for Claude/Codex/Antigravity)."""
+def mcp_serve(
+    http: bool = typer.Option(False, "--http", help="Serve streamable HTTP (bearer = MCO_AGENT_TOKEN) instead of stdio."),
+    host: str = typer.Option("127.0.0.1", "--host", help="HTTP bind address; use a private address such as a Tailscale IP."),
+    port: int = typer.Option(18790, "--port", help="HTTP port."),
+):
+    """Run the MCO dropbox as an MCP server: stdio (Claude/Codex/Antigravity) or HTTP (remote agents)."""
     # stdio is the MCP transport channel: do NOT write to stdout in this command.
+    if http:
+        from mco.mcp_server import run_http
+        run_http(host, port)
+        return
     from mco.mcp_server import run
     run()
 
