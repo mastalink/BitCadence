@@ -1379,6 +1379,58 @@ def score_scaffold(
     console.print(f"[green][OK][/green] Wrote {out} ({len(document['tasks'])} tasks), digest {digest(load_score(text))}")
 
 
+@score_app.command("intake")
+def score_intake(
+    args: List[str] = typer.Argument(..., help="BRIEF.txt to draft a scope, or `approve SCOPE.json`."),
+    out: Path = typer.Option(..., "--out", help="Where to write the scope (draft) or the Score (approve)."),
+    client: str = typer.Option("", "--client", help="Client name (draft)."),
+    worktree: Optional[str] = typer.Option(None, "--worktree", help="approve: client worktree path."),
+    branch: Optional[str] = typer.Option(None, "--branch", help="approve: client branch."),
+    before_sha: Optional[str] = typer.Option(None, "--before-sha", help="approve: starting commit."),
+):
+    """Draft a SCOPE from a client brief (with guardrail flags), or `approve` a clean scope into a Score."""
+    from mco.orchestrator.score_intake import approve_scope, draft_scope
+
+    try:
+        if args[0] == "approve":
+            if len(args) != 2 or not (worktree and branch and before_sha):
+                raise ValueError("usage: mco score intake approve SCOPE.json --worktree --branch --before-sha --out")
+            scope_file = Path(args[1])
+            scope = json.loads(scope_file.read_text(encoding="utf-8"))
+            document = approve_scope(scope, worktree=worktree, branch=branch, before_sha=before_sha)
+            out.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+            scope_file.write_text(json.dumps(scope, indent=2) + "\n", encoding="utf-8")
+            console.print(f"[green][OK][/green] Approved; wrote {out} ({len(document['tasks'])} tasks)")
+            return
+        if len(args) != 1:
+            raise ValueError("usage: mco score intake BRIEF.txt --out scope.json")
+        scope = draft_scope(Path(args[0]).read_text(encoding="utf-8"), client=client)
+        out.write_text(json.dumps(scope, indent=2) + "\n", encoding="utf-8")
+        flags = [f["id"] for f in scope["flags"]]
+        console.print(f"[green][OK][/green] Wrote {out} ({len(scope['steps'])} steps); flags: {', '.join(flags) or 'none'}")
+    except (ValueError, TypeError, KeyError, OSError) as exc:
+        console.print(f"[red][X] Intake failed:[/red] {exc}")
+        raise typer.Exit(code=1)
+
+
+@score_app.command("deliver")
+def score_deliver(
+    worktree: Path = typer.Argument(..., help="Worktree of the finished client branch."),
+    out: Path = typer.Option(..., "--out", help="Delivery directory."),
+    evidence: Optional[Path] = typer.Option(None, "--evidence", help="Directory of review reports."),
+    client: str = typer.Option("", "--client"),
+):
+    """Bundle code, tests, README, reviews and a DRAFT client message (never sent)."""
+    from mco.orchestrator.score_intake import build_delivery
+
+    try:
+        names = build_delivery(worktree, out, evidence_dir=evidence, client=client)
+    except (ValueError, OSError) as exc:
+        console.print(f"[red][X] Could not build the delivery:[/red] {exc}")
+        raise typer.Exit(code=1)
+    console.print(f"[green][OK][/green] Delivery bundle in {out}: {', '.join(names)}")
+
+
 @score_app.command("list")
 def score_list(database: Path = typer.Option(DEFAULT_SCORE_DB, "--db")):
     """Runs in this conductor database."""
