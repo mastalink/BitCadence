@@ -6,6 +6,12 @@ They are evaluated deterministically in code and are NEVER delegated to Jev.
 
 The `\\bbank\\b` filter is deliberately conservative (it may exclude benign
 "bank statement parser" jobs), because Joseph works at the Federal Reserve.
+The wider finance-sector filter (trading, crypto, lending, insurance,
+accounting, payments) is conservative for the same reason.
+
+Only one-off deliverables are eligible ("build X and send it"). Hourly
+contracts, ongoing or long-term engagements, retainers, staff roles and
+consulting or advisory work are excluded (owner decision, 2026-09-25).
 """
 
 from __future__ import annotations
@@ -20,6 +26,14 @@ from mco.jobs.models import JobPosting
 REASON_EXCLUDE_FINANCIAL_CONFLICT = (
     "EXCLUDE: Client is a bank/credit union/financial institution/fintech lender "
     "(owner's Federal Reserve employment conflict)"
+)
+REASON_EXCLUDE_FINANCE_SECTOR = (
+    "EXCLUDE: Finance-sector work (trading, crypto, lending, insurance, accounting, "
+    "payments; owner's Federal Reserve employment conflict)"
+)
+REASON_EXCLUDE_NOT_ONE_OFF = (
+    "EXCLUDE: Not a one-off deliverable (hourly, ongoing, long-term, retainer, "
+    "staff role, or consulting/advisory)"
 )
 REASON_EXCLUDE_LOGIN_SCRAPING = (
     "EXCLUDE: Scraping behind logins, paywalls, or bot challenges "
@@ -64,6 +78,22 @@ _FINANCIAL_SAFE_EXCLUSIONS = re.compile(
     r"\b(?:memory\s+bank|question\s+bank|word\s+bank|blood\s+bank|food\s+bank|power\s+bank|battery\s+bank)\b",
     _RE_FLAGS,
 )
+
+_FINANCE_SECTOR_PATTERNS = [
+    re.compile(r"\b(?:finance|financial|fintech|financing|investment|investing|investor\s+portfolio|wealth\s+management|asset\s+management|hedge\s+fund|private\s+equity|venture\s+capital)\b", _RE_FLAGS),
+    re.compile(r"\b(?:trading\s+(?:bot|platform|strategy|algorithm|signals?|system)|algorithmic\s+trading|algo\s+trading|day\s+trading|forex|stock\s+market|stocks?\s+(?:trading|screener|analysis)|options\s+trading|brokerage|broker-dealer)\b", _RE_FLAGS),
+    re.compile(r"\b(?:crypto|cryptocurrency|bitcoin|ethereum|defi|nft|token\s+sale|web3|blockchain)\b", _RE_FLAGS),
+    re.compile(r"\b(?:loans?|lending|lender|mortgage|credit\s+(?:card|score|repair|report)|debt\s+collection|underwriting|insurance|insurer)\b", _RE_FLAGS),
+    re.compile(r"\b(?:accounting|bookkeeping|bookkeeper|accountant|payroll|tax\s+(?:return|preparation|filing)|quickbooks|xero|invoice\s+factoring)\b", _RE_FLAGS),
+    re.compile(r"\b(?:payment\s+(?:processor|processing|gateway)|money\s+transfer|remittance|kyc|aml|anti-money\s+laundering)\b", _RE_FLAGS),
+]
+
+_NOT_ONE_OFF_PATTERNS = [
+    re.compile(r"\b(?:long[\s-]term|ongoing|on-going|retainer|recurring\s+work|continuous\s+(?:work|support)|monthly\s+(?:retainer|contract|fee))\b", _RE_FLAGS),
+    re.compile(r"\b(?:full[\s-]time|part[\s-]time|\d+\s*(?:\+\s*)?(?:hours?|hrs?)\s*(?:per|a|/)\s*(?:week|wk|month)|hours?\s+per\s+week)\b", _RE_FLAGS),
+    re.compile(r"\b(?:join\s+our\s+team|in-house\s+(?:role|position|developer)|staff\s+augmentation|dedicated\s+(?:developer|engineer|resource)|virtual\s+assistant|contract[\s-]to[\s-]hire|hire\s+for\s+(?:a\s+)?(?:role|position))\b", _RE_FLAGS),
+    re.compile(r"\b(?:consultant|consultation|consulting\s+(?:role|engagement|services|call)|advisor|advisory|fractional\s+(?:cto|cio|engineer)|office\s+hours)\b", _RE_FLAGS),
+]
 
 _LOGIN_SCRAPING_PATTERNS = [
     re.compile(r"\b(?:scrape|scraping|crawler|crawling|extractor|extract)\b.*\b(?:behind\s+login|after\s+login|authenticated|with\s+login|login\s+session|session\s+cookie|logged\s+in|bypassing\s+login|bypass\s+login|login\s+screen|login\s+wall|behind\s+paywall|paywall)\b", _RE_FLAGS),
@@ -138,6 +168,22 @@ class HardFilterEngine:
                         continue
                 reasons.append(REASON_EXCLUDE_FINANCIAL_CONFLICT)
                 break
+
+        # 1b. Wider finance sector (trading, crypto, lending, insurance, accounting)
+        if REASON_EXCLUDE_FINANCIAL_CONFLICT not in reasons:
+            for pattern in _FINANCE_SECTOR_PATTERNS:
+                if pattern.search(full_text):
+                    reasons.append(REASON_EXCLUDE_FINANCE_SECTOR)
+                    break
+
+        # 1c. One-off deliverables only: no hourly, ongoing, staff or consulting work
+        if (posting.budget_type or "").strip().lower() == "hourly":
+            reasons.append(REASON_EXCLUDE_NOT_ONE_OFF)
+        else:
+            for pattern in _NOT_ONE_OFF_PATTERNS:
+                if pattern.search(full_text):
+                    reasons.append(REASON_EXCLUDE_NOT_ONE_OFF)
+                    break
 
         # 2. Scraping behind logins / paywalls / bot challenges
         for pattern in _LOGIN_SCRAPING_PATTERNS:
