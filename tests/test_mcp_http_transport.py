@@ -24,3 +24,27 @@ def test_http_transport_needs_a_token_and_a_specific_address(monkeypatch):
     monkeypatch.setenv("MCO_AGENT_TOKEN", "x")
     with pytest.raises(SystemExit, match="every interface"):
         run_http("0.0.0.0", 18790)
+
+
+def test_empty_host_and_duplicate_authorization_are_refused(monkeypatch):
+    monkeypatch.setenv("MCO_AGENT_TOKEN", "x")
+    for host in ("", "  ", "[::]"):
+        with pytest.raises(SystemExit, match="every interface"):
+            run_http(host, 18790)
+    client = TestClient(bearer_guard(_ok, "secret-token"))
+    doubled = [("Authorization", "Bearer secret-token"), ("Authorization", "Bearer secret-token")]
+    assert client.get("/mcp", headers=doubled).status_code == 401
+
+
+def test_websocket_scopes_never_reach_the_app():
+    import asyncio
+    sent, reached = [], []
+
+    async def app(scope, receive, send):
+        reached.append(scope["type"])
+
+    async def send(message):
+        sent.append(message)
+
+    asyncio.run(bearer_guard(app, "t")({"type": "websocket", "headers": []}, None, send))
+    assert reached == [] and sent[0]["type"] == "websocket.close"

@@ -331,9 +331,6 @@ def run() -> None:
     mcp.run()
 
 
-LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
-
-
 def bearer_guard(app, token: str):
     """ASGI middleware: every HTTP request must carry ``Authorization: Bearer <token>``.
 
@@ -345,8 +342,14 @@ def bearer_guard(app, token: str):
     expected = f"Bearer {token}".encode()
 
     async def guarded(scope, receive, send):
+        if scope["type"] == "websocket":
+            # No websocket route exists; refuse outright rather than pass an unauthenticated scope through.
+            await send({"type": "websocket.close", "code": 1008})
+            return
         if scope["type"] == "http":
-            supplied = dict(scope.get("headers") or []).get(b"authorization", b"")
+            # Exactly one Authorization header, matching exactly; duplicates are refused.
+            values = [v for k, v in (scope.get("headers") or []) if k.lower() == b"authorization"]
+            supplied = values[0] if len(values) == 1 else b""
             if not hmac.compare_digest(supplied, expected):
                 await send({"type": "http.response.start", "status": 401,
                             "headers": [(b"content-type", b"text/plain"), (b"www-authenticate", b"Bearer")]})
@@ -370,7 +373,8 @@ def run_http(host: str, port: int) -> None:
     token = os.environ.get("MCO_AGENT_TOKEN", "")
     if not token:
         raise SystemExit("MCO_AGENT_TOKEN is required for the HTTP transport")
-    if host in {"0.0.0.0", "::"}:
+    # An empty host binds every interface in uvicorn too (reported by Muse's review of PR #115).
+    if not host.strip() or host.strip() in {"0.0.0.0", "::", "[::]"}:
         raise SystemExit("Refusing to bind every interface; give a specific private address")
     # Keep the SDK's DNS-rebinding protection on; allow exactly the address being served.
     from mcp.server.transport_security import TransportSecuritySettings
