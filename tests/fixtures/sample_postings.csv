@@ -1,0 +1,5 @@
+id,title,description,budget_type,budget_min,budget_max,skills,client_country,client_payment_verified,client_total_spent,client_hire_rate,client_rating,proposals_count,posted_at,url
+job-101,Automated Test Suite in Pytest for REST API,Build a comprehensive test suite for a FastAPI application with coverage reporting and mock fixtures. Deliverables: pytest suite with 90%+ coverage.,fixed,800,800,python;pytest;fastapi,United States,true,15000,0.80,4.9,2,2026-09-24T12:00:00Z,https://example.com/job/101
+job-102,need script fast,simple script needed quick fix asap inbox me,fixed,50,50,python,United States,false,0,0,0,25,2026-09-24T11:00:00Z,https://example.com/job/102
+job-103,Credit Union Loan Origination Sync Tool,Synchronize member loan data with our credit union core banking provider.,fixed,1200,1200,python;api,United States,true,40000,0.85,4.95,5,2026-09-24T10:00:00Z,https://example.com/job/103
+job-104,Scrape paywall news articles bypassing login,Extract subscriber articles behind paywall and login screen,fixed,400,400,python;web scraping,Germany,true,2000,0.40,4.2,15,2026-09-24T09:00:00Z,https://example.com/job/104

@@ -439,6 +439,13 @@ INCOMING_JOB_TRIAGE_QUESTIONS: Dict[str, Dict[str, Any]] = {
     "needs_operator": OPERATOR_ATTENTION_QUESTIONS["needs_operator"],
 }
 
+from mco.orchestrator.service_job_fit import (
+    SERVICE_JOB_FIT,
+    SERVICE_JOB_FIT_QUESTIONS,
+    SERVICE_JOB_FIT_VERSION,
+)
+
+
 QUESTION_SET_REGISTRY: Dict[str, Dict[str, Dict[str, Any]]] = {
     "incoming_job_intent": {QUESTION_SET_VERSION: INCOMING_JOB_INTENT_QUESTIONS},
     "job_urgency": {QUESTION_SET_VERSION: JOB_URGENCY_QUESTIONS},
@@ -447,6 +454,7 @@ QUESTION_SET_REGISTRY: Dict[str, Dict[str, Dict[str, Any]]] = {
     "prompt_injection_risk": {QUESTION_SET_VERSION: PROMPT_INJECTION_RISK_QUESTIONS},
     "handler_shortlist_fit": {HANDLER_FIT_VERSION: HANDLER_SHORTLIST_FIT_QUESTIONS},
     "incoming_job_triage": {QUESTION_SET_VERSION: INCOMING_JOB_TRIAGE_QUESTIONS},
+    "service_job_fit": {SERVICE_JOB_FIT_VERSION: SERVICE_JOB_FIT_QUESTIONS},
 }
 
 

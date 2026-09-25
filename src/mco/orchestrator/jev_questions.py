@@ -18,6 +18,12 @@ WATCHDOG_SYMPTOM = "watchdog-symptom"
 NOTIFY_QUALITY = "notify-quality"
 CLAUDE_CODE_MODEL_ROUTE = "claude-code-model-route"
 CODEX_TASK_ROUTE = "codex-task-route"
+from mco.orchestrator.service_job_fit import (
+    SERVICE_JOB_FIT,
+    SERVICE_JOB_FIT_QUESTIONS,
+    SERVICE_JOB_FIT_VERSION,
+)
+
 
 
 # Version 2: TypeSafe requires score criteria as an ordered list; v1's dict form was rejected.
@@ -237,12 +243,20 @@ _CODEX_TASK_ROUTE_V1: Dict[str, Any] = {
 }
 
 
+_SERVICE_JOB_FIT_V1: Dict[str, Any] = {
+    "use_case_id": SERVICE_JOB_FIT,
+    "version": SERVICE_JOB_FIT_VERSION,
+    "questions": SERVICE_JOB_FIT_QUESTIONS,
+}
+
+
 _REGISTRIES: Dict[str, Dict[str, Any]] = {
     DRUMLINE_OPS: _DRUMLINE_OPS_V2,
     WATCHDOG_SYMPTOM: _WATCHDOG_SYMPTOM_V1,
     NOTIFY_QUALITY: _NOTIFY_QUALITY_V1,
     CLAUDE_CODE_MODEL_ROUTE: _CLAUDE_CODE_MODEL_ROUTE_V1,
     CODEX_TASK_ROUTE: _CODEX_TASK_ROUTE_V1,
+    SERVICE_JOB_FIT: _SERVICE_JOB_FIT_V1,
 }
 
 

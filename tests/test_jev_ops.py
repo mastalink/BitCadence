@@ -30,6 +30,7 @@ from mco.orchestrator.jev_questions import (
     CODEX_TASK_ROUTE,
     DRUMLINE_OPS,
     NOTIFY_QUALITY,
+    SERVICE_JOB_FIT,
     WATCHDOG_SYMPTOM,
     all_registries,
     get_registry,
@@ -503,9 +504,15 @@ class TestQuestionSetVersioning:
         assert set(registries) == {
             DRUMLINE_OPS, WATCHDOG_SYMPTOM, NOTIFY_QUALITY,
             CLAUDE_CODE_MODEL_ROUTE, CODEX_TASK_ROUTE,
+            SERVICE_JOB_FIT,
         }
         for registry in registries.values():
-            expected = "2" if registry["use_case_id"] == DRUMLINE_OPS else "1"
+            if registry["use_case_id"] == DRUMLINE_OPS:
+                expected = "2"
+            elif registry["use_case_id"] == SERVICE_JOB_FIT:
+                expected = "1.0.0"
+            else:
+                expected = "1"
             assert registry["version"] == expected
             assert registry["questions"]
             assert "incident" not in KINDS
