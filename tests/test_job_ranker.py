@@ -279,8 +279,80 @@ def test_hard_filters_all_categories_and_safe_exclusions():
         budget_max=25.0,
     )
     res_low_h = HardFilterEngine.evaluate(low_hourly)
-    assert res_low_h.eligible is True
+    assert res_low_h.eligible is False  # hourly work is never a one-off deliverable
     assert any(REASON_FLAG_LOW_BUDGET in r for r in res_low_h.flags)
+
+
+def test_only_one_off_non_finance_deliverables_are_eligible():
+    """Owner rule: 'build X and send it' only; no finance sector, hourly, ongoing or consulting."""
+    from mco.jobs.filters import REASON_EXCLUDE_FINANCE_SECTOR, REASON_EXCLUDE_NOT_ONE_OFF
+
+    def posting(title, description, budget_type="fixed"):
+        return JobPosting(source="file", id=title, title=title, description=description,
+                          budget_type=budget_type, budget_min=900.0, budget_max=900.0)
+
+    finance = [
+        ("Crypto trading bot", "Build a Binance\ntrading bot for day trading."),
+        ("Loan app automation", "Automate our\nmortgage lending pipeline."),
+        ("QuickBooks sync", "Sync invoices into QuickBooks for our bookkeeping team."),
+        ("Insurance claims parser", "Parse insurance claim PDFs."),
+        ("Investment dashboard", "Dashboard for our financial advisors."),
+    ]
+    for title, desc in finance:
+        res = HardFilterEngine.evaluate(posting(title, desc))
+        assert res.eligible is False, title
+        assert REASON_EXCLUDE_FINANCE_SECTOR in res.reasons, title
+
+    not_one_off = [
+        ("Python developer", "Long-term\nengagement building internal tools."),
+        ("Automation engineer", "Ongoing work, 20 hours per week."),
+        ("AI consultant", "Looking for an AI consultant to advise our roadmap."),
+        ("Join our team", "Join our team as a dedicated developer."),
+        ("Monthly retainer", "Maintain our Zapier flows on a monthly retainer."),
+        ("Script help", "Long term\nrelationship for the right person."),
+        ("Automation dev", "Expect about 20 hrs/week."),
+        ("Full-time role", "This is a full-time position."),
+        ("VA needed", "Looking for a virtual assistant to manage inboxes."),
+        ("AI advisor", "We need an AI advisor for our board."),
+        # Regressions caught in the second review of PR #116.
+        ("PT employee", "Part-time employee needed for data entry."),
+        ("FT staff", "Looking for full-time staff to run our automations."),
+        ("Advisor", "Needing an advisor with automation experience."),
+        ("Office hours", "Mentor who holds weekly office hours for students."),
+        ("VA hire", "We are hiring a VA for admin work."),
+    ]
+    for title, desc in [("AM firm site", "Website for our asset management firm.")]:
+        res = HardFilterEngine.evaluate(posting(title, desc))
+        assert res.eligible is False, title
+        assert REASON_EXCLUDE_FINANCE_SECTOR in res.reasons, title
+    for title, desc in not_one_off:
+        res = HardFilterEngine.evaluate(posting(title, desc))
+        assert res.eligible is False, title
+        assert REASON_EXCLUDE_NOT_ONE_OFF in res.reasons, title
+
+    hourly = HardFilterEngine.evaluate(posting("Build a Slack bot", "Build a Slack bot.", "hourly"))
+    assert hourly.eligible is False
+    assert REASON_EXCLUDE_NOT_ONE_OFF in hourly.reasons
+
+    good = [
+        ("Build a Gmail-to-Sheets automation", "Build a script that copies order emails into Google Sheets and hand it over."),
+        ("Slack bot for our team", "Build a Slack bot that posts daily standup reminders to our team members."),
+        ("PDF data extractor", "Extract tables from our product catalog PDFs into CSV. Deliver the script."),
+        # False positives found in review of PR #116: benign build-and-deliver jobs.
+        ("Photo DAM", "Build a digital asset management system for our photographers."),
+        ("VA chatbot", "Build a virtual assistant chatbot for our website."),
+        ("Booking page", "Booking page showing our office hours and a contact form."),
+        ("Dev portal", "Build an in-house developer portal with docs search."),
+        ("Coaching site", "Consultation booking form for my coaching business website."),
+        ("One-time build", "One-time build, no ongoing maintenance needed."),
+        ("Hours report", "Dashboard reporting hours per week by project."),
+        ("Staff tool", "Our full-time staff needs a tool to track equipment."),
+        ("Monthly report", "Automate our monthly report emails from a Google Sheet."),
+        ("Career chatbot", "Build an AI career advisor chatbot for students."),
+    ]
+    for title, desc in good:
+        res = HardFilterEngine.evaluate(posting(title, desc))
+        assert res.eligible is True, (title, res.reasons)
 
 
 # ── 3. Ranking Orders Clear $800 Automation Above Vague $50 Job ──────────────
