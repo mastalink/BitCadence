@@ -309,6 +309,11 @@ def test_only_one_off_non_finance_deliverables_are_eligible():
         ("AI consultant", "Looking for an AI consultant to advise our roadmap."),
         ("Join our team", "Join our team as a dedicated developer."),
         ("Monthly retainer", "Maintain our Zapier flows on a monthly retainer."),
+        ("Script help", "Long term\nrelationship for the right person."),
+        ("Automation dev", "Expect about 20 hrs/week."),
+        ("Full-time role", "This is a full-time position."),
+        ("VA needed", "Looking for a virtual assistant to manage inboxes."),
+        ("AI advisor", "We need an AI advisor for our board."),
     ]
     for title, desc in not_one_off:
         res = HardFilterEngine.evaluate(posting(title, desc))
@@ -323,6 +328,17 @@ def test_only_one_off_non_finance_deliverables_are_eligible():
         ("Build a Gmail-to-Sheets automation", "Build a script that copies order emails into Google Sheets and hand it over."),
         ("Slack bot for our team", "Build a Slack bot that posts daily standup reminders to our team members."),
         ("PDF data extractor", "Extract tables from our product catalog PDFs into CSV. Deliver the script."),
+        # False positives found in review of PR #116: benign build-and-deliver jobs.
+        ("Photo DAM", "Build a digital asset management system for our photographers."),
+        ("VA chatbot", "Build a virtual assistant chatbot for our website."),
+        ("Booking page", "Booking page showing our office hours and a contact form."),
+        ("Dev portal", "Build an in-house developer portal with docs search."),
+        ("Coaching site", "Consultation booking form for my coaching business website."),
+        ("One-time build", "One-time build, no ongoing maintenance needed."),
+        ("Hours report", "Dashboard reporting hours per week by project."),
+        ("Staff tool", "Our full-time staff needs a tool to track equipment."),
+        ("Monthly report", "Automate our monthly report emails from a Google Sheet."),
+        ("Career chatbot", "Build an AI career advisor chatbot for students."),
     ]
     for title, desc in good:
         res = HardFilterEngine.evaluate(posting(title, desc))
