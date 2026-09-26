@@ -80,7 +80,7 @@ _FINANCIAL_SAFE_EXCLUSIONS = re.compile(
 )
 
 _FINANCE_SECTOR_PATTERNS = [
-    re.compile(r"\b(?:finance|financial|fintech|financing|investment|investing|investor\s+portfolio|wealth\s+management|hedge\s+fund|private\s+equity|venture\s+capital)\b", _RE_FLAGS),
+    re.compile(r"\b(?:finance|financial|fintech|financing|investment|investing|investor\s+portfolio|wealth\s+management|(?<!\bdigital\s)asset\s+management|hedge\s+fund|private\s+equity|venture\s+capital)\b", _RE_FLAGS),
     re.compile(r"\b(?:trading\s+(?:bot|platform|strategy|algorithm|signals?|system)|algorithmic\s+trading|algo\s+trading|day\s+trading|forex|stock\s+market|stocks?\s+(?:trading|screener|analysis)|options\s+trading|brokerage|broker-dealer)\b", _RE_FLAGS),
     re.compile(r"\b(?:crypto|cryptocurrency|bitcoin|ethereum|defi|nft|token\s+sale|web3|blockchain)\b", _RE_FLAGS),
     re.compile(r"\b(?:loans?|lending|lender|mortgage|credit\s+(?:card|score|repair|report)|debt\s+collection|underwriting|insurance|insurer)\b", _RE_FLAGS),
@@ -92,11 +92,11 @@ _NOT_ONE_OFF_PATTERNS = [
     # Negated mentions ("one-time build, no ongoing maintenance") stay eligible.
     re.compile(r"(?<!\bno\s)(?<!\bnot\s)(?<!\bwithout\s)(?<!\bnon-)\b(?:long[\s-]term|ongoing|on-going|retainer|recurring\s+work|continuous\s+(?:work|support)|monthly\s+(?:retainer|contract|fee))\b", _RE_FLAGS),
     # Role-adjacent only, so "our full-time staff needs a tool" stays eligible.
-    re.compile(r"\b(?:(?:full|part)[\s-]time\s+(?:role|position|job|developer|engineer|contractor|freelancer|commitment|hire|basis)|(?:work|available|hire|hiring)\s+(?:full|part)[\s-]time|\d+\s*(?:\+\s*)?(?:hours?|hrs?)\s*(?:per|a|/)\s*(?:week|wk|month))\b", _RE_FLAGS),
-    re.compile(r"\b(?:join\s+our\s+team|in-house\s+(?:role|position)|staff\s+augmentation|dedicated\s+(?:developer|engineer|resource)|(?:hire|hiring|looking\s+for|need|seeking)\s+(?:an?\s+)?virtual\s+assistant|contract[\s-]to[\s-]hire|hire\s+for\s+(?:a\s+)?(?:role|position))\b", _RE_FLAGS),
+    re.compile(r"\b(?:(?:full|part)[\s-]time\s+(?:role|position|job|developer|engineer|contractor|freelancer|commitment|hire|basis)|(?:work|available|hire|hiring)\s+(?:full|part)[\s-]time|(?:hire|hiring|looking\s+for|needs?|needing|seeking)\s+(?:an?\s+)?(?:full|part)[\s-]time\s+(?:employee|staff)|(?:full|part)[\s-]time\s+(?:employee|staff)\s+(?:needed|wanted)|\d+\s*(?:\+\s*)?(?:hours?|hrs?)\s*(?:per|a|/)\s*(?:week|wk|month))\b", _RE_FLAGS),
+    re.compile(r"\b(?:join\s+our\s+team|in-house\s+(?:role|position)|staff\s+augmentation|dedicated\s+(?:developer|engineer|resource)|(?:hire|hiring|looking\s+for|needs?|needing|seeking|wanted)\s+(?:an?\s+)?(?:virtual\s+assistant|va)|contract[\s-]to[\s-]hire|hire\s+for\s+(?:a\s+)?(?:role|position))\b", _RE_FLAGS),
     # Consulting as the engagement itself, not a product that mentions it
     # ("consultation booking form for my coaching business" stays eligible).
-    re.compile(r"\b(?:consultant|consulting\s+(?:role|engagement|services|call)|advisory\s+(?:role|services|engagement)|(?:hire|hiring|looking\s+for|need|seeking)\s+(?:an?\s+)?(?:\w+\s+)?advisor|fractional\s+(?:cto|cio|engineer)|(?:hold|host|offer)\s+office\s+hours)\b", _RE_FLAGS),
+    re.compile(r"\b(?:consultant|consulting\s+(?:role|engagement|services|call)|advisory\s+(?:role|services|engagement)|(?:hire|hiring|looking\s+for|needs?|needing|seeking|wanted)\s+(?:an?\s+)?(?:\w+\s+)?advisor|fractional\s+(?:cto|cio|engineer)|(?:holds?|holding|hosts?|hosting|offers?|offering)\s+(?:\w+\s+)?office\s+hours)\b", _RE_FLAGS),
 ]
 
 _LOGIN_SCRAPING_PATTERNS = [

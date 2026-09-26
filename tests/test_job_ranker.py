@@ -314,7 +314,17 @@ def test_only_one_off_non_finance_deliverables_are_eligible():
         ("Full-time role", "This is a full-time position."),
         ("VA needed", "Looking for a virtual assistant to manage inboxes."),
         ("AI advisor", "We need an AI advisor for our board."),
+        # Regressions caught in the second review of PR #116.
+        ("PT employee", "Part-time employee needed for data entry."),
+        ("FT staff", "Looking for full-time staff to run our automations."),
+        ("Advisor", "Needing an advisor with automation experience."),
+        ("Office hours", "Mentor who holds weekly office hours for students."),
+        ("VA hire", "We are hiring a VA for admin work."),
     ]
+    for title, desc in [("AM firm site", "Website for our asset management firm.")]:
+        res = HardFilterEngine.evaluate(posting(title, desc))
+        assert res.eligible is False, title
+        assert REASON_EXCLUDE_FINANCE_SECTOR in res.reasons, title
     for title, desc in not_one_off:
         res = HardFilterEngine.evaluate(posting(title, desc))
         assert res.eligible is False, title
