@@ -15,6 +15,11 @@ variable "alert_email" {
   type        = string
   default     = ""
 }
+variable "extra_trusted_subjects" {
+  description = "Additional exact GitHub OIDC subject claims allowed to assume the deploy role. Empty keeps the role trusting only this repository's deploy branches."
+  type        = list(string)
+  default     = []
+}
 resource "aws_budgets_budget" "account" {
   name         = "bitcadence-lab-account-watch"
   budget_type  = "COST"
@@ -131,7 +136,7 @@ resource "aws_iam_role" "deploy" {
   max_session_duration = 3600
   # Immutable subjects are GitHub's default for repositories created after
   # July 15, 2026. This repository's API and the live role confirm this format.
-  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Federated = aws_iam_openid_connect_provider.github.arn }, Action = "sts:AssumeRoleWithWebIdentity", Condition = { StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com", "token.actions.githubusercontent.com:sub" = [for branch in local.deploy_branches : "repo:mastalink@72055896/BitCadence@1245844706:ref:refs/heads/${branch}"] } } }] })
+  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Federated = aws_iam_openid_connect_provider.github.arn }, Action = "sts:AssumeRoleWithWebIdentity", Condition = { StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com", "token.actions.githubusercontent.com:sub" = concat([for branch in local.deploy_branches : "repo:mastalink@72055896/BitCadence@1245844706:ref:refs/heads/${branch}"], var.extra_trusted_subjects) } } }] })
 }
 resource "aws_iam_role_policy" "deploy" {
   role = aws_iam_role.deploy.id
