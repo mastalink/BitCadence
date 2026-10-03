@@ -1,7 +1,7 @@
 import hashlib
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -127,7 +127,7 @@ def _setup_bridge_and_executor(tmp_path, wt_dir, target_branch, initial_sha, evi
         "resources": [str(wt_dir)],
         "env": "test",
         "not_before": "2026-09-15T00:00:00Z",
-        "expires_at": "2026-10-01T00:00:00Z",
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=365)).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "budget_cents": 0,
         "human_principal": "conductor",
     })
