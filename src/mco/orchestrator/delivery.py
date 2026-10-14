@@ -152,6 +152,31 @@ def _online_roles(db: Any, org: str) -> set:
     return available_roles(describe_fleet(db, rows, threshold=get_offline_after_seconds()), org)
 
 
+def instance_host(instance_id: Optional[str]) -> str:
+    """Machine an instance runs on, from its id: ``codex-beast`` -> ``beast``,
+    ``claude-mac-studio`` -> ``mac-studio``. Registry rows carry no host field."""
+    _, _, host = str(instance_id or "").lower().partition("-")
+    return host
+
+
+def cross_host_reroute_allowed(config: Optional[dict] = None) -> bool:
+    """MCO_REROUTE_CROSS_HOST=1 lets a pinned job reroute to another machine.
+    Default off: host-bound work (files only on one machine) must not move."""
+    config = config if config is not None else get_config()
+    return str(config.get("MCO_REROUTE_CROSS_HOST") or "").strip().lower() in ("1", "true", "on", "yes")
+
+
+def _online_instances(db: Any, org: str) -> list:
+    """(role, instance_id) for every agent that can take new work now."""
+    from mco.orchestrator.presence import STANDBY, WORKING, describe_fleet
+    from mco.orchestrator.routes import get_offline_after_seconds
+
+    rows = db.table("agent_registry").select("*").execute().data or []
+    fleet = describe_fleet(db, rows, threshold=get_offline_after_seconds())
+    return [(str(r.get("role") or "").lower(), r.get("instance_id")) for r in fleet
+            if (r.get("org_id") or "default") == org and r.get("state") in {STANDBY, WORKING}]
+
+
 def _busy_instances(db: Any) -> set:
     """Instances holding a leased or in-progress job right now.
 
@@ -173,6 +198,7 @@ def sweep(
     config: Optional[dict] = None,
     online_roles: Optional[Callable[[Any, str], set]] = None,
     jev_provider: Optional[Any] = None,
+    online_instances: Optional[Callable[[Any, str], list]] = None,
 ) -> SweepResult:
     """Advance delivery for every stalled PENDING job by at most one step."""
     from mco.orchestrator.audit import get_events, record_event
@@ -189,6 +215,9 @@ def sweep(
     fallbacks = parse_fallbacks(config.get("MCO_ROUTE_FALLBACKS"))
     max_reroutes = get_max_reroutes(config)
     online_roles = online_roles or _online_roles
+    online_instances = online_instances or _online_instances
+    cross_host = cross_host_reroute_allowed(config)
+    instance_cache: dict[str, list] = {}
     online_cache: dict[str, set] = {}
     busy: Optional[set] = None
 
@@ -237,13 +266,30 @@ def sweep(
         payload = job.get("input_payload") or {}
         org = job.get("org_id") or "default"
         target = None
+        target_id = None
         reason = None
+        same_host_only = bool(pinned) and not cross_host
         if isinstance(payload, dict) and payload.get("no_reroute"):
             reason = "job is marked no_reroute"
         elif reroutes >= max_reroutes:
             reason = f"reroute limit reached ({max_reroutes})"
         elif role not in fallbacks:
             reason = f"no fallback configured for role '{role}'"
+        elif same_host_only:
+            # Host-bound work: only a fallback on the pinned worker's own machine
+            # may take it, and it is pinned there so no other host can lease it.
+            if org not in instance_cache:
+                instance_cache[org] = online_instances(db, org)
+            host = instance_host(pinned)
+            for r in fallbacks[role]:
+                target_id = next((i for rr, i in instance_cache[org]
+                                  if rr == r and i != pinned and instance_host(i) == host), None)
+                if target_id:
+                    target = r
+                    break
+            if target is None:
+                reason = (f"pinned worker {pinned} not picking up; "
+                          f"no fallback on host '{host}'")
         else:
             if org not in online_cache:
                 online_cache[org] = online_roles(db, org)
@@ -254,14 +300,15 @@ def sweep(
         if target is not None:
             updated = db.table("agent_jobs").update({
                 "target_agent_role": target,
-                "target_agent_id": None,
+                "target_agent_id": target_id,
             }).eq("id", job_id).eq("status", "pending").execute().data
             if not updated:
                 continue  # leased or changed since we read it: delivery happened
             record_event(db, job_id, REROUTED, ACTOR_ID, ACTOR_ROLE,
                          {"from_role": job.get("target_agent_role"),
                           "from_instance": job.get("target_agent_id"),
-                          "to_role": target, "pending_seconds": int(age)})
+                          "to_role": target, "to_instance": target_id,
+                          "pending_seconds": int(age)})
             result.broadcasts.append(("job_pending", updated[0]))
             result.rerouted.append(job_id)
             _shadow_watchdog(result, jev_provider, db, job_id, "reroute", {
