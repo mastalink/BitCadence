@@ -152,6 +152,20 @@ def _online_roles(db: Any, org: str) -> set:
     return available_roles(describe_fleet(db, rows, threshold=get_offline_after_seconds()), org)
 
 
+def _busy_instances(db: Any) -> set:
+    """Instances holding a leased or in-progress job right now.
+
+    A job pinned to one of these is queued behind its own worker, not stalled:
+    the worker is alive and will take it next. Rerouting it would hand
+    host-bound work (files only on that machine) to an agent that cannot do it.
+    """
+    from mco.orchestrator.presence import _ACTIVE_JOB_STATUSES
+
+    rows = (db.table("agent_jobs").select("*").in_("status", _ACTIVE_JOB_STATUSES)
+            .execute().data or [])
+    return {r.get("leased_by_instance_id") for r in rows if r.get("leased_by_instance_id")}
+
+
 def sweep(
     db: Any,
     *,
@@ -176,6 +190,7 @@ def sweep(
     max_reroutes = get_max_reroutes(config)
     online_roles = online_roles or _online_roles
     online_cache: dict[str, set] = {}
+    busy: Optional[set] = None
 
     jobs = db.table("agent_jobs").select("*").eq("status", "pending").execute().data or []
     for job in jobs:
@@ -210,6 +225,13 @@ def sweep(
 
         if age < 2 * stall or ESCALATED in since:
             continue
+
+        pinned = job.get("target_agent_id")
+        if pinned:
+            if busy is None:
+                busy = _busy_instances(db)
+            if pinned in busy:
+                continue  # queued behind its own busy worker; leave it pinned
 
         role = str(job.get("target_agent_role") or "").lower()
         payload = job.get("input_payload") or {}

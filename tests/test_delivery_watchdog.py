@@ -121,6 +121,19 @@ class TestSweep:
         assert repeat.notifications == []
         assert _events(db) == [delivery.REKICKED, delivery.ESCALATED]
 
+    def test_job_pinned_to_busy_instance_stays_queued(self, db):
+        # The pinned worker is alive and working another job: the stalled job is
+        # waiting its turn, so it is re-kicked but never rerouted or escalated.
+        _job(db, job_id="busy", status="leased", age_seconds=60)
+        db.table("agent_jobs").update({"leased_by_instance_id": "codex-beast"}).eq("id", "busy").execute()
+        _job(db, age_seconds=STALL + 5)
+        delivery.sweep(db, config=BASE, online_roles=_online("claude"))
+        result = delivery.sweep(db, now=_later(STALL * 3), config=BASE, online_roles=_online("claude"))
+        assert result.rerouted == [] and result.escalated == []
+        row = _row(db)
+        assert row["target_agent_role"] == "codex"
+        assert row["target_agent_id"] == "codex-beast"
+
     def test_no_reroute_flag_escalates_instead(self, db):
         _job(db, age_seconds=STALL + 5, payload={"no_reroute": True})
         delivery.sweep(db, config=BASE, online_roles=_online("claude"))
