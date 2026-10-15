@@ -36,7 +36,10 @@ param(
   [string] $Role = 'claude',
   [string] $GatewayUrl = 'http://127.0.0.1:18789',
   [string] $WorktreeScript,
-  [string] $PythonPath
+  [string] $PythonPath,
+  # Model tier (2026-10-05): 'sonnet' default for builds/fixes, 'haiku' for chores,
+  # 'opus' only for hard problems and final reviews. Empty = account default.
+  [string] $Model = 'sonnet'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -93,6 +96,13 @@ $env:MCO_AGENT_TOKEN   = $token
 $env:AGENT_ROLE        = $Role
 $env:AGENT_INSTANCE_ID = $Instance
 
+# The video builder needs ElevenLabs (voice + music). Load the owner's key file
+# into this process only; never echo it. Added 2026-10-14 (incidents 41/42).
+$elevenKeyFile = 'C:\AI\elevenlabs.txt'
+if ($Instance -eq 'claude-beast' -and -not $env:ELEVENLABS_API_KEY -and (Test-Path $elevenKeyFile)) {
+  $env:ELEVENLABS_API_KEY = (Get-Content -Raw $elevenKeyFile).Trim()
+}
+
 # fleet-worktree.ps1 signals success by returning the path and failure by
 # calling exit inside Fail(); it does not set an exit code on the success path,
 # so $LASTEXITCODE here would be whatever git last set. Trust the return value.
@@ -106,5 +116,5 @@ if (-not $wt -or -not (Test-Path $wt)) { Write-Error 'fleet-worktree returned no
 Set-Location $wt
 
 Get-Content $prompt -Raw |
-  & claude -p --mcp-config $mcpFile --strict-mcp-config --dangerously-skip-permissions
+  & claude -p @(if ($Model) { '--model', $Model }) --mcp-config $mcpFile --strict-mcp-config --dangerously-skip-permissions
 exit $LASTEXITCODE
