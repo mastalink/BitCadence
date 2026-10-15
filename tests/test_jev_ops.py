@@ -37,7 +37,7 @@ from mco.orchestrator.jev_questions import (
     registry_digest,
 )
 from tests.test_chain_stall import _done, _successor, _sweep
-from tests.test_delivery_watchdog import BASE, STALL, _events, _job, _later, _online, _row
+from tests.test_delivery_watchdog import BASE, STALL, _events, _job, _later, _online, _row, _sweep_beast
 from tests.test_presence_state import THRESHOLD as PRESENCE_THRESHOLD
 from tests.test_presence_state import _agent, _describe, _job as _presence_job
 from tests.test_routes import FakeDB
@@ -212,15 +212,15 @@ class TestDisabledModeParity:
 
     def test_delivery_still_rekicks_reroutes_escalates(self, db):
         _job(db, age_seconds=STALL + 5)
-        first = delivery.sweep(db, config=BASE, online_roles=_online("grok"))
+        first = _sweep_beast(db, config=BASE, online_roles=_online("grok"))
         assert first.rekicked == ["job-1"]
         assert _events(db) == [delivery.REKICKED]
-        result = delivery.sweep(db, now=_later(STALL), config=BASE, online_roles=_online("grok"))
+        result = _sweep_beast(db, now=_later(STALL), config=BASE, online_roles=_online("grok"))
         assert result.rerouted == ["job-1"]
         assert _row(db)["target_agent_role"] == "grok"
         _job(db, age_seconds=STALL + 5, job_id="job-2")
-        delivery.sweep(db, config=BASE, online_roles=_online())
-        escalated = delivery.sweep(db, now=_later(STALL), config=BASE, online_roles=_online())
+        _sweep_beast(db, config=BASE, online_roles=_online())
+        escalated = _sweep_beast(db, now=_later(STALL), config=BASE, online_roles=_online())
         assert escalated.escalated == ["job-2"]
         assert "jev_decision" not in _events(db, "job-2")
 
@@ -278,8 +278,8 @@ class TestShadowDoesNotApply:
     def test_watchdog_still_escalates_when_jev_says_noise(self, db):
         provider = _shadow_provider(_watchdog_payload("noise"))
         _job(db, age_seconds=STALL + 5)
-        delivery.sweep(db, config=BASE, online_roles=_online(), jev_provider=provider)
-        result = delivery.sweep(
+        _sweep_beast(db, config=BASE, online_roles=_online(), jev_provider=provider)
+        result = _sweep_beast(
             db, now=_later(STALL), config=BASE, online_roles=_online(), jev_provider=provider,
         )
         assert result.escalated == ["job-1"]
@@ -294,8 +294,8 @@ class TestShadowDoesNotApply:
     def test_watchdog_still_reroutes_when_jev_says_retry(self, db):
         provider = _shadow_provider(_watchdog_payload("retry"))
         _job(db, age_seconds=STALL + 5)
-        delivery.sweep(db, config=BASE, online_roles=_online("grok"), jev_provider=provider)
-        result = delivery.sweep(
+        _sweep_beast(db, config=BASE, online_roles=_online("grok"), jev_provider=provider)
+        result = _sweep_beast(
             db, now=_later(STALL), config=BASE, online_roles=_online("grok"), jev_provider=provider,
         )
         assert result.rerouted == ["job-1"]
@@ -473,8 +473,8 @@ class TestDeterministicFallback:
     def test_watchdog_fallback_does_not_change_escalate(self, db):
         provider, _calls = _failing_provider(status=429)
         _job(db, age_seconds=STALL + 5)
-        delivery.sweep(db, config=BASE, online_roles=_online(), jev_provider=provider)
-        result = delivery.sweep(
+        _sweep_beast(db, config=BASE, online_roles=_online(), jev_provider=provider)
+        result = _sweep_beast(
             db, now=_later(STALL), config=BASE, online_roles=_online(), jev_provider=provider,
         )
         assert result.escalated == ["job-1"]
@@ -541,21 +541,21 @@ class TestRegressions:
 
     def test_pending_job_rekick_then_reroute_then_escalate(self, db):
         _job(db, age_seconds=STALL + 5)
-        first = delivery.sweep(db, config=BASE, online_roles=_online("claude"))
+        first = _sweep_beast(db, config=BASE, online_roles=_online("claude"))
         assert first.rekicked == ["job-1"]
-        second = delivery.sweep(db, now=_later(STALL), config=BASE, online_roles=_online("claude"))
+        second = _sweep_beast(db, now=_later(STALL), config=BASE, online_roles=_online("claude"))
         assert second.rerouted == ["job-1"]
         assert _row(db)["target_agent_role"] == "claude"
         _job(db, age_seconds=STALL + 5, job_id="stuck")
-        delivery.sweep(db, config=BASE, online_roles=_online())
-        third = delivery.sweep(db, now=_later(STALL), config=BASE, online_roles=_online())
+        _sweep_beast(db, config=BASE, online_roles=_online())
+        third = _sweep_beast(db, now=_later(STALL), config=BASE, online_roles=_online())
         assert third.escalated == ["stuck"]
 
     def test_reroute_cas_leaves_leased_job_alone(self, db):
         _job(db, age_seconds=STALL + 5)
-        delivery.sweep(db, config=BASE, online_roles=_online("claude"))
+        _sweep_beast(db, config=BASE, online_roles=_online("claude"))
         db.table("agent_jobs").update({"status": "leased"}).eq("id", "job-1").execute()
-        result = delivery.sweep(db, now=_later(STALL), config=BASE, online_roles=_online("claude"))
+        result = _sweep_beast(db, now=_later(STALL), config=BASE, online_roles=_online("claude"))
         assert result.rerouted == []
         assert _row(db)["status"] == "leased"
         assert _row(db)["target_agent_role"] == "codex"
@@ -595,7 +595,7 @@ class TestRegressions:
             return presence.available_roles(fleet, org)
 
         config = {**BASE, "MCO_ROUTE_FALLBACKS": "grok:codex|claude"}
-        _job(db, age_seconds=STALL + 5, job_id="from-grok", role="grok", instance="grok-1")
+        _job(db, age_seconds=STALL + 5, job_id="from-grok", role="grok", instance="grok-mac")
         delivery.sweep(db, config=config, online_roles=online_roles)
         result = delivery.sweep(db, now=_later(STALL), config=config, online_roles=online_roles)
         assert _row(db, "from-grok")["target_agent_role"] == "claude"
