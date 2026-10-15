@@ -152,10 +152,16 @@ def _online_roles(db: Any, org: str) -> set:
     return available_roles(describe_fleet(db, rows, threshold=get_offline_after_seconds()), org)
 
 
-def instance_host(instance_id: Optional[str]) -> str:
+def instance_host(instance_id: Optional[str], role: Optional[str] = None) -> str:
     """Machine an instance runs on, from its id: ``codex-beast`` -> ``beast``,
-    ``claude-mac-studio`` -> ``mac-studio``. Registry rows carry no host field."""
-    _, _, host = str(instance_id or "").lower().partition("-")
+    ``claude-mac-studio`` -> ``mac-studio``. Supply the known role so compound
+    roles such as ``via-dispatch`` are removed in full. Unknown prefixes fail
+    closed: registry rows carry no host field to resolve the ambiguity."""
+    instance = str(instance_id or "").lower()
+    if role is not None:
+        prefix = f"{role.lower()}-"
+        return instance[len(prefix):] if instance.startswith(prefix) else ""
+    _, _, host = instance.partition("-")
     return host
 
 
@@ -188,7 +194,7 @@ def _busy_instances(db: Any) -> set:
 
     rows = (db.table("agent_jobs").select("*").in_("status", _ACTIVE_JOB_STATUSES)
             .execute().data or [])
-    return {r.get("leased_by_instance_id") for r in rows if r.get("leased_by_instance_id")}
+    return {str(r["leased_by_instance_id"]).lower() for r in rows if r.get("leased_by_instance_id")}
 
 
 def sweep(
@@ -259,7 +265,7 @@ def sweep(
         if pinned:
             if busy is None:
                 busy = _busy_instances(db)
-            if pinned in busy:
+            if str(pinned).lower() in busy:
                 continue  # queued behind its own busy worker; leave it pinned
 
         role = str(job.get("target_agent_role") or "").lower()
@@ -280,14 +286,18 @@ def sweep(
             # may take it, and it is pinned there so no other host can lease it.
             if org not in instance_cache:
                 instance_cache[org] = online_instances(db, org)
-            host = instance_host(pinned)
-            for r in fallbacks[role]:
-                target_id = next((i for rr, i in instance_cache[org]
-                                  if rr == r and i != pinned and instance_host(i) == host), None)
-                if target_id:
-                    target = r
-                    break
-            if target is None:
+            host = instance_host(pinned, role)
+            if not host:
+                reason = f"pinned worker {pinned} not picking up; no host suffix in instance id"
+            else:
+                for r in fallbacks[role]:
+                    target_id = next((i for rr, i in instance_cache[org]
+                                      if rr == r and str(i or "").lower() != str(pinned).lower()
+                                      and instance_host(i, rr) == host), None)
+                    if target_id:
+                        target = r
+                        break
+            if target is None and reason is None:
                 reason = (f"pinned worker {pinned} not picking up; "
                           f"no fallback on host '{host}'")
         else:

@@ -177,6 +177,46 @@ class TestSweep:
         assert delivery.instance_host("claude-beast") == "beast"
         assert delivery.instance_host("claude-mac-studio") == "mac-studio"
 
+    @pytest.mark.parametrize("role,instance,fallback,target", [
+        ("via-dispatch", "via-dispatch-beast", "claude", "claude-beast"),
+        ("codex", "codex-beast", "via-retrieval", "via-retrieval-beast"),
+        ("score-canary-worker", "score-canary-worker-mac-studio",
+         "via-retrieval", "via-retrieval-mac-studio"),
+    ])
+    def test_compound_roles_reroute_on_same_host(self, db, role, instance, fallback, target):
+        _job(db, age_seconds=STALL + 5, role=role, instance=instance)
+        config = {**BASE, "MCO_ROUTE_FALLBACKS": f"{role}:{fallback}"}
+        kw = dict(config=config, online_instances=lambda _db, _org: [(fallback, target)])
+        delivery.sweep(db, **kw)
+        result = delivery.sweep(db, now=_later(STALL), **kw)
+        assert result.rerouted == ["job-1"]
+        assert _row(db)["target_agent_id"] == target
+        event = next(e for e in get_events(db, "job-1") if e["event"] == delivery.REROUTED)
+        assert event["detail"]["to_instance"] == target
+
+    @pytest.mark.parametrize("instance,target", [("codex", "claude"), ("codex-", "claude-")])
+    def test_unknown_host_stays_pinned_and_escalates_once(self, db, instance, target):
+        _job(db, age_seconds=STALL + 5, instance=instance)
+        kw = dict(config=BASE, online_instances=lambda _db, _org: [("claude", target)])
+        delivery.sweep(db, **kw)
+        result = delivery.sweep(db, now=_later(STALL), **kw)
+        assert result.rerouted == []
+        assert result.escalated == ["job-1"]
+        assert _row(db)["target_agent_id"] == instance
+        event = next(e for e in get_events(db, "job-1") if e["event"] == delivery.ESCALATED)
+        assert "no host suffix" in event["detail"]["reason"]
+        repeat = delivery.sweep(db, now=_later(STALL * 3), **kw)
+        assert repeat.escalated == [] and repeat.notifications == []
+
+    def test_busy_instance_identity_is_case_insensitive(self, db):
+        _job(db, job_id="busy", status="leased", age_seconds=60)
+        db.table("agent_jobs").update({"leased_by_instance_id": "CODEX-BEAST"}).eq("id", "busy").execute()
+        _job(db, age_seconds=STALL + 5)
+        _sweep_beast(db, config=BASE, online_roles=_online("claude"))
+        result = _sweep_beast(db, now=_later(STALL * 3), config=BASE, online_roles=_online("claude"))
+        assert result.rerouted == [] and result.escalated == []
+        assert _row(db)["target_agent_id"] == "codex-beast"
+
     def test_no_reroute_flag_escalates_instead(self, db):
         _job(db, age_seconds=STALL + 5, payload={"no_reroute": True})
         _sweep_beast(db, config=BASE, online_roles=_online("claude"))
