@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-theme="light"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Run - BitCadence v2 mockup</title>
+<link rel="stylesheet" href="../redesign-v1/assets/style.css"><link rel="stylesheet" href="assets/v2.css"><script src="../redesign-v1/assets/app.js"></script></head><body>
+<div class="topbar"><span class="logo">BitCadence</span><nav class="nav" aria-label="Main"><a href="00-home.html">Home</a><a href="01-projects.html" class=on>Projects</a><a href="05-library.html">Library</a><a href="06-operations.html">Operations</a><a href="../redesign-v1/09-settings.html">Settings</a></nav><span class="sp"></span><a class="btn small" href="index.html">All screens</a><button class="btn small" onclick="bcTheme()" aria-label="Switch light or dark">🌓</button></div>
+<main class="wrap">
+<div class="mock-note">Low-fidelity proposal (Platform v2). Nothing here is connected to a backend or approved.</div>
+<p class="crumbs"><a href="01-projects.html">Projects</a> › Episode 32 › Run 4</p>
+<h1>Episode 32: "The Long Nap"</h1><p class="sub">Started 9:12 PM · 5 of 10 steps done · $3.10 spent of $9 · You are needed for 1 step</p>
+
+<div class="card" style="margin-bottom:14px">
+ <div class="row"><b style="flex:1">Script</b><span class="pill ok">Done</span></div>
+ <ul class="ladder"><li class="done">Accepted</li><li class="done">Assigned</li><li class="done">Working</li><li class="done">Output checked</li><li class="done">Reviewed</li><li class="done">Approved</li><li class="done">Delivered</li></ul>
+ <p class="hint">script.md, version 2 · reviewed by Grok · approved by you at 9:40 PM</p>
+</div>
+
+<div class="card" style="margin-bottom:14px">
+ <div class="row"><b style="flex:1">Narration</b><span class="pill run">Working</span></div>
+ <ul class="ladder"><li class="done">Accepted</li><li class="done">Assigned</li><li class="now">Working</li><li>Output checked</li><li>Reviewed</li><li>Approved</li><li>Delivered</li></ul>
+ <div class="wave" style="margin-top:10px" aria-label="Narration preview, take 2"></div>
+ <p class="hint">Take 2 of 3 · 02:40 of 06:15 · ElevenLabs · $0.42 so far</p>
+ <details class="adv"><summary>Details</summary><pre>attempt 2 · lease held by claude-beast · effect: elevenlabs.tts (submitted, key bitcadence:job-8f2:2)
+reasoning: Medium</pre></details>
+</div>
+
+<div class="wait" style="margin-bottom:14px">
+ <div class="row"><b style="flex:1">Artwork (12 scenes)</b><span class="pill warn">Waiting</span></div>
+ <p style="margin:8px 0">Waiting for the GPU on Beast. <b>Overnight training</b> holds it until 2:00 AM. Waiting costs nothing.</p>
+ <div class="row"><button class="btn small" data-toast="OK. It will start when the GPU frees up.">Wait</button><button class="btn small" data-toast="Asked the training job to pause at its next checkpoint.">Ask it to yield</button><button class="btn small" disabled title="No other computer can do GPU work right now">Run on another computer</button></div>
+ <p class="hint">Mac Studio isn't offered because it's in testing.</p>
+</div>
+
+<div id="recover" class="recover" role="alert">
+ <div class="row"><b style="flex:1">Character portraits</b><span class="pill bad">Stuck</span></div>
+ <dl><dt>What happened</dt><dd>Beast doesn't have the model "sdxl-character-v2" that this template needs.</dd>
+ <dt>What's saved</dt><dd>Script v2, narration takes 1-2, and the scene list. Nothing was charged for this step.</dd>
+ <dt>What you can do</dt><dd>Use the older character model (v1) for this episode, or ask an admin to install v2.</dd></dl>
+ <div class="row"><button class="btn primary" data-toast="Switched to sdxl-character-v1 for this run. Checking again.">Use v1 for this episode</button>
+ <button class="btn" data-toast="Request sent to the admin.">Ask an admin</button></div>
+ <details class="adv"><summary>More options</summary><p class="hint">Stop this step and keep everything else · Skip portraits (the creative review will be told).</p></details>
+</div>
+
+<h2>Other things that can go wrong, and what you'd see</h2>
+<div class="grid">
+ <div class="recover"><b>Out of quota</b><p class="hint">Claude ran out of quota. The branch and test results are saved.</p><button class="btn small" data-toast="Continuing with Codex on Beast from the last checkpoint.">Continue with Codex</button></div>
+ <div class="recover"><b>Not sure it happened</b><p class="hint">We can't tell whether take 3 was made. We won't pay twice.</p><button class="btn small" data-toast="Checked with ElevenLabs: it was made. Using it.">Check now</button></div>
+ <div class="recover"><b>Sign-in expired</b><p class="hint">GitHub sign-in for MyMeals expired. Your work is saved.</p><button class="btn small" data-toast="Sign-in window opened.">Sign in again</button></div>
+ <div class="recover"><b>Not allowed</b><p class="hint">Codex can't cancel this run. Only Joe can let it take over.</p><button class="btn small" data-toast="Asked Joe to let Codex take over this run for 4 hours.">Ask Joe</button></div>
+</div>
+<div class="row" style="margin-top:18px"><button class="btn" data-toast="Paused. Nothing new starts. Work in progress finishes its current try.">Pause this run</button><button class="btn" data-toast="Stopped. Everything finished so far is kept.">Stop and keep what's done</button></div>
+</main><nav class="tabbar" aria-label="Main"><a href="00-home.html"><b>🏠</b>Home</a><a href="01-projects.html" class=on><b>📁</b>Projects</a><a href="05-library.html"><b>📚</b>Library</a><a href="06-operations.html"><b>🛠️</b>Operations</a><a href="../redesign-v1/09-settings.html"><b>⚙️</b>Settings</a></nav></body></html>

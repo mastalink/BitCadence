@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="light"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Review - BitCadence v2 mockup</title>
+<link rel="stylesheet" href="../redesign-v1/assets/style.css"><link rel="stylesheet" href="assets/v2.css"><script src="../redesign-v1/assets/app.js"></script></head><body>
+<div class="topbar"><span class="logo">BitCadence</span><nav class="nav" aria-label="Main"><a href="00-home.html" class=on>Home</a><a href="01-projects.html">Projects</a><a href="05-library.html">Library</a><a href="06-operations.html">Operations</a><a href="../redesign-v1/09-settings.html">Settings</a></nav><span class="sp"></span><a class="btn small" href="index.html">All screens</a><button class="btn small" onclick="bcTheme()" aria-label="Switch light or dark">🌓</button></div>
+<main class="wrap narrow">
+<div class="mock-note">Low-fidelity proposal (Platform v2). Nothing here is connected to a backend or approved.</div>
+<p class="crumbs"><a href="00-home.html">Needs you</a> › Episode 32 › Narration</p>
+<h1>Review narration</h1><p class="sub">Two checks are separate: <b>Technical</b> (automatic) and <b>Does it sound right?</b> (you).</p>
+
+<div class="card" style="margin-bottom:14px">
+ <b>Technical checks</b>
+ <table class="plain"><tbody>
+  <tr><td>✅</td><td>Length 06:15 (the script expects 06:00-06:30)</td></tr>
+  <tr><td>✅</td><td>Loudness -16 LUFS (target -16 ±1)</td></tr>
+  <tr><td>✅</td><td>No silence longer than 2 seconds</td></tr>
+  <tr><td>✅</td><td>Every line in the script is present</td></tr>
+ </tbody></table>
+</div>
+
+<div class="compare">
+ <div class="card"><div class="row"><b style="flex:1">Take 1</b><span class="badge">Earlier</span></div><div class="wave" style="margin:10px 0"></div><button class="btn small" data-toast="Playing take 1.">▶ Play</button></div>
+ <div class="card"><div class="row"><b style="flex:1">Take 2</b><span class="badge ok">New</span></div><div class="wave" style="margin:10px 0"></div><button class="btn small" data-toast="Playing take 2.">▶ Play</button></div>
+</div>
+
+<div class="card" style="margin-top:14px">
+ <b>Comments on take 2</b>
+ <div class="timeline" aria-label="Timeline with comments"><div class="pin" style="left:34%"><span>02:10</span></div></div>
+ <p style="margin-top:28px"><b>Grok (reviewer), 02:10:</b> "Carlo" is said as "Car-LOW". The character sheet says "CAR-lo".</p>
+ <label for="c">Add a comment at the playhead</label><input id="c" placeholder="Type a note">
+</div>
+
+<div class="card" style="margin-top:14px">
+ <b>Ask for a fix</b>
+ <p class="hint">Only the part you pick is redone. This costs at most 1 more narration (about $0.30). 1 of 2 fix rounds is left.</p>
+ <div class="row"><label for="from" style="margin:0">From</label><input id="from" value="02:08" style="width:110px"><label for="to" style="margin:0">to</label><input id="to" value="02:14" style="width:110px"></div>
+ <div class="row" style="margin-top:12px"><button class="btn" data-toast="Fix requested for 02:08-02:14 only.">Fix just this part</button></div>
+</div>
+
+<div class="card" style="margin-top:14px">
+ <b>Approve</b>
+ <p class="hint">You're approving <b>narration take 2</b> (fingerprint 9c1e…a7). If it changes, this OK no longer counts. This does <b>not</b> publish anything. Publishing is its own approval.</p>
+ <div class="row"><button class="btn good big" data-toast="Approved take 2. Signed in as Joe.">Approve take 2</button><button class="btn" data-toast="Sent back with your comments.">Send back</button></div>
+ <details class="adv"><summary>Details</summary><pre>approval binds: run ep32-r4 · flow digest 5b0e… · step narration · artifact sha256 9c1e…a7 · effect: none (internal)
+decided by: authenticated session (agent tokens can't approve)</pre></details>
+</div>
+</main><nav class="tabbar" aria-label="Main"><a href="00-home.html" class=on><b>🏠</b>Home</a><a href="01-projects.html"><b>📁</b>Projects</a><a href="05-library.html"><b>📚</b>Library</a><a href="06-operations.html"><b>🛠️</b>Operations</a><a href="../redesign-v1/09-settings.html"><b>⚙️</b>Settings</a></nav></body></html>

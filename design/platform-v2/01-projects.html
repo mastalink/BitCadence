@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" data-theme="light"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Projects - BitCadence v2 mockup</title>
+<link rel="stylesheet" href="../redesign-v1/assets/style.css"><link rel="stylesheet" href="assets/v2.css"><script src="../redesign-v1/assets/app.js"></script></head><body>
+<div class="topbar"><span class="logo">BitCadence</span><nav class="nav" aria-label="Main"><a href="00-home.html">Home</a><a href="01-projects.html" class=on>Projects</a><a href="05-library.html">Library</a><a href="06-operations.html">Operations</a><a href="../redesign-v1/09-settings.html">Settings</a></nav><span class="sp"></span><a class="btn small" href="index.html">All screens</a><button class="btn small" onclick="bcTheme()" aria-label="Switch light or dark">🌓</button></div>
+<main class="wrap">
+<div class="mock-note">Low-fidelity proposal (Platform v2). Nothing here is connected to a backend or approved.</div>
+<h1>Projects</h1><p class="sub">A project holds everything for one outcome. Coding, media and operations can live in the same project.</p>
+
+<div class="card">
+ <div class="row"><h2 style="margin:0;flex:1">MyMeals 2.0 launch</h2><span class="badge ok">On track</span></div>
+ <table class="plain stack" style="margin-top:10px"><thead><tr><th>Flow</th><th>Kind</th><th>Now</th></tr></thead><tbody>
+  <tr><td><a href="02-flow.html">Fix and release</a></td><td>Coding</td><td><span class="pill warn">Needs your OK</span></td></tr>
+  <tr><td>Launch video</td><td>Media</td><td><span class="pill idle">Waits for release notes v3</span></td></tr>
+  <tr><td>Watch the deploy</td><td>AI Ops</td><td><span class="pill idle">Starts after release</span></td></tr>
+ </tbody></table>
+ <p class="hint">The launch video uses <b>release-notes.md, version 3</b> from "Fix and release". If the notes change, you will be asked before anything is made again.</p>
+</div>
+
+<h2 id="new">Start something new</h2>
+<div class="card">
+ <label for="want">What do you want to end up with?</label>
+ <textarea id="want" placeholder="Say it the way you'd tell a person.">Fix the bug where MyMeals logs people out after a password reset.</textarea>
+ <p class="hint">We'll match this to a tested template. If none fits, we draft an <b>Experimental</b> flow you can try with tighter limits.</p>
+ <div class="chips" role="group" aria-label="Kind of work" style="margin:10px 0">
+  <button class="chip on" data-group="k">💻 Coding</button><button class="chip" data-group="k">🎬 Media</button><button class="chip" data-group="k">🛠️ AI Ops</button></div>
+</div>
+
+<h2>Tested templates</h2>
+<div class="grid">
+ <div class="card tpl"><span class="kind">Coding</span><b>Fix a bug</b><span class="meta">Reproduce · fix in a safe copy · test · independent review · draft PR</span><span class="meta">Usually 20-40 min · up to $3</span><span class="badge ok">Tested · v3</span><a class="btn primary small" href="02-flow.html">Use this</a></div>
+ <div class="card tpl"><span class="kind">Coding</span><b>Build a small app</b><span class="meta">Plan · build · test · review · draft PR</span><span class="meta">1-3 h · up to $12</span><span class="badge ok">Tested · v1</span><button class="btn small">Use this</button></div>
+ <div class="card tpl"><span class="kind">Media</span><b>Make an episode</b><span class="meta">Script · art · narration · edit · music · checks · reviews · package</span><span class="meta">3-6 h · up to $9 · needs the GPU</span><span class="badge ok">Tested · v2</span><button class="btn small">Use this</button></div>
+ <div class="card tpl"><span class="kind">Media</span><b>Narrate a script</b><span class="meta">Narration · sound check · your review · one fix round</span><span class="meta">10 min · up to $1</span><span class="badge ok">Tested · v1</span><button class="btn small">Use this</button></div>
+ <div class="card tpl"><span class="kind">AI Ops</span><b>Watch a deploy</b><span class="meta">Health checks for 24 h · open a card if errors rise</span><span class="meta">Free</span><span class="badge ok">Tested · v1</span><button class="btn small">Use this</button></div>
+ <div class="card tpl"><span class="kind">AI Ops</span><b>Add a computer</b><span class="meta">Find what it can do · test it · add it to the queue</span><span class="meta">5 min · free</span><span class="badge ok">Tested · v1</span><a class="btn small" href="06-operations.html">Use this</a></div>
+</div>
+<p class="hint" style="margin-top:14px">Publishing and releasing are always their own templates. Making something never means it gets published.</p>
+</main><nav class="tabbar" aria-label="Main"><a href="00-home.html"><b>🏠</b>Home</a><a href="01-projects.html" class=on><b>📁</b>Projects</a><a href="05-library.html"><b>📚</b>Library</a><a href="06-operations.html"><b>🛠️</b>Operations</a><a href="../redesign-v1/09-settings.html"><b>⚙️</b>Settings</a></nav></body></html>
