@@ -17,7 +17,8 @@ Design, evidence and backlog:
 | `03-run.html` | Previews, wait reasons, recovery cards (what happened, what's saved, what you can do) |
 | `04-review.html` | Technical checks kept apart from taste, version compare, timecode comments, bounded fix, approval of one exact version |
 | `05-library.html` | Characters & Voices, brand kits, and connections that show what each one may do |
-| `06-operations.html` | Computers (model, role and host kept separate), helpers, queue reasons, GPU owner, spend, repairs |
+| `06-operations.html` | Computers (model, role and host kept separate), helpers, queue reasons, GPU owner, spend with project and overall caps, repairs, takeovers |
+| `07-settings.html` | The owner decisions in the GUI: publish-without-asking (per flow and destination, off by default), overall cap, budgets for new flows, takeover order (Chief, Deputy Chief, you) |
 
 The sample names, times and costs are made up for illustration. They are not fleet data.
 Checked at 1280 px (light theme) and 390 px (dark theme): no horizontal page scroll and no script errors.

@@ -1,6 +1,6 @@
 # BitCadence Platform v2: Coding, Media and AI Ops in one product
 
-**Status:** proposal for owner review. Nothing here is approved, built, or measured.
+**Status:** proposal for owner review. The owner decisions in §9 were recorded on 2026-10-18. The rest is not yet approved, and nothing is built or measured.
 **Evidence base:** `mastalink/BitCadence` default branch `main` at
 `62bb5c59dc75560af4de7d5082ab5a350ed09f0c` (2026-10-14 21:00 -0400), read 2026-10-18.
 Open PRs #148, #153 and #156 were read. There were no open issues.
@@ -363,12 +363,13 @@ role (`routes.py:1309-1310`, `:1478-1479`). An owner saying "take over" in
 chat grants nothing the server can see, so a worker token gets 403. That is
 correct behavior, and the product failure is that nothing better was offered.
 
-v2 adds a **Takeover grant**: the owner, in an authenticated session, grants
-helper X the right to cancel or reassign jobs *in run R* for *N hours*. It is
+v2 adds a **Takeover grant**: the Chief seat, the Deputy Chief seat, or Joe
+(in that escalation order, §6.4) grants helper X the right to cancel or
+reassign jobs *in run R* for *N hours*. It is
 recorded in the audit log and shown on the run card. It expires on its own.
 Old pending jobs from the replaced owner are fenced at grant time, so another
 worker cannot take them. The 403 becomes a plain state: *"Codex can't cancel
-this yet. [Ask Joe to let Codex take over this run]"*.
+this yet. [Ask the Chief to let Codex take over this run]"*.
 
 ### 6.3 Cost
 
@@ -376,10 +377,43 @@ this yet. [Ask Joe to let Codex take over this run]"*.
   already reserved. Unknown estimates show as "unknown" and need an explicit
   OK.
 - **During the run:** reserved and spent per step. A step that would cross
-  the cap stops at a gate. This already exists as an idea in
-  `SPEND_ABOVE_CAP` (`score_policy.py:15-17`).
+  the tighter of the project and organization caps stops at a gate (§6.5).
+  This already exists as an idea in `SPEND_ABOVE_CAP` (`score_policy.py:15-17`).
 - **Failed attempts keep their reservation** until reconciled. This is a
   conservative rule that already exists (`scores.py:200`).
+
+### 6.4 Takeover grants (decided)
+
+- **Who may grant, in order:** first the holder of the **Chief** seat (`claude-desktop` when online, otherwise the `claude-cio` sidecar, per `ops/cio-sidecar-brief.md` and `cio_policy.chief_is_online`). If the Chief seat is unavailable, the **Deputy Chief** seat. Then **Joe**.
+  The Deputy Chief seat is **not defined anywhere in the repository today**. Work packet P2d must add it as a named seat. It is a seat, not a fixed agent identity.
+- **A seat never grants a takeover to itself.** Grantor and grantee must be different identities.
+- **Joe can always revoke or override** a grant issued by either seat.
+- **Scope:** cancel, reassign and fence jobs inside one run. A grant never covers approvals, publishing, release, spend above caps, or new grants.
+- **Duration:** up to 4 hours **[assumption]**. It expires on its own. Every grant, use and revocation is written to the audit trail and shown on the run card.
+
+### 6.5 Spend caps (decided)
+
+- Two caps apply to every paid step: the **organization** monthly cap and the **project** monthly cap. A step must fit both, and the tighter one wins.
+- Project caps start from the values already in `cio_policy.SPEND_CAPS_CENTS`: Via $150, MyMeals $15, Sim Lab $25 with a hard stop at $40, Operate $10. A project with no cap fails closed, which `cio_policy` already does.
+- The organization cap value is an **[assumption]** until Joe sets it in Settings. It is shown as "not set" and blocks paid work, so it is never treated as unlimited.
+
+### 6.6 Publish gate (decided)
+
+- **Default:** every publish effect (YouTube, a website, a social post, a release to production) pauses at a human gate. The approval names the exact artifact version and destination.
+- **Bypass:** Settings > Publishing > "Publish without asking me". It is set **per flow template and destination**. It is never a global switch.
+  - It is off by default.
+  - Only an authenticated human owner session can turn it on. Agent tokens and the Chief and Deputy Chief seats cannot.
+  - Turning it on is audited.
+  - While it is on, every run of that flow shows a "Publishes automatically" badge before Start.
+- A bypass removes only the final publish gate. It does **not** remove the other gates in the production flow: creative review, prayer sign-off, technical checks, spend caps.
+
+### 6.7 Paid steps in Experimental flows (decided)
+
+- The first run of an Experimental flow that contains any paid step stops before Start for an **initial approval**.
+- That approval sets a **flow budget**, for example "$5 for further runs of this flow".
+- Later runs of the **same flow version** draw from that budget without asking. When it runs out, the next run asks again.
+- **[assumption]** The budget is tied to the flow version's digest. Editing the flow makes a new version, which needs a new initial approval, so changing the steps can't silently inherit a budget.
+- Flow budgets still count against the project and organization caps (§6.5).
 
 ---
 
@@ -404,11 +438,11 @@ this yet. [Ask Joe to let Codex take over this run]"*.
   prayer sign-off, or an owner-triggered relay. These pauses are designed in.
   A guided one-tap action the product offers (such as "Sign in again" or
   "Continue with Codex") counts as an **intervention**, not a repair.
-- **Supported configuration v1 [assumption]:** gateway on Windows or Linux,
+- **Supported configuration v1 (owner decision 2):** gateway on Windows or Linux,
   SQLite or Postgres store, helpers Claude, Codex and Grok (short steps only),
   hosts Beast (active) and Mac Studio (testing; no compute), connectors
   GitHub, ComfyUI and ElevenLabs.
-- **Workload mix [assumption]:** Coding 40%, Media 40%, AI Ops 20%. Each
+- **Workload mix (owner decision 2):** Coding 40%, Media 40%, AI Ops 20%. Each
   domain is also reported on its own, so one domain cannot hide another.
 
 ### 7.2 Metrics reported separately (never folded into UCR)
@@ -422,10 +456,14 @@ this yet. [Ask Joe to let Codex take over this run]"*.
 
 ### 7.3 Evaluation plan
 
-- **Confidence.** A claim of "≥ 92.6%" means the 95% Wilson lower bound is
-  at least 0.926. That needs **193 of 200** clean runs (96.5% observed), or
-  **287 of 300** (95.7%). An observed 92.6% does **not** prove the target.
-  Owner decision 1 asks which reading the owner wants.
+- **Goal (owner decision 1).** 92.6% is a **point-estimate working goal**:
+  it is met when observed UCR is at least 92.6% over an evaluation window of
+  at least 200 eligible runs.
+- **Confidence, shown for information.** The dashboard also shows the 95%
+  Wilson lower bound. For reference, a lower bound of 0.926 would need
+  **193 of 200** clean runs (96.5% observed), or **287 of 300** (95.7%).
+  At an observed rate of exactly 92.6%, the true rate could be lower. The
+  dashboard says so instead of hiding it.
 - **Per domain:** at least 60 eligible runs each before a per-domain number
   is published.
 - **Fault-injection suite** (each one runs as a test, then as a scheduled canary):
@@ -460,21 +498,23 @@ this yet. [Ask Joe to let Codex take over this run]"*.
 
 ---
 
-## 9. Owner decisions (only these)
+## 9. Owner decisions (recorded 2026-10-18)
 
-1. **What the 92.6% means.** Is it a point estimate, or a 95% lower bound?
-   The lower bound needs about 96.5% observed over 200 runs.
-2. **Workload mix and supported configuration** for the denominator (§7.1).
-   The values there are assumptions.
-3. **Navigation.** Five places (Home, Projects, Library, Operations, Settings)
-   replacing the current 12-item sidebar.
-4. **Who may grant a Takeover,** and the longest it may last.
-5. **Spend caps.** Do monthly caps stay per organization (VIA's $150/month
-   gate), or go per project, or both?
-6. **Media acceptance.** Which technical checks are hard failures (loudness,
-   duration, resolution), and is the Gemini ear review required or advisory?
-7. **Whether chat-drafted Experimental Flows** may use paid connectors at all
-   before validation.
+Joe answered these in the review conversation. Where his answer left a detail
+open, the detail is marked **[assumption]** and can be changed in review.
 
-Everything else here is a routine choice, labeled as an assumption where it
-matters, and can be changed in review.
+| # | Decision | What it changes |
+|---|---|---|
+| 1 | **92.6% is a point-estimate working goal.** | §7.3: the goal is met when observed UCR ≥ 92.6% over the evaluation window. The Wilson lower bound is still shown on the dashboard for information. It is not the bar. |
+| 2 | **Mix and supported configuration as proposed.** Joe left this choice to the designer. | §7.1 values stand: Coding 40%, Media 40%, AI Ops 20%. Supported configuration as listed. Each domain is still reported on its own. |
+| 3 | **Five places: Home, Projects, Library, Operations, Settings.** The bar: *it must not look or feel overwhelming.* | §3 stands. Every new screen is reviewed against that bar. When in doubt, a control goes behind "Details" or Advanced. |
+| 4 | **Takeover grants are issued by the Chief seat, then the Deputy Chief seat, then Joe**, in that escalation order. | §6.4. |
+| 5 | **Spend caps at both levels**: an overall organization cap and a cap per project. | §6.5. Builds on the per-project caps that already exist in `cio_policy.SPEND_CAPS_CENTS` (`src/mco/orchestrator/cio_policy.py:28-34`). |
+| 6 | **The final publish step has a human gate by default.** It can be bypassed only by a specific setting in the BitCadence Settings GUI. | §6.6. |
+| 7 | **A paid step in an Experimental flow needs an initial approval. That approval sets a budget for further runs of that flow.** | §6.7. |
+
+Still open. Joe didn't address these, so the earlier recommendation stands as an **[assumption]**:
+
+- Which media checks hard-fail. Assumed: loudness, duration and resolution.
+- Whether the Gemini ear review is required. Assumed: required before publish, advisory for drafts.
+- The longest a takeover grant may last. Assumed: 4 hours.
