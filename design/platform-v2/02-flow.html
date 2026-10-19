@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-theme="light"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Flow - BitCadence v2 mockup</title>
+<link rel="stylesheet" href="../redesign-v1/assets/style.css"><link rel="stylesheet" href="assets/v2.css"><script src="../redesign-v1/assets/app.js"></script></head><body>
+<div class="topbar"><span class="logo">BitCadence</span><nav class="nav" aria-label="Main"><a href="00-home.html">Home</a><a href="01-projects.html" class=on>Projects</a><a href="05-library.html">Library</a><a href="06-operations.html">Operations</a><a href="07-settings.html">Settings</a></nav><span class="sp"></span><a class="btn small" href="index.html">All screens</a><button class="btn small" onclick="bcTheme()" aria-label="Switch light or dark">🌓</button></div>
+<main class="wrap">
+<div class="mock-note">Low-fidelity proposal (Platform v2). Nothing here is connected to a backend or approved.</div>
+<p class="crumbs"><a href="01-projects.html">MyMeals 2.0 launch</a> › Fix and release</p>
+<h1>Fix the logout-after-reset bug</h1><p class="sub">From the template <b>Fix a bug, v3</b>. Change what you like. We check it before you start.</p>
+
+<div class="card" style="margin-bottom:14px">
+ <label for="chat">Change it in words</label>
+ <div class="row"><input id="chat" value="Also update the release notes when it's fixed" style="flex:1"><button class="btn" data-toast="Added step 6: Update release notes. Shown below.">Apply</button></div>
+ <p class="hint">Changes in words show up as steps below. Nothing changes that you can't see.</p>
+</div>
+
+<ol class="outline" aria-label="Steps">
+ <li><div class="head"><span class="num">1</span><span class="title">🔎 Reproduce the bug</span><span class="badge">Claude</span><span class="move"><button aria-label="Move up" disabled>↑</button><button aria-label="Move down">↓</button></span></div>
+  <div class="io">Uses: your description, the MyMeals repository · Makes: <b>a failing test</b></div>
+  <details class="adv"><summary>Details</summary><pre>step id: reproduce · output: git/commit + report/test (expect: 1 failing)
+limits: 1 try · 15 min · $0.80 · reasoning: Medium</pre></details></li>
+ <li><div class="head"><span class="num">2</span><span class="title">🛠️ Fix it in a safe copy</span><span class="badge">Claude</span><span class="move"><button aria-label="Move up">↑</button><button aria-label="Move down">↓</button></span></div>
+  <div class="io">Uses: the failing test · Makes: <b>a change on branch fix/logout-reset</b> · Never touches main or release branches</div>
+  <details class="adv"><summary>Details</summary><pre>capability: repository:write · allowed paths: src/auth/**, tests/auth/**
+limits: 2 tries · 30 min each · $2.00 · reasoning: Medium</pre></details></li>
+ <li><div class="head"><span class="num">3</span><span class="title">🧪 Run all the tests</span><span class="badge">Codex on Beast</span><span class="move"><button aria-label="Move up">↑</button><button aria-label="Move down">↓</button></span></div>
+  <div class="io">Makes: <b>a test report</b> · Must pass: every test, including the new one</div></li>
+ <li class="review"><div class="head"><span class="num">4</span><span class="title">👀 Independent review</span><span class="badge">Codex</span></div>
+  <div class="io">A different helper checks the change against "Done means". The builder can't review its own work.</div>
+  <div class="row" style="margin-top:8px"><label for="rev" style="margin:0">Reviewer</label><select id="rev" style="width:auto"><option>Codex</option><option>Grok (short reviews only)</option><option disabled>Claude (built it, so not allowed)</option></select></div></li>
+ <li><div class="head"><span class="num">5</span><span class="title">📬 Open a draft pull request</span><span class="badge">GitHub</span></div>
+  <div class="io">Makes: <b>a draft PR</b>. It does not merge or release.</div></li>
+ <li class="gate"><div class="head"><span class="num">6</span><span class="title">✋ You approve the PR</span><span class="badge warn">Needs you</span></div>
+  <div class="io">You approve this exact PR at this exact commit. Release is a separate flow.</div></li>
+</ol>
+<div class="row" style="margin-top:12px"><button class="btn small" data-toast="Step catalog opened.">+ Add a step</button><button class="btn small" data-toast="Limits opened.">Change limits</button><a class="hint" href="03-run.html">See it as it will run</a></div>
+
+<h2>Before you start</h2>
+<div class="card" aria-live="polite">
+ <table class="plain"><tbody>
+  <tr><td>✅</td><td>MyMeals repository is connected and a safe copy can be made</td></tr>
+  <tr><td>✅</td><td>Claude has quota (resets in 3 h) · Codex on Beast is ready</td></tr>
+  <tr><td>✅</td><td>GitHub sign-in is good for 41 more days</td></tr>
+  <tr><td>✅</td><td>Fits both limits: up to $3.40 · MyMeals has $11.60 of $15 left · all projects have $109 of $150 left</td></tr>
+  <tr><td>⚠️</td><td>Mac Studio is in testing, so no steps will run there</td></tr>
+ </tbody></table>
+ <div class="row" style="margin-top:12px"><a class="btn good big" href="03-run.html">Start</a><button class="btn" data-toast="Saved as a draft.">Save for later</button></div>
+</div>
+</main><nav class="tabbar" aria-label="Main"><a href="00-home.html"><b>🏠</b>Home</a><a href="01-projects.html" class=on><b>📁</b>Projects</a><a href="05-library.html"><b>📚</b>Library</a><a href="06-operations.html"><b>🛠️</b>Operations</a><a href="07-settings.html"><b>⚙️</b>Settings</a></nav></body></html>

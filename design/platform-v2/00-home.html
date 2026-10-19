@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en" data-theme="light"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Home - BitCadence v2 mockup</title>
+<link rel="stylesheet" href="../redesign-v1/assets/style.css"><link rel="stylesheet" href="assets/v2.css"><script src="../redesign-v1/assets/app.js"></script></head><body>
+<div class="topbar"><span class="logo">BitCadence</span><nav class="nav" aria-label="Main"><a href="00-home.html" class=on>Home</a><a href="01-projects.html">Projects</a><a href="05-library.html">Library</a><a href="06-operations.html">Operations</a><a href="07-settings.html">Settings</a></nav><span class="sp"></span><a class="btn small" href="index.html">All screens</a><button class="btn small" onclick="bcTheme()" aria-label="Switch light or dark">🌓</button></div>
+<main class="wrap">
+<div class="mock-note">Low-fidelity proposal (Platform v2). Nothing here is connected to a backend or approved.</div>
+<h1>Good morning, Joe</h1><p class="sub">3 things need you. 4 runs are going on their own.</p>
+
+<h2>Needs you</h2>
+<div class="grid">
+ <div class="card"><span class="pill warn">✋ Approve</span>
+  <h3 style="margin:10px 0 4px">Draft PR for the MyMeals login fix</h3>
+  <p class="hint">Tests passed (214). Reviewed by Codex. You approve this PR at commit a41c9e2. A new commit cancels this OK.</p>
+  <div class="row"><a class="btn good" href="04-review.html">Review and approve</a></div></div>
+ <div class="card"><span class="pill warn">🎧 Your turn</span>
+  <h3 style="margin:10px 0 4px">Ear review for Episode 32</h3>
+  <p class="hint">Upload the review pack (8.4 MB) to Gemini, then paste its notes here. Time offsets are kept for the whole film.</p>
+  <div class="row"><button class="btn" data-toast="Review pack downloaded.">Get review pack</button><button class="btn" data-toast="Notes box opened.">Paste notes</button></div></div>
+ <div class="card"><span class="pill bad">🔧 Fix</span>
+  <h3 style="margin:10px 0 4px">Character art is stuck</h3>
+  <p class="hint">Beast is missing the model "sdxl-character-v2". Nothing was spent.</p>
+  <div class="row"><a class="btn" href="03-run.html#recover">See what to do</a></div></div>
+</div>
+
+<h2>Running now</h2>
+<div class="grid">
+ <a class="acard run" href="03-run.html" style="text-decoration:none;color:inherit"><div class="who"><span class="dot run"></span>Episode 32 · Narration</div>
+  <p class="line">ElevenLabs is making narration take 2 of 3.</p>
+  <ul class="ladder" aria-label="Progress"><li class="done">Accepted</li><li class="done">Assigned</li><li class="now">Working</li><li>Output checked</li><li>Reviewed</li><li>Approved</li><li>Delivered</li></ul></a>
+ <div class="acard need"><div class="who"><span class="dot warn"></span>Episode 32 · Artwork</div>
+  <p class="line">Waiting for the GPU. Overnight training holds it until 2:00 AM.</p>
+  <ul class="ladder"><li class="done">Accepted</li><li class="need">Waiting: GPU</li></ul></div>
+ <div class="acard done"><div class="who"><span class="dot ok"></span>MyMeals · Watch the deploy</div>
+  <p class="line">Healthy for 6 h of 24. Error rate 0.1%.</p></div>
+ <div class="acard run"><div class="who"><span class="dot run"></span>BitCadence · Weekly dependency check</div>
+  <p class="line">Codex is running tests in an isolated copy.</p></div>
+</div>
+<p class="hint" style="margin-top:18px">Spent this month: $41 of $150 · <a href="06-operations.html#spend">See spend</a></p>
+</main><nav class="tabbar" aria-label="Main"><a href="00-home.html" class=on><b>🏠</b>Home</a><a href="01-projects.html"><b>📁</b>Projects</a><a href="05-library.html"><b>📚</b>Library</a><a href="06-operations.html"><b>🛠️</b>Operations</a><a href="07-settings.html"><b>⚙️</b>Settings</a></nav></body></html>

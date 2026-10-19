@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-theme="light"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Settings - BitCadence v2 mockup</title>
+<link rel="stylesheet" href="../redesign-v1/assets/style.css"><link rel="stylesheet" href="assets/v2.css"><script src="../redesign-v1/assets/app.js"></script></head><body>
+<div class="topbar"><span class="logo">BitCadence</span><nav class="nav" aria-label="Main"><a href="00-home.html">Home</a><a href="01-projects.html">Projects</a><a href="05-library.html">Library</a><a href="06-operations.html">Operations</a><a href="07-settings.html" class=on>Settings</a></nav><span class="sp"></span><a class="btn small" href="index.html">All screens</a><button class="btn small" onclick="bcTheme()" aria-label="Switch light or dark">🌓</button></div>
+<main class="wrap narrow">
+<div class="mock-note">Low-fidelity proposal (Platform v2). Nothing here is connected to a backend or approved.</div>
+<h1>Settings</h1><p class="sub">The few things only you decide. Everything else has a safe default.</p>
+
+<h2>Publishing</h2>
+<div class="card">
+ <p>Publishing always waits for your OK, unless you turn that off below for one flow and one destination.</p>
+ <table class="plain stack"><thead><tr><th>Flow</th><th>Where</th><th>Publish without asking me</th></tr></thead><tbody>
+  <tr><td>Publish an episode</td><td>YouTube</td><td><label class="switch"><input type="checkbox" data-toast="Turning this on needs your sign-in. It will be recorded."> Off</label></td></tr>
+  <tr><td>Release MyMeals</td><td>Production</td><td><label class="switch"><input type="checkbox" data-toast="Turning this on needs your sign-in. It will be recorded."> Off</label></td></tr>
+ </tbody></table>
+ <p class="hint">Only you can turn this on. Helpers and the Chief can't. When it's on, those runs show "Publishes automatically" before they start. Creative review, prayer sign-off and checks still happen.</p>
+</div>
+
+<h2>Spend</h2>
+<div class="card">
+ <label for="org">Overall monthly cap (all projects)</label><input id="org" value="$150">
+ <p class="hint">Each project also has its own cap in Operations › Spend. A paid step has to fit both.</p>
+</div>
+
+<h2>Trying new flows</h2>
+<div class="card">
+ <p>A new flow that uses paid tools asks you the first time. When you OK it, you also set a budget for running it again.</p>
+ <table class="plain stack"><thead><tr><th>Flow</th><th>Budget for re-runs</th><th>Left</th></tr></thead><tbody>
+  <tr><td>Thumbnail variations (experimental, v1)</td><td>$5.00</td><td>$3.20</td></tr>
+ </tbody></table>
+ <p class="hint">If the flow's steps change, it asks you again. A budget never carries over to a changed flow.</p>
+</div>
+
+<h2>Who can let a helper take over</h2>
+<div class="card">
+ <ol style="margin:0;padding-left:22px"><li><b>The Chief</b> (Claude desktop, or its sidecar when the desktop app is closed)</li><li><b>The Deputy Chief</b>, if the Chief isn't available</li><li><b>You</b>: you can always grant, revoke or override</li></ol>
+ <p class="hint">A takeover covers stopping and moving jobs in one run, for up to 4 hours. It can't approve, publish, spend over a cap, or hand out more takeovers. A seat can't grant a takeover to itself.</p>
+</div>
+
+<h2>Everything else</h2>
+<div class="card"><p class="hint">Pause everything, start with my computer, lock this computer down: unchanged from <a href="../redesign-v1/09-settings.html">redesign v1</a>.</p></div>
+</main><nav class="tabbar" aria-label="Main"><a href="00-home.html"><b>🏠</b>Home</a><a href="01-projects.html"><b>📁</b>Projects</a><a href="05-library.html"><b>📚</b>Library</a><a href="06-operations.html"><b>🛠️</b>Operations</a><a href="07-settings.html" class=on><b>⚙️</b>Settings</a></nav></body></html>
