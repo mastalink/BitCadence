@@ -28,9 +28,9 @@ def _now():
 
 
 def _job(db, *, age_seconds=0, job_id="job-1", role="codex", instance="codex-beast",
-         status="pending", payload=None):
+         status="pending", payload=None, title="Fix the thing"):
     db.table("agent_jobs").insert({
-        "id": job_id, "title": "Fix the thing", "status": status,
+        "id": job_id, "title": title, "status": status,
         "target_agent_role": role, "target_agent_id": instance,
         "input_payload": payload or {},
         "created_at": (_now() - timedelta(seconds=age_seconds)).isoformat(),
@@ -223,6 +223,20 @@ class TestSweep:
         result = _sweep_beast(db, now=_later(STALL), config=BASE, online_roles=_online("claude"))
         assert result.escalated == ["job-1"]
         assert result.notifications == [{"job_id": "job-1"}]
+
+    def test_shepherd_gate_is_never_rerouted(self, db):
+        _job(db, age_seconds=STALL + 5, title="[shepherd] review ep 3 (gate)")
+        _sweep_beast(db, config=BASE, online_roles=_online("claude"))
+        result = _sweep_beast(db, now=_later(STALL), config=BASE, online_roles=_online("claude"))
+        assert result.rerouted == []
+        assert result.escalated == ["job-1"]
+        assert _row(db)["target_agent_id"] == "codex-beast"
+
+    def test_non_gate_shepherd_title_still_reroutes(self, db):
+        _job(db, age_seconds=STALL + 5, title="[shepherd] build ep 3")
+        _sweep_beast(db, config=BASE, online_roles=_online("claude"))
+        result = _sweep_beast(db, now=_later(STALL), config=BASE, online_roles=_online("claude"))
+        assert result.rerouted == ["job-1"]
 
     def test_role_without_fallback_escalates(self, db):
         _job(db, age_seconds=STALL + 5, role="chief", instance="chief-beast")
