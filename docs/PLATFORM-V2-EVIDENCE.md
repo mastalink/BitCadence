@@ -63,7 +63,7 @@ comes from repository documents or PR text, and its source is named.
 | ElevenLabs connector | **missing** (source) | PR #156 only loads `ELEVENLABS_API_KEY` into a worker's environment | A worker can call it ad hoc. It is not a governed effect. |
 | Publish / deploy effects | **missing** | Dry-run previews only (`score_adapters.py:119-125`) | |
 | Per-project spend caps (Chief policy) | exists | `src/mco/orchestrator/cio_policy.py:28-34` (Via $150, MyMeals $15, Sim Lab $25 / hard stop $40, Operate $10); unknown project fails closed (`:87-94`) | Used by the Chief sidecar's approve/reject. Not yet enforced by the Score bridge. |
-| Chief seat | exists | `cio_policy.chief_is_online` (`:75-80`); `ops/cio-sidecar-brief.md` | Deputy Chief seat: **missing** |
+| Chief seat | exists | `cio_policy.chief_is_online` (`:75-80`); `ops/cio-sidecar-brief.md` | Deputy Chief seat: **missing** in source. The owner has assigned it to Grokbot (design §6.4). |
 | Paid-effect budget reservation | partial (sandbox only) | `scores.py:199-200`, `:278-279`, `:358`. The live bridge refuses budgets (`score_bridge.py:143`) | |
 | Usage / capacity signal | planned | `docs/USAGE-CAPACITY-SIGNAL.md` (U01 contract). No source implementation found. | |
 
