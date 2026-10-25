@@ -72,15 +72,23 @@ def list_exchanges(
     workflow_step: Optional[str] = None,
     thread_id: Optional[str] = None,
     kind: Optional[str] = None,
+    since: Optional[str] = None,
+    from_agent: Optional[str] = None,
     limit: int = ax.DEFAULT_PAGE,
     cursor: Optional[str] = None,
     agent: dict = Depends(require_scopes("context:read")),
 ):
+    """List recent org exchanges; linkage, kind, author and since filters are optional.
+
+    Workflow filters must include name, run and step together. `since` is an
+    exclusive ISO timestamp with a timezone; `from_agent` is an author instance ID.
+    """
     try:
         page = ax.list_exchanges(
             _db(), agent, job_id=job_id, workflow_name=workflow_name,
             workflow_run=workflow_run, workflow_step=workflow_step,
-            thread_id=thread_id, kind=kind, limit=limit, cursor=cursor,
+            thread_id=thread_id, kind=kind, since=since, from_agent=from_agent,
+            limit=limit, cursor=cursor,
         )
     except ax.ExchangeError as exc:
         raise _fail(exc)
