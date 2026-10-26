@@ -225,18 +225,75 @@ def test_foreign_tenant_gets_404_and_empty_lists(client):
     assert client.get("/api/exchanges", params={"thread_id": row["thread_id"]}).json()["items"] == []
 
 
-def test_list_requires_linkage_filter(client):
-    assert client.get("/api/exchanges").status_code == 400
-    assert client.get("/api/exchanges", params={"kind": "question"}).status_code == 400
-    assert client.get("/api/exchanges", params={"workflow_name": "w"}).status_code == 400
+def test_unfiltered_list_returns_newest_first_across_jobs(db, client, monkeypatch):
+    other_job = str(uuid.uuid4())
+    db.table("agent_jobs").insert({"id": other_job, "title": "second", "status": "pending"}).execute()
+    for day, body, job in [(1, "old", JOB), (3, "new", other_job), (2, "middle", JOB)]:
+        monkeypatch.setattr(ax, "_now", lambda day=day: f"2026-09-{day:02}T00:00:00.000000+00:00")
+        assert post(client, body=body, job_id=job).status_code == 201
+    resp = client.get("/api/exchanges", params={"limit": 2})
+    assert resp.status_code == 200, resp.text
+    assert [r["body"] for r in resp.json()["items"]] == ["new", "middle"]
+    assert resp.json()["next_cursor"]
+    assert resp.json()["authoritative"] is False
 
 
-def test_cursor_pagination_stable_capped_and_tenant_bound(db, client, monkeypatch):
+def test_unfiltered_list_kind_and_author_filters(client):
+    post(client, kind="question", body="first author")
+    client.state["agent"] = principal("agent-2")
+    post(client, kind="decision", body="decision")
+    post(client, kind="question", body="second author")
+    resp = client.get("/api/exchanges", params={"kind": "question", "from_agent": "agent-2"})
+    assert resp.status_code == 200, resp.text
+    assert [r["body"] for r in resp.json()["items"]] == ["second author"]
+
+
+def test_unfiltered_list_since_filter(client, monkeypatch):
+    for day in (1, 2, 3):
+        monkeypatch.setattr(ax, "_now", lambda day=day: f"2026-09-{day:02}T00:00:00.000000+00:00")
+        post(client, body=f"day {day}")
+    resp = client.get("/api/exchanges", params={"since": "2026-09-02T01:00:00+01:00"})
+    assert resp.status_code == 200, resp.text
+    assert [r["body"] for r in resp.json()["items"]] == ["day 3"]
+
+
+@pytest.mark.parametrize("since", ["yesterday", "2026-09-02", "2026-09-02T00:00:00"])
+def test_list_rejects_invalid_or_naive_since(client, since):
+    assert client.get("/api/exchanges", params={"since": since}).status_code == 400
+    assert client.get("/api/exchanges", params={"job_id": JOB, "since": since}).status_code == 400
+
+
+def test_unfiltered_list_org_isolation(client):
+    post(client, body="default org only")
+    client.state["agent"] = principal("other-agent", org="other", scopes=["context:read"])
+    resp = client.get("/api/exchanges")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["items"] == [] and resp.json()["next_cursor"] is None
+
+
+def test_unfiltered_list_requires_read_scope(client):
+    client.state["agent"] = principal(scopes=["context:write"])
+    assert client.get("/api/exchanges").status_code == 403
+
+
+@pytest.mark.parametrize("workflow", [
+    {"workflow_name": "w"}, {"workflow_run": "r"}, {"workflow_step": "s"},
+    {"workflow_name": "w", "workflow_run": "r"},
+    {"workflow_name": "w", "workflow_step": "s"},
+    {"workflow_run": "r", "workflow_step": "s"},
+])
+def test_list_rejects_partial_workflow_filter(client, workflow):
+    assert client.get("/api/exchanges", params=workflow).status_code == 400
+    assert client.get("/api/exchanges", params={"job_id": JOB, **workflow}).status_code == 400
+
+
+@pytest.mark.parametrize("linkage", [{"job_id": JOB}, {}])
+def test_cursor_pagination_stable_capped_and_tenant_bound(db, client, monkeypatch, linkage):
     monkeypatch.setattr(ax, "_now", lambda: "2026-09-23T00:00:00.000000+00:00")  # equal timestamps
     ids = [post(client, body=f"m{i}").json()["exchange"]["id"] for i in range(7)]
     seen, cursor, last_cursor = [], None, None
     while True:
-        params = {"job_id": JOB, "limit": 3}
+        params = {**linkage, "limit": 3}
         if cursor:
             params["cursor"] = cursor
         page = client.get("/api/exchanges", params=params).json()
@@ -248,7 +305,7 @@ def test_cursor_pagination_stable_capped_and_tenant_bound(db, client, monkeypatc
         if not cursor:
             break
     assert set(ids) <= set(seen) and len(seen) == len(set(seen))
-    assert len(client.get("/api/exchanges", params={"job_id": JOB, "limit": 9999}).json()["items"]) <= ax.MAX_PAGE
+    assert len(client.get("/api/exchanges", params={**linkage, "limit": 9999}).json()["items"]) <= ax.MAX_PAGE
     foreign = ax.encode_cursor("default", {"created_at": "a", "id": "b"})
     client.state["agent"] = principal("x", org="other")
     assert client.get("/api/exchanges", params={"thread_id": ids[0], "cursor": foreign}).status_code == 400

@@ -311,8 +311,10 @@ def test_exchange_tools_call_exchange_api(monkeypatch):
     monkeypatch.setattr(mcp_mod, "_client", lambda: gw)
     mcp_mod.mco_exchange_post("blocker", "stuck", "key-1", job_id="j1")
     mcp_mod.mco_exchange_list(job_id="j1", limit=10)
+    mcp_mod.mco_exchange_list(since="2026-09-02T00:00:00Z", from_agent="agent-2")
     assert seen[0][:2] == ("POST", "/api/exchanges")
     assert seen[0][3]["provenance"] == {"source": "mcp"} and seen[0][3]["kind"] == "blocker"
     assert seen[1][:2] == ("GET", "/api/exchanges") and seen[1][2]["job_id"] == "j1"
+    assert seen[2][2] == {"since": "2026-09-02T00:00:00Z", "from_agent": "agent-2", "limit": "50"}
     # No promotion tool is exposed to agents over MCP.
     assert not hasattr(mcp_mod, "mco_exchange_promote")
