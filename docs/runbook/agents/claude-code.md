@@ -11,7 +11,7 @@ The primary code builder for BitCadence, Score steps, Blender automation scripts
 
 ## Not allowed (hard rules)
 - Never pushes directly to remote `main` branch or shared repos without explicit instructions.
-- Never deploys production infrastructure (only Joseph merges and deploys).
+- Never deploys production infrastructure (only the owner merges and deploys).
 - Never writes credentials, tokens, or environment secrets into committed files.
 - Never performs media rendering or ComfyUI model execution (delegate to `claude-beast`).
 
@@ -45,4 +45,4 @@ Send via `mco_send`:
 - **Fix:** Check `~/.mco/logs/claude-code.log`. If out of Claude usage, reassign code tasks to `codex-beast`.
 
 ## Who reviews its work
-`antigravity-beast` or `agy-studio-3` (code review), and Joseph before merging.
+`antigravity-beast` or `agy-studio-3` (code review), and the owner before merging.

@@ -20,7 +20,7 @@ VIEW_SOURCE = (
 SHELL_SOURCE = (
     ROOT / "src" / "mco" / "console_src" / "8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js"
 ).read_text(encoding="utf-8")
-OPERATOR = {"instance_id": "joe", "role": "human", "status": "online", "org_id": "default"}
+OPERATOR = {"instance_id": "alex", "role": "human", "status": "online", "org_id": "default"}
 
 
 @pytest.fixture

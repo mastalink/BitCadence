@@ -44,4 +44,4 @@ Send via `mco_send`:
 - **Fix:** Check `mco score status --run-id <id>`; verify reviewer output artifact hashes; restart conductor process.
 
 ## Who reviews its work
-Downstream task reviewers and Joseph.
+Downstream task reviewers and the owner.

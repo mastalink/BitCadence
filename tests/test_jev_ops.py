@@ -181,7 +181,7 @@ class TestDisabledModeParity:
         entry = remember(
             db, title="Prod DB is read-only on Sundays",
             content="Maintenance window 02:00-06:00 UTC.",
-            kind="fact", tags=["Postgres", " ops "], created_by="joe",
+            kind="fact", tags=["Postgres", " ops "], created_by="alex",
         )
         assert entry["kind"] == "fact"
         assert entry["tags"] == ["postgres", "ops"]

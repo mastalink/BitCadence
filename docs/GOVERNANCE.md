@@ -63,7 +63,7 @@ Default: `human,admin,operator`.
 
 Register yourself a human approver agent once and save its token:
 ```bash
-mco register --name joe --role human
+mco register --name alex --role human
 ```
 
 ### Deciding the gate

@@ -1,11 +1,12 @@
 """Deterministic hard filters in code for job ranking.
 
-Hard filters represent non-negotiable boundaries (employment conflicts, legal
+Hard filters represent non-negotiable boundaries (owner conflicts of interest, legal
 and terms-of-service compliance, ethical boundaries, and fleet capabilities).
 They are evaluated deterministically in code and are NEVER delegated to Jev.
 
 The `\\bbank\\b` filter is deliberately conservative (it may exclude benign
-"bank statement parser" jobs), because Joseph works at the Federal Reserve.
+"bank statement parser" jobs), because of the owner conflict-of-interest policy
+(regulated financial institutions).
 The wider finance-sector filter (trading, crypto, lending, insurance,
 accounting, payments) is conservative for the same reason.
 
@@ -25,11 +26,11 @@ from mco.jobs.models import JobPosting
 
 REASON_EXCLUDE_FINANCIAL_CONFLICT = (
     "EXCLUDE: Client is a bank/credit union/financial institution/fintech lender "
-    "(owner's Federal Reserve employment conflict)"
+    "(owner conflict-of-interest policy: regulated financial institutions)"
 )
 REASON_EXCLUDE_FINANCE_SECTOR = (
     "EXCLUDE: Finance-sector work (trading, crypto, lending, insurance, accounting, "
-    "payments; owner's Federal Reserve employment conflict)"
+    "payments; owner conflict-of-interest policy: regulated financial institutions)"
 )
 REASON_EXCLUDE_NOT_ONE_OFF = (
     "EXCLUDE: Not a one-off deliverable (hourly, ongoing, long-term, retainer, "

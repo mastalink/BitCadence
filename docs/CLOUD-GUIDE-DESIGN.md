@@ -1,6 +1,6 @@
 # Cloud guide design
 
-Subject: the deployed BitCadence AWS test lab. Audience: Joseph learning operations
+Subject: the deployed BitCadence AWS test lab. Audience: The owner learning operations
 and investors understanding where control and evidence live. Primary job: explain
 the architecture and teach a safe first session without implying production HA.
 

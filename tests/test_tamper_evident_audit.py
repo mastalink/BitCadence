@@ -26,7 +26,7 @@ from tests.test_routes import FakeDB
 
 
 CODEX_AGENT = {"instance_id": "agent-1", "role": "codex", "status": "online"}
-HUMAN_AGENT = {"instance_id": "joe", "role": "human", "status": "online"}
+HUMAN_AGENT = {"instance_id": "alex", "role": "human", "status": "online"}
 
 
 def _build_app() -> FastAPI:

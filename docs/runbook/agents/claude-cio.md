@@ -40,7 +40,7 @@ Send via `mco_send`:
 
 ## Signs it is stuck and the fix
 - **Signs:** Shows offline in `mco_agents`, or lease expired without approval action.
-- **Fix:** Check gateway connection; fallback to direct owner approval from Joseph.
+- **Fix:** Check gateway connection; fallback to direct owner approval from the owner.
 
 ## Who reviews its work
-Joseph (owner).
+The owner (owner).

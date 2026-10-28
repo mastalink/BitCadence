@@ -4,8 +4,8 @@ Response procedures for stuck agents, outages, credential leaks, and review disp
 
 ## Standing Safety Rules
 1. **Never print, copy, or commit secrets or tokens.**
-2. **Escalation path is strictly ordered:** Worker -> Deputy (`grok-beast`) -> Chief (`claude-desktop`) -> Joseph.
-3. **Nobody deploys to production or modifies production data except Joseph.**
+2. **Escalation path is strictly ordered:** Worker -> Deputy (`grok-beast`) -> Chief (`claude-desktop`) -> The owner.
+3. **Nobody deploys to production or modifies production data except the owner.**
 4. **Log every incident immediately** in `docs/runbook/incident-log.md`.
 
 ---
@@ -15,7 +15,7 @@ Response procedures for stuck agents, outages, credential leaks, and review disp
 Worker encountering error
   └─► Deputy Chief: grok-beast (first response, triage, single retry)
         └─► Chief: claude-desktop (policy, architecture, batched questions)
-              └─► Owner: Joseph (spending, prod deployment, security, publishing)
+              └─► Owner: The owner (spending, prod deployment, security, publishing)
 ```
 
 ---
@@ -47,7 +47,7 @@ Worker encountering error
    - Verify port 18789 responds: `curl http://127.0.0.1:18789/api/jobs/capabilities`.
 3. **Escalation:**
    - If the gateway fails to start due to corrupted local store or database lock, notify Chief immediately.
-   - Chief prepares recovery options and brings concise action plan to Joseph.
+   - Chief prepares recovery options and brings concise action plan to the owner.
 
 ---
 
@@ -57,13 +57,13 @@ Worker encountering error
    - Invalidate any exposed external API keys (ElevenLabs, OpenAI, Anthropic, Google).
 2. **Scrub Repositories:**
    - Check `git status` and `git diff`. Do NOT push commits containing secrets.
-   - If pushed to a branch, force-delete or rebase immediately under Joseph's direction.
+   - If pushed to a branch, force-delete or rebase immediately under the owner's direction.
 3. **Re-key Workers:**
    - Store new token in gitignored `.env` (mode 600) or `~/.mco/tokens/<instance>.token`.
    - Update consumer configurations (`~/.claude.json`, `config.toml`).
 4. **Report:**
    - Log full incident in `incident-log.md` with timestamp, compromised credential name, and verification of rotation.
-   - Notify Joseph immediately.
+   - Notify the owner immediately.
 
 ---
 
@@ -73,8 +73,8 @@ Worker encountering error
 2. **Doctrinal or Moral Doubt:**
    - If `reviewer-beast` flags a theological issue or kid-safety concern that seems ambiguous, do NOT attempt to bypass the gate.
    - Escalate directly to Chief `claude-desktop`.
-   - If Chief cannot settle the doctrinal question from Church teaching, Chief brings the exact text and citation to Joseph.
+   - If Chief cannot settle the doctrinal question from Church teaching, Chief brings the exact text and citation to the owner.
 3. **Comedy Gate Disagreement:**
    - If a comedy script fails twice, the Shepherd automatically marks HOLD.
    - The episode moves to the owner review queue (`C:\AI\content-studio\REVIEW_QUEUE.md`).
-   - Joseph reviews the punch-up list during his review window.
+   - The owner reviews the punch-up list during his review window.

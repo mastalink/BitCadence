@@ -22,7 +22,7 @@
     { instance_id: "claude-research-1", role: "claude", status: "online", last_seen_at: minsAgo(0.1) },
     { instance_id: "claude-research-2", role: "claude", status: "offline", last_seen_at: minsAgo(94) },
     { instance_id: "gemini-qa-1", role: "gemini", status: "online", last_seen_at: minsAgo(0.6) },
-    { instance_id: "joe-laptop", role: "human", status: "online", last_seen_at: minsAgo(1) },
+    { instance_id: "owner-laptop", role: "human", status: "online", last_seen_at: minsAgo(1) },
     { instance_id: "ops-console-1", role: "operator", status: "offline", last_seen_at: minsAgo(312) },
   ];
 
@@ -37,7 +37,7 @@
 
   function mkJob(o) {
     return Object.assign({
-      id: uuid(), title: "", description: "", source_agent_id: "joe-laptop", source_agent_role: "human",
+      id: uuid(), title: "", description: "", source_agent_id: "owner-laptop", source_agent_role: "human",
       target_agent_role: "codex", target_agent_id: null, status: "pending", depends_on: [],
       input_payload: {}, output_payload: null, error_message: null,
       requires_approval: false, max_retries: 0, retry_count: 0, escalate_to_role: null,
@@ -62,7 +62,7 @@
     mkJob({ title: "Nightly dependency audit", description: "Scan lockfiles for vulnerable packages.", target_agent_role: "gemini", status: "completed", created_at: minsAgo(125), output_payload: { vulnerabilities: 0, scanned: 312 } }),
     mkJob({ title: "Backfill audit events to cold storage", target_agent_role: "codex", status: "failed", error_message: "S3 bucket policy denied PutObject (403).", max_retries: 2, retry_count: 2, escalate_to_role: "human", created_at: minsAgo(58) }),
     mkJob({ title: "Draft release notes for v2.3.1", target_agent_role: "claude", status: "completed", created_at: minsAgo(240), output_payload: { doc: "release-notes-v2.3.1.md" } }),
-    mkJob({ title: "Prune stale agent registrations", target_agent_role: "codex", status: "rejected", requires_approval: true, approved_by: "joe-laptop", error_message: "Rejected by joe-laptop: ops-console-1 may come back after the office move.", created_at: minsAgo(300) }),
+    mkJob({ title: "Prune stale agent registrations", target_agent_role: "codex", status: "rejected", requires_approval: true, approved_by: "owner-laptop", error_message: "Rejected by owner-laptop: ops-console-1 may come back after the office move.", created_at: minsAgo(300) }),
   ];
 
   // Seed plausible audit history
@@ -77,7 +77,7 @@
       recordAt(j.id, "retried", "system", "system", { attempt: 2, max_retries: 2 }, j.updated_at);
       recordAt(j.id, "status:failed", "codex-build-2", "codex", { error: j.error_message }, j.updated_at);
     }
-    if (j.status === "rejected") recordAt(j.id, "rejected", "joe-laptop", "human", { reason: "ops-console-1 may come back after the office move." }, j.updated_at);
+    if (j.status === "rejected") recordAt(j.id, "rejected", "owner-laptop", "human", { reason: "ops-console-1 may come back after the office move." }, j.updated_at);
   });
 
   // ---------------- Store + pub/sub ----------------
@@ -129,7 +129,7 @@
     retryNow(jobId) {
       const j = find(jobId); if (!j || j.status !== "failed") return;
       j.retry_count = 0; j.error_message = null; touch(j, "pending");
-      record(jobId, "retried", "joe-laptop", "human", { manual: true });
+      record(jobId, "retried", "owner-laptop", "human", { manual: true });
       toast("ok", "Re-queued", j.title);
       notify();
     },
@@ -137,7 +137,7 @@
       const j = find(jobId); if (!j) return;
       touch(j, "cancelled");
       j.error_message = reason ? "Cancelled: " + reason : "Cancelled by operator";
-      record(jobId, "cancelled", "joe-laptop", "human", { reason });
+      record(jobId, "cancelled", "owner-laptop", "human", { reason });
       toast("ok", "Cancelled", j.title);
       notify();
     },
@@ -146,7 +146,7 @@
       if (toRole) j.target_agent_role = toRole;
       if (toInstance) j.leased_by_instance_id = toInstance;
       touch(j, "pending");
-      record(jobId, "reassigned", "joe-laptop", "human", { toRole, toInstance });
+      record(jobId, "reassigned", "owner-laptop", "human", { toRole, toInstance });
       toast("ok", "Reassigned", j.title + " → " + (toInstance || toRole));
       notify();
     },
@@ -155,7 +155,7 @@
       const clean = String(name || "").trim();
       j.project = clean ? { id: clean.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project", name: clean } : null;
       j.updated_at = now();
-      record(jobId, clean ? "project_assigned" : "project_cleared", "joe-laptop", "human", { project: j.project });
+      record(jobId, clean ? "project_assigned" : "project_cleared", "owner-laptop", "human", { project: j.project });
       notify();
     },
     batchAction(action, jobIds, extra = {}) {
@@ -164,31 +164,31 @@
         const j = find(id);
         if (!j) return;
         if (action === "approve" && j.status === "needs_approval") {
-          touch(j, "pending"); j.approved_by = "joe-laptop";
-          record(j.id, "approved", "joe-laptop", "human");
+          touch(j, "pending"); j.approved_by = "owner-laptop";
+          record(j.id, "approved", "owner-laptop", "human");
           count++;
         } else if (action === "reject" && j.status === "needs_approval") {
-          touch(j, "rejected"); j.approved_by = "joe-laptop";
+          touch(j, "rejected"); j.approved_by = "owner-laptop";
           j.error_message = extra.reason || "Rejected by operator";
-          record(j.id, "rejected", "joe-laptop", "human", { reason: extra.reason });
+          record(j.id, "rejected", "owner-laptop", "human", { reason: extra.reason });
           count++;
         } else if (action === "retry" && ["failed", "rejected", "halted"].includes(j.status)) {
           j.retry_count = 0; j.error_message = null; touch(j, "pending");
-          record(j.id, "retried", "joe-laptop", "human", { manual: true });
+          record(j.id, "retried", "owner-laptop", "human", { manual: true });
           count++;
         } else if (action === "cancel" && !["completed", "failed", "rejected", "cancelled", "halted"].includes(j.status)) {
           touch(j, "cancelled"); j.error_message = extra.reason || "Cancelled by operator";
-          record(j.id, "cancelled", "joe-laptop", "human", { reason: extra.reason });
+          record(j.id, "cancelled", "owner-laptop", "human", { reason: extra.reason });
           count++;
         } else if (action === "archive" && ["completed", "failed", "rejected", "cancelled"].includes(j.status)) {
           touch(j, "archived");
-          record(j.id, "archived", "joe-laptop", "human");
+          record(j.id, "archived", "owner-laptop", "human");
           count++;
         } else if (action === "reassign" && !["completed", "failed", "rejected", "cancelled", "halted"].includes(j.status)) {
           if (extra.to_role) j.target_agent_role = extra.to_role;
           if (extra.to_instance) j.leased_by_instance_id = extra.to_instance;
           touch(j, "pending");
-          record(j.id, "reassigned", "joe-laptop", "human", extra);
+          record(j.id, "reassigned", "owner-laptop", "human", extra);
           count++;
         }
       });
@@ -198,9 +198,9 @@
     createJob(payload) {
       const requires = !!payload.requires_approval;
       const status = (payload.depends_on || []).length ? "waiting" : (requires ? "needs_approval" : "pending");
-      const j = mkJob(Object.assign({}, payload, { status, source_agent_id: "joe-laptop", source_agent_role: "human" }));
+      const j = mkJob(Object.assign({}, payload, { status, source_agent_id: "owner-laptop", source_agent_role: "human" }));
       jobs.unshift(j);
-      record(j.id, "created", "joe-laptop", "human", { status, target_agent_role: j.target_agent_role });
+      record(j.id, "created", "owner-laptop", "human", { status, target_agent_role: j.target_agent_role });
       toast(requires ? "approval" : "ok", "Job created", j.title);
       notify();
       return j;
@@ -223,7 +223,7 @@
           input_payload: { prompt: s.instructions, workflow: { name, run, step: s.tmpId } },
         });
         jobs.unshift(j);
-        record(j.id, "created", "joe-laptop", "human", { status: j.status, workflow: name });
+        record(j.id, "created", "owner-laptop", "human", { status: j.status, workflow: name });
         idMap[s.tmpId] = j.id;
       });
       toast("ok", "Demo pipeline running", "Claude -> Codex -> reviewer is now visible on the board.");
@@ -253,7 +253,7 @@
       const decisions = auditEvents.filter((e) => e.event === "approved" || e.event === "rejected");
       const audit = {
         exported_at: now(),
-        requested_by: "joe-laptop",
+        requested_by: "owner-laptop",
         org_id: "default",
         range: { start, end },
         regulatory_basis: {

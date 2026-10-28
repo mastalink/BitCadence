@@ -125,7 +125,7 @@ def evaluate(proposal: Proposal, *, decider: str) -> Decision:
             ESCALATE,
             ("proposal has no `proposed_by` identity; self-approval cannot be "
              "ruled out, so it may not be auto-approved (route to Grok or to "
-             "Joseph)",),
+             "The owner)",),
         )
 
     decider_normalized = (decider or "").strip()
@@ -134,14 +134,14 @@ def evaluate(proposal: Proposal, *, decider: str) -> Decision:
             ESCALATE,
             ("no `decider` identity was given; self-approval cannot be ruled "
              "out, so it may not be auto-approved (route to Grok or to "
-             "Joseph)",),
+             "The owner)",),
         )
 
     if proposed_by.casefold() == decider_normalized.casefold():
         return Decision(
             ESCALATE,
             (f"{decider} proposed this and may not also approve it (self-approval "
-             "is never permitted; route to Grok or to Joseph)",),
+             "is never permitted; route to Grok or to the owner)",),
         )
 
     blocking = sorted(proposal.categories & PROHIBITED_CATEGORIES)

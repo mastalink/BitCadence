@@ -5,7 +5,7 @@ From initial research to scheduled YouTube upload. Plain words, short sentences.
 ## Standing Safety Rules
 1. **Uploads are private + scheduled only.** Never publish public directly. Always set `publish_at` for feast day 07:00 America/New_York.
 2. **Two different model families must pass video reviews.** No agent reviews its own work.
-3. **Nobody deploys to production except Joseph.**
+3. **Nobody deploys to production except the owner.**
 4. **Never print, copy, or log secrets.** The ElevenLabs key is read in-memory from `C:\AI\elevenlabs.txt`.
 
 ---
@@ -17,15 +17,15 @@ From initial research to scheduled YouTube upload. Plain words, short sentences.
 - **Artifacts:** Batch folder `K:\SaintsStudio\_incoming\saints_research_<date>\<slug>\` containing `research.md`, `script.md`, `scenes.json`, `facts.json`, `captions_draft.srt`.
 
 ## Step 2: Script Gate and Prayer Sign-off
-- **Who:** Reviewers: `reviewer-beast` (`theology` gate) and `codex-beast` (`facts` gate); Approver: Joseph.
+- **Who:** Reviewers: `reviewer-beast` (`theology` gate) and `codex-beast` (`facts` gate); Approver: The owner.
 - **Process:** The Video Shepherd locks `facts` and `theology` reviews to `artifacts.script` BEFORE any art, GPU, or voice work.
-- **Script rules:** Narrator is Storytime Joe (`aERVKfcBzYTPdoYoqMpB`, `eleven_v4`, default settings). TTS text spells out "Saint", never "St.". Never pray TO a saint (intercession to God only). Final scene must use the exact sign-off catchphrase: *"Go be a saint today, because I can't wait to add YOUR story to The Saints Storybook!"*
-- **Owner gate:** Prayer text is copied to `K:\SaintsStudio\saints\PRAYERS-FOR-OWNER-APPROVAL.md`. Joseph signs off on every prayer before it enters `script.json`.
+- **Script rules:** Narrator is Storytime the owner (`aERVKfcBzYTPdoYoqMpB`, `eleven_v4`, default settings). TTS text spells out "Saint", never "St.". Never pray TO a saint (intercession to God only). Final scene must use the exact sign-off catchphrase: *"Go be a saint today, because I can't wait to add YOUR story to The Saints Storybook!"*
+- **Owner gate:** Prayer text is copied to `K:\SaintsStudio\saints\PRAYERS-FOR-OWNER-APPROVAL.md`. The owner signs off on every prayer before it enters `script.json`.
 
 ## Step 3: Character Sheets and Still Plates
 - **Who:** Builder: `claude-beast` (stand-in: `codex-beast`).
 - **Tools:** FLUX 3 Klein via `K:\SaintsStudio\tools\venv_flux3` or ComfyUI storybook graph (port 8188).
-- **Process:** Generate cut-paper storybook style stills. One base plate per shot into `<episode>\art\stills\`. Joseph confirms character look once.
+- **Process:** Generate cut-paper storybook style stills. One base plate per shot into `<episode>\art\stills\`. The owner confirms character look once.
 - **Rules:** Locked camera, no zoom, soft dissolves, no AI-generated gibberish text in images.
 
 ## Step 4: Narration Generation

@@ -45,4 +45,4 @@ Send via `mco_send`:
 - **Fix:** Check ffmpeg availability at `/opt/homebrew/bin/ffmpeg` and clean `/tmp` storage.
 
 ## Who reviews its work
-Video Shepherd `tick` validates verdict JSON; Joseph.
+Video Shepherd `tick` validates verdict JSON; the owner.

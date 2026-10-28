@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from mco.notifiers.ntfy import flush_batched, is_joseph_decision, notify_event
+from mco.notifiers.ntfy import flush_batched, is_owner_decision, notify_event
 
 
 EASTERN = ZoneInfo("America/New_York")
@@ -22,7 +22,7 @@ def pending_decisions(db) -> list[dict]:
         .data
         or []
     )
-    return [row for row in rows if is_joseph_decision(row.get("title", ""))]
+    return [row for row in rows if is_owner_decision(row.get("title", ""))]
 
 
 def maintenance_once(db, now: datetime | None = None) -> dict:

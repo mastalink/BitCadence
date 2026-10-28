@@ -3,9 +3,9 @@
 Production workflow for the AI comedy sitcom pilot. Plain words, short sentences.
 
 ## Standing Safety Rules
-1. **Uploads are private + scheduled only.** No public posting without Joseph's explicit confirmation.
+1. **Uploads are private + scheduled only.** No public posting without the owner's explicit confirmation.
 2. **Two different model families must pass reviews.** No agent reviews its own work.
-3. **Nobody deploys to production except Joseph.**
+3. **Nobody deploys to production except the owner.**
 4. **Never print secrets or tokens.**
 
 ---
@@ -37,7 +37,7 @@ Production workflow for the AI comedy sitcom pilot. Plain words, short sentences
 - **Process:**
   - Generate reference character plates for each cast member.
   - Enforce wardrobe lock: Maya (cream oversized sweater, messy bun), Dan (solid navy quarter-zip, khakis), Rosa (heather-grey hoodie, reading glasses).
-  - Joseph approves the master cast reference stills once before production.
+  - The owner approves the master cast reference stills once before production.
 
 ## Phase 5: Keyframes and Wan 2.2 Motion
 - **Who:** Builder: `claude-beast`.
@@ -61,4 +61,4 @@ Production workflow for the AI comedy sitcom pilot. Plain words, short sentences
 - **Who:**
   - Visual and comedic integrity: `reviewer-beast` (GPT).
   - Watch, timing, and audio sync: `agy-studio-1..4` (Gemini on Mac Studio) listening to the mix.
-  - Final cut verification: Chief `claude-desktop` compiles verdicts and presents to Joseph.
+  - Final cut verification: Chief `claude-desktop` compiles verdicts and presents to the owner.
