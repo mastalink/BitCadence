@@ -101,7 +101,7 @@ class GatewayClient:
         token: Optional[str] = None,
         role: Optional[str] = None,
         instance_id: Optional[str] = None,
-        timeout: float = 30.0,
+        timeout: Optional[float] = None,
         transport: Optional[httpx.BaseTransport] = None,
         lease_store_dir: Optional[os.PathLike] = None,
     ):
@@ -109,7 +109,9 @@ class GatewayClient:
         self.token = token if token is not None else os.environ.get("MCO_AGENT_TOKEN", "")
         self.role = role if role is not None else os.environ.get("AGENT_ROLE", "")
         self.instance_id = instance_id if instance_id is not None else os.environ.get("AGENT_INSTANCE_ID", "")
-        self.timeout = timeout
+        # MCO_HTTP_TIMEOUT lets a worker outwait a busy gateway: a client that gives up first leaves the job leased
+        # server-side with no proof on this side.
+        self.timeout = timeout if timeout is not None else float(os.environ.get("MCO_HTTP_TIMEOUT") or 30.0)
         self._leases = {}
         self._transport = transport  # test hook (httpx.MockTransport); None in production
         configured_store = (

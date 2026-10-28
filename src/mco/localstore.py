@@ -43,6 +43,18 @@ from typing import Any, Dict, List, Optional
 APPEND_ONLY_TABLES = {"agent_job_events", "mco_audit_outbox", "mco_attempt_receipts", "score_events", "score_checkpoint_decisions", "agent_exchanges", "agent_exchange_promotions"}
 
 # Natural primary key per table (upsert conflict target).
+# Equality lookups the gateway repeats on every request. The builder inlines the
+# JSON path as a literal so SQLite can use these expression indexes; without
+# them each audit append, heartbeat and job fetch scanned (and decoded) the
+# whole table inside the writer lock.
+HOT_INDEXES = {
+    "agent_jobs": ("id",),
+    "agent_registry": ("instance_id",),
+    "agent_job_events": ("job_id", "outbox_id", "event"),
+    "mco_audit_outbox": ("job_id",),
+    "mco_attempt_receipts": ("job_id",),
+}
+
 PRIMARY_KEYS = {
     "agent_registry": "instance_id",
     "job_project_assignments": "job_id",
@@ -213,6 +225,9 @@ class LocalStore:
         if mode.lower() != "wal":
             self._conn.close()
             raise RuntimeError(f"LocalStore requires WAL mode, got {mode}")
+        for table in HOT_INDEXES:
+            if self._table_exists(self._conn, table):
+                self._ensure_indexes(table)
 
     # ── public API (mirrors the Supabase client) ─────────────────────────
     def table(self, name: str) -> _Query:
@@ -292,6 +307,13 @@ class LocalStore:
         ).fetchone() is not None
 
     # ── storage plumbing ─────────────────────────────────────────────────
+    def _ensure_indexes(self, table: str) -> None:
+        for column in HOT_INDEXES.get(table, ()):
+            self._conn.execute(
+                f'CREATE INDEX IF NOT EXISTS "ix_{table}_{column}" '
+                f"ON \"{table}\"(json_extract(data, '{self._json_path(column)}'))"
+            )
+
     def _ensure_table(self, table: str) -> None:
         # Do not issue CREATE TABLE for every read: DDL upgrades a deferred
         # reader into a writer and collides with a worker's heartbeat commit.
@@ -302,6 +324,7 @@ class LocalStore:
             self._conn.execute(
                 f'CREATE TABLE IF NOT EXISTS "{table}" (pk TEXT PRIMARY KEY, data TEXT NOT NULL)'
             )
+            self._ensure_indexes(table)
 
     def _pk_field(self, table: str) -> str:
         return PRIMARY_KEYS.get(table, "id")
@@ -320,76 +343,102 @@ class LocalStore:
             return None
         return f'$."{column}"'
 
-    def _select_rows(self, q: _Query) -> List[dict]:
-        """Select agent jobs in SQLite before decoding their JSON documents.
+    def _python_select(self, q: _Query) -> List[dict]:
+        """Compatibility path: decode every row, then filter/sort/window in Python."""
+        rows = [r for r in self._load_rows(q._table) if self._matches(r, q._filters)]
+        if q._order:
+            col, desc = q._order
+            rows.sort(key=lambda r: str(r.get(col) or ""), reverse=desc)
+        if q._offset:
+            rows = rows[q._offset:]
+        if q._limit is not None:
+            rows = rows[: q._limit]
+        return rows
 
-        LocalStore keeps rows as JSON for PostgREST compatibility. The job
-        board is the one hot, potentially large table, so execute its builder
-        predicates and window in SQLite instead of decoding and filtering
-        every document in Python. Other tables and unsupported value shapes retain the generic
+    def _count_rows(self, table: str) -> int:
+        conn = self._read_connection()
+        if not self._table_exists(conn, table):
+            return 0
+        return conn.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+
+    def _find(self, table: str, *filters: tuple) -> List[dict]:
+        """Rows matching ("eq"|"in"|"gt", column, value) filters, filtered in SQLite."""
+        q = _Query(self, table)
+        q._filters = list(filters)
+        return self._select_rows(q)
+
+    def _select_rows(self, q: _Query) -> List[dict]:
+        """Select rows in SQLite before decoding their JSON documents.
+
+        LocalStore keeps rows as JSON for PostgREST compatibility, but the
+        audit, outbox and job tables hold hundreds of MB. Decoding whole
+        tables inside the writer lock starved every other request (the
+        2026-10-28 lock contention), so push builder predicates and the
+        window into SQLite. Unsupported value shapes retain the generic
         compatibility path.
         """
         scalar = (str, int, float, bool, type(None))
-        if q._table != "agent_jobs":
-            return [r for r in self._load_rows(q._table) if self._matches(r, q._filters)]
-
+        fallback = self._python_select
         clauses: List[str] = []
         params: List[Any] = []
         for kind, column, value in q._filters:
             path = self._json_path(column)
             if path is None:
-                return [r for r in self._load_rows(q._table) if self._matches(r, q._filters)]
+                return fallback(q)
             if kind == "eq":
                 if not isinstance(value, scalar):
-                    return [r for r in self._load_rows(q._table) if self._matches(r, q._filters)]
+                    return fallback(q)
                 if value is None:
-                    clauses.append("json_extract(data, ?) IS NULL")
-                    params.append(path)
+                    clauses.append(f"json_extract(data, '{path}') IS NULL")
                 else:
-                    clauses.append("json_extract(data, ?) = ?")
-                    params.extend((path, value))
+                    clauses.append(f"json_extract(data, '{path}') = ?")
+                    params.append(value)
             elif kind == "in":
                 values = list(value)
                 if not all(isinstance(item, scalar) for item in values):
-                    return [r for r in self._load_rows(q._table) if self._matches(r, q._filters)]
+                    return fallback(q)
                 non_null = [item for item in values if item is not None]
                 parts: List[str] = []
                 if non_null:
                     placeholders = ", ".join("?" for _ in non_null)
-                    parts.append(f"json_extract(data, ?) IN ({placeholders})")
-                    params.extend((path, *non_null))
+                    parts.append(f"json_extract(data, '{path}') IN ({placeholders})")
+                    params.extend(non_null)
                 if any(item is None for item in values):
-                    parts.append("json_extract(data, ?) IS NULL")
-                    params.append(path)
+                    parts.append(f"json_extract(data, '{path}') IS NULL")
                 clauses.append(f"({' OR '.join(parts)})" if parts else "0")
             elif kind == "gt":
                 if not isinstance(value, scalar) or value is None:
-                    return [r for r in self._load_rows(q._table) if self._matches(r, q._filters)]
-                clauses.append("json_extract(data, ?) > ?")
-                params.extend((path, value))
+                    return fallback(q)
+                clauses.append(f"json_extract(data, '{path}') > ?")
+                params.append(value)
             else:
-                return [r for r in self._load_rows(q._table) if self._matches(r, q._filters)]
+                return fallback(q)
 
         conn = self._read_connection()
         if not self._table_exists(conn, q._table):
             return []
-        sql = f'SELECT data FROM "{q._table}"'
+        select_expr = "data"
+        wanted = [c.strip() for c in q._columns.split(",") if c.strip()]
+        if q._columns.strip() != "*" and wanted and all(self._json_path(c) for c in wanted):
+            # Narrow reads (ids, watermarks) must not decode whole documents.
+            select_expr = "json_object(" + ", ".join(
+                f"'{c}', json_extract(data, '{self._json_path(c)}')" for c in wanted) + ")"
+        sql = f'SELECT {select_expr} FROM "{q._table}"'
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
         if q._order:
             column, desc = q._order
             path = self._json_path(column)
             if path is None:
-                return [r for r in self._load_rows(q._table) if self._matches(r, q._filters)]
+                return fallback(q)
             # _run_once historically sorted by str(value or ""). This cast
             # preserves that ordering for the job fields used by the API.
-            sql += " ORDER BY CAST(COALESCE(json_extract(data, ?), '') AS TEXT)"
+            sql += f" ORDER BY CAST(COALESCE(json_extract(data, '{path}'), '') AS TEXT)"
             sql += " DESC" if desc else " ASC"
             # Python's former stable sort preserved the table scan's rowid
             # order for equal values. Make that tie order explicit so LIMIT
             # and OFFSET page boundaries cannot drift across query plans.
             sql += ", rowid"
-            params.append(path)
         if q._limit is not None:
             sql += " LIMIT ?"
             params.append(q._limit)
@@ -448,7 +497,7 @@ class LocalStore:
         if pk == "id" and not row.get("id"):
             row["id"] = str(uuid.uuid4())
         elif pk == "seq" and not row.get("seq"):
-            row["seq"] = len(self._load_rows(table)) + 1
+            row["seq"] = self._count_rows(table) + 1
         elif pk == "run_id" and not row.get("run_id"):
             row["run_id"] = str(uuid.uuid4())
 
@@ -522,25 +571,20 @@ class LocalStore:
                 raise PermissionError(f"{q._table} is append-only: UPSERT is not allowed")
             if q._op == "select":
                 rows = self._select_rows(q)
-                if q._order and q._table != "agent_jobs":
-                    col, desc = q._order
-                    rows.sort(key=lambda r: str(r.get(col) or ""), reverse=desc)
-                if q._offset and q._table != "agent_jobs":
-                    rows = rows[q._offset:]
-                if q._limit is not None and q._table != "agent_jobs":
-                    rows = rows[: q._limit]
                 return APIResult([self._project(r, q._columns) for r in rows])
 
             if q._op == "insert":
                 self._ensure_table(q._table)
                 row = self._apply_defaults(q._table, q._payload or {})
-                if any(r.get(self._pk_field(q._table)) == row.get(self._pk_field(q._table))
-                       for r in self._load_rows(q._table)):
+                pk_name = self._pk_field(q._table)
+                if any(r.get(pk_name) == row.get(pk_name)
+                       for r in self._find(q._table, ("eq", pk_name, row.get(pk_name)))):
                     raise ValueError("Duplicate primary key")
                 if q._table in UNIQUE_CONSTRAINTS:
                     cols = UNIQUE_CONSTRAINTS[q._table]
                     key_tuple = tuple(row.get(c) for c in cols)
-                    if any(tuple(r.get(c) for c in cols) == key_tuple for r in self._load_rows(q._table)):
+                    if any(tuple(r.get(c) for c in cols) == key_tuple
+                           for r in self._find(q._table, *(("eq", c, row.get(c)) for c in cols))):
                         raise ValueError(f"Duplicate unique constraint {cols} on {q._table}")
                 self._write_row(q._table, row)
                 self._commit()
@@ -552,7 +596,7 @@ class LocalStore:
                 payload = dict(q._payload or {})
                 existing = None
                 if payload.get(pk) is not None:
-                    for r in self._load_rows(q._table):
+                    for r in self._find(q._table, ("eq", pk, payload[pk])):
                         if r.get(pk) == payload[pk]:
                             existing = r
                             break
@@ -560,7 +604,7 @@ class LocalStore:
                 if q._table in UNIQUE_CONSTRAINTS:
                     cols = UNIQUE_CONSTRAINTS[q._table]
                     key_tuple = tuple(row.get(c) for c in cols)
-                    for r in self._load_rows(q._table):
+                    for r in self._find(q._table, *(("eq", c, row.get(c)) for c in cols)):
                         if str(r.get(pk)) != str(row.get(pk)) and tuple(r.get(c) for c in cols) == key_tuple:
                             raise ValueError(f"Duplicate unique constraint {cols} on {q._table}")
                 self._write_row(q._table, row)
@@ -572,13 +616,13 @@ class LocalStore:
                     raise PermissionError(f"{q._table} is append-only: UPDATE is not allowed")
                 pk = self._pk_field(q._table)
                 updated = []
-                for r in self._load_rows(q._table):
+                for r in self._find(q._table, *q._filters):
                     if self._matches(r, q._filters):
                         candidate = {**r, **(q._payload or {})}
                         if q._table in UNIQUE_CONSTRAINTS:
                             cols = UNIQUE_CONSTRAINTS[q._table]
                             cand_tuple = tuple(candidate.get(c) for c in cols)
-                            for other in self._load_rows(q._table):
+                            for other in self._find(q._table, *(("eq", c, candidate.get(c)) for c in cols)):
                                 if str(other.get(pk)) != str(r.get(pk)) and tuple(other.get(c) for c in cols) == cand_tuple:
                                     raise ValueError(f"Duplicate unique constraint {cols} on {q._table}")
                         r.update(q._payload or {})
@@ -594,8 +638,9 @@ class LocalStore:
                 if q._table in APPEND_ONLY_TABLES:
                     raise PermissionError(f"{q._table} is append-only: DELETE is not allowed")
                 kept, removed = [], []
-                for r in self._load_rows(q._table):
-                    (removed if self._matches(r, q._filters) else kept).append(r)
+                for r in self._find(q._table, *q._filters):
+                    if self._matches(r, q._filters):
+                        removed.append(r)
                 if removed:
                     for r in removed:
                         if q._table == "agent_jobs":
