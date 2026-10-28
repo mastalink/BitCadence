@@ -68,8 +68,8 @@ print(f'  OIDC session configured  = {bool(cfg.get("MCO_OIDC_CLIENT_ID"))}')
 print("  -> no human can decide a Score gate over HTTP on this profile.")
 
 head("6. the decision itself, made by an authenticated HUMAN principal")
-human = {"instance_id": "joseph.arroyo", "org_id": "default", "auth_method": "session"}
-record = run.approve("C01", actor="joseph.arroyo", actor_kind="human",
+human = {"instance_id": "owner.user", "org_id": "default", "auth_method": "session"}
+record = run.approve("C01", actor="owner.user", actor_kind="human",
                      caller=human, gate_kind="spend_above_cap",
                      evidence={"reason": "S06a injected human gate: approved for the canary lane"})
 print("  durable authorization record:")
@@ -87,7 +87,7 @@ try:
                     grants={"evidence:write", "evidence:review"},
                     authorized_budget_cents=0, gate_service=gates,
                     projected_monthly_cents={"C01": projected})
-    run2.approve("C01", actor="joseph.arroyo", actor_kind="human", caller=human,
+    run2.approve("C01", actor="owner.user", actor_kind="human", caller=human,
                  gate_kind="spend_above_cap", evidence={"reason": "second decision"})
     print("  !! a second decision was accepted. FAIL.")
 except ScoreError as exc:

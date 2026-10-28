@@ -535,7 +535,7 @@ function Overview({ jobs, agents, tone, advanced, onNav, onOpen }) {
                       <div style={{ fontWeight: 600, fontSize: 13.5 }}>{j.title}</div>
                       <div style={{ fontSize: 12, color: "var(--text-3)" }}>from {j.source_agent_id} · {timeAgo(j.created_at)}</div>
                     </div>
-                    <Btn kind="ok" small onClick={() => window.BitCadenceStore.approve(j.id, "joe-laptop")}>✓ Approve</Btn>
+                    <Btn kind="ok" small onClick={() => window.BitCadenceStore.approve(j.id, "owner-laptop")}>✓ Approve</Btn>
                     <Btn small onClick={() => onOpen(j.id)}>Review</Btn>
                   </div>
                 </Card>
@@ -795,9 +795,9 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
                 {advanced ? <span>ID: <Mono>{shortId(selected.id)}</Mono></span> : null}
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                <Btn kind="primary" onClick={() => window.BitCadenceStore.approve(selected.id, "joe-laptop")}>✓ Approve &amp; run</Btn>
+                <Btn kind="primary" onClick={() => window.BitCadenceStore.approve(selected.id, "owner-laptop")}>✓ Approve &amp; run</Btn>
                 <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tone === "plain" ? "Reason for saying no…" : "Rejection reason (audited)…"} style={{ flex: 1, minWidth: 160, border: "1px solid var(--border-strong)", borderRadius: 8, padding: "8px 12px", fontSize: 13 }} />
-                <Btn kind="danger" onClick={() => window.BitCadenceStore.reject(selected.id, "joe-laptop", reason)}>Reject</Btn>
+                <Btn kind="danger" onClick={() => window.BitCadenceStore.reject(selected.id, "owner-laptop", reason)}>Reject</Btn>
                 <Btn kind="ghost" onClick={() => onOpen(selected.id)}>Full details →</Btn>
               </div>
             </Card>

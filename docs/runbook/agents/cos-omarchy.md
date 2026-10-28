@@ -1,10 +1,10 @@
 # cos-omarchy
 
 ## Purpose
-UNVERIFIED: ask Joseph. Registered with role `admin` in the BitCadence gateway registry; currently offline.
+UNVERIFIED: ask the owner. Registered with role `admin` in the BitCadence gateway registry; currently offline.
 
 ## Good at
-UNVERIFIED: ask Joseph.
+UNVERIFIED: ask the owner.
 
 ## Not allowed (hard rules)
 - Offline. Do not send active production or development jobs to this instance.
@@ -16,7 +16,7 @@ Send via `mco_send`:
 - `to_role`: `admin`
 - `to_instance`: `cos-omarchy`
 - `title`: Operational status inquiry
-- `instructions`: Administrative instructions approved by Joseph
+- `instructions`: Administrative instructions approved by the owner
 - `priority`: 0
 
 ## Job template and worked example
@@ -35,7 +35,7 @@ Send via `mco_send`:
 
 ## Signs it is stuck and the fix
 - **Signs:** Shows offline in registry (normal state).
-- **Fix:** Keep offline unless Joseph explicitly directs reactivation.
+- **Fix:** Keep offline unless the owner explicitly directs reactivation.
 
 ## Who reviews its work
-Joseph (owner).
+The owner (owner).

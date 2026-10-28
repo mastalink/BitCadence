@@ -536,13 +536,13 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
             </div>
             {!rejecting ? (
               <div style={{ display: "flex", gap: 8 }}>
-                <Btn kind="ok" small onClick={() => window.BitCadenceStore.approve(j.id, "joe-laptop")}>✓ Approve &amp; run</Btn>
+                <Btn kind="ok" small onClick={() => window.BitCadenceStore.approve(j.id, "owner-laptop")}>✓ Approve &amp; run</Btn>
                 <Btn kind="danger" small onClick={() => setRejecting(true)}>Reject…</Btn>
               </div>
             ) : (
               <div style={{ display: "flex", gap: 8 }}>
                 <input autoFocus value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why? (recorded in the audit trail)" style={{ flex: 1, border: "1px solid var(--border-strong)", borderRadius: 6, padding: "5px 10px", fontSize: 12.5 }} />
-                <Btn kind="danger" small onClick={() => { window.BitCadenceStore.reject(j.id, "joe-laptop", reason); setRejecting(false); }}>Reject</Btn>
+                <Btn kind="danger" small onClick={() => { window.BitCadenceStore.reject(j.id, "owner-laptop", reason); setRejecting(false); }}>Reject</Btn>
                 <Btn kind="ghost" small onClick={() => setRejecting(false)}>Cancel</Btn>
               </div>
             )}

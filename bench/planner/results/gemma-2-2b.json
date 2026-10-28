@@ -45,7 +45,7 @@
   },
   {
    "id": 5,
-   "output": "{\"title\":\"Look up Avon Lake library hours\",\"schedule\":{\"kind\":\"on_demand\",\"detail\":\"\"}, \"steps\":[{\"id\":\"s1\",\"action\":\"search_web\",\"what\":\"Avon Lake library opening hours\",\"depends_on\":[], \"condition\":\"\",\"needs_approval\":false}],\"confidence\":\"medium\"} ",
+   "output": "{\"title\":\"Look up Springfield library hours\",\"schedule\":{\"kind\":\"on_demand\",\"detail\":\"\"}, \"steps\":[{\"id\":\"s1\",\"action\":\"search_web\",\"what\":\"Springfield library opening hours\",\"depends_on\":[], \"condition\":\"\",\"needs_approval\":false}],\"confidence\":\"medium\"} ",
    "seconds": 10.227361679077148,
    "tokens": 66,
    "mean_logprob": null,

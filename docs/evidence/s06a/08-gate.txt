@@ -39,7 +39,7 @@
     digest           5974bd7a18e2f0f9933e19a5524d3937753ecacc28fa9c06bdc045aea89617fe
     task_id          C01
     decision         approved
-    human_principal  joseph.arroyo
+    human_principal  owner.user
     reason           S06a injected human gate: approved for the canary lane
     decided_at       2026-09-16T15:23:12.485859+00:00
 

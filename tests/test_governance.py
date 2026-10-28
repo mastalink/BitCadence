@@ -14,7 +14,7 @@ from tests.test_routes import FakeDB
 
 
 CODEX_AGENT = {"instance_id": "agent-1", "role": "codex", "status": "online"}
-HUMAN_AGENT = {"instance_id": "joe", "role": "human", "status": "online"}
+HUMAN_AGENT = {"instance_id": "alex", "role": "human", "status": "online"}
 
 
 def _build_app() -> FastAPI:
@@ -78,7 +78,7 @@ class TestApprovalGates(_GovernanceBase):
         assert resp.status_code == 200
         job = resp.json()["job"]
         assert job["status"] == "pending"
-        assert job["approved_by"] == "joe"
+        assert job["approved_by"] == "alex"
 
     def test_non_approver_role_gets_403(self):
         job_id = self._gated_job()
@@ -153,7 +153,7 @@ class TestManualRetry(_GovernanceBase):
         assert job["status"] == "pending"
         assert job["leased_by_instance_id"] is None
         events = self.http.get("/api/jobs/mr1/events").json()
-        assert any(e["event"] == "retried" and e["actor_id"] == "joe" for e in events)
+        assert any(e["event"] == "retried" and e["actor_id"] == "alex" for e in events)
 
     def test_rejected_job_can_be_retried(self):
         self.db.add_job(id="mr2", status="rejected", target_agent_role="codex")
@@ -189,7 +189,7 @@ class TestCancel(_GovernanceBase):
         assert job["status"] == "cancelled"
         assert "wrong target" in job["error_message"]
         events = self.http.get("/api/jobs/c1/events").json()
-        assert any(e["event"] == "cancelled" and e["actor_id"] == "joe" for e in events)
+        assert any(e["event"] == "cancelled" and e["actor_id"] == "alex" for e in events)
 
     def test_can_cancel_leased_and_in_progress_jobs(self):
         self.db.add_job(id="c2", status="leased", target_agent_role="codex",

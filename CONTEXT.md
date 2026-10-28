@@ -47,6 +47,6 @@ _Avoid_: Encrypted key, credential field
 
 ## Example dialogue
 
-> **Developer:** Joe signed in through the Acme Identity Provider. Why can he approve jobs?
+> **Developer:** Alex signed in through the Acme Identity Provider. Why can he approve jobs?
 >
 > **Domain expert:** His Acme Membership received the Approver role through the `Change-Approvers` Role Mapping. His phone has a Session, but the Anthropic API key remains behind the Model Connection's Secret Reference in the Saved Instance.

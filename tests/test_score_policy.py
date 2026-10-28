@@ -40,7 +40,7 @@ def strict_grant(**overrides):
         "org_id": "acme", "run_id": "run-1", "digest": "a" * 64,
         "actions": ["deploy"], "resources": ["via-api"], "env": "production",
         "not_before": "2026-09-15T00:00:00Z", "expires_at": "2026-09-16T00:00:00Z",
-        "budget_cents": 15000, "human_principal": "user:joe",
+        "budget_cents": 15000, "human_principal": "user:alex",
     }
     value.update(overrides)
     return sign_grant(value, KEY)
@@ -50,7 +50,7 @@ def test_signed_grant_is_bound_to_run_action_resource_environment_time_and_budge
     value = strict_grant()
     identity = require_grant(value, org_id="acme", run_id="run-1", digest="a" * 64,
                              action="deploy", resource="via-api", environment="production",
-                             cost_cents=15000, owner_principal="user:joe",
+                             cost_cents=15000, owner_principal="user:alex",
                              verification_key=KEY, now=NOW)
     assert identity == grant_identity(value)
     checks = [
@@ -60,7 +60,7 @@ def test_signed_grant_is_bound_to_run_action_resource_environment_time_and_budge
     for changed, message in checks:
         kwargs = dict(org_id="acme", run_id="run-1", digest="a" * 64, action="deploy",
                       resource="via-api", environment="production", cost_cents=1,
-                      owner_principal="user:joe", verification_key=KEY, now=NOW)
+                      owner_principal="user:alex", verification_key=KEY, now=NOW)
         kwargs.update(changed)
         with pytest.raises(AuthorityError, match=message):
             require_grant(value, **kwargs)
@@ -68,7 +68,7 @@ def test_signed_grant_is_bound_to_run_action_resource_environment_time_and_budge
     with pytest.raises(AuthorityError, match="signature"):
         require_grant(forged, org_id="acme", run_id="run-1", digest="a" * 64,
                       action="deploy", resource="via-api", environment="production",
-                      cost_cents=1, owner_principal="user:joe",
+                      cost_cents=1, owner_principal="user:alex",
                       verification_key=KEY, now=NOW)
 
 
@@ -136,7 +136,7 @@ def test_owner_policy_has_exactly_g08_signoff_and_over_cap_spend():
 def test_agent_role_cannot_impersonate_human_principal():
     with pytest.raises(ScoreError, match="agent bearer"):
         authenticated_human({"instance_id": "agent", "role": "human", "auth_method": "bearer"})
-    assert authenticated_human({"instance_id": "user:joe", "auth_method": "session"}) == "user:joe"
+    assert authenticated_human({"instance_id": "user:alex", "auth_method": "session"}) == "user:alex"
 
 
 @pytest.fixture
@@ -151,7 +151,7 @@ def test_gate_view_has_evidence_and_separate_immutable_decision(store):
     gate = service.request(org_id="acme", run_id="run-1", digest="a" * 64,
                            task_id="G09", kind=G08_LAUNCH_SIGNOFF,
                            evidence={"g08_report": "sha256:abc"})
-    decision = service.decide(gate["id"], caller={"org_id": "acme", "instance_id": "user:joe", "auth_method": "session"},
+    decision = service.decide(gate["id"], caller={"org_id": "acme", "instance_id": "user:alex", "auth_method": "session"},
                               decision="approved", reason="Lorain MVP accepted")
     view = service.list(org_id="acme")[0]
     assert view["evidence"] == {"g08_report": "sha256:abc"}
@@ -191,7 +191,7 @@ def test_gate_service_accepts_task_checkpoint_kind(store):
 
 def test_gateway_restart_authorization_distinguishable_from_task_checkpoint_in_audit_trail(store):
     service = GateService(store)
-    caller = {"org_id": "acme", "instance_id": "user:joe", "auth_method": "session"}
+    caller = {"org_id": "acme", "instance_id": "user:alex", "auth_method": "session"}
 
     checkpoint_gate = service.request(
         org_id="acme",
@@ -234,7 +234,7 @@ def test_gateway_restart_authorization_distinguishable_from_task_checkpoint_in_a
 
     updated_listed = {item["kind"]: item for item in service.list(org_id="acme")}
     assert updated_listed[TASK_CHECKPOINT]["status"] == "approved"
-    assert updated_listed[TASK_CHECKPOINT]["decision"]["human_principal"] == "user:joe"
+    assert updated_listed[TASK_CHECKPOINT]["decision"]["human_principal"] == "user:alex"
     assert updated_listed[GATEWAY_RESTART_AUTHORIZATION]["status"] == "pending"
     assert updated_listed[GATEWAY_RESTART_AUTHORIZATION]["decision"] is None
 
@@ -247,7 +247,7 @@ def test_gateway_restart_authorization_distinguishable_from_task_checkpoint_in_a
 
     final_listed = {item["kind"]: item for item in service.list(org_id="acme")}
     assert final_listed[GATEWAY_RESTART_AUTHORIZATION]["status"] == "approved"
-    assert final_listed[GATEWAY_RESTART_AUTHORIZATION]["decision"]["human_principal"] == "user:joe"
+    assert final_listed[GATEWAY_RESTART_AUTHORIZATION]["decision"]["human_principal"] == "user:alex"
 
     # Distinct records exist in score_checkpoint_decisions
     decisions = store.table("score_checkpoint_decisions").select("*").eq("org_id", "acme").execute().data or []
@@ -351,7 +351,7 @@ def test_human_issuance_route_persists_signed_grant(store, monkeypatch):
     app = FastAPI()
     app.include_router(score_grants_router)
     app.dependency_overrides[require_agent] = lambda: {
-        "org_id": "acme", "instance_id": "user:joe", "auth_method": "session",
+        "org_id": "acme", "instance_id": "user:alex", "auth_method": "session",
         "scopes": ["jobs:approve"],
     }
     response = TestClient(app).post("/api/score/grants", json={
@@ -362,7 +362,7 @@ def test_human_issuance_route_persists_signed_grant(store, monkeypatch):
     })
     assert response.status_code == 200
     saved = store.table("score_grants").select("*").execute().data[0]
-    assert saved["human_principal"] == "user:joe"
+    assert saved["human_principal"] == "user:alex"
     assert len(saved["signature"]) == 64
 
 
@@ -397,13 +397,13 @@ def test_policy_gate_is_durable_and_pauses_only_g09_path(store):
     assert run.blockers("G09") == ["human_checkpoint"]
     assert run.blockers("G14") == []
     gate = service.list(org_id="acme")[0]
-    service.decide(gate["id"], caller={"org_id": "acme", "instance_id": "user:joe", "auth_method": "session"},
+    service.decide(gate["id"], caller={"org_id": "acme", "instance_id": "user:alex", "auth_method": "session"},
                    decision="approved", reason="launch accepted")
     assert run.blockers("G09") == []
 
     without_store = SandboxRun(score, "run-without-store", grants=["repo:read"])
     with pytest.raises(ScoreError, match="Durable gate service"):
-        without_store.approve("G09", actor="user:joe", actor_kind="human")
+        without_store.approve("G09", actor="user:alex", actor_kind="human")
 
 
 def test_via_expansion_transits_g09_but_g14_is_maintenance():

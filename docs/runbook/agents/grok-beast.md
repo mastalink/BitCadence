@@ -4,7 +4,7 @@
 Deputy Chief of the fleet (Grok on Beast). Handles daily operational status, stall intake, triage, Saints research batches, and Embracing the Sofa `comedy_script` reviews.
 
 ## Good at
-- Daily triage: answering "How's it going?" for Joseph via MosesGrok without using Claude quota.
+- Daily triage: answering "How's it going?" for the owner via MosesGrok without using Claude quota.
 - Triage intake for stalls and failed worker jobs (one re-dispatch per failure).
 - Gathering Saints research batches (`_incoming\saints_research_*`).
 - Reviewing comedy scripts against the Leslie Nielsen deadpan and Ryan Reynolds snap standards.
@@ -45,4 +45,4 @@ Send via `mco_send`:
 - **Fix:** Check `~/.grok/config.toml`. Relaunch worker with `grok-beast-run.cmd` on Beast.
 
 ## Who reviews its work
-`reviewer-beast` (theology on research), Chief `claude-desktop` (escalations), and Joseph.
+`reviewer-beast` (theology on research), Chief `claude-desktop` (escalations), and the owner.

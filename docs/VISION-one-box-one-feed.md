@@ -1,7 +1,7 @@
 # One box, one feed — where BitCadence goes next
 
 **Status:** vision brief, for fleet critique. Not a spec. Argue with it.
-**Author:** Joe + MOSES/Claude, 2026-09-02
+**Author:** The owner + MOSES/Claude, 2026-09-02
 
 ---
 
@@ -155,7 +155,7 @@ fixed before push is turned on for anything real.
 
 Keep them separate and connect them with one bridge:
 
-- **MOSES + Genesis** — who Joe is, what he wants, his life. *Identity memory.*
+- **MOSES + Genesis** — who the owner is, what he wants, his life. *Identity memory.*
 - **BitCadence + Drumline** — making it happen and proving it happened.
   *Work memory.*
 
@@ -747,7 +747,7 @@ cost state, policy constraints, reproducibility, and separation of duties.
 post-failure rule applied to a job whose target was already chosen.
 
 The most underestimated “low effort” item is Idea 2. A fleet-silence query is a
-day; a watchdog that still reaches Joe when the gateway, Pi, power, router, or
+day; a watchdog that still reaches the owner when the gateway, Pi, power, router, or
 ntfy path is the failed component is an availability system with at least two
 failure domains. Among the five sized here, Idea 7 is the largest semantic
 swamp because “one emitter” is being asked to imply three supportable vendor

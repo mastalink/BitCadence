@@ -1,19 +1,19 @@
 # Playbook: Owner Video Fix Notes
 
-How to turn Joseph's video feedback into an actionable, verified fix job. Plain words, short sentences.
+How to turn the owner's video feedback into an actionable, verified fix job. Plain words, short sentences.
 
 ## Standing Safety Rules
 1. **Uploads are private + scheduled only.** Never publish public directly. Fixed cuts use `shepherd.py replace <id>`.
 2. **Two different model families must pass reviews on the new cut.** No agent reviews its own work.
-3. **Nobody deploys to production except Joseph.**
+3. **Nobody deploys to production except the owner.**
 4. **Never print, copy, or log secrets.**
 
 ---
 
 ## Step 1: Intake and Triage Owner Notes
-- **Context:** Joseph watches scheduled draft cuts during his review window (listed in `C:\AI\content-studio\REVIEW_QUEUE.md`). His notes arrive in chat or as a board job.
+- **Context:** The owner watches scheduled draft cuts during his review window (listed in `C:\AI\content-studio\REVIEW_QUEUE.md`). His notes arrive in chat or as a board job.
 - **Triage action:**
-  - Read Joseph's notes verbatim. Do not reinterpret or drop requirements.
+  - Read the owner's notes verbatim. Do not reinterpret or drop requirements.
   - Determine which stage created the defect:
     - Text or theological error -> Stage `script`.
     - Character outfit drift or bad still -> Stage `art`.
@@ -35,7 +35,7 @@ How to turn Joseph's video feedback into an actionable, verified fix job. Plain 
   - `to_instance`: `claude-beast`
   - `title`: `Fix owner notes on <Episode Name> (<Stage>)`
   - `instructions`:
-    1. Quote Joseph's exact note.
+    1. Quote the owner's exact note.
     2. Reference the current episode folder and existing assets.
     3. Specify exact fix: re-voice line N, re-render clip M, or adjust cut in `assemble.py`.
     4. Rebuild cut to `<slug>_v<N+1>.mp4`.
@@ -46,7 +46,7 @@ How to turn Joseph's video feedback into an actionable, verified fix job. Plain 
 - The Shepherd tick posts fresh review jobs for the new file:
   - `visual`: `reviewer-beast` (GPT family).
   - `watch` / `comedy_cut`: `agy-studio-1..4` (Gemini family on Mac Studio).
-- Both families must pass the new cut. Reviewers must confirm Joseph's specific note was resolved.
+- Both families must pass the new cut. Reviewers must confirm the owner's specific note was resolved.
 
 ## Step 5: Replace YouTube Upload
 - **Command:** Once all gates pass on the new file sha256, execute replacement:
@@ -62,7 +62,7 @@ How to turn Joseph's video feedback into an actionable, verified fix job. Plain 
 
 ## Step 6: Log and Report
 - Append the fix summary to `<episode>/FIX_LOG.md` and mark the note CLOSED.
-- Report completion back to Joseph with:
+- Report completion back to the owner with:
   1. Path to new video cut.
   2. YouTube private preview link.
   3. Confirmation that all review gates passed.

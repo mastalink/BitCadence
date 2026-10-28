@@ -66,7 +66,7 @@ def grants(store):
         "not_before": (NOW - timedelta(days=1)).isoformat(),
         "expires_at": (NOW + timedelta(days=1)).isoformat(),
         "budget_cents": 0,
-        "human_principal": "joseph",
+        "human_principal": "owner",
     })
     return service
 
@@ -205,7 +205,7 @@ def test_denylist_refuses_in_live_executor_before_claim_or_command(store, grants
     op = Operation(
         org_id="default", run_id="run-live-1", digest=DIGEST, task_id="task-1",
         attempt=1, adapter="repository-worktree-commit", action="repository:write",
-        resource="repo", environment="test", owner_principal="joseph",
+        resource="repo", environment="test", owner_principal="owner",
         cost_cents=0, dry_run=False,
         desired_state={
             "worktree_path": "/some/fake/path",
@@ -558,7 +558,7 @@ def test_grant_requirement_missing_grant_refused(store, grants, git_worktree):
     op = Operation(
         org_id="default", run_id="unauthorized-run", digest=DIGEST, task_id="task-1",
         attempt=1, adapter="repository-worktree-commit", action="repository:write",
-        resource="repo", environment="test", owner_principal="joseph",
+        resource="repo", environment="test", owner_principal="owner",
         cost_cents=0, dry_run=False,
         desired_state={
             "worktree_path": str(wt_dir),
@@ -594,14 +594,14 @@ def test_grant_requirement_lacking_write_action_refused(store, grants, git_workt
         "not_before": (NOW - timedelta(days=1)).isoformat(),
         "expires_at": (NOW + timedelta(days=1)).isoformat(),
         "budget_cents": 0,
-        "human_principal": "joseph",
+        "human_principal": "owner",
     })
 
     executor = LiveScoreAdapterExecutor(store, grant_service=grants, now=lambda: NOW)
     op = Operation(
         org_id="default", run_id="run-read-only", digest=DIGEST, task_id="task-1",
         attempt=1, adapter="repository-worktree-commit", action="repository:write",
-        resource="repo", environment="test", owner_principal="joseph",
+        resource="repo", environment="test", owner_principal="owner",
         cost_cents=0, dry_run=False,
         desired_state={
             "worktree_path": str(wt_dir),
@@ -636,14 +636,14 @@ def test_grant_requirement_expired_grant_refused(store, grants, git_worktree):
         "not_before": (NOW - timedelta(days=2)).isoformat(),
         "expires_at": (NOW - timedelta(days=1)).isoformat(),
         "budget_cents": 0,
-        "human_principal": "joseph",
+        "human_principal": "owner",
     })
 
     executor = LiveScoreAdapterExecutor(store, grant_service=grants, now=lambda: NOW)
     op = Operation(
         org_id="default", run_id="run-expired", digest=DIGEST, task_id="task-1",
         attempt=1, adapter="repository-worktree-commit", action="repository:write",
-        resource="repo", environment="test", owner_principal="joseph",
+        resource="repo", environment="test", owner_principal="owner",
         cost_cents=0, dry_run=False,
         desired_state={
             "worktree_path": str(wt_dir),
@@ -672,7 +672,7 @@ def test_live_executor_full_lifecycle_with_valid_grant_and_receipts(store, grant
     op = Operation(
         org_id="default", run_id="run-live-1", digest=DIGEST, task_id="task-lifecycle",
         attempt=1, adapter="repository-worktree-commit", action="repository:write",
-        resource="repo", environment="test", owner_principal="joseph",
+        resource="repo", environment="test", owner_principal="owner",
         cost_cents=0, dry_run=False,
         desired_state={
             "worktree_path": str(wt_dir),
@@ -726,7 +726,7 @@ def test_standalone_commit_worktree_changes_with_grant_service(grants, git_workt
         action="repository:write",
         resource="repo",
         environment="test",
-        owner_principal="joseph",
+        owner_principal="owner",
         now=NOW,
     )
     assert len(new_sha) == 40
@@ -902,7 +902,7 @@ def test_compensate_atomic_concurrency_race(store, grants, git_worktree):
     op = Operation(
         org_id="default", run_id="run-live-1", digest=DIGEST, task_id="task-race",
         attempt=1, adapter="repository-worktree-commit", action="repository:write",
-        resource="repo", environment="test", owner_principal="joseph",
+        resource="repo", environment="test", owner_principal="owner",
         cost_cents=0, dry_run=False,
         desired_state={
             "worktree_path": str(wt_dir),
