@@ -101,6 +101,171 @@ function projectGroups(jobs) {
   }).sort((a, b) => a.rank - b.rank || (a.id === "unassigned" ? 1 : 0) - (b.id === "unassigned" ? 1 : 0) || a.name.localeCompare(b.name));
 }
 
+const PORTFOLIO_HEALTH = {
+  green: { label: "On track", color: "var(--st-done-dot)", bg: "var(--st-done-bg)", fg: "var(--st-done-fg)" },
+  amber: { label: "Watch", color: "var(--st-approval-dot)", bg: "var(--st-approval-bg)", fg: "var(--st-approval-fg)" },
+  red: { label: "Blocked", color: "var(--st-failed-dot)", bg: "var(--st-failed-bg)", fg: "var(--st-failed-fg)" },
+};
+
+function PortfolioHealth({ value }) {
+  const health = PORTFOLIO_HEALTH[value] || PORTFOLIO_HEALTH.amber;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 99, padding: "3px 9px", background: health.bg, color: health.fg, fontSize: 11.5, fontWeight: 650 }}>
+      <span style={{ width: 7, height: 7, borderRadius: 99, background: health.color }}></span>
+      {health.label}
+    </span>
+  );
+}
+
+function PortfolioCapacity({ snapshot }) {
+  const gpu = (snapshot.queues && snapshot.queues.gpu) || {};
+  const cpu = (snapshot.queues && snapshot.queues.cpu) || { running: [], pending: [] };
+  const workers = snapshot.workers || { counts: {} };
+  const segments = [
+    {
+      label: "GPU queue",
+      value: gpu.available ? `${gpu.running || 0} running · ${gpu.queued || 0} waiting` : "Unavailable",
+      note: gpu.holder ? `Held by ${gpu.holder}` : gpu.idle ? "Idle" : "Status unknown",
+      kind: gpu.idle && gpu.queued ? "red" : "green",
+    },
+    {
+      label: "CPU queue",
+      value: `${(cpu.running || []).length} running · ${(cpu.pending || []).length} waiting`,
+      note: `${Object.keys(cpu.by_worker || {}).length} workers carrying jobs`,
+      kind: (cpu.pending || []).length ? "amber" : "green",
+    },
+    {
+      label: "Workers",
+      value: `${(workers.counts && workers.counts.online) || 0} online`,
+      note: `${(workers.counts && workers.counts.broken) || 0} broken · ${(workers.counts && workers.counts.away) || 0} away`,
+      kind: workers.counts && workers.counts.broken ? "red" : "green",
+    },
+  ];
+  return (
+    <section aria-label="Shared capacity" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface)", overflow: "hidden", marginBottom: 18 }}>
+      {segments.map((item, index) => (
+        <div key={item.label} style={{ padding: "13px 16px", borderLeft: index ? "1px solid var(--border)" : "none", minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, color: "var(--text-3)", fontSize: 11.5, fontWeight: 650 }}>
+            <span style={{ width: 7, height: 7, borderRadius: 99, background: PORTFOLIO_HEALTH[item.kind].color }}></span>
+            {item.label}
+          </div>
+          <div style={{ marginTop: 4, fontSize: 14, fontWeight: 680 }}>{item.value}</div>
+          <div style={{ color: "var(--text-3)", fontSize: 11.5, marginTop: 2 }}>{item.note}</div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function PortfolioMilestone({ milestone }) {
+  const marks = { done: "✓", next: "●", blocked: "!" };
+  const colors = { done: "var(--st-done-fg)", next: "var(--accent-text)", blocked: "var(--st-failed-fg)" };
+  return (
+    <li style={{ display: "grid", gridTemplateColumns: "22px minmax(0,1fr) auto", alignItems: "center", gap: 7, padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
+      <span aria-hidden="true" style={{ width: 19, height: 19, borderRadius: 99, display: "grid", placeItems: "center", background: "var(--surface-2)", color: colors[milestone.status], fontSize: 11, fontWeight: 750 }}>{marks[milestone.status]}</span>
+      <span style={{ fontSize: 12.5, fontWeight: milestone.status === "next" ? 650 : 500 }}>{milestone.title}</span>
+      <span style={{ color: colors[milestone.status], fontSize: 11.5 }}>{milestone.status}</span>
+    </li>
+  );
+}
+
+function PortfolioPage({ snapshot, error, mode, onRefresh, onOpen }) {
+  const [expanded, setExpanded] = useStateJ(null);
+  if (error) {
+    return <Card><EmptyState icon="!" title="Portfolio could not be refreshed" body={error} /><div style={{ textAlign: "center" }}><Btn onClick={onRefresh}>Try again</Btn></div></Card>;
+  }
+  if (!snapshot) {
+    return <Card><EmptyState icon="◇" title={mode === "live" ? "Loading portfolio" : "Portfolio is not configured"} body={mode === "live" ? "Reading local roadmaps and live queues…" : "Connect to the gateway, then add a local portfolio configuration."} /></Card>;
+  }
+  if (!snapshot.configured) {
+    return <Card><EmptyState icon="◇" title="Portfolio is not configured" body="Copy configs/portfolio.example.yaml to your local BitCadence config and add your projects. Real project data stays outside this repository." /></Card>;
+  }
+  const projects = snapshot.projects || [];
+  const flags = snapshot.flags || [];
+  return (
+    <div>
+      <style>{`@media(max-width:820px){.portfolio-ledger{grid-template-columns:1fr!important}.portfolio-capacity{grid-template-columns:1fr!important}}`}</style>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 16 }}>
+        <div style={{ flex: 1 }}>
+          <h2 style={{ margin: "0 0 5px", fontSize: 20, fontWeight: 700 }}>Every project, one run sheet</h2>
+          <p style={{ margin: 0, color: "var(--text-2)", fontSize: 13.5, maxWidth: 700 }}>Roadmaps come from local configuration. Queues, workers, jobs, and flow warnings are live and read-only.</p>
+        </div>
+        <Btn onClick={onRefresh}>Refresh</Btn>
+      </div>
+
+      {flags.length ? (
+        <section aria-label="Portfolio flow flags" style={{ background: "var(--st-failed-bg)", border: "1px solid var(--st-failed-dot)", borderRadius: 10, marginBottom: 16, overflow: "hidden" }}>
+          <div style={{ padding: "10px 13px", color: "var(--st-failed-fg)", fontSize: 12.5, fontWeight: 700, borderBottom: "1px solid color-mix(in srgb, var(--st-failed-dot) 35%, transparent)" }}>{flags.length} flow {flags.length === 1 ? "flag" : "flags"}</div>
+          {flags.map((flag) => (
+            <div key={flag.id} style={{ display: "grid", gridTemplateColumns: "minmax(150px,.7fr) minmax(0,1.6fr)", gap: 12, padding: "9px 13px", color: "var(--st-failed-fg)", fontSize: 12.5, borderBottom: "1px solid color-mix(in srgb, var(--st-failed-dot) 20%, transparent)" }}>
+              <strong>{flag.title}</strong><span>{flag.detail}</span>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      <div className="portfolio-capacity"><PortfolioCapacity snapshot={snapshot} /></div>
+
+      {projects.length === 0 ? <Card><EmptyState icon="◇" title="No projects are configured" body="Add at least one project and milestone to the local portfolio file." /></Card> : (
+        <section aria-label="Project portfolio" className="portfolio-ledger" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(390px, 1fr))", gap: 13 }}>
+          {projects.map((project) => {
+            const open = expanded === project.id;
+            const health = PORTFOLIO_HEALTH[project.health] || PORTFOLIO_HEALTH.amber;
+            return (
+              <article key={project.id} style={{ position: "relative", border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface)", overflow: "hidden", boxShadow: open ? "0 8px 24px rgba(36,35,58,.08)" : "none" }}>
+                <div aria-hidden="true" style={{ position: "absolute", inset: "0 auto 0 0", width: 5, background: health.color }}></div>
+                <button type="button" aria-expanded={open} onClick={() => setExpanded(open ? null : project.id)} style={{ display: "block", width: "100%", border: 0, background: "transparent", color: "var(--text)", textAlign: "left", cursor: "pointer", padding: "15px 16px 14px 20px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={{ color: "var(--text-3)", fontSize: 11.5, fontWeight: 750 }}>P{project.priority}</span>
+                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{project.name}</h3>
+                        <span style={{ color: project.status === "active" ? "var(--st-done-fg)" : "var(--text-3)", fontSize: 11.5 }}>{project.status}</span>
+                      </div>
+                      <p style={{ margin: "7px 0 0", color: "var(--text-2)", fontSize: 12.5, lineHeight: 1.45 }}>{project.done_definition}</p>
+                    </div>
+                    <PortfolioHealth value={project.health} />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center", marginTop: 13 }}>
+                    <div aria-label={`${project.progress.percent}% along the roadmap`} style={{ height: 7, borderRadius: 99, overflow: "hidden", background: "var(--surface-2)" }}><div style={{ width: project.progress.percent + "%", height: "100%", background: health.color }}></div></div>
+                    <span style={{ color: "var(--text-3)", fontSize: 11.5 }}>{project.progress.done}/{project.progress.total}</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, marginTop: 10, fontSize: 12.5 }}>
+                    <span><span style={{ color: "var(--text-3)" }}>Next: </span><strong>{project.next_milestone || "Roadmap complete"}</strong></span>
+                    <span style={{ color: "var(--text-3)" }}>{project.last_activity ? timeAgo(project.last_activity) : "No activity"}</span>
+                  </div>
+                </button>
+
+                {open ? (
+                  <div style={{ borderTop: "1px solid var(--border)", padding: "4px 16px 16px 20px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 18 }}>
+                      <div>
+                        <h4 style={{ margin: "12px 0 4px", fontSize: 12, fontWeight: 700 }}>Roadmap</h4>
+                        <ol style={{ listStyle: "none", margin: 0, padding: 0 }}>{project.milestones.map((milestone, index) => <PortfolioMilestone key={`${milestone.title}-${index}`} milestone={milestone} />)}</ol>
+                      </div>
+                      <div>
+                        <h4 style={{ margin: "12px 0 4px", fontSize: 12, fontWeight: 700 }}>Recent board jobs</h4>
+                        {project.recent_jobs.length ? project.recent_jobs.map((job) => (
+                          <button key={job.id} onClick={() => onOpen(job.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 8, width: "100%", border: 0, borderBottom: "1px solid var(--border)", background: "transparent", color: "var(--text)", padding: "8px 0", textAlign: "left", cursor: "pointer", fontSize: 12.5 }}><span>{job.title}</span><span style={{ color: "var(--text-3)" }}>{job.status}</span></button>
+                        )) : <div style={{ color: "var(--text-3)", fontSize: 12, padding: "8px 0" }}>No matching jobs.</div>}
+                        <h4 style={{ margin: "14px 0 4px", fontSize: 12, fontWeight: 700 }}>Open pull requests</h4>
+                        {project.open_prs.length ? project.open_prs.map((pr) => <a key={pr.url} href={pr.url} target="_blank" rel="noreferrer" style={{ display: "block", padding: "6px 0", color: "var(--accent-text)", fontSize: 12.5 }}>{pr.number ? `#${pr.number} ` : ""}{pr.title}</a>) : <div style={{ color: "var(--text-3)", fontSize: 12, padding: "8px 0" }}>No open pull requests.</div>}
+                      </div>
+                    </div>
+                    {/* TODO(owner-controls): wire priority/pause writes after the owner-override API lands. */}
+                    <div style={{ marginTop: 13, paddingTop: 10, borderTop: "1px solid var(--border)", color: "var(--text-3)", fontSize: 11.5 }}>Priority and pause controls · Read-only in v1</div>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </section>
+      )}
+      <div style={{ marginTop: 14, color: "var(--text-3)", fontSize: 11.5 }}>Updated {timeAgo(snapshot.generated_at)} · local roadmap + live board</div>
+    </div>
+  );
+}
+
 function ProjectDashboard({ jobs, coverage, tone, onOpen, onShowJobs }) {
   const [query, setQuery] = useStateJ("");
   const [filter, setFilter] = useStateJ("open");
@@ -929,4 +1094,4 @@ function ActivityFeedScreen({ jobs, tone, advanced, onOpen }) {
   );
 }
 
-Object.assign(window, { ProjectDashboard, JobBoard, JobDetail, NewJobForm, ActivityFeedScreen });
+Object.assign(window, { PortfolioPage, ProjectDashboard, JobBoard, JobDetail, NewJobForm, ActivityFeedScreen });

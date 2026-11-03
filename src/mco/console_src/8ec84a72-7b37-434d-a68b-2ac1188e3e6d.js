@@ -3,7 +3,7 @@ const { useState: useStateA, useEffect: useEffectA } = React;
 
 const NAV = [
   { id: "overview", label: "Home", icon: "M3 3h7v7H3zM14 3h7v4h-7zM14 11h7v10h-7zM3 14h7v7H3z" },
-  { id: "projects", label: "Projects", icon: "M3 7h7l2 2h9v10H3zM3 7V5h7l2 2" },
+  { id: "portfolio", label: "Portfolio", icon: "M3 7h7l2 2h9v10H3zM3 7V5h7l2 2" },
   { id: "jobs", label: "Job Board", icon: "M4 6h16M4 12h16M4 18h10" },
   { id: "approvals", label: "Approvals", icon: "M9 12l2 2 4-5M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18z" },
   { id: "governance", label: "Governance", icon: "M12 3l8 4v5c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V7l8-4zM9 12l2 2 4-5" },
@@ -69,13 +69,13 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 const PAGE_TITLES = {
-  expert: { overview: "Home", projects: "Projects", jobs: "Job Board", approvals: "Approval Queue", governance: "Governance", ask: "Ask for something", agents: "Agent Fleet", connect: "Connect an AI", schedules: "Schedules", memory: "Drumline", activity: "Audit Trail", settings: "Settings", scoreLive: "Live view" },
-  plain: { overview: "Home", projects: "Projects", jobs: "All work", approvals: "Needs your OK", governance: "Governance", ask: "Ask for something", agents: "Your helpers", connect: "Connect an AI", schedules: "Schedules", memory: "Drumline", activity: "What happened", settings: "Settings", scoreLive: "Live view" },
+  expert: { overview: "Home", portfolio: "Portfolio", jobs: "Job Board", approvals: "Approval Queue", governance: "Governance", ask: "Ask for something", agents: "Agent Fleet", connect: "Connect an AI", schedules: "Schedules", memory: "Drumline", activity: "Audit Trail", settings: "Settings", scoreLive: "Live view" },
+  plain: { overview: "Home", portfolio: "Portfolio", jobs: "All work", approvals: "Needs your OK", governance: "Governance", ask: "Ask for something", agents: "Your helpers", connect: "Connect an AI", schedules: "Schedules", memory: "Drumline", activity: "What happened", settings: "Settings", scoreLive: "Live view" },
 };
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [page, setPage] = useStateA(((p) => p === "workflows" ? "ask" : p)(localStorage.getItem("bitcadence_page") || localStorage.getItem("baton_page") || "overview"));
+  const [page, setPage] = useStateA(((p) => p === "workflows" ? "ask" : p === "projects" ? "portfolio" : p)(localStorage.getItem("bitcadence_page") || localStorage.getItem("baton_page") || "overview"));
   const [advanced, setAdvanced] = useStateA((localStorage.getItem("bitcadence_adv") ?? localStorage.getItem("baton_adv")) === "1");
   const [openJob, setOpenJob] = useStateA(null);
   const [watchRun, setWatchRun] = useStateA(null);
@@ -106,20 +106,25 @@ function App() {
   const projectCoverage = window.BitCadenceStore.getProjectCoverage ? window.BitCadenceStore.getProjectCoverage() : { count: projectJobs.length, truncated: false };
   const storeMode = window.BitCadenceStore.mode ? window.BitCadenceStore.mode() : "demo";
   const agents = window.BitCadenceStore.getAgents();
+  const portfolio = window.BitCadenceStore.getPortfolio ? window.BitCadenceStore.getPortfolio() : null;
+  const portfolioError = window.BitCadenceStore.getPortfolioError ? window.BitCadenceStore.getPortfolioError() : null;
   const tone = t.tone;
   const gates = jobs.filter((j) => j.status === "needs_approval").length;
 
   useEffectA(() => {
-    if (page !== "projects" || !window.BitCadenceStore.refreshProjectView) return;
-    window.BitCadenceStore.refreshProjectView(false).catch(() => {});
-    const timer = setInterval(() => window.BitCadenceStore.refreshProjectView(true).catch(() => {}), 60000);
+    if (page !== "portfolio" || !window.BitCadenceStore.refreshPortfolio) return;
+    window.BitCadenceStore.refreshPortfolio(false).catch(() => {});
+    const timer = setInterval(() => window.BitCadenceStore.refreshPortfolio(true).catch(() => {}), 30000);
     return () => clearInterval(timer);
   }, [page, storeMode]);
+
+  const portfolioJobs = portfolio && portfolio.projects
+    ? portfolio.projects.flatMap((project) => project.recent_jobs || []) : [];
 
   const screen = {
     overview: <Home jobs={jobs} agents={agents} onNav={setPage} onOpen={setOpenJob} onWatch={(id) => {setWatchRun(id);setPage("scoreLive");}} />,
     scoreLive: <ScoreLive runId={watchRun} jobs={jobs} agents={agents} onBack={() => setPage("overview")} />,
-    projects: <ProjectDashboard jobs={projectJobs} coverage={projectCoverage} tone={tone} onOpen={setOpenJob} onShowJobs={() => setPage("jobs")} />,
+    portfolio: <PortfolioPage snapshot={portfolio} error={portfolioError} mode={storeMode} onRefresh={() => window.BitCadenceStore.refreshPortfolio(true)} onOpen={setOpenJob} />,
     jobs: <JobBoard jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} onCompose={() => setComposing(true)} />,
     approvals: <Approvals jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
     governance: <Governance jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
@@ -215,7 +220,7 @@ function App() {
       </main>
 
       <Drawer open={!!openJob} onClose={() => setOpenJob(null)}>
-        <JobDetail jobId={openJob} jobs={page === "projects" ? projectJobs : jobs} tone={tone} advanced={advanced} onClose={() => setOpenJob(null)} onOpen={setOpenJob} />
+        <JobDetail jobId={openJob} jobs={page === "portfolio" ? portfolioJobs : jobs} tone={tone} advanced={advanced} onClose={() => setOpenJob(null)} onOpen={setOpenJob} />
       </Drawer>
       <Drawer open={composing} onClose={() => setComposing(false)} width={420}>
         <NewJobForm tone={tone} advanced={advanced} onClose={() => setComposing(false)} />
