@@ -43,4 +43,4 @@ Send via `mco_send`:
 - **Fix:** Check `ps aux | grep codex` on Mac; ensure runner points to `/opt/homebrew/bin/python3`. Restart worker process if stalled.
 
 ## Who reviews its work
-`agy-studio-3`, `claude-code`, and Joseph before PR merge.
+`agy-studio-3`, `claude-code`, and the owner before PR merge.

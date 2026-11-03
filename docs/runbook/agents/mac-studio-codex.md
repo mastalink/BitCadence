@@ -43,4 +43,4 @@ Send via `mco_send`:
 - **Fix:** Check Mac worker runner logs in `~/.mco/logs/` and restart worker socket.
 
 ## Who reviews its work
-`agy-studio-*`, `claude-code`, and Joseph.
+`agy-studio-*`, `claude-code`, and the owner.

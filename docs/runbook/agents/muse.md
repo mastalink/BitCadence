@@ -45,4 +45,4 @@ Send via `mco_send`:
 - **Fix:** Provide a concrete 4-beat outline and relaunch the job.
 
 ## Who reviews its work
-`grok-beast` (comedy_script gate), `reviewer-beast` (script room notes), and Joseph.
+`grok-beast` (comedy_script gate), `reviewer-beast` (script room notes), and the owner.

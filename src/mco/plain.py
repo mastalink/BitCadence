@@ -777,7 +777,7 @@ def do_settings(client, *, show_advanced: bool = False) -> int:
 def do_remember(client, text: str, content: str = "") -> int:
     text = (text or "").strip()
     if not text:
-        say('Tell me what to remember, for example: bitcadence remember "Cassie likes the blue folder"')
+        say('Tell me what to remember, for example: bitcadence remember "Sam likes the blue folder"')
         return 1
     title, body = (text, content) if content else (text if len(text) <= 60 else text[:57] + "...", text)
     client.remember(title=title, content=body, kind="fact")

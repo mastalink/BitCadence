@@ -244,7 +244,7 @@ class TestEditionGateOnRoutes:
         monkeypatch.setattr(editions_mod, "current_edition", lambda: COMMUNITY)
         app = FastAPI()
         app.include_router(integrations_router)
-        app.dependency_overrides[require_agent] = lambda: {"role": "human", "instance_id": "joe"}
+        app.dependency_overrides[require_agent] = lambda: {"role": "human", "instance_id": "alex"}
         resp = TestClient(app).get("/api/integrations")
         assert resp.status_code == 403
         assert "MCO_EDITION=enterprise" in resp.json()["detail"]

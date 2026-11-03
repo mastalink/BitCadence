@@ -353,7 +353,7 @@ actions sit behind "More options".
 | GPU busy | "Waiting for the GPU (training holds it until 2:00 AM)." | Wait | Arbiter queue. No model spend while waiting. |
 | Credential expired | "GitHub sign-in for MyMeals expired. Your work is saved." | Sign in again | The secret value is never shown. Resumes from the checkpoint after sign-in. |
 | Uncertain paid effect | "We can't tell if the narration was generated. We will not pay twice." | Check now | Reconcile probe. If still unknown, a human decides "already done" or "generate again". |
-| Permission denied | "You can approve this, but only Joe can release to production." | Ask Joe | No bypass. The request is sent to the person who holds the grant. |
+| Permission denied | "You can approve this, but only the owner can release to production." | Ask the owner | No bypass. The request is sent to the person who holds the grant. |
 | Review rejected | "Reviewer: narration mispronounces 'Carlo' at 02:12." | Fix just that part | A bounded correction attempt within the retry and spend limits. |
 
 ### 6.2 Authority: fixing "cancel/reassign returned 403 despite owner takeover"
@@ -363,7 +363,7 @@ role (`routes.py:1309-1310`, `:1478-1479`). An owner saying "take over" in
 chat grants nothing the server can see, so a worker token gets 403. That is
 correct behavior, and the product failure is that nothing better was offered.
 
-v2 adds a **Takeover grant**: the Chief seat, the Deputy Chief seat, or Joe
+v2 adds a **Takeover grant**: the Chief seat, the Deputy Chief seat, or the owner
 (in that escalation order, §6.4) grants helper X the right to cancel or
 reassign jobs *in run R* for *N hours*. It is
 recorded in the audit log and shown on the run card. It expires on its own.
@@ -384,12 +384,12 @@ this yet. [Ask the Chief to let Codex take over this run]"*.
 
 ### 6.4 Takeover grants (decided)
 
-- **Who may grant, in order:** first the holder of the **Chief** seat (`claude-desktop` when online, otherwise the `claude-cio` sidecar, per `ops/cio-sidecar-brief.md` and `cio_policy.chief_is_online`). If the Chief seat is unavailable, the **Deputy Chief** seat. Then **Joe**.
-  **The Deputy Chief seat is held by Grokbot** (owner decision, 2026-10-22). The seat is not defined anywhere in the repository today, so work packet P2d adds it as a named seat and assigns Grokbot to it. Who holds a seat is configuration, not code, so Joe can reassign it later without a code change.
+- **Who may grant, in order:** first the holder of the **Chief** seat (`claude-desktop` when online, otherwise the `claude-cio` sidecar, per `ops/cio-sidecar-brief.md` and `cio_policy.chief_is_online`). If the Chief seat is unavailable, the **Deputy Chief** seat. Then **The owner**.
+  **The Deputy Chief seat is held by Grokbot** (owner decision, 2026-10-22). The seat is not defined anywhere in the repository today, so work packet P2d adds it as a named seat and assigns Grokbot to it. Who holds a seat is configuration, not code, so the owner can reassign it later without a code change.
   **[assumption]** Grokbot is the fleet's existing Grok worker (role `grok`, instance `grok-beast` per `ops/cio-sidecar-brief.md:52`). P2d confirms the exact registered identity before binding the seat.
 - **A seat never grants a takeover to itself.** Grantor and grantee must be different identities.
-- **Deputy and reviewer stay separate.** Grok is also the fleet's primary reviewer (`ops/cio-sidecar-brief.md:52-53`). If Grokbot issues a takeover as Deputy Chief on a run, it may not be the independent reviewer for work in that run that the takeover touched. That review goes to the second reviewer or to Joe. This extends the existing author-is-not-reviewer rule (`scores.py:379-393`) to the person who authorized the takeover.
-- **Joe can always revoke or override** a grant issued by either seat.
+- **Deputy and reviewer stay separate.** Grok is also the fleet's primary reviewer (`ops/cio-sidecar-brief.md:52-53`). If Grokbot issues a takeover as Deputy Chief on a run, it may not be the independent reviewer for work in that run that the takeover touched. That review goes to the second reviewer or to the owner. This extends the existing author-is-not-reviewer rule (`scores.py:379-393`) to the person who authorized the takeover.
+- **The owner can always revoke or override** a grant issued by either seat.
 - **Scope:** cancel, reassign and fence jobs inside one run. A grant never covers approvals, publishing, release, spend above caps, or new grants.
 - **Duration:** up to 4 hours **[assumption]**. It expires on its own. Every grant, use and revocation is written to the audit trail and shown on the run card.
 
@@ -397,7 +397,7 @@ this yet. [Ask the Chief to let Codex take over this run]"*.
 
 - Two caps apply to every paid step: the **organization** monthly cap and the **project** monthly cap. A step must fit both, and the tighter one wins.
 - Project caps start from the values already in `cio_policy.SPEND_CAPS_CENTS`: Via $150, MyMeals $15, Sim Lab $25 with a hard stop at $40, Operate $10. A project with no cap fails closed, which `cio_policy` already does.
-- The organization cap value is an **[assumption]** until Joe sets it in Settings. It is shown as "not set" and blocks paid work, so it is never treated as unlimited.
+- The organization cap value is an **[assumption]** until the owner sets it in Settings. It is shown as "not set" and blocks paid work, so it is never treated as unlimited.
 
 ### 6.6 Publish gate (decided)
 
@@ -502,20 +502,20 @@ this yet. [Ask the Chief to let Codex take over this run]"*.
 
 ## 9. Owner decisions (recorded 2026-10-18)
 
-Joe answered these in the review conversation. Where his answer left a detail
+The owner answered these in the review conversation. Where his answer left a detail
 open, the detail is marked **[assumption]** and can be changed in review.
 
 | # | Decision | What it changes |
 |---|---|---|
 | 1 | **92.6% is a point-estimate working goal.** | §7.3: the goal is met when observed UCR ≥ 92.6% over the evaluation window. The Wilson lower bound is still shown on the dashboard for information. It is not the bar. |
-| 2 | **Mix and supported configuration as proposed.** Joe left this choice to the designer. | §7.1 values stand: Coding 40%, Media 40%, AI Ops 20%. Supported configuration as listed. Each domain is still reported on its own. |
+| 2 | **Mix and supported configuration as proposed.** The owner left this choice to the designer. | §7.1 values stand: Coding 40%, Media 40%, AI Ops 20%. Supported configuration as listed. Each domain is still reported on its own. |
 | 3 | **Five places: Home, Projects, Library, Operations, Settings.** The bar: *it must not look or feel overwhelming.* | §3 stands. Every new screen is reviewed against that bar. When in doubt, a control goes behind "Details" or Advanced. |
-| 4 | **Takeover grants are issued by the Chief seat, then the Deputy Chief seat, then Joe**, in that escalation order. **Grokbot holds the Deputy Chief seat** (decided 2026-10-22). | §6.4. |
+| 4 | **Takeover grants are issued by the Chief seat, then the Deputy Chief seat, then the owner**, in that escalation order. **Grokbot holds the Deputy Chief seat** (decided 2026-10-22). | §6.4. |
 | 5 | **Spend caps at both levels**: an overall organization cap and a cap per project. | §6.5. Builds on the per-project caps that already exist in `cio_policy.SPEND_CAPS_CENTS` (`src/mco/orchestrator/cio_policy.py:28-34`). |
 | 6 | **The final publish step has a human gate by default.** It can be bypassed only by a specific setting in the BitCadence Settings GUI. | §6.6. |
 | 7 | **A paid step in an Experimental flow needs an initial approval. That approval sets a budget for further runs of that flow.** | §6.7. |
 
-Still open. Joe didn't address these, so the earlier recommendation stands as an **[assumption]**:
+Still open. The owner didn't address these, so the earlier recommendation stands as an **[assumption]**:
 
 - Which media checks hard-fail. Assumed: loudness, duration and resolution.
 - Whether the Gemini ear review is required. Assumed: required before publish, advisory for drafts.

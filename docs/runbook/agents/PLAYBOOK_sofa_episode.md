@@ -5,7 +5,7 @@ From concept and script to scheduled YouTube upload. Plain words, short sentence
 ## Standing Safety Rules
 1. **Uploads are private + scheduled only.** Never publish public directly. Scheduled via Video Shepherd.
 2. **Two different model families must pass video reviews.** No agent reviews its own work.
-3. **Nobody deploys to production except Joseph.**
+3. **Nobody deploys to production except the owner.**
 4. **Never print, copy, or log secrets.**
 
 ---
@@ -30,12 +30,12 @@ From concept and script to scheduled YouTube upload. Plain words, short sentence
   5. Escalation
   6. Punch-up list (3 proposed replacements)
   7. Kill list (must be empty: no punching down, no real names, no mean-spirited lines)
-- **Pass threshold:** Average score >= 8.0, no individual score < 7.0, and kill list empty. If failed twice, episode goes on HOLD for Joseph.
+- **Pass threshold:** Average score >= 8.0, no individual score < 7.0, and kill list empty. If failed twice, episode goes on HOLD for the owner.
 - **Recording:** Write report to `<episode>/reviews/comedy_script_<family>.json`.
 
 ## Step 3: Narration Generation
 - **Who:** Builder: `claude-beast`.
-- **Tools:** ElevenLabs API (`voice-lab-eleven`). Narrator voice "Storytime Joe" or "Confident Idiot" on `eleven_v4`.
+- **Tools:** ElevenLabs API (`voice-lab-eleven`). Narrator voice "Storytime the owner" or "Confident Idiot" on `eleven_v4`.
 - **Rules:** Deliver lines flat and unbothered. Respect timing pauses in narration files.
 
 ## Step 4: Visual Generation and Sight-Gags
@@ -67,4 +67,4 @@ From concept and script to scheduled YouTube upload. Plain words, short sentence
 
 ## Step 7: Scheduled Release
 - **Who:** Orchestrator: `shepherd.py release <id>`.
-- **Process:** Tool verifies all gates are passed against current video sha256. Uploads via YouTube profile `sofa` as **Private + publishAt**. Joseph reviews in YouTube Studio during the scheduled window.
+- **Process:** Tool verifies all gates are passed against current video sha256. Uploads via YouTube profile `sofa` as **Private + publishAt**. The owner reviews in YouTube Studio during the scheduled window.

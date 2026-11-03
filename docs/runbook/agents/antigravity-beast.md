@@ -44,4 +44,4 @@ Send via `mco_send`:
 - **Fix:** Restart Antigravity IDE on Beast with `%USERPROFILE%\.mco\bin\antigravity-worker-run.ps1`.
 
 ## Who reviews its work
-`claude-code`, Chief `claude-desktop`, and Joseph.
+`claude-code`, Chief `claude-desktop`, and the owner.

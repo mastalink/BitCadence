@@ -44,4 +44,4 @@ Send via `mco_send`:
 - **Fix:** Verify OpenAI Codex credits. If worker memory is corrupted or loading stale context, run `prepare-codex-worker.ps1` and launch `codex-beast-run.cmd`.
 
 ## Who reviews its work
-`reviewer-beast` (theology and kid safety), `antigravity-beast`, and Joseph.
+`reviewer-beast` (theology and kid safety), `antigravity-beast`, and the owner.

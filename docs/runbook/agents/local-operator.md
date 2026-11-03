@@ -33,7 +33,7 @@ Send via `mco_send`:
 ```
 
 ## What it needs in the job
-- Direct authorization from Joseph.
+- Direct authorization from the owner.
 - Explicit shell scripts and working directories.
 
 ## Signs it is stuck and the fix
@@ -41,4 +41,4 @@ Send via `mco_send`:
 - **Fix:** Launch interactive terminal session on Beast.
 
 ## Who reviews its work
-Joseph (owner).
+The owner (owner).

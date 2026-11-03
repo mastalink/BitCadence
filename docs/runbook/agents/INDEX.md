@@ -1,6 +1,6 @@
 # BitCadence AI Fleet Runbooks and Playbooks Index
 
-Central directory of runbooks, operational playbooks, and owner cheat sheets for Joseph's AI crew.
+Central directory of runbooks, operational playbooks, and owner cheat sheets for the owner's AI crew.
 
 ---
 
@@ -8,7 +8,7 @@ Central directory of runbooks, operational playbooks, and owner cheat sheets for
 
 | Agent File | Role | One-Line Description |
 |---|---|---|
-| [claude-desktop.md](claude-desktop.md) | `claude` | Chief advisor and orchestrator: routes jobs, interprets policy, and prepares decisions for Joseph. |
+| [claude-desktop.md](claude-desktop.md) | `claude` | Chief advisor and orchestrator: routes jobs, interprets policy, and prepares decisions for the owner. |
 | [claude-beast.md](claude-beast.md) | `claude` | Primary media builder on Beast: video assembly, ComfyUI, ElevenLabs voice takes, and build scripts. |
 | [claude-code.md](claude-code.md) | `claude` | Primary code builder: develops BitCadence features, Score steps, Blender scripts, and Git PRs. |
 | [claude-cio.md](claude-cio.md) | `cio` | Backup Chief and governance officer: approves gated jobs when claude-desktop is offline. |
@@ -25,12 +25,12 @@ Central directory of runbooks, operational playbooks, and owner cheat sheets for
 | [agy-studio-3.md](agy-studio-3.md) | `antigravity` | Gemini reviewer on Mac Studio: audits video pacing, writes runbooks, and checks subtitle synchronization. |
 | [agy-studio-4.md](agy-studio-4.md) | `antigravity` | Gemini reviewer on Mac Studio: frame-by-frame visual comedy review, 480p proxy checks, and cast consistency. |
 | [muse.md](muse.md) | `muse` | Head comedy writer: writes Embracing the Sofa scripts and the sitcom pilot using the Comic Voice Bible. |
-| [stealth-beast.md](stealth-beast.md) | `stealth` | UNVERIFIED: ask Joseph. Registered role `stealth` on Beast in the gateway registry. |
+| [stealth-beast.md](stealth-beast.md) | `stealth` | UNVERIFIED: ask the owner. Registered role `stealth` on Beast in the gateway registry. |
 | [via-retrieval-beast.md](via-retrieval-beast.md) | `via-retrieval` | Data collector on Beast: retrieves public Catholic parish schedules and Mass times for the Via app. |
 | [via-dispatch-beast.md](via-dispatch-beast.md) | `via-dispatch` | Queue manager: idempotent, UUID-bound dispatch of Via schedule batches to Score. |
 | [score-conductor-1.md](score-conductor-1.md) | `conductor` | Score conductor: advances declarative outcome DAGs and enforces evidence verification gates. |
 | [local-operator.md](local-operator.md) | `admin` | Local administrative identity on Beast for manual CLI operations and isolated canary test harnesses. |
-| [cos-omarchy.md](cos-omarchy.md) | `admin` | UNVERIFIED: ask Joseph. Registered role `admin` in gateway registry; currently offline. |
+| [cos-omarchy.md](cos-omarchy.md) | `admin` | UNVERIFIED: ask the owner. Registered role `admin` in gateway registry; currently offline. |
 
 ---
 
@@ -43,11 +43,11 @@ Central directory of runbooks, operational playbooks, and owner cheat sheets for
 | [PLAYBOOK_sitcom_pilot.md](PLAYBOOK_sitcom_pilot.md) | End-to-end pilot workflow: Muse script, GPT room notes, prop design, locked plates, motion, and voices. |
 | [PLAYBOOK_via_data_issue.md](PLAYBOOK_via_data_issue.md) | Investigating public parish schedule API errors, implementing Codex parser fixes, and opening PRs. |
 | [PLAYBOOK_incident.md](PLAYBOOK_incident.md) | Incident response procedures for hung leases, gateway outages, leaked tokens, and review disputes. |
-| [PLAYBOOK_owner_notes.md](PLAYBOOK_owner_notes.md) | How to translate Joseph's video review notes into rollback stages, builder jobs, and replaced uploads. |
+| [PLAYBOOK_owner_notes.md](PLAYBOOK_owner_notes.md) | How to translate the owner's video review notes into rollback stages, builder jobs, and replaced uploads. |
 
 ---
 
-## Joseph's Cheat Sheet (The 10 Things He Will Actually Ask)
+## The owner's Cheat Sheet (The 10 Things He Will Actually Ask)
 
 ### 1. "How's it going?" / "Give me a quick status check."
 - **What to say:** Ask MosesGrok (`grok-beast`) first to avoid Claude usage. Report in three plain bullets:

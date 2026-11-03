@@ -55,7 +55,7 @@ def grants(store):
         "not_before": "2026-09-15T00:00:00Z",
         "expires_at": "2026-10-01T00:00:00Z",
         "budget_cents": 0,
-        "human_principal": "joseph",
+        "human_principal": "owner",
     })
     return service
 
@@ -65,7 +65,7 @@ def operation(adapter="deploy-preview", action="deploy:preview", resource="via",
     return Operation(
         org_id="default", run_id="run-5", digest=DIGEST, task_id="G05",
         attempt=1, adapter=adapter, action=action, resource=resource,
-        environment="test", owner_principal="joseph", cost_cents=0,
+        environment="test", owner_principal="owner", cost_cents=0,
         desired_state=desired or {"version": "candidate", "mode": "dry-run"},
         dry_run=dry_run,
     )
@@ -573,7 +573,7 @@ def test_claim_concurrency_serializes_and_proves_single_winner(tmp_path):
                 "not_before": "2026-09-15T00:00:00Z",
                 "expires_at": "2026-10-01T00:00:00Z",
                 "budget_cents": 0,
-                "human_principal": "joseph",
+                "human_principal": "owner",
             })
             return service
 

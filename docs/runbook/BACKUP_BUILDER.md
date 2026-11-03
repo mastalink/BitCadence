@@ -15,7 +15,7 @@ Any model with a shell on Beast can read those and continue. The risk is judgmen
 ## 2. When to switch (any one is enough)
 - A builder job fails or the worker exits with a usage-limit or quota message.
 - claude-beast is offline or has no heartbeat for more than 30 minutes while builder jobs sit pending, and a relaunch fails (see section 8).
-- Joseph says "Claude is out."
+- The owner says "Claude is out."
 
 The Chief or the Deputy (grok-beast) makes the switch. If the Chief is also out, the Deputy does it and logs it in `docs\runbook\incident-log.md`.
 
@@ -28,10 +28,10 @@ The Chief or the Deputy (grok-beast) makes the switch. If the Chief is also out,
 | 3 | **antigravity-beast** (Gemini) | Beast | Yes | QA and light script runs | Not a builder by default. |
 | 4 | **opencode-beast** | Beast | Yes | A launcher exists. VERIFY its model and whether it can run long jobs before relying on it. | |
 | - | **agy-studio-1..4** (Gemini, Mac Studio) | Mac | **No** | Review and research only, through jobs that carry the text | Cannot read K: or the GPU. Never send them build work. |
-| - | **Gemini 4 relay** (Drive) | Joseph's account | Via a Drive pack | Listening reviews only | See `GEMINI_RELAY.md`. Not a builder. |
-| Last | **Joseph by hand** | Beast | Yes | Run one stage script from a terminal | See section 9. |
+| - | **Gemini 4 relay** (Drive) | The owner's account | Via a Drive pack | Listening reviews only | See `GEMINI_RELAY.md`. Not a builder. |
+| Last | **The owner by hand** | Beast | Yes | Run one stage script from a terminal | See section 9. |
 
-A backup is a **stand-in**. It finishes the current slice and keeps the queue alive. Don't start new creative work with it unless Joseph says so.
+A backup is a **stand-in**. It finishes the current slice and keeps the queue alive. Don't start new creative work with it unless the owner says so.
 
 ## 4. Switch procedure (Chief or Deputy)
 
@@ -46,7 +46,7 @@ A backup is a **stand-in**. It finishes the current slice and keeps the queue al
    - `priority` matches the old job. `escalate_to_role=grok`. `expects_successor=true` if the slice hands off to a conductor job.
    - Use the prompt template in section 5.
 4. **Make sure the worker is awake.** Check `mco_agents`. If a worker is offline, wake it with `mco wake`, or start its `*-beast-run.cmd` from `C:\Users\masta\.mco\bin\`.
-5. **Tell Joseph in one sentence** what is running and who is doing it.
+5. **Tell the owner in one sentence** what is running and who is doing it.
 
 ## 5. Prompt template for the backup job
 
@@ -68,7 +68,7 @@ HARD RULES
 - Never print, copy or log any secret. ElevenLabs: in your own process only, set ELEVENLABS_API_KEY from C:\AI\elevenlabs.txt, e.g.
     $env:ELEVENLABS_API_KEY = (Get-Content -Raw 'C:\AI\elevenlabs.txt').Trim()
   Never echo it, put it in a job or a file, or write it to a log.
-- Voice: Storytime Joe aERVKfcBzYTPdoYoqMpB, model eleven_v4, DEFAULT settings. No [tags] and no heavy "!" in the TTS text.
+- Voice: Storytime the owner aERVKfcBzYTPdoYoqMpB, model eleven_v4, DEFAULT settings. No [tags] and no heavy "!" in the TTS text.
 - Style: locked camera, no zoom; character-locked stills from characters\v12\; no AI-made text in pictures; no circle wipes except the one into the 16-bit sprite; no burned-in captions (write the .srt only); NO subscribe line; "Saint" spelled out; never pray TO a saint.
 - GPU: ComfyUI is at 127.0.0.1:8188 on G:\ComfyUI. Check its queue first, run one heavy job at a time, and don't kill other processes.
 - Append progress to V12_PROGRESS.md after every unit of work (clip, still, voice chunk) so a restart can resume.
@@ -86,11 +86,11 @@ Claude, Codex and Grok judge pictures and sound differently, so every stand-in s
 
 ## 7. What a stand-in should and should not do
 
-| Safe for a backup | Needs the Chief or Joseph |
+| Safe for a backup | Needs the Chief or the owner |
 |---|---|
 | Re-run a stage script (voice, stills, render, QA) | Any new look, new character, new script wording |
 | Apply a logged fix from `ROUND_FIXLIST.md` | Changing a rule or a decision in CHIEF_NOTES |
-| Regenerate a rejected clip, still or voice line | Prayer text (Joseph signs off on every prayer) |
+| Regenerate a rejected clip, still or voice line | Prayer text (the owner signs off on every prayer) |
 | Write contact sheets, logs and handoffs | Uploading, scheduling, posting, spending money |
 | Mark items FIXED or WAIVED in `FIX_LOG.md` | Installing or downloading new models |
 
@@ -104,7 +104,7 @@ Claude, Codex and Grok judge pictures and sound differently, so every stand-in s
 - **GPU:** only one ComfyUI. If it shows an unexpected busy state, look at `/queue` before assuming a conflict.
 - **Usage limits reset:** don't leave the stand-in running once Claude is back.
 
-## 9. Last resort: Joseph runs it by hand
+## 9. Last resort: The owner runs it by hand
 From a PowerShell window on Beast, after reading `V12_PROGRESS.md` for the current slice:
 ```
 cd K:\SaintsStudio\tools

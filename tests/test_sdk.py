@@ -115,7 +115,7 @@ class TestBuildPrompt:
                         "created_by": "claude-1", "created_at": "2026-06-12"}
         lesson = {"id": "g1", "kind": "lesson", "title": "CI quirk",
                   "content": "Retry flaky network tests once.",
-                  "created_by": "joe", "created_at": "2026-06-01"}
+                  "created_by": "alex", "created_at": "2026-06-01"}
         client = FakeClient(recall_map={("run:abc",): [thread_entry], "general": [lesson]})
         agent = _agent(client)
         job = {"id": "j2", "title": "Implement fix",

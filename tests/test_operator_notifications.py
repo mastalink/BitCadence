@@ -24,7 +24,7 @@ def test_digest_is_silent_when_nothing_is_pending(tmp_path, monkeypatch):
 def test_digest_counts_only_owner_decisions_once_at_8am(tmp_path, monkeypatch):
     db = LocalStore(tmp_path / "digest.db")
     for job_id, title in (
-        ("11111111-aaaa", "Joseph decision: choose lane"),
+        ("11111111-aaaa", "Owner decision: choose lane"),
         ("22222222-bbbb", "CIO approval: spend cap"),
         ("33333333-cccc", "ordinary worker task"),
     ):

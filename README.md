@@ -129,7 +129,7 @@ for agents: what one learns, every agent knows.
 === SHARED CONTEXT (Drumline) ===
 - [handoff] Job outcome: Triage P-99 (claude-w1)
   Root cause: runaway cron. Disabled job foo.
-- [fact] Prod DB read-only on Sundays (joe)
+- [fact] Prod DB read-only on Sundays (alex)
   Maintenance window 02:00-06:00 UTC.
 === END SHARED CONTEXT ===
 ```

@@ -45,4 +45,4 @@ Send via `mco_send`:
 - **Fix:** Check runner in `C:\Users\masta\.mco\bin\reviewer-beast-run.cmd`. Check OpenAI API quota. Restart the supervised worker process.
 
 ## Who reviews its work
-Video Shepherd tool (`shepherd.py` validates sha256 and scores); Chief `claude-desktop` and Joseph.
+Video Shepherd tool (`shepherd.py` validates sha256 and scores); Chief `claude-desktop` and the owner.

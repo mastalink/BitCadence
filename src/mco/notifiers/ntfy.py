@@ -321,14 +321,14 @@ def notify(message: str, title: Optional[str] = None, priority: int = 3,
     return False
 
 
-def is_joseph_decision(title: str) -> bool:
+def is_owner_decision(title: str) -> bool:
     lowered = str(title or "").strip().lower()
-    return lowered.startswith("joseph decision") or lowered.startswith("cio approval")
+    return lowered.startswith("owner decision") or lowered.startswith("cio approval")
 
 
 def notify_job_created(job_id: str, title: str, to_role: str):
     del to_role
-    if is_joseph_decision(title):
+    if is_owner_decision(title):
         return notify_event("decision", job_id)
     return False
 
@@ -350,7 +350,7 @@ def notify_job_failed(job_id: str, error: str, to_role: str):
 
 def notify_job_needs_approval(job_id: str, title: str, to_role: str):
     del to_role
-    if is_joseph_decision(title):
+    if is_owner_decision(title):
         return notify_event("decision", job_id)
     return False
 
