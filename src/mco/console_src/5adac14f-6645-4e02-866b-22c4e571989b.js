@@ -101,6 +101,7 @@ function projectGroups(jobs) {
   }).sort((a, b) => a.rank - b.rank || (a.id === "unassigned" ? 1 : 0) - (b.id === "unassigned" ? 1 : 0) || a.name.localeCompare(b.name));
 }
 
+// ----- Portfolio -----
 const PORTFOLIO_HEALTH = {
   green: { label: "On track", color: "var(--st-done-dot)", bg: "var(--st-done-bg)", fg: "var(--st-done-fg)" },
   amber: { label: "Watch", color: "var(--st-approval-dot)", bg: "var(--st-approval-bg)", fg: "var(--st-approval-fg)" },
