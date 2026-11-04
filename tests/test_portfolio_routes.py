@@ -261,3 +261,37 @@ def test_core_board_query_failure_returns_service_unavailable(tmp_path, monkeypa
     assert response.status_code == 503
     assert response.json() == {"detail": "Portfolio board data is unavailable."}
     assert "private database detail" not in response.text
+
+
+def test_chain_event_query_failure_returns_service_unavailable(tmp_path, monkeypatch):
+    path = tmp_path / "portfolio.yaml"
+    write_config(path)
+    monkeypatch.setenv("MCO_PORTFOLIO_CONFIG", str(path))
+    store = LocalStore(tmp_path / "board.db")
+    store.table("agent_jobs").insert(
+        {
+            "id": "job",
+            "org_id": "ours",
+            "title": "Pilot work",
+            "status": "in_progress",
+            "created_at": "2026-11-03T18:00:00Z",
+            "input_payload": {"project": "alpha-app"},
+        }
+    ).execute()
+
+    class EventBrokenStore:
+        def table(self, name):
+            if name == "agent_job_events":
+                raise RuntimeError("private event database detail")
+            return store.table(name)
+
+    http = app_for(
+        EventBrokenStore(),
+        {"org_id": "ours", "role": "viewer", "scopes": ["jobs:read"]},
+    )
+
+    response = http.get("/api/portfolio")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Portfolio board data is unavailable."}
+    assert "private event database detail" not in response.text

@@ -99,8 +99,10 @@ def _snapshot(caller: dict) -> dict:
                 .data
                 or []
             )
-        except Exception:
-            events = []
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503, detail="Portfolio board data is unavailable."
+            ) from exc
 
     return build_portfolio_snapshot(
         _config_result(), jobs=jobs, agents=agents, events=events, now=_now()

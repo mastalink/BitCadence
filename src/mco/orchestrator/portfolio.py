@@ -56,6 +56,10 @@ def _validate_command(value: Any, label: str) -> list[str]:
     return [part.strip() for part in value]
 
 
+def _validate_optional_command(value: Any, label: str) -> list[str]:
+    return [] if value == [] else _validate_command(value, label)
+
+
 def _validate_config(raw: Any) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise PortfolioConfigError("portfolio configuration must be a mapping")
@@ -114,7 +118,7 @@ def _validate_config(raw: Any) -> dict[str, Any]:
                 raise PortfolioConfigError("project repository must be a mapping")
             repository = dict(repository)
             if "pr_command" in repository:
-                repository["pr_command"] = _validate_command(
+                repository["pr_command"] = _validate_optional_command(
                     repository["pr_command"], "repository pr_command"
                 )
             project["repository"] = repository
@@ -127,10 +131,10 @@ def _validate_config(raw: Any) -> dict[str, Any]:
         raise PortfolioConfigError("publishing must be a mapping")
     publishing = dict(publishing)
     if "status_command" in publishing:
-        publishing["status_command"] = _validate_command(
+        publishing["status_command"] = _validate_optional_command(
             publishing["status_command"], "publishing status_command"
         )
-    if "episodes_root" in publishing and (
+    if publishing.get("episodes_root") != "" and "episodes_root" in publishing and (
         not isinstance(publishing["episodes_root"], str)
         or not publishing["episodes_root"].strip()
     ):
@@ -149,8 +153,8 @@ def _validate_config(raw: Any) -> dict[str, Any]:
     gpu["stage_terms"] = [term.strip() for term in terms]
     for field in ("lock_command", "nvidia_smi_command"):
         if field in gpu:
-            gpu[field] = _validate_command(gpu[field], f"gpu {field}")
-    if "comfy_url" in gpu and (
+            gpu[field] = _validate_optional_command(gpu[field], f"gpu {field}")
+    if gpu.get("comfy_url") != "" and "comfy_url" in gpu and (
         not isinstance(gpu["comfy_url"], str) or not gpu["comfy_url"].strip()
     ):
         raise PortfolioConfigError("gpu comfy_url must be text")

@@ -22,6 +22,16 @@ from mco.orchestrator.portfolio import (
 NOW = datetime(2026, 11, 3, 20, 0, tzinfo=timezone.utc)
 
 
+def test_committed_example_config_is_valid():
+    example = __import__("pathlib").Path(__file__).parents[1] / "configs" / "portfolio.example.yaml"
+
+    result = load_portfolio_config(example)
+
+    assert result.configured is True
+    assert result.config["publishing"]["status_command"] == []
+    assert result.config["publishing"]["episodes_root"] == ""
+
+
 def test_missing_config_is_safe_and_does_not_disclose_path(tmp_path):
     result = load_portfolio_config(tmp_path / "private" / "portfolio.yaml")
 
