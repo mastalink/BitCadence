@@ -1,0 +1,24 @@
+{
+  "_note": "Neutral template. Copy to configs/portfolio.local.json (gitignored) and fill in your own projects and paths. Never commit the local copy.",
+  "registry_path": "/path/to/shepherd/registry.json",
+  "gpu_lock_path": "/path/to/shepherd/gpu_lock.json",
+  "comfy_urls": ["http://127.0.0.1:8188"],
+  "projects": [
+    {
+      "id": "video-pipeline", "name": "Video pipeline", "status": "active", "priority": 1, "adapter": "saints",
+      "done_definition": "Every scheduled episode publishes on time with all gates passing.",
+      "job_keywords": ["episode", "short"],
+      "roadmap": [
+        {"title": "First batch scheduled", "done": true},
+        {"title": "Autonomous release", "done": false}
+      ]
+    },
+    {
+      "id": "app", "name": "Main app", "status": "active", "priority": 2, "repo": "owner/repo",
+      "done_definition": "v1 live with paying pilots.",
+      "job_keywords": ["app"],
+      "roadmap": [{"title": "MVP", "done": false}]
+    },
+    {"id": "side-project", "name": "Side project", "status": "paused", "priority": 9, "roadmap": []}
+  ]
+}

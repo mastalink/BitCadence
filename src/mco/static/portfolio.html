@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>BitCadence Portfolio</title><style>
+body{font:15px system-ui;background:#0d1117;color:#e6edf3;max-width:1100px;margin:1.5rem auto;padding:0 1rem}
+h1{font-size:1.4rem;margin:.2rem 0}h2{font-size:1.05rem;margin:.2rem 0}small,.muted{color:#8b949e}
+input,button{background:#21262d;color:#e6edf3;border:1px solid #30363d;border-radius:6px;padding:.45rem}button{cursor:pointer}
+#token{width:22rem;max-width:60%}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:.8rem;margin:1rem 0}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:.9rem;border-left:5px solid #30363d}
+.card.green{border-left-color:#238636}.card.amber{border-left-color:#d29922}.card.red{border-left-color:#da3633}.card.paused{opacity:.65}
+.bar{height:8px;background:#30363d;border-radius:4px;margin:.5rem 0;overflow:hidden}.bar i{display:block;height:100%;background:#2f81f7}
+.pill{display:inline-block;font-size:.75rem;padding:.05rem .5rem;border-radius:99px;border:1px solid #30363d;margin-right:.3rem}
+.flag{padding:.4rem .6rem;border-radius:6px;margin:.25rem 0;background:#161b22;border-left:4px solid #d29922}.flag.red{border-left-color:#da3633;background:#2a1215}
+.card:hover{cursor:pointer;border-color:#58a6ff}#detail{background:#161b22;border:1px solid #58a6ff;border-radius:10px;padding:1rem;margin:1rem 0;display:none}
+ul{margin:.3rem 0;padding-left:1.2rem}.done{text-decoration:line-through;color:#8b949e}a{color:#58a6ff}
+.row{display:flex;gap:1rem;flex-wrap:wrap}.row>div{flex:1;min-width:260px}
+</style></head><body>
+<h1>Portfolio <small id="stamp"></small></h1>
+<p><input id="token" type="password" placeholder="Bearer token (optional if signed in)"> <button onclick="load()">Refresh</button>
+<span class="muted"> controls are read-only for now</span></p>
+<div id="msg" class="muted"></div>
+<h2>Flow flags</h2><div id="flags"></div>
+<h2>Projects</h2><div class="grid" id="projects"></div>
+<div id="detail"></div>
+<h2>Machines &amp; board</h2><div class="row" id="infra"></div>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function hdrs(){const h={},t=$('token').value.trim();if(t)h.Authorization='Bearer '+t;return h}
+let DATA=null;
+async function load(){
+  $('msg').textContent='';
+  const r=await fetch('/api/portfolio',{headers:hdrs()});
+  if(!r.ok){$('msg').textContent='Could not load ('+r.status+'): '+((await r.json().catch(()=>({}))).detail||'');return}
+  DATA=await r.json();render();
+}
+function render(){
+  const d=DATA;$('stamp').textContent=d.generated_at.slice(0,19).replace('T',' ')+' UTC';
+  if(d.config_missing)$('msg').textContent='No local portfolio config found. Copy configs/portfolio.example.json to configs/portfolio.local.json.';
+  $('flags').innerHTML=d.flags.length?d.flags.map(f=>`<div class="flag ${esc(f.severity)}">${f.severity==='red'?'RED':'WARN'} &middot; ${esc(f.message)}</div>`).join(''):'<span class="muted">No flags. Flow is clear.</span>';
+  $('projects').innerHTML=d.projects.map(p=>`<div class="card ${esc(p.health)}" onclick="detail('${esc(p.id)}')">
+    <h2>${esc(p.name)} <span class="pill">${esc(p.status)}</span>${p.priority!=null?`<span class="pill">P${esc(p.priority)}</span>`:''}</h2>
+    <div class="muted">${esc(p.done_definition)||'<i>no definition of done</i>'}</div>
+    <div class="bar"><i style="width:${p.progress.percent||0}%"></i></div>
+    <small>${p.progress.percent==null?'no roadmap':p.progress.percent+'% of roadmap'} &middot; next: ${esc(p.progress.next_milestone||'-')}</small><br>
+    <small>health: ${esc(p.health)} &middot; ${p.open_prs.length} open PR(s)</small></div>`).join('');
+  const g=d.gpu,b=d.board,s=d.saints;
+  $('infra').innerHTML=`<div><h2>GPU</h2>${g.available?'':'<span class="muted">unavailable</span>'}
+    <div>${g.lock_holders.length?g.lock_holders.map(h=>'lock: '+esc(h.holder||h.owner||'?')+' ('+esc(h.lane||'')+')').join('<br>'):'no GPU lock held'}</div>
+    ${g.comfy.map(c=>`<div>ComfyUI ${esc(c.url)}: ${c.running==null?'off':c.running+' running, '+c.pending+' queued'}</div>`).join('')}
+    ${g.nvidia?`<div>GPU ${g.nvidia.util_pct}% &middot; ${g.nvidia.mem_used_mb}/${g.nvidia.mem_total_mb} MB</div>`:''}</div>
+    <div><h2>Saints pipeline</h2>${s.available?`<div>${s.episodes} episodes</div>`+Object.entries(s.by_stage).map(([k,v])=>`<span class="pill">${esc(k)} ${v}</span>`).join(''):'<span class="muted">unavailable</span>'}</div>
+    <div><h2>Board &amp; workers</h2>${Object.entries(b.jobs_by_status).map(([k,v])=>`<span class="pill">${esc(k)} ${v}</span>`).join('')}
+    <div>${b.workers_online}/${b.workers_total} workers online${b.workers_offline.length?'<br>offline: '+b.workers_offline.map(esc).join(', '):''}</div></div>`;
+}
+function detail(id){
+  const p=DATA.projects.find(x=>x.id===id),el=$('detail');el.style.display='block';
+  el.innerHTML=`<h2>${esc(p.name)}</h2><div class="row"><div><b>Roadmap</b><ul>${p.roadmap.map(m=>`<li class="${m.done?'done':''}">${esc(m.title)}</li>`).join('')||'<li class="muted">none</li>'}</ul></div>
+  <div><b>Recent board jobs</b><ul>${p.recent_jobs.map(j=>`<li>${esc(j.title)} <span class="pill">${esc(j.status)}</span></li>`).join('')||'<li class="muted">none</li>'}</ul></div>
+  <div><b>Open PRs</b><ul>${p.open_prs.map(r=>`<li><a href="${esc(r.url)}" target="_blank" rel="noopener">#${r.number}</a> ${esc(r.title)}</li>`).join('')||'<li class="muted">none</li>'}</ul></div></div>
+  <p class="muted">Controls (override / priority / pause / resume / reschedule) are not wired yet.</p>
+  <button onclick="this.parentNode.style.display='none'">Close</button>`;
+  el.scrollIntoView({behavior:'smooth'});
+}
+load();setInterval(load,60000);
+</script></body></html>

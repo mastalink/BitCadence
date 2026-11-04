@@ -181,3 +181,6 @@ infra/aws/lab/.terraform/
 infra/aws/lab/*.tfstate*
 infra/aws/lab/*.tfplan
 infra/aws/lab/terraform.tfvars
+
+# Local portfolio config (project names, priorities, paths)
+configs/portfolio.local.json

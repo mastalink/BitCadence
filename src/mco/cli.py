@@ -285,6 +285,12 @@ def create_app() -> FastAPI:
     from mco.orchestrator.ask_routes import ask_router
     app_server.include_router(ask_router)
 
+    # Portfolio page: every project, its roadmap and live flow flags (read-only).
+    from mco.orchestrator.portfolio_routes import page_router as portfolio_page_router
+    from mco.orchestrator.portfolio_routes import portfolio_router
+    app_server.include_router(portfolio_router)
+    app_server.include_router(portfolio_page_router)
+
     # Helpers page: friendly names, health light, add a helper, "Fix it" (same code as `bitcadence helpers`).
     from mco.orchestrator.helpers_routes import helpers_router
     app_server.include_router(helpers_router)
