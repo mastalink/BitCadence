@@ -297,6 +297,10 @@ def create_app() -> FastAPI:
     from mco.orchestrator.schedules_routes import schedules_router
     app_server.include_router(schedules_router)
 
+    # Local-configured project portfolio and flow flags (read-only in v1).
+    from mco.orchestrator.portfolio_routes import portfolio_router
+    app_server.include_router(portfolio_router)
+
     # Admin API: agent management, settings, workflow submission (Control Panel)
     from mco.orchestrator.admin_routes import (
         agents_admin_router,

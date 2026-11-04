@@ -1,0 +1,46 @@
+version: 1
+
+# Copy this file outside the repository (default:
+# ~/.bitcadence/portfolio.yaml) and keep real project data local.
+projects:
+  - id: project-alpha
+    name: Project Alpha
+    status: active
+    priority: 1
+    done_definition: Customers can complete the primary workflow reliably.
+    aliases:
+      - alpha-app
+    milestones:
+      - title: Foundation
+        status: done
+      - title: Pilot
+        status: next
+      - title: Release
+        status: blocked
+    repository:
+      pr_command:
+        - gh
+        - pr
+        - list
+        - --json
+        - number,title,url,updatedAt
+
+publishing:
+  status_command: []
+  episodes_root: ""
+
+gpu:
+  lock_command: []
+  comfy_url: "http://127.0.0.1:8188"
+  nvidia_smi_command:
+    - nvidia-smi
+    - --query-gpu=utilization.gpu,memory.used,memory.total
+    - --format=csv,noheader,nounits
+  stage_terms:
+    - image generation
+    - video render
+
+thresholds:
+  gpu_idle_minutes: 30
+  pending_hours: 2
+  publish_due_days: 7

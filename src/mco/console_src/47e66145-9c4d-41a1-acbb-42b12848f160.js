@@ -32,6 +32,10 @@
   let projectCoverage = { count: 0, truncated: false, ceiling: 5000 };
   let projectFetchedAt = 0;
   let projectFetchPromise = null;
+  let portfolio = null;
+  let portfolioError = null;
+  let portfolioFetchedAt = 0;
+  let portfolioFetchPromise = null;
   let agents = [];
   let eventsCache = {};
   let prevStatus = {};
@@ -138,6 +142,24 @@
     return projectFetchPromise;
   }
 
+  async function refreshPortfolio(force) {
+    if (!isLive()) return;
+    if (!force && portfolioFetchedAt && Date.now() - portfolioFetchedAt < 30000) return;
+    if (portfolioFetchPromise) return portfolioFetchPromise;
+    portfolioFetchPromise = api("/api/portfolio").then((snapshot) => {
+      portfolio = snapshot;
+      portfolioError = null;
+      portfolioFetchedAt = Date.now();
+      emit();
+      return snapshot;
+    }).catch((error) => {
+      portfolioError = error.message || "Portfolio could not be refreshed";
+      emit();
+      throw error;
+    }).finally(() => { portfolioFetchPromise = null; });
+    return portfolioFetchPromise;
+  }
+
   function startPolling() {
     if (pollTimer) clearInterval(pollTimer);
     // With a live WebSocket feed, polling is just a safety net (agents list,
@@ -206,6 +228,7 @@
         demo.stopSim();
         connState = "live";
         jobs = []; projectJobs = []; projectFetchedAt = 0;
+        portfolio = null; portfolioError = null; portfolioFetchedAt = 0;
         projectCoverage = { count: 0, truncated: false, ceiling: 5000 };
         agents = []; eventsCache = {}; prevStatus = {}; liveActivity = [];
         await poll();
@@ -226,6 +249,7 @@
       stopPolling();
       connState = "demo"; lastError = null;
       projectJobs = []; projectFetchedAt = 0;
+      portfolio = null; portfolioError = null; portfolioFetchedAt = 0;
       projectCoverage = { count: 0, truncated: false, ceiling: 5000 };
       localStorage.removeItem("bitcadence_conn");
       localStorage.removeItem("baton_conn");
@@ -240,6 +264,9 @@
       ? { count: demo.getJobs().length, truncated: false, ceiling: 5000 }
       : projectFetchedAt ? { ...projectCoverage } : { count: jobs.length, truncated: false, ceiling: 5000 },
     refreshProjectView,
+    getPortfolio: () => portfolio,
+    getPortfolioError: () => portfolioError,
+    refreshPortfolio,
     getAgents: () => connState === "demo" ? demo.getAgents() : agents.slice(),
     async getScoreRun(runId) {
       if (connState === "demo") return null;
