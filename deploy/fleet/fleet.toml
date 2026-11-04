@@ -1,0 +1,106 @@
+[workers.opencode-beast]
+role = "opencode"
+instance = "opencode-beast"
+mode = "off"
+exec = "{{HOME_FWD}}/.mco/bin/opencode-beast-run.cmd"
+min_interval = 10
+
+[workers.grok-beast]
+role = "grok"
+instance = "grok-beast"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/grok-beast-run.cmd"
+min_interval = 10
+
+[workers.codex-beast]
+role = "codex"
+instance = "codex-beast"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/codex-beast-run.cmd"
+min_interval = 10
+
+[workers.reviewer-beast]
+role = "reviewer"
+instance = "reviewer-beast"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/reviewer-beast-run.cmd"
+poll_interval = 1800
+
+[workers.chief-beast]
+role = "chief"
+instance = "chief-beast"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/chief-beast-run.cmd"
+min_interval = 300
+poll_interval = 1800
+
+[workers.antigravity-beast]
+role = "antigravity"
+instance = "antigravity-beast"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/antigravity-beast-run.cmd"
+min_interval = 10
+
+[workers.claude-beast]
+role = "claude"
+instance = "claude-beast"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/claude-beast-run.cmd"
+min_interval = 10
+
+[workers.claude-light]
+role = "light"
+instance = "claude-light"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/claude-light-run.cmd"
+min_interval = 10
+
+[workers.claude-code]
+role = "claude"
+instance = "claude-code"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/claude-code-run.cmd"
+min_interval = 10
+
+[workers.stealth-beast]
+role = "stealth"
+instance = "stealth-beast"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/stealth-beast-run.cmd"
+min_interval = 10
+
+[workers.claude-cio]
+role = "cio"
+instance = "claude-cio"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/claude-cio-run.cmd"
+min_interval = 10
+background = true
+
+[workers.agy-studio-5]
+role = "antigravity"
+instance = "agy-studio-5"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/agy-studio-5-run.cmd"
+min_interval = 60
+
+[workers.agy-studio-6]
+role = "antigravity"
+instance = "agy-studio-6"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/agy-studio-6-run.cmd"
+min_interval = 60
+
+[workers.agy-studio-7]
+role = "antigravity"
+instance = "agy-studio-7"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/agy-studio-7-run.cmd"
+min_interval = 60
+
+[workers.agy-studio-8]
+role = "antigravity"
+instance = "agy-studio-8"
+mode = "waker"
+exec = "{{HOME_FWD}}/.mco/bin/agy-studio-8-run.cmd"
+min_interval = 60
