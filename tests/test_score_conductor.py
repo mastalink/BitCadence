@@ -87,6 +87,24 @@ def _do_review(conductor, job_id, reviewer="canary-review-1"):
     conductor.board.finish(job_id, review(job, reviewer, conductor.bridge.root))
 
 
+def test_explicit_validation_retry_command_does_not_dispatch(conductor, monkeypatch, capsys):
+    from mco.orchestrator.score_conductor import main
+    run = _start(conductor)
+    job = conductor.tick(run).dispatched[0]
+    _do_work(conductor, run, job)
+    conductor.board.jobs[job]["output_payload"] = conductor.board.jobs[job]["output_payload"]["result"]
+    with conductor.bridge.tx() as db:
+        db.execute("UPDATE runs SET status='blocked' WHERE id=?", (run,))
+        conductor.bridge.event(db, run, "validation_blocked", {"reason": "Strict JSON result required"})
+    monkeypatch.setattr("mco.cli._conductor", lambda database, root: (conductor, conductor.board))
+    args = ["retry-validation", "--run-id", run, "--db", conductor.bridge.database, "--root", str(conductor.bridge.root)]
+    assert main(args) == 0
+    assert json.loads(capsys.readouterr().out)["status"] == "running"
+    assert len(conductor.board.jobs) == 1  # no new reviewer job is dispatched
+    assert main(args) == 1
+    assert "exhausted" in capsys.readouterr().err
+
+
 class TestTick:
     def test_a_run_reaches_accepted_without_anyone_typing_a_prompt(self, conductor):
         run = _start(conductor)

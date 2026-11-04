@@ -119,6 +119,11 @@ class Conductor:
 
     # ── the loop ─────────────────────────────────────────────────────────
 
+    def retry_validation(self, run_id: str) -> dict:
+        """Explicit one-time audit retry; never plans or dispatches new jobs."""
+        self.bridge.retry_validation(run_id, self.board)
+        return self.status(run_id)
+
     def _block(self, run_id: str, stage: str, reason: str) -> None:
         """Stop a run whose tick raised, durably.
 
@@ -257,3 +262,29 @@ def sqlite_runs(database: str | Path) -> list[dict]:
         return rows
     except sqlite3.Error:
         return []
+
+
+def main(argv=None) -> int:
+    """Narrow recovery command, separate from the ordinary tick/sweep loop."""
+    import argparse
+    import sys
+    from mco.cli import _conductor
+
+    parser = argparse.ArgumentParser(description="Explicit owner-authenticated Score validation recovery")
+    parser.add_argument("command", choices=["retry-validation"])
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--db", required=True, type=Path)
+    parser.add_argument("--root", required=True, type=Path)
+    args = parser.parse_args(argv)
+    try:
+        conductor, _ = _conductor(args.db, args.root)
+        result = conductor.retry_validation(args.run_id)
+    except ScoreError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    print(json.dumps(result, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

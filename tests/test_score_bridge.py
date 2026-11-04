@@ -801,3 +801,216 @@ def test_missing_completion_event_blocks_after_grace(tmp_path):
     with pytest.raises(ScoreError):
         bridge.poll("run", board)
     assert bridge.status("run")["status"] == "blocked"
+
+
+def completed_phase(setup, phase, legacy=True):
+    b, g, e = setup
+    job = b.plan("run")[0]
+    b.dispatch("run", g)
+    g.complete(job, {"artifacts": e})
+    if phase == "review":
+        b.poll("run", g)
+        job = b.plan("run")[0]
+        b.dispatch("run", g)
+        g.complete(job, {"verdict": "pass", "review_of": e, "findings": []})
+    if legacy:
+        g.jobs[job]["output_payload"] = g.jobs[job]["output_payload"]["result"]
+    return job
+
+
+def historical_envelope_block(b):
+    # Persist the state left by the old decoder, without altering board results.
+    with b.tx() as db:
+        db.execute("UPDATE runs SET status='blocked' WHERE id='run'")
+        b.event(db, "run", "validation_blocked", {"reason": "Strict JSON result required"})
+
+
+@pytest.mark.parametrize("phase", ["work", "review"])
+@pytest.mark.parametrize("legacy", [True, False])
+def test_authenticated_result_envelopes(setup, phase, legacy):
+    b, g, _ = setup
+    job = completed_phase(setup, phase, legacy)
+    original = copy.deepcopy(g.jobs)
+    b.poll("run", g)
+    row = next(r for r in b.status("run")["dispatches"] if r["job_id"] == job)
+    assert row["status"] == ("validated" if phase == "work" else "accepted")
+    assert g.jobs == original
+
+
+@pytest.mark.parametrize("legacy", [True, False])
+@pytest.mark.parametrize("raw", ['{"artifacts":{}} prose', '{', '[]', 'null',
+                                 '{"artifacts":{},"x":NaN}', '{"artifacts":{},"x":Infinity}',
+                                 '{"artifacts":{},"artifacts":{}}'])
+def test_result_must_be_one_strict_json_object(setup, legacy, raw):
+    b, g, e = setup
+    job = completed_phase(setup, "work", legacy)
+    raw = raw.replace('"artifacts":{}', '"artifacts":' + json.dumps(e))
+    g.jobs[job]["output_payload"] = raw if legacy else {"result": raw}
+    with pytest.raises(ScoreError, match="Strict JSON|must be an object"):
+        b.poll("run", g)
+    assert b.status("run")["status"] == "blocked"
+
+
+@pytest.mark.parametrize("phase", ["work", "review"])
+@pytest.mark.parametrize("mutation", ["lease", "event_actor", "event_role", "creator", "tenant", "hash", "intent"])
+def test_legacy_envelope_preserves_authenticated_evidence_checks(setup, phase, mutation):
+    b, g, _ = setup
+    job = completed_phase(setup, phase)
+    if mutation == "lease": g.jobs[job]["leased_by_instance_id"] = "worker" if phase == "review" else "intruder"
+    if mutation.startswith("event_"):
+        g.events = lambda jid: [dict(job_id=jid, event="status:completed",
+                                    actor_id="intruder" if mutation == "event_actor" else g.jobs[jid]["target_agent_id"],
+                                    actor_role="intruder" if mutation == "event_role" else g.jobs[jid]["target_agent_role"])]
+    if mutation == "creator": g.jobs[job]["source_agent_id"] = "intruder"
+    if mutation == "tenant": g.jobs[job]["org_id"] = "other"
+    if mutation == "hash": (b.root / "report.json").write_text("changed")
+    if mutation == "intent": g.jobs[job]["input_payload"]["score"]["task"] = "other"
+    with pytest.raises(ScoreError):
+        b.poll("run", g)
+    assert b.status("run")["status"] == "blocked"
+
+
+@pytest.mark.parametrize("phase", ["work", "review"])
+def test_retry_validation_reuses_dispatch_and_results_once(setup, phase):
+    b, g, _ = setup
+    completed_phase(setup, phase)
+    historical_envelope_block(b)
+    with b.tx() as db:
+        before = [dict(r) for r in db.execute("SELECT * FROM dispatch")]
+    original_jobs, creates = copy.deepcopy(g.jobs), g.creates
+    b = ScoreBridge(b.database, b.root)  # retry budget survives restart
+    b.retry_validation("run", g)
+    with b.tx() as db:
+        after = [dict(r) for r in db.execute("SELECT * FROM dispatch")]
+    for old, new in zip(before, after):
+        for field in ("job_id", "payload", "deadline", "task", "phase"):
+            assert old[field] == new[field]
+        if old["evidence"] is not None: assert old["evidence"] == new["evidence"]
+    assert g.jobs == original_jobs and g.creates == creates
+    events = b.status("run")["events"]
+    retry = [json.loads(e["detail"]) for e in events if e["event"] == "validation_retry"]
+    assert len(retry) == 1 and retry[0]["principal"] == "conductor"
+    assert retry[0]["jobs"] == [r["job_id"] for r in before if r["status"] == "submitted"]
+    historical_envelope_block(b)
+    with pytest.raises(ScoreError, match="retry.*exhausted"):
+        ScoreBridge(b.database, b.root).retry_validation("run", g)
+
+
+@pytest.mark.parametrize("mutation", ["credential", "expired", "write", "reason", "extra_block", "rejected",
+                                      "lease", "event", "malformed", "hash", "fail_verdict", "job_failed", "running"])
+def test_retry_validation_refuses_without_mutating_state(setup, mutation):
+    b, g, e = setup
+    job = completed_phase(setup, "review")
+    historical_envelope_block(b)
+    if mutation == "credential": g.identity = "intruder"
+    if mutation == "lease": g.jobs[job]["leased_by_instance_id"] = "worker"
+    if mutation == "event": g.events = lambda _: []
+    if mutation == "malformed": g.jobs[job]["output_payload"] += " prose"
+    if mutation == "hash": (b.root / "report.json").write_text("changed")
+    if mutation == "fail_verdict": g.jobs[job]["output_payload"] = json.dumps({"verdict": "fail", "review_of": e, "findings": []})
+    if mutation == "job_failed": g.jobs[job]["status"] = "failed"
+    with b.tx() as db:
+        if mutation == "expired": db.execute("UPDATE dispatch SET deadline=0 WHERE phase='review'")
+        if mutation == "rejected": db.execute("UPDATE dispatch SET status='rejected' WHERE phase='review'")
+        if mutation == "running": db.execute("UPDATE runs SET status='running'")
+        if mutation == "write":
+            definition = json.loads(b.run(db, "run")["definition"])
+            definition["tasks"][0]["capabilities"] = ["repository:write"]
+            db.execute("UPDATE runs SET definition=?", (json.dumps(definition),))
+        if mutation == "reason": b.event(db, "run", "validation_blocked", {"reason": "Missing authenticated lease/completion identity"})
+        if mutation == "extra_block": b.event(db, "run", "tick_blocked", {"stage": "dispatch", "reason": "other"})
+    before = b.status("run")
+    with pytest.raises(ScoreError):
+        b.retry_validation("run", g)
+    assert b.status("run") == before
+
+
+def test_retry_refuses_changed_previously_validated_evidence(setup):
+    b, g, _ = setup
+    completed_phase(setup, "review")
+    historical_envelope_block(b)
+    work = next(j for j in g.jobs.values() if j["input_payload"]["score"]["phase"] == "work")
+    path = b.root / "other.json"
+    path.write_text("other valid evidence")
+    work["output_payload"] = json.dumps({"artifacts": {"report": {"path": "other.json", "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}}})
+    before = b.status("run")
+    with pytest.raises(ScoreError, match="validated evidence"):
+        b.retry_validation("run", g)
+    assert b.status("run") == before
+
+
+def test_retry_serializes_concurrent_attempts(setup):
+    b, g, _ = setup
+    completed_phase(setup, "work")
+    historical_envelope_block(b)
+    def attempt(_):
+        try:
+            ScoreBridge(b.database, b.root).retry_validation("run", g)
+            return True
+        except ScoreError:
+            return False
+    with ThreadPoolExecutor(2) as pool:
+        assert sum(pool.map(attempt, range(2))) == 1
+    assert len([e for e in b.status("run")["events"] if e["event"] == "validation_retry"]) == 1
+
+
+@pytest.mark.parametrize("retry", [False, True])
+def test_legacy_review_cannot_be_its_author_even_with_matching_intent(setup, retry):
+    b, g, _ = setup
+    job = completed_phase(setup, "review")
+    # Corrupted persisted routing and matching board intent must still fail closed.
+    with b.tx() as db:
+        row = db.execute("SELECT payload FROM dispatch WHERE job_id=?", (job,)).fetchone()
+        payload = json.loads(row["payload"])
+        payload["target_agent_id"] = "worker"
+        db.execute("UPDATE dispatch SET payload=? WHERE job_id=?", (json.dumps(payload), job))
+    g.jobs[job]["target_agent_id"] = "worker"
+    g.jobs[job]["leased_by_instance_id"] = "worker"
+    if retry: historical_envelope_block(b)
+    with pytest.raises(ScoreError, match="Independent identity"):
+        (b.retry_validation if retry else b.poll)("run", g)
+    assert b.status("run")["status"] == "blocked"
+
+
+def test_legacy_fail_verdict_remains_a_rejection(setup):
+    b, g, e = setup
+    job = completed_phase(setup, "review")
+    g.jobs[job]["output_payload"] = json.dumps({"verdict": "fail", "review_of": e, "findings": ["issue"]})
+    b.poll("run", g)
+    assert b.status("run")["status"] == "blocked"
+    assert next(r for r in b.status("run")["dispatches"] if r["job_id"] == job)["status"] == "rejected"
+
+
+def test_retry_deadline_must_still_hold_after_board_preflight(setup):
+    b, g, _ = setup
+    job = completed_phase(setup, "work")
+    historical_envelope_block(b)
+    original_events = g.events
+    def events(jid):
+        b.clock = lambda: 10**12  # time spent verifying board evidence consumed the deadline
+        return original_events(jid)
+    g.events = events
+    before = b.status("run")
+    with pytest.raises(ScoreError, match="expired deadlines"):
+        b.retry_validation("run", g)
+    assert b.status("run") == before
+
+
+def test_retry_poll_reblocks_if_evidence_changes_after_preflight(setup):
+    b, g, _ = setup
+    job = completed_phase(setup, "work")
+    historical_envelope_block(b)
+    original_get = g.get
+    reads = 0
+    def get(jid):
+        nonlocal reads
+        reads += 1
+        if reads == 2: (b.root / "report.json").write_text("changed after preflight")
+        return original_get(jid)
+    g.get = get
+    with pytest.raises(ScoreError, match="digest mismatch"):
+        b.retry_validation("run", g)
+    assert b.status("run")["status"] == "blocked"
+    with pytest.raises(ScoreError, match="exhausted"):
+        b.retry_validation("run", g)
+    assert reads == 2  # bounded; no automatic retries
