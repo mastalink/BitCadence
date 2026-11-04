@@ -20,6 +20,7 @@ import fnmatch
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 from dataclasses import dataclass
@@ -107,6 +108,47 @@ def _run_git(args: Sequence[str], cwd: str | Path) -> subprocess.CompletedProces
         text=True,
         check=False,
     )
+
+
+def _run_gh(args: Sequence[str], cwd: str | Path) -> subprocess.CompletedProcess[str]:
+    """Execute the GitHub CLI with an explicit arg list and cwd (never a shell)."""
+    return subprocess.run(["gh", *args], cwd=str(cwd), capture_output=True, text=True, check=False)
+
+
+_PR_URL_RE = re.compile(r"^https://github\.com/([A-Za-z0-9._-]+)/([A-Za-z0-9._-]+)/pull/(\d+)/?$")
+_REMOTE_RE = re.compile(r"github\.com[:/]([A-Za-z0-9._-]+)/([A-Za-z0-9._-]+?)(?:\.git)?/?$")
+
+
+def verify_pr_url(pr_url: Any, worktree_path: str | Path, target_branch: str) -> str:
+    """Check a claimed PR with `gh pr view`; return the canonical URL or raise.
+
+    The PR must live in the task's repo (the worktree's origin), be OPEN or
+    MERGED, and have head == the task's target_branch. A bare string claim is
+    never evidence: a worker once skipped "open ONE PR" and was still accepted.
+    """
+    if not isinstance(pr_url, str):
+        raise LiveAdapterError("pr_url_must_be_string")
+    m = _PR_URL_RE.match(pr_url.strip())
+    if not m:
+        raise LiveAdapterError(f"pr_url_not_a_github_pull_url:{pr_url!r}")
+    remote = _run_git(["remote", "get-url", "origin"], cwd=worktree_path)
+    rm = _REMOTE_RE.search(remote.stdout.strip()) if remote.returncode == 0 else None
+    if not rm:
+        raise LiveAdapterError("pr_url_cannot_resolve_task_repo_origin")
+    if (m.group(1).lower(), m.group(2).lower()) != (rm.group(1).lower(), rm.group(2).lower()):
+        raise LiveAdapterError(f"pr_url_wrong_repo:{m.group(1)}/{m.group(2)}")
+    proc = _run_gh(["pr", "view", pr_url.strip(), "--json", "state,headRefName,url"], cwd=worktree_path)
+    if proc.returncode != 0:
+        raise LiveAdapterError(f"pr_url_gh_pr_view_failed:{(proc.stderr or '').strip()[:200]}")
+    try:
+        info = json.loads(proc.stdout)
+    except ValueError as exc:
+        raise LiveAdapterError("pr_url_gh_returned_invalid_json") from exc
+    if not isinstance(info, dict) or str(info.get("state", "")).upper() not in ("OPEN", "MERGED"):
+        raise LiveAdapterError(f"pr_url_not_open_or_merged:{info.get('state') if isinstance(info, dict) else None}")
+    if info.get("headRefName") != target_branch:
+        raise LiveAdapterError(f"pr_url_head_mismatch:{info.get('headRefName')}!={target_branch}")
+    return str(info.get("url") or pr_url.strip())
 
 
 def verify_git_worktree(worktree_path: str | Path, target_branch: str) -> Path:

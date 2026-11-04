@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from mco.orchestrator.score_adapters import Operation
-from mco.orchestrator.score_adapters_live import LiveScoreAdapterExecutor, LiveAdapterError, _run_git, verify_not_denied_branch
+from mco.orchestrator.score_adapters_live import LiveScoreAdapterExecutor, LiveAdapterError, _run_git, verify_not_denied_branch, verify_pr_url
 from mco.orchestrator.score_authority import AuthorityError
 from mco.orchestrator.score_dispatcher import score_job_id
 from mco.orchestrator.score_policy import TASK_CHECKPOINT
@@ -375,12 +375,12 @@ class ScoreBridge:
                     if findings:
                         prompt += "\nRejection findings to fix:\n" + "\n".join(f"- {f}" for f in findings)
                     if "repository:write" in t["capabilities"]:
-                        prompt += " Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit."
+                        prompt += " Edit files in the worktree as instructed. When changes are ready, return strict JSON {\"ready\": true}. Do not commit." + (" Your instructions require an opened PR: push the branch, open it, and return strict JSON {\"ready\": true, \"pr_url\": \"<the PR url>\"}; the PR is checked with gh and the task is rejected without it." if "pr_url" in t["evidence"] else "")
                     else:
                         prompt += " Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets."
                 else:
                     if "repository:write" in t["capabilities"]:
-                        prompt = "Independently verify the repository commit and test evidence. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}. Copy review_of exactly from the supplied contract map; do not add, remove, or rename keys."
+                        prompt = "Independently verify the repository commit and test evidence. Read the task instructions and check EVERY \"Done means\" item, including the final step (for example pushing and opening a PR); reject (verdict fail) if any item is missing or unverified, even when the commit looks fine. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}. Copy review_of exactly from the supplied contract map; do not add, remove, or rename keys."
                     else:
                         prompt = "Independently verify these read-only audit artifacts, hashes, observations and limitations. No cloud or artifact mutations. Pass means an honest evidence-backed audit, NOT launch readiness. Return strict JSON {verdict: pass|fail, review_of: EXACT_CONTRACT_MAP, findings: [strings]}. Copy review_of exactly from the supplied contract map; do not add, remove, or rename keys."
 
@@ -700,6 +700,16 @@ class ScoreBridge:
                             evidence[req] = {"sha": new_sha, "target_branch": str(target_branch)}
                         elif req == "commit_sha":
                             evidence[req] = new_sha
+                        elif req == "pr_url":
+                            claimed = output.get("pr_url")
+                            if claimed is None and isinstance(output.get("artifacts"), dict):
+                                claimed = output["artifacts"].get("pr_url")
+                            if not claimed:
+                                raise ScoreError("Missing required evidence 'pr_url': the worker did not report an opened PR")
+                            try:
+                                evidence[req] = verify_pr_url(claimed, wt_path, str(target_branch))
+                            except LiveAdapterError as exc:
+                                raise ScoreError(f"Unverified pr_url evidence: {exc}") from exc
                         else:
                             # Required evidence is not a commit property; must be an authenticated/verified artifact
                             artifacts_claim = output.get("artifacts")
