@@ -57,6 +57,13 @@ def test_portfolio_view_has_setup_loading_error_and_empty_guidance():
         assert phrase in view
 
 
+def test_portfolio_capacity_grid_owns_its_mobile_layout_class():
+    view = VIEWS.read_text(encoding="utf-8")
+
+    assert '<section aria-label="Shared capacity" className="portfolio-capacity"' in view
+    assert '<div className="portfolio-capacity"><PortfolioCapacity' not in view
+
+
 def test_console_bundle_rebuilds_from_portfolio_sources():
     result = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "build_console.py"), "verify"],

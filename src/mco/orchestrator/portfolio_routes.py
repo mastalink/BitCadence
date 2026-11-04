@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from mco.orchestrator.auth import require_scopes
 from mco.orchestrator.portfolio import (
@@ -42,22 +42,23 @@ def _config_result() -> PortfolioConfigResult:
         )
 
 
-def _rows(table: str, org_id: str) -> list[dict]:
-    db = get_db_client()
+def _rows(db, table: str, org_id: str) -> list[dict]:
     if db is None:
-        return []
+        raise HTTPException(status_code=503, detail="Portfolio board data is unavailable.")
     try:
         return db.table(table).select("*").eq("org_id", org_id).execute().data or []
-    except Exception:
-        return []
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503, detail="Portfolio board data is unavailable."
+        ) from exc
 
 
 def _snapshot(caller: dict) -> dict:
     db = get_db_client()
     org_id = agent_org(caller)
-    jobs = _rows("agent_jobs", org_id)
+    jobs = _rows(db, "agent_jobs", org_id)
     jobs = [job for job in jobs if not job.get("archived")]
-    agents = _rows("agent_registry", org_id)
+    agents = _rows(db, "agent_registry", org_id)
 
     if db is not None and jobs:
         try:
@@ -84,9 +85,20 @@ def _snapshot(caller: dict) -> dict:
     job_ids = [job.get("id") for job in jobs if job.get("id")]
     if db is not None and job_ids:
         try:
-            events = db.table("agent_job_events").select("*").in_(
-                "job_id", job_ids
-            ).order("created_at", desc=True).limit(100).execute().data or []
+            cutoff = (_now() - timedelta(hours=24)).isoformat()
+            events = (
+                db.table("agent_job_events")
+                .select("*")
+                .eq("org_id", org_id)
+                .eq("event", "chain_stalled")
+                .gt("created_at", cutoff)
+                .in_("job_id", job_ids)
+                .order("created_at", desc=True)
+                .limit(100)
+                .execute()
+                .data
+                or []
+            )
         except Exception:
             events = []
 

@@ -48,6 +48,14 @@ def _require_text(value: Any, label: str) -> str:
     return value.strip()
 
 
+def _validate_command(value: Any, label: str) -> list[str]:
+    if not isinstance(value, list) or not value or any(
+        not isinstance(part, str) or not part.strip() for part in value
+    ):
+        raise PortfolioConfigError(f"{label} must be a non-empty argv list")
+    return [part.strip() for part in value]
+
+
 def _validate_config(raw: Any) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise PortfolioConfigError("portfolio configuration must be a mapping")
@@ -100,10 +108,65 @@ def _validate_config(raw: Any) -> dict[str, Any]:
                 {"title": title, "status": milestone["status"]}
             )
         project["milestones"] = checked_milestones
+        repository = project.get("repository")
+        if repository is not None:
+            if not isinstance(repository, dict):
+                raise PortfolioConfigError("project repository must be a mapping")
+            repository = dict(repository)
+            if "pr_command" in repository:
+                repository["pr_command"] = _validate_command(
+                    repository["pr_command"], "repository pr_command"
+                )
+            project["repository"] = repository
         validated.append(project)
 
     result = dict(raw)
     result["projects"] = validated
+    publishing = result.get("publishing", {})
+    if not isinstance(publishing, dict):
+        raise PortfolioConfigError("publishing must be a mapping")
+    publishing = dict(publishing)
+    if "status_command" in publishing:
+        publishing["status_command"] = _validate_command(
+            publishing["status_command"], "publishing status_command"
+        )
+    if "episodes_root" in publishing and (
+        not isinstance(publishing["episodes_root"], str)
+        or not publishing["episodes_root"].strip()
+    ):
+        raise PortfolioConfigError("publishing episodes_root must be text")
+    result["publishing"] = publishing
+
+    gpu = result.get("gpu", {})
+    if not isinstance(gpu, dict):
+        raise PortfolioConfigError("gpu must be a mapping")
+    gpu = dict(gpu)
+    terms = gpu.get("stage_terms", [])
+    if not isinstance(terms, list) or any(
+        not isinstance(term, str) or not term.strip() for term in terms
+    ):
+        raise PortfolioConfigError("gpu stage_terms must be a list of text values")
+    gpu["stage_terms"] = [term.strip() for term in terms]
+    for field in ("lock_command", "nvidia_smi_command"):
+        if field in gpu:
+            gpu[field] = _validate_command(gpu[field], f"gpu {field}")
+    if "comfy_url" in gpu and (
+        not isinstance(gpu["comfy_url"], str) or not gpu["comfy_url"].strip()
+    ):
+        raise PortfolioConfigError("gpu comfy_url must be text")
+    result["gpu"] = gpu
+
+    thresholds = result.get("thresholds", {})
+    if not isinstance(thresholds, dict):
+        raise PortfolioConfigError("thresholds must be a mapping")
+    thresholds = dict(thresholds)
+    for field in ("gpu_idle_minutes", "pending_hours", "publish_due_days"):
+        value = thresholds.get(field)
+        if value is not None and (
+            not isinstance(value, int) or isinstance(value, bool) or value < 1
+        ):
+            raise PortfolioConfigError(f"threshold {field} must be a positive integer")
+    result["thresholds"] = thresholds
     return result
 
 
@@ -492,22 +555,33 @@ def worker_snapshot(agents: list[dict[str, Any]]) -> dict[str, Any]:
     return {"workers": workers, "counts": counts}
 
 
-def read_open_prs(project: dict[str, Any], *, runner=_default_runner) -> list[dict[str, Any]]:
+def read_open_prs(project: dict[str, Any], *, runner=_default_runner) -> dict[str, Any]:
     repository = project.get("repository")
     repository = repository if isinstance(repository, dict) else {}
+    command = _command(repository.get("pr_command"))
+    if not command:
+        return {"available": False, "pull_requests": []}
     try:
-        rows = _run_json(repository.get("pr_command"), runner)
+        rows = _run_json(command, runner)
     except (OSError, ValueError, TypeError, RuntimeError, subprocess.SubprocessError, TimeoutError):
-        return []
+        return {
+            "available": False,
+            "pull_requests": [],
+            "warning": "Repository pull requests were unavailable.",
+        }
     if not isinstance(rows, list):
-        return []
+        return {
+            "available": False,
+            "pull_requests": [],
+            "warning": "Repository pull requests were unavailable.",
+        }
     safe = []
     for row in rows:
         if not isinstance(row, dict) or not row.get("title") or not row.get("url"):
             continue
         item = {field: row[field] for field in ("number", "title", "url", "updatedAt") if field in row}
         safe.append(item)
-    return safe
+    return {"available": True, "pull_requests": safe}
 
 
 def _project_for_job(projects: list[dict[str, Any]], job_id: Any) -> Optional[str]:
@@ -549,8 +623,17 @@ def compute_flow_flags(
     flags = []
 
     queued_since = parse_timestamp(gpu.get("queued_since"))
-    if gpu.get("idle") and int(gpu.get("queued") or 0) > 0 and queued_since:
-        if now_utc - queued_since > timedelta(minutes=gpu_minutes):
+    idle_since = parse_timestamp(gpu.get("idle_since"))
+    if (
+        gpu.get("idle")
+        and int(gpu.get("queued") or 0) > 0
+        and queued_since
+        and idle_since
+    ):
+        if (
+            now_utc - queued_since > timedelta(minutes=gpu_minutes)
+            and now_utc - idle_since > timedelta(minutes=gpu_minutes)
+        ):
             flags.append(
                 _flag(
                     "gpu_idle",
@@ -652,7 +735,13 @@ def build_portfolio_snapshot(
     config = config_result.config
     projects = project_snapshot(config, jobs, now)
     for snapshot, project_config in zip(projects, sorted(config["projects"], key=lambda item: (item["priority"], item["name"].lower()))):
-        snapshot["open_prs"] = read_open_prs(project_config, runner=runner)
+        repository = read_open_prs(project_config, runner=runner)
+        snapshot["open_prs"] = repository["pull_requests"]
+        snapshot["repository"] = {
+            key: value for key, value in repository.items() if key != "pull_requests"
+        }
+        if repository.get("warning") and snapshot["health"] != "red":
+            snapshot["health"] = "amber"
     gpu = read_gpu_state(config.get("gpu", {}), jobs, runner=runner, fetcher=fetcher)
     cpu = cpu_queue_snapshot(jobs)
     workers = worker_snapshot(agents)

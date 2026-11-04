@@ -143,7 +143,7 @@ function PortfolioCapacity({ snapshot }) {
     },
   ];
   return (
-    <section aria-label="Shared capacity" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface)", overflow: "hidden", marginBottom: 18 }}>
+    <section aria-label="Shared capacity" className="portfolio-capacity" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface)", overflow: "hidden", marginBottom: 18 }}>
       {segments.map((item, index) => (
         <div key={item.label} style={{ padding: "13px 16px", borderLeft: index ? "1px solid var(--border)" : "none", minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7, color: "var(--text-3)", fontSize: 11.5, fontWeight: 650 }}>
@@ -205,7 +205,7 @@ function PortfolioPage({ snapshot, error, mode, onRefresh, onOpen }) {
         </section>
       ) : null}
 
-      <div className="portfolio-capacity"><PortfolioCapacity snapshot={snapshot} /></div>
+      <PortfolioCapacity snapshot={snapshot} />
 
       {projects.length === 0 ? <Card><EmptyState icon="◇" title="No projects are configured" body="Add at least one project and milestone to the local portfolio file." /></Card> : (
         <section aria-label="Project portfolio" className="portfolio-ledger" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(390px, 1fr))", gap: 13 }}>
@@ -250,7 +250,7 @@ function PortfolioPage({ snapshot, error, mode, onRefresh, onOpen }) {
                           <button key={job.id} onClick={() => onOpen(job.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 8, width: "100%", border: 0, borderBottom: "1px solid var(--border)", background: "transparent", color: "var(--text)", padding: "8px 0", textAlign: "left", cursor: "pointer", fontSize: 12.5 }}><span>{job.title}</span><span style={{ color: "var(--text-3)" }}>{job.status}</span></button>
                         )) : <div style={{ color: "var(--text-3)", fontSize: 12, padding: "8px 0" }}>No matching jobs.</div>}
                         <h4 style={{ margin: "14px 0 4px", fontSize: 12, fontWeight: 700 }}>Open pull requests</h4>
-                        {project.open_prs.length ? project.open_prs.map((pr) => <a key={pr.url} href={pr.url} target="_blank" rel="noreferrer" style={{ display: "block", padding: "6px 0", color: "var(--accent-text)", fontSize: 12.5 }}>{pr.number ? `#${pr.number} ` : ""}{pr.title}</a>) : <div style={{ color: "var(--text-3)", fontSize: 12, padding: "8px 0" }}>No open pull requests.</div>}
+                        {project.repository && project.repository.warning ? <div style={{ color: "var(--st-waiting-fg)", fontSize: 12, padding: "8px 0" }}>{project.repository.warning}</div> : project.open_prs.length ? project.open_prs.map((pr) => <a key={pr.url} href={pr.url} target="_blank" rel="noreferrer" style={{ display: "block", padding: "6px 0", color: "var(--accent-text)", fontSize: 12.5 }}>{pr.number ? `#${pr.number} ` : ""}{pr.title}</a>) : <div style={{ color: "var(--text-3)", fontSize: 12, padding: "8px 0" }}>No open pull requests.</div>}
                       </div>
                     </div>
                     {/* TODO(owner-controls): wire priority/pause writes after the owner-override API lands. */}

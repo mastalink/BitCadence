@@ -82,6 +82,23 @@ def test_invalid_config_degrades_without_leaking_contents(tmp_path, monkeypatch)
     assert "private-secret" not in response.text
 
 
+def test_semantically_invalid_optional_config_degrades_without_500(tmp_path, monkeypatch):
+    path = tmp_path / "portfolio.yaml"
+    write_config(path)
+    path.write_text(path.read_text(encoding="utf-8") + "\ngpu:\n  stage_terms: null\n")
+    monkeypatch.setenv("MCO_PORTFOLIO_CONFIG", str(path))
+    http = app_for(
+        LocalStore(tmp_path / "board.db"),
+        {"org_id": "ours", "role": "viewer", "scopes": ["jobs:read"]},
+    )
+
+    response = http.get("/api/portfolio")
+
+    assert response.status_code == 200
+    assert response.json()["configured"] is False
+    assert response.json()["warning"] == "Portfolio configuration is invalid."
+
+
 def test_portfolio_aggregate_is_org_scoped_and_flags_endpoint_matches(tmp_path, monkeypatch):
     path = tmp_path / "portfolio.yaml"
     write_config(path)
@@ -170,3 +187,77 @@ def test_portfolio_scope_is_enforced(tmp_path, monkeypatch):
     )
 
     assert http.get("/api/portfolio").status_code == 403
+
+
+def test_chain_stall_query_filters_before_the_hundred_event_limit(tmp_path, monkeypatch):
+    path = tmp_path / "portfolio.yaml"
+    write_config(path)
+    monkeypatch.setenv("MCO_PORTFOLIO_CONFIG", str(path))
+    store = LocalStore(tmp_path / "board.db")
+    store.table("agent_jobs").insert(
+        {
+            "id": "job",
+            "org_id": "ours",
+            "title": "Pilot work",
+            "status": "in_progress",
+            "created_at": "2026-11-03T18:00:00Z",
+            "input_payload": {"project": "alpha-app"},
+        }
+    ).execute()
+    store.table("agent_job_events").insert(
+        {
+            "id": "stall",
+            "job_id": "job",
+            "org_id": "ours",
+            "event": "chain_stalled",
+            "created_at": "2026-11-03T19:00:00Z",
+            "payload": {},
+        }
+    ).execute()
+    for index in range(101):
+        store.table("agent_job_events").insert(
+            {
+                "id": f"routine-{index}",
+                "job_id": "job",
+                "org_id": "ours",
+                "event": "heartbeat",
+                "created_at": "2026-11-03T19:30:00Z",
+                "payload": {},
+            }
+        ).execute()
+    monkeypatch.setattr(
+        "mco.orchestrator.portfolio_routes._now",
+        lambda: __import__("datetime").datetime(
+            2026, 11, 3, 20, 0, tzinfo=__import__("datetime").timezone.utc
+        ),
+    )
+    http = app_for(
+        store,
+        {"org_id": "ours", "role": "viewer", "scopes": ["jobs:read"]},
+    )
+
+    response = http.get("/api/portfolio")
+
+    assert response.status_code == 200
+    assert "chain_stalled" in {flag["kind"] for flag in response.json()["flags"]}
+
+
+def test_core_board_query_failure_returns_service_unavailable(tmp_path, monkeypatch):
+    path = tmp_path / "portfolio.yaml"
+    write_config(path)
+    monkeypatch.setenv("MCO_PORTFOLIO_CONFIG", str(path))
+
+    class BrokenStore:
+        def table(self, name):
+            raise RuntimeError("private database detail")
+
+    http = app_for(
+        BrokenStore(),
+        {"org_id": "ours", "role": "viewer", "scopes": ["jobs:read"]},
+    )
+
+    response = http.get("/api/portfolio")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Portfolio board data is unavailable."}
+    assert "private database detail" not in response.text

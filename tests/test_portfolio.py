@@ -6,6 +6,8 @@ import pytest
 
 from mco.orchestrator.portfolio import (
     PortfolioConfigError,
+    PortfolioConfigResult,
+    build_portfolio_snapshot,
     compute_flow_flags,
     cpu_queue_snapshot,
     load_portfolio_config,
@@ -54,6 +56,28 @@ projects:
     assert result.configured is True
     assert result.warning is None
     assert result.config["projects"][0]["id"] == "alpha"
+
+
+@pytest.mark.parametrize(
+    "optional_config",
+    (
+        "gpu:\n  stage_terms: null\n",
+        "thresholds:\n  pending_hours: two\n",
+        "publishing:\n  episodes_root: [not, a, path]\n",
+    ),
+)
+def test_malformed_optional_config_is_rejected_before_snapshot(tmp_path, optional_config):
+    path = tmp_path / "portfolio.yaml"
+    path.write_text(
+        "version: 1\nprojects:\n  - id: alpha\n    name: Alpha\n"
+        "    status: active\n    priority: 1\n    done_definition: Done.\n"
+        "    milestones:\n      - {title: First, status: next}\n"
+        + optional_config,
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PortfolioConfigError):
+        load_portfolio_config(path)
 
 
 @pytest.mark.parametrize("status", ["", "working", "complete", None])
@@ -326,8 +350,53 @@ def test_open_pr_adapter_accepts_only_safe_fields_and_fails_soft():
         project, runner=lambda argv, timeout: completed("not json")
     )
 
-    assert result == [{"number": 7, "title": "Pilot", "url": "https://example.test/pr/7"}]
-    assert unavailable == []
+    assert result == {
+        "available": True,
+        "pull_requests": [
+            {"number": 7, "title": "Pilot", "url": "https://example.test/pr/7"}
+        ],
+    }
+    assert unavailable == {
+        "available": False,
+        "pull_requests": [],
+        "warning": "Repository pull requests were unavailable.",
+    }
+
+
+def test_repository_adapter_warning_marks_otherwise_healthy_project_amber():
+    config = {
+        "version": 1,
+        "projects": [
+            {
+                "id": "alpha",
+                "name": "Alpha",
+                "status": "active",
+                "priority": 1,
+                "done_definition": "Done.",
+                "aliases": [],
+                "milestones": [{"title": "Released", "status": "done"}],
+                "repository": {"pr_command": ["broken-pr-reader"]},
+            }
+        ],
+        "gpu": {"stage_terms": []},
+        "publishing": {},
+        "thresholds": {},
+    }
+
+    snapshot = build_portfolio_snapshot(
+        PortfolioConfigResult(True, config, "explicit"),
+        jobs=[],
+        agents=[],
+        events=[],
+        now=NOW,
+        runner=lambda argv, timeout: completed("not json"),
+    )
+
+    assert snapshot["projects"][0]["health"] == "amber"
+    assert snapshot["projects"][0]["repository"] == {
+        "available": False,
+        "warning": "Repository pull requests were unavailable.",
+    }
 
 
 def test_flow_flags_cover_every_v1_stall_condition():
@@ -349,6 +418,7 @@ def test_flow_flags_cover_every_v1_stall_condition():
         "idle": True,
         "queued": 1,
         "queued_since": "2026-11-03T18:00:00Z",
+        "idle_since": "2026-11-03T18:30:00Z",
     }
     publishing = {
         "episodes": [
@@ -390,6 +460,26 @@ def test_flow_flags_cover_every_v1_stall_condition():
     }
     assert all(flag["severity"] == "red" for flag in flags)
     assert next(flag for flag in flags if flag["kind"] == "job_pending")["project_id"] == "alpha"
+
+
+def test_gpu_idle_flag_requires_the_gpu_and_work_to_exceed_the_threshold():
+    flags = compute_flow_flags(
+        projects=[],
+        jobs=[],
+        workers={"workers": [], "counts": {}},
+        gpu={
+            "idle": True,
+            "queued": 1,
+            "queued_since": "2026-11-03T18:00:00Z",
+            "idle_since": "2026-11-03T19:45:00Z",
+        },
+        publishing={"episodes": []},
+        events=[],
+        thresholds={"gpu_idle_minutes": 30},
+        now=NOW,
+    )
+
+    assert flags == []
 
 
 def test_flow_flags_ignore_recent_or_malformed_timestamps():
