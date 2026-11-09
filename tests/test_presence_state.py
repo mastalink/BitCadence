@@ -72,10 +72,10 @@ def test_lease_holder_is_working_even_if_heartbeat_is_stale(db):
     assert row["state"] == "working"
 
 
-def test_reachable_agent_with_stalled_work_is_broken(db):
+def test_reachable_agent_with_stalled_work_is_ready_with_delivery_warning(db):
     _job(db, "stuck", role="codex", target="codex-beast", age=STALL + 120)
     row = _describe(db, [_agent("codex-beast", "codex")], {"codex-beast"})["codex-beast"]
-    assert row["state"] == "broken"
+    assert row["state"] == "standby"
     assert "1 job(s) addressed to it untaken" in row["state_reason"]
 
 
@@ -84,7 +84,7 @@ def test_stalled_job_pinned_elsewhere_does_not_break_a_peer(db):
     rows = _describe(db, [_agent("codex-beast", "codex"), _agent("codex-mac", "codex", seen_seconds_ago=5)],
                      {"codex-beast"})
     assert rows["codex-beast"]["state"] == "standby"
-    assert rows["codex-mac"]["state"] == "broken"
+    assert rows["codex-mac"]["state"] == "standby"
 
 
 def test_fresh_pending_job_is_not_a_stall(db):
@@ -92,12 +92,12 @@ def test_fresh_pending_job_is_not_a_stall(db):
     assert _describe(db, [_agent("codex-beast", "codex")], {"codex-beast"})["codex-beast"]["state"] == "standby"
 
 
-def test_recent_reroutes_away_mark_broken(db):
+def test_recent_reroutes_are_delivery_warning_not_worker_failure(db):
     _job(db, "moved", status="completed", role="claude")
     record_event(db, "moved", REROUTED, "system", "delivery",
                  {"from_role": "codex", "from_instance": "codex-beast", "to_role": "claude"})
     row = _describe(db, [_agent("codex-beast", "codex")], {"codex-beast"})["codex-beast"]
-    assert row["state"] == "broken"
+    assert row["state"] == "standby"
     assert "1 job(s) rerouted away" in row["state_reason"]
 
 
@@ -119,7 +119,7 @@ def test_available_roles_excludes_broken_and_offline(db):
         _agent("claude-mac", "claude", seen_seconds_ago=5),
         _agent("grok-beast", "grok", seen_seconds_ago=9999),
     ], threshold=THRESHOLD, connected=set(), stall_seconds=STALL)
-    assert presence.available_roles(described) == {"claude"}
+    assert presence.available_roles(described) == {"claude", "codex"}
 
 
 def test_probe_is_used_when_no_connected_set_given(db):

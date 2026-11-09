@@ -39,6 +39,8 @@ class FakeDB:
         self._q_in_conds: dict = {}
         self._q_insert_data = None
         self._q_update_data = None
+        self._q_range = None
+        self._q_gt = {}
 
     def add_agent(self, instance_id, role, token, status="online"):
         self._agents.append({
@@ -70,6 +72,8 @@ class FakeDB:
         self._q_in_conds = {}
         self._q_insert_data = None
         self._q_update_data = None
+        self._q_range = None
+        self._q_gt = {}
         return self
 
     def select(self, *_args):
@@ -88,6 +92,14 @@ class FakeDB:
         return self
 
     def limit(self, _n):
+        return self
+
+    def range(self, start, end):
+        self._q_range = (start, end)
+        return self
+
+    def gt(self, col, val):
+        self._q_gt[col] = val
         return self
 
     def insert(self, data):
@@ -183,6 +195,8 @@ class FakeDB:
                 rows = list(self._events)
                 for col, val in self._q_conds.items():
                     rows = [r for r in rows if r.get(col) == val]
+                for col, val in self._q_gt.items():
+                    rows = [r for r in rows if str(r.get(col) or '') > str(val)]
                 return R([dict(r) for r in rows])
 
         if t == "agent_jobs":
@@ -192,6 +206,9 @@ class FakeDB:
                     rows = [r for r in rows if r.get(col) == val]
                 for col, vals in self._q_in_conds.items():
                     rows = [r for r in rows if r.get(col) in vals]
+                if self._q_range:
+                    start, end = self._q_range
+                    rows = rows[start:end + 1]
                 return R([dict(r) for r in rows])
 
             if op == "insert":

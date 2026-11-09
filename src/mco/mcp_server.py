@@ -106,7 +106,9 @@ def mco_fail(task_id: str, error: str) -> dict:
 def mco_send(to_role: str, title: str, instructions: str, to_instance: str = "",
              requires_approval: bool = False, max_retries: int = 0,
              escalate_to_role: str = "", priority: int = 0,
-             expects_successor: bool = False) -> dict:
+             expects_successor: bool = False,
+             required_capabilities: Optional[List[str]] = None,
+             allowed_roles: Optional[List[str]] = None) -> dict:
     """Drop a task/message into another agent's dropbox. to_instance is optional
     (omit to address the whole role). Set requires_approval=True to pause the job
     at a human approval gate; max_retries/escalate_to_role control what happens
@@ -114,16 +116,27 @@ def mco_send(to_role: str, title: str, instructions: str, to_instance: str = "",
     workers take the first job in their inbox, so an urgent job sent to a role
     with an existing backlog needs one to be picked up next.
 
+    required_capabilities and allowed_roles constrain leasing and fallback
+    routing. For GPU work, require gpu-render and restrict allowed_roles to
+    workers that can sustain the session. Worker capabilities are configured
+    by instance in MCO_WORKER_CAPABILITIES; unknown capabilities fail closed.
+
     Set expects_successor=True when this job is one link in a chain and its
     worker owes a hand-off to the next agent. If that worker completes without
     creating a follow-up job, the gateway records a chain_stalled event and
     hands the stall to MCO_CHAIN_STALL_TO_ROLE - without it, a chain that
     forgets to dispatch leaves an empty board that looks perfectly healthy."""
-    extra = {"expects_successor": True} if expects_successor else None
+    extra = {"expects_successor": True} if expects_successor else {}
+    if required_capabilities is not None or allowed_roles is not None:
+        extra['routing'] = {}
+        if required_capabilities is not None:
+            extra['routing']['required_capabilities'] = required_capabilities
+        if allowed_roles is not None:
+            extra['routing']['allowed_roles'] = allowed_roles
     return _client().send(to_role, title, instructions, to_instance or None,
                           requires_approval=requires_approval, max_retries=max_retries,
                           escalate_to_role=escalate_to_role or None,
-                          priority=priority, extra_payload=extra)
+                          priority=priority, extra_payload=extra or None)
 
 
 @mcp.tool()

@@ -10,9 +10,8 @@ work would get done.
 schema change (so LocalStore and PostgreSQL behave the same):
 
   working  - holds a lease on a job right now
-  broken   - reachable, but work addressed to it is not being taken: a job
-             stalled past the delivery window, or jobs the delivery watchdog
-             had to reroute away from it within the last hour
+  out_of_quota - a fenced worker report identified a credit/quota problem
+  broken   - an explicit worker fault; queue age alone is not evidence
   standby  - reachable and nothing waiting on it: a live waker socket, or a
              fresh heartbeat
   offline  - none of the above (and `disabled` passes through)
@@ -31,6 +30,7 @@ STANDBY = "standby"
 BROKEN = "broken"
 OFFLINE = "offline"
 DISABLED = "disabled"
+OUT_OF_QUOTA = "out_of_quota"
 
 BROKEN_WINDOW_SECONDS = 3600
 _ACTIVE_JOB_STATUSES = ["leased", "in_progress"]
@@ -91,6 +91,11 @@ def describe_fleet(
 
     use_cache = now is None
     now = now or datetime.now(timezone.utc)
+    from mco.orchestrator.worker_policy import quota_workers
+    try:
+        unavailable = quota_workers(db, now=now)
+    except Exception:
+        unavailable = set()
     stall = get_stall_seconds() if stall_seconds is None else stall_seconds
     connected = connected if connected is not None else (connected_instances() or set())
 
@@ -145,6 +150,13 @@ def describe_fleet(
             state = DISABLED
         elif instance in working:
             state = WORKING
+            reason = 'Busy with a leased job'
+        elif instance in unavailable:
+            state = OUT_OF_QUOTA
+            reason = 'Out of quota; retrying after the cooldown'
+        elif raw.get('status') == BROKEN:
+            state = BROKEN
+            reason = 'Worker reported a fault'
         elif row["effective_status"] != "online":
             state = OFFLINE
         else:
@@ -153,7 +165,9 @@ def describe_fleet(
             if str(row.get("role") or "").lower() in _NON_WORKER_ROLES:
                 state = STANDBY
             elif waiting or moved:
-                state = BROKEN
+                # Queue age and delivery movement are evidence about delivery,
+                # not proof that the worker process has failed.
+                state = STANDBY
                 parts = []
                 if waiting:
                     oldest = max(int((now - _parse_ts(j["created_at"])).total_seconds() // 60) for j in waiting)

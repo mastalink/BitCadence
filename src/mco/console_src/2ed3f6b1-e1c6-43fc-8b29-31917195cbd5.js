@@ -250,6 +250,7 @@ function AgentFleet({ agents, jobs, tone, advanced }) {
                     <span style={{ fontSize: 11.5, color: "var(--text-3)" }}>{a.status === "online" ? "seen " + timeAgo(a.last_seen_at) : "last seen " + timeAgo(a.last_seen_at)}</span>
                   </div>
                   <div style={{ fontSize: 12.5, color: "var(--text-2)", marginTop: 4, paddingLeft: 16 }}>
+                    <div title={a.state_reason || ""}>{({working: "Busy", out_of_quota: "Out of quota", broken: "Broken", standby: "Ready", offline: "Offline", disabled: "Disabled"})[a.state] || a.status}</div>
                     {job
                       ? <span>{tone === "plain" ? "Working on: " : "Executing: "}<b>{job.title}</b></span>
                       : a.status === "online"

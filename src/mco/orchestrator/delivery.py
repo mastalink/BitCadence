@@ -221,6 +221,8 @@ def sweep(
 ) -> SweepResult:
     """Advance delivery for every stalled PENDING job by at most one step."""
     from mco.orchestrator.audit import get_events, record_event
+    from mco.orchestrator.worker_policy import can_run, quota_workers, recover_quota
+    from mco.orchestrator.stale import expire_waiting
 
     config = config if config is not None else get_config()
     result = SweepResult()
@@ -231,6 +233,11 @@ def sweep(
         return result
 
     now = now or datetime.now(timezone.utc)
+    for recovered in recover_quota(db):
+        result.broadcasts.append(('job_pending', recovered))
+    for expired in expire_waiting(db, now=now, config=config):
+        result.broadcasts.append(('job_updated', expired))
+    unavailable = quota_workers(db, now=now, config=config)
     fallbacks = parse_fallbacks(config.get("MCO_ROUTE_FALLBACKS"))
     max_reroutes = get_max_reroutes(config)
     online_roles = online_roles or _online_roles
@@ -306,7 +313,8 @@ def sweep(
                 for r in fallbacks[role]:
                     target_id = next((i for rr, i in instance_cache[org]
                                       if rr == r and str(i or "").lower() != str(pinned).lower()
-                                      and instance_host(i, rr) == host), None)
+                                      and instance_host(i, rr) == host and i not in unavailable
+                                      and can_run(job, rr, i, config)), None)
                     if target_id:
                         target = r
                         break
@@ -316,7 +324,18 @@ def sweep(
         else:
             if org not in online_cache:
                 online_cache[org] = online_roles(db, org)
-            target = next((r for r in fallbacks[role] if r in online_cache[org]), None)
+            constrained = isinstance(payload, dict) and 'routing' in payload
+            if constrained or unavailable:
+                if org not in instance_cache:
+                    instance_cache[org] = online_instances(db, org)
+                for r in fallbacks[role]:
+                    target_id = next((i for rr, i in instance_cache[org]
+                                      if rr == r and i not in unavailable and can_run(job, rr, i, config)), None)
+                    if target_id:
+                        target = r
+                        break
+            else:
+                target = next((r for r in fallbacks[role] if r in online_cache[org]), None)
             if target is None:
                 reason = f"no online agent for fallback roles {fallbacks[role]}"
 

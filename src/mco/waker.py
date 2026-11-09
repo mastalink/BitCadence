@@ -15,6 +15,16 @@ from mco.orchestrator.client import DEFAULT_GATEWAY, GatewayClient
 
 logger = logging.getLogger("mco.waker")
 
+
+def worker_lock(role: str, instance_id: str, *, directory=None):
+    """OS-owned lock: duplicates exit; a crash releases it without a PID file."""
+    import hashlib
+    from filelock import FileLock
+    root = Path(directory) if directory is not None else Path.home() / '.mco' / 'wake-locks'
+    root.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha256((role.lower() + '\0' + instance_id.lower()).encode()).hexdigest()
+    return FileLock(str(root / (key + '.lock')), timeout=0)
+
 # Per-instance agent tokens live here, one file per instance id.
 AGENT_TOKEN_DIR = Path.home() / ".mco" / "tokens"
 
@@ -276,6 +286,14 @@ class Waker:
         self._last_spawn_start = 0.0
 
     async def run_forever(self) -> None:
+        from filelock import Timeout
+        try:
+            with worker_lock(self.role, self.instance_id):
+                await self._run_locked()
+        except Timeout:
+            logger.info('A waker already owns this worker; exiting duplicate')
+
+    async def _run_locked(self) -> None:
         """Connect to the broadcast socket and reconnect forever on failures."""
         repoll = None
         if self.repoll_interval > 0:
@@ -285,6 +303,9 @@ class Waker:
         finally:
             if repoll is not None:
                 repoll.cancel()
+                await asyncio.gather(repoll, return_exceptions=True)
+            if self._drain_task is not None:
+                await self._drain_task
 
     async def _repoll_loop(self) -> None:
         """Re-check the authoritative inbox on a timer, independent of events."""
