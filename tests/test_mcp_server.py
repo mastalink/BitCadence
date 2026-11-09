@@ -81,6 +81,12 @@ def _fake(monkeypatch, **responses) -> FakeGatewayClient:
     return client
 
 
+def test_mco_send_attaches_job_capabilities(monkeypatch):
+    fake = _fake(monkeypatch)
+    mco_send('grok', 'Motion', 'Render', required_capabilities=['gpu-render'], allowed_roles=['grok'])
+    assert fake.last_extra_payload == {'routing': {'required_capabilities': ['gpu-render'], 'allowed_roles': ['grok']}}
+
+
 # ── Tool delegation tests ─────────────────────────────────────────────────────
 
 def test_mco_inbox_delegates_and_returns_payload(monkeypatch):

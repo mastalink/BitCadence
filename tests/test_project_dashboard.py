@@ -70,7 +70,7 @@ def test_truncated_project_coverage_is_wired_to_a_visible_warning():
 
 def test_full_project_dataset_is_lazy_and_not_part_of_fleet_poll():
     adapter = (ROOT / "src" / "mco" / "console_src" / "47e66145-9c4d-41a1-acbb-42b12848f160.js").read_text(encoding="utf-8")
-    assert 'Promise.all([api("/api/jobs?limit=200"), api("/api/agents")])' in adapter
+    assert 'Promise.all([api("/api/jobs"), api("/api/agents")])' in adapter
     assert adapter.count('api("/api/jobs/project-view")') == 1
     assert "Date.now() - projectFetchedAt < 60000" in adapter
     assert "await refreshProjectView(true)" in adapter

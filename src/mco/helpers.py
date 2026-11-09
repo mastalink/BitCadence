@@ -43,6 +43,7 @@ def friendly_name(instance_id: str) -> str:
 # state -> (light, word). The word always travels with the colour.
 _LIGHTS = {
     "working": ("green", "Working"),
+    "out_of_quota": ("grey", "Out of quota"),
     "standby": ("green", "Ready"),
     "broken": ("red", "Stuck"),
     "offline": ("grey", "Not connected"),
@@ -83,6 +84,8 @@ def doing(helper: dict, jobs: Iterable[dict] = (), findings: Iterable["Finding"]
         return "Isn't picking up its jobs" + (f" ({reason})" if reason else "")
     if state == "disabled":
         return "Paused. It won't take new work until you turn it back on"
+    if state == 'out_of_quota':
+        return 'Out of quota. Work stays queued until an eligible worker can take it'
     if state == "offline":
         return "Not connected right now"
     return "Waiting for a job"

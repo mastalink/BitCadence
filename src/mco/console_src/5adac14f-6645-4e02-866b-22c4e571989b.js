@@ -216,6 +216,16 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
   const [selected, setSelected] = useStateJ(new Set());
   const [batchBusy, setBatchBusy] = useStateJ(false);
   const [reassignRole, setReassignRole] = useStateJ("");
+  const [stalePreview, setStalePreview] = useStateJ(null);
+  const [staleError, setStaleError] = useStateJ("");
+  const cleanupStale = async (apply) => {
+    setBatchBusy(true); setStaleError("");
+    try {
+      const result = await window.BitCadenceStore.cancelStale(!apply, stalePreview && stalePreview.preview_id);
+      setStalePreview(apply ? null : result);
+    } catch (e) { setStaleError(e.message); }
+    finally { setBatchBusy(false); }
+  };
 
   const setSort = (s) => {
     setSortState(s);
@@ -323,6 +333,7 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+        <button disabled={batchBusy} onClick={() => cleanupStale(false)}>Preview stale jobs</button>
         <div style={{ display: "flex", gap: 2, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: 3 }}>
           {JOB_FILTERS.map((f) => (
             <button key={f.id} onClick={() => setFilter(f.id)} style={{
@@ -355,6 +366,14 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
         <div style={{ flex: 1 }}></div>
         <Btn kind="primary" onClick={onCompose}>+ New job</Btn>
       </div>
+
+      {staleError ? <p role="alert">{staleError}</p> : null}
+      {stalePreview ? <Card>
+        <p>These {stalePreview.jobs.length} old jobs have never started. Review this list before stopping them. Active work is kept.</p>
+        <ul>{stalePreview.jobs.map(j => <li key={j.id}>{j.title || j.id} · {j.status} · {j.id}</li>)}</ul>
+        <Btn disabled={batchBusy || !stalePreview.jobs.length} onClick={() => cleanupStale(true)}>Cancel stale jobs</Btn>
+        <Btn disabled={batchBusy} onClick={() => setStalePreview(null)}>Keep these jobs</Btn>
+      </Card> : null}
 
       {selected.size > 0 ? (
         <div style={{

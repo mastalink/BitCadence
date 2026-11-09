@@ -2355,7 +2355,7 @@ def list_agents():
         table.add_column("Status", style="bold")
         table.add_column("State", style="bold")
         table.add_column("Last Seen", style="white")
-        state_styles = {"working": "[cyan]working[/cyan]", "standby": "[green]standby[/green]",
+        state_styles = {"out_of_quota": "[yellow]out of quota[/yellow]", "working": "[cyan]busy[/cyan]", "standby": "[green]standby[/green]",
                         "broken": "[red]broken[/red]", "offline": "[dim]offline[/dim]",
                         "disabled": "[yellow]disabled[/yellow]"}
 
