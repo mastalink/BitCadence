@@ -216,12 +216,13 @@ def open_bridge(database: str | Path, artifact_root: str | Path, gate_service=No
 
 
 def start_run(bridge: ScoreBridge, *, run_id: str, score_path: str | Path, principal: str,
-              org: str, targets: dict, credential_hash: str) -> dict:
+              org: str, targets: dict, credential_hash: str, standing_grant_id: str | None = None) -> dict:
     """Initialize a run from a score file. Idempotent: re-initializing the same
     run with the same policy and identities is a no-op, a changed one is an error."""
     score = load_score(Path(score_path).read_text(encoding="utf-8"))
     bridge.initialize(run_id, score, principal=principal, org=org, targets=targets,
-                      credential_hash=credential_hash)
+                      credential_hash=credential_hash,
+                      **({"standing_grant_id": standing_grant_id} if standing_grant_id is not None else {}))
     return {"run_id": run_id, "score_id": score["id"]}
 
 

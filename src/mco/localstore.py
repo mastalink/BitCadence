@@ -41,6 +41,7 @@ from typing import Any, Dict, List, Optional
 
 # Tables whose history must never be rewritten (mirrors the Postgres trigger).
 APPEND_ONLY_TABLES = {"agent_job_events", "mco_audit_outbox", "mco_attempt_receipts", "score_events", "score_checkpoint_decisions", "agent_exchanges", "agent_exchange_promotions"}
+APPEND_ONLY_TABLES.update({"score_standing_grants", "score_standing_revocations", "score_standing_events", "score_standing_runs"})
 
 # Natural primary key per table (upsert conflict target).
 # Equality lookups the gateway repeats on every request. The builder inlines the
