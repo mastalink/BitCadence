@@ -4,19 +4,20 @@ from __future__ import annotations
 
 import ctypes
 from ctypes import wintypes
-import json
 import os
 from pathlib import Path
+import secrets
 import signal
 import subprocess
 from typing import Any, Callable
 
-import psutil
-
 from mco import service
 from mco.service import ServiceSpec
 
+from .. import identity
+from ..identity import NONCE_ENV, ReapReport
 from ..tokens import current_user_sid
+from .base import SupervisorAlreadyRunning
 
 
 CREATE_SUSPENDED = 0x00000004
@@ -26,10 +27,6 @@ JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
 JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
 ERROR_ALREADY_EXISTS = 183
 SDDL_REVISION_1 = 1
-
-
-class SupervisorAlreadyRunning(RuntimeError):
-    pass
 
 
 class _SECURITY_ATTRIBUTES(ctypes.Structure):
@@ -165,11 +162,21 @@ class _JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
 
 
 class WindowsProcessHandle:
-    """Small adapter that gives Windows a polite process-group stop."""
+    """A child plus the Job Object that owns its whole process tree."""
 
-    def __init__(self, process: subprocess.Popen[Any]):
+    def __init__(
+        self,
+        process: subprocess.Popen[Any],
+        job: int | None = None,
+        *,
+        terminate_job: Callable[[int], None] | None = None,
+        close_job: Callable[[int], None] | None = None,
+    ):
         self._process = process
         self.pid = process.pid
+        self._job = job
+        self._terminate_job = terminate_job
+        self._close_job = close_job
 
     @property
     def stdout(self) -> Any:
@@ -183,31 +190,71 @@ class WindowsProcessHandle:
         return self._process.poll()
 
     def terminate(self) -> None:
+        """Polite stop: CTRL_BREAK to the child's process group.
+
+        Best effort by nature - it only reaches a child that shares a console
+        with the daemon and handles the event. The supervisor's terminate
+        deadline, then ``kill``, is what actually bounds the stop.
+        """
         try:
             self._process.send_signal(signal.CTRL_BREAK_EVENT)
         except (OSError, ValueError):
             self._process.terminate()
 
     def kill(self) -> None:
-        self._process.kill()
+        """Kill the whole tree: everything in the child's Job Object."""
+        if self._job is not None and self._terminate_job is not None:
+            try:
+                self._terminate_job(self._job)
+            except OSError:
+                pass
+        try:
+            self._process.kill()
+        except OSError:
+            pass
 
     def wait(self, timeout: float) -> int:
         return self._process.wait(timeout=timeout)
 
+    def close(self) -> None:
+        """The child is gone: kill any descendants it left, free the job."""
+        job, self._job = self._job, None
+        if job is None:
+            return
+        if self._terminate_job is not None:
+            try:
+                self._terminate_job(job)
+            except OSError:
+                pass
+        if self._close_job is not None:
+            self._close_job(job)
+
 
 class WindowsAdapter:
-    """Spawn invisible children inside a kill-on-close Windows Job Object."""
+    """Spawn invisible children, each inside its own kill-on-close Job Object.
+
+    One job per child, not one for the daemon: the daemon holds the only
+    handle to each job, so if the daemon dies for any reason Windows closes
+    the handles and kills every tree; and stopping one worker is a single
+    ``TerminateJobObject`` that takes its descendants with it (a waker's
+    running agent CLI, a batch file's children) without touching the others.
+    """
 
     def __init__(
         self,
         pidfile: Path | None = None,
         popen_factory: Callable[..., subprocess.Popen[Any]] = subprocess.Popen,
         supervisor_lock: WindowsSupervisorLock | None = None,
+        nonce: str | None = None,
     ) -> None:
         self.pidfile = pidfile or Path.home() / ".mco" / "agentd.pids"
         self._popen_factory = popen_factory
         self._job_handle: int | None = None
         self._supervisor_lock = supervisor_lock
+        # Random per-supervisor generation, handed to every child in its
+        # environment. Half of what proves a recorded pid is ours (R6).
+        self.nonce = nonce or secrets.token_hex(16)
+        self.last_reap_report = ReapReport()
 
     def acquire_supervisor_lock(self) -> None:
         if self._supervisor_lock is None:
@@ -219,11 +266,15 @@ class WindowsAdapter:
             self._supervisor_lock.release()
 
     def bind_to_parent_lifetime(self) -> None:
+        """Prove kill-on-close Job Objects work here, before any spawn."""
         if self._job_handle is not None:
             return
         if os.name != "nt":
             raise RuntimeError("WindowsAdapter can only be initialized on Windows")
+        self._job_handle = self._create_job()
 
+    @staticmethod
+    def _create_job() -> int:
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel32.CreateJobObjectW.argtypes = [wintypes.LPVOID, wintypes.LPCWSTR]
         kernel32.CreateJobObjectW.restype = wintypes.HANDLE
@@ -251,7 +302,19 @@ class WindowsAdapter:
         if not ok:
             kernel32.CloseHandle(handle)
             raise ctypes.WinError(ctypes.get_last_error())
-        self._job_handle = int(handle)
+        return int(handle)
+
+    @staticmethod
+    def _terminate_job(job: int) -> None:
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+        kernel32.TerminateJobObject.restype = wintypes.BOOL
+        if not kernel32.TerminateJobObject(wintypes.HANDLE(job), 1):
+            raise ctypes.WinError(ctypes.get_last_error())
+
+    @staticmethod
+    def _close_job(job: int) -> None:
+        _close_handle(job)
 
     def spawn(
         self,
@@ -262,32 +325,46 @@ class WindowsAdapter:
         stderr: int,
     ) -> WindowsProcessHandle:
         self.bind_to_parent_lifetime()
+        child_env = dict(env)
+        child_env[NONCE_ENV] = self.nonce
+        # CREATE_NO_WINDOW: a console with no window, inherited by everything
+        # the child starts. No console window can appear at any depth.
         flags = CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP | CREATE_SUSPENDED
         process = self._popen_factory(
             argv,
             cwd=str(cwd),
-            env=env,
+            env=child_env,
+            stdin=subprocess.DEVNULL,
             stdout=stdout,
             stderr=stderr,
             creationflags=flags,
         )
+        job: int | None = None
         try:
-            self._record_pid(process.pid, argv[0])
-            self._assign_to_job(process)
+            # Suspended until it is recorded and inside its job: the child
+            # cannot run a single instruction, or fork, before we own it.
+            self._record_child(process.pid, argv)
+            job = self._create_job()
+            self._assign_to_job(process, job)
             self._resume_process(process)
         except Exception:
             process.kill()
             process.wait()
             self.forget_pid(process.pid)
+            if job is not None:
+                self._close_job(job)
             raise
-        return WindowsProcessHandle(process)
+        return WindowsProcessHandle(
+            process, job, terminate_job=self._terminate_job, close_job=self._close_job
+        )
 
-    def _assign_to_job(self, process: subprocess.Popen[Any]) -> None:
+    def _assign_to_job(self, process: subprocess.Popen[Any], job: int | None = None) -> None:
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
         kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
         ok = kernel32.AssignProcessToJobObject(
-            wintypes.HANDLE(self._job_handle), wintypes.HANDLE(process._handle)
+            wintypes.HANDLE(job if job is not None else self._job_handle),
+            wintypes.HANDLE(process._handle),
         )
         if not ok:
             raise ctypes.WinError(ctypes.get_last_error())
@@ -303,58 +380,25 @@ class WindowsAdapter:
         if status != 0:
             raise OSError(f"NtResumeProcess failed with NTSTATUS 0x{status & 0xffffffff:08x}")
 
-    def _record_pid(self, pid: int, command: str) -> None:
-        self.pidfile.parent.mkdir(parents=True, exist_ok=True)
-        record = {"pid": pid, "command": Path(command).name}
-        with self.pidfile.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record, separators=(",", ":")) + "\n")
-            handle.flush()
-            os.fsync(handle.fileno())
+    def _record_child(self, pid: int, argv: list[str]) -> None:
+        """Record the full identity of a child (R6), before it runs."""
+        identity.append_record(self.pidfile, identity.capture_identity(pid, argv, self.nonce))
 
     def forget_pid(self, pid: int) -> None:
-        if not self.pidfile.exists():
-            return
-        retained = [r for r in self._read_pidfile(self.pidfile) if r.get("pid") != pid]
-        self._write_records(self.pidfile, retained)
+        identity.forget_record(self.pidfile, pid)
 
     def reap_orphans(self, pidfile: Path) -> list[int]:
-        killed: list[int] = []
-        for record in self._read_pidfile(pidfile):
-            try:
-                pid = int(record["pid"])
-                expected = Path(str(record["command"])).name.casefold()
-                process = psutil.Process(pid)
-                cmdline = process.cmdline()
-                actual = Path(cmdline[0]).name.casefold() if cmdline else process.name().casefold()
-                if actual != expected:
-                    continue
-                process.kill()
-                process.wait(timeout=5)
-                killed.append(pid)
-            except (KeyError, TypeError, ValueError, psutil.Error):
-                continue
-        self._write_records(pidfile, [])
-        return killed
+        """Kill recorded children only when their identity is proven (R6)."""
+        self.last_reap_report = identity.reap_recorded(pidfile)
+        return list(self.last_reap_report.killed)
 
     @staticmethod
     def _read_pidfile(pidfile: Path) -> list[dict[str, object]]:
-        if not pidfile.exists():
-            return []
-        records: list[dict[str, object]] = []
-        for line in pidfile.read_text(encoding="utf-8").splitlines():
-            try:
-                value = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(value, dict):
-                records.append(value)
-        return records
+        return identity.read_records(pidfile)
 
     @staticmethod
     def _write_records(pidfile: Path, records: list[dict[str, object]]) -> None:
-        pidfile.parent.mkdir(parents=True, exist_ok=True)
-        text = "".join(json.dumps(r, separators=(",", ":")) + "\n" for r in records)
-        pidfile.write_text(text, encoding="utf-8")
+        identity.write_records(pidfile, records)
 
     def install_service(self, spec: ServiceSpec) -> tuple[bool, str]:
         return service._win_install_service(spec)

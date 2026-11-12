@@ -23,7 +23,11 @@ ICON_GREY = "grey"
 
 ICON_STATES = (ICON_GREEN, ICON_AMBER, ICON_RED, ICON_GREY)
 
-_AMBER_WORKER_STATES = frozenset({"starting", "backoff", "restarting", "degraded"})
+# "blocked": another owner is running this worker. "draining": the supervisor
+# is stopping its children for an upgrade. Neither is healthy-green.
+_AMBER_WORKER_STATES = frozenset(
+    {"starting", "backoff", "restarting", "degraded", "blocked", "draining"}
+)
 _CRASH_STATES = frozenset({"crashlooped", "crash_looped", "crash-looped"})
 _DAEMON_DOWN_STATES = frozenset({"stopped", "down", "not_running", "offline"})
 

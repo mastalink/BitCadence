@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 import re
+import tempfile
 from typing import Any
 
 try:  # pragma: no cover - exercised by interpreter version
@@ -232,9 +234,29 @@ def set_worker_value(worker: str, assignment: str, path: Path = FLEET_CONFIG_PAT
         raise FleetConfigError(f"Worker not found: {worker}")
     workers[worker][key] = _coerce_assignment_value(key, value.strip())
     parse_fleet_data(data)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_render_fleet_toml(workers), encoding="utf-8")
+    _atomic_write_text(path, _render_fleet_toml(workers))
     return f"Updated {worker}.{key}; run 'mco fleet apply' for the change to take effect."
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Replace `path` in one step so a reader never sees a half-written file.
+
+    `Path.write_text()` truncates first and writes second. Anything watching
+    the file (the supervisor polls it) can read it in between and see a
+    shorter fleet than the real one. Writing a sibling temp file, flushing it
+    to disk and renaming it over the target has no such window.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def _required_string(raw: dict[str, Any], key: str, worker: str) -> str:

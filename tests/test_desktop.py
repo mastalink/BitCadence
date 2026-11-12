@@ -97,7 +97,11 @@ def test_wait_ready_gives_up_after_timeout(monkeypatch):
 def test_poll_keeps_executor_command():
     from mco import service
     supervisor = StackSupervisor(None)
-    assert supervisor._argv(config("poll")) == service._poll_argv("example.cmd")
+    # The executor command itself, not the `conhost --headless` wrapper a
+    # scheduled task needs: a supervised child is created with no window, and
+    # that wrapper swallows the output the supervisor's log pipes read.
+    assert supervisor._argv(config("poll")) == ["example.cmd"]
+    assert service._poll_argv("example.cmd")[-1] == "example.cmd"
 
 
 def test_stop_tree_releases_descendants(tmp_path):

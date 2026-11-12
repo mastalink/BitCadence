@@ -12,7 +12,8 @@ status: accepted
 > already handed to implementers.
 
 **Supersedes:** the per-worker service model in `fleet.apply_fleet()`.
-**Implementation status:** specified, not yet built.
+**Implementation status:** supervisor core built against Revision 2; see
+*Implementation status after the Revision 2 rework* at the end of Revision 2.
 
 ## The problem, stated by the operator
 
@@ -600,6 +601,42 @@ only here.
   1 and **must be reworked** against R3, R4, and R7 before merge.
 - Jobs 2/5, 4/5, and 5/5 were cancelled before being leased, and are reposted
   against this revision.
+
+## Implementation status after the Revision 2 rework
+
+The supervisor core (`src/mco/agentd/`) now implements this revision. PRs #46
+and #47 had merged against Revision 1; this is the rework they were owed.
+
+| Item | Where it lives |
+|---|---|
+| R1 per-user scope | per-user mutex / lock file and control port; `daemon.SCOPE_NOTICE` |
+| R2 single owner | `platform/*` singleton, `locks.py` per-worker lock, `ownership.py` legacy-copy check |
+| R3 crash loop | `supervisor.py` (two states, persisted, boot recorded) |
+| R4 fleet schema | `supervisor._argv`; no schema change |
+| R5 transactional config | `config.py`; `fleet.set_worker_value` writes atomically |
+| R6 orphan reaping | `identity.py` |
+| R7 control privilege | `tokens.py`, `control.py` |
+| R8 desired state, upgrades | `supervisor.py` overrides, `drain`/`resume`, `/v1/version` |
+| R10 shutdown and logs | `supervisor.py` deadlines, `logs.py` |
+
+Decisions this revision left open, and how they were settled in code:
+
+- **A reboot does not clear the crash-loop latch or a manual stop.** Failure
+  times are wall-clock, so they stay meaningful across a boot; only age, the
+  cooldown, or an explicit reset/start clears them.
+- **A vanished or empty `fleet.toml` is never read as "remove every worker"**
+  once a fleet is running. To stop a worker, set `mode = "off"`.
+- **A worker that something else is already running is `blocked`, not
+  failed.** It is retried, never counted toward a crash loop, and never
+  started as a second copy.
+- **Supervised children run under `python.exe` with no window**, not
+  `pythonw.exe`, and poll workers run their `exec` directly rather than through
+  `conhost --headless`: a hidden console is inherited by everything below it,
+  and the wrapper swallowed the output.
+
+Not built yet: `mco fleet migrate --apply` and the live migration, the atomic
+install / rollback half of the R8 upgrade protocol, the R9 gateway-survives-a-
+daemon-upgrade test, the console Machine tab, and the tray rework.
 
 ---
 ## Review findings

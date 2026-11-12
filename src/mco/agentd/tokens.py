@@ -24,12 +24,21 @@ class AgentdTokenStore:
     ) -> None:
         self.control_path = control_path
         self.logs_path = logs_path
+        # Hardening a token file costs two subprocesses on Windows. Do it once
+        # per file per process, not once per request.
+        self._cache: dict[Path, str] = {}
 
     def control_token(self) -> str:
-        return self._read_or_create(self.control_path)
+        return self._cached(self.control_path)
 
     def logs_token(self) -> str:
-        return self._read_or_create(self.logs_path)
+        return self._cached(self.logs_path)
+
+    def _cached(self, path: Path) -> str:
+        token = self._cache.get(path)
+        if token is None:
+            token = self._cache[path] = self._read_or_create(path)
+        return token
 
     @staticmethod
     def _read_or_create(path: Path) -> str:
@@ -45,7 +54,8 @@ class AgentdTokenStore:
             )
             temporary = Path(temporary_name)
             try:
-                os.fchmod(fd, 0o600)
+                if hasattr(os, "fchmod"):  # absent on Windows before 3.13
+                    os.fchmod(fd, 0o600)
                 with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
                     handle.write(token + "\n")
                     handle.flush()
@@ -67,6 +77,10 @@ class AgentdTokenStore:
 def _harden_owner_only(path: Path) -> None:
     os.chmod(path, 0o600)
     if os.name != "nt":
+        # Verify, do not assume: a token another user can read is not a secret.
+        mode = path.stat().st_mode & 0o777
+        if mode & 0o077:
+            raise RuntimeError(f"{path} is readable by other users (mode {mode:o})")
         return
     sid = current_user_sid()
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)

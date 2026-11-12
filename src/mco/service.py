@@ -554,6 +554,15 @@ def _service_launchd_plist_xml(spec: ServiceSpec) -> str:
 
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess:
+    if os.name == "nt":
+        # A console tool started from a windowless process (pythonw, the
+        # supervisor, the tray) gets a brand new visible console. Never.
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
