@@ -243,6 +243,10 @@ class Supervisor:
         self._spawn(runtime)
 
     def _spawn(self, runtime: WorkerRuntime) -> None:
+        from mco.killswitch import stop_active
+
+        if stop_active():
+            return
         if not runtime.desired_running or runtime.state == WorkerState.CRASHLOOPED:
             return
         if not self._started:
