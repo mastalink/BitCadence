@@ -7,7 +7,8 @@ Work already in flight and already-scheduled private uploads are left alone.
 
 Only the owner clears it: nothing in this module deletes the file. The phone
 command can only SET the switch; clearing is deleting the file by hand.
-The retired ``~/.mco/leo/STOP`` file is deliberately not a signal.
+The only signal is the one file from ``stop_path()``. No other file (including
+the retired ``~/.mco/leo/STOP`` and old per-project pause files) is read.
 """
 from __future__ import annotations
 
@@ -25,20 +26,23 @@ def stop_path() -> Path:
     return Path(override) if override else Path.home() / ".mco" / "STOP"
 
 
-def legacy_paths() -> list[Path]:
-    """Old per-project pause files, honoured as aliases. leo/STOP is excluded."""
-    raw = os.environ.get("MCO_LEGACY_PAUSE_FILES", "")
-    return [Path(p) for p in raw.split(os.pathsep) if p.strip()]
+def _exists_fail_closed(path: Path) -> bool:
+    """True if the file exists OR its state cannot be determined.
+
+    ``Path.exists`` swallows errors such as PermissionError, so use os.stat and
+    treat only a definite "not there" as absent.
+    """
+    try:
+        os.stat(path)
+        return True
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    except OSError:
+        return True
 
 
 def stop_active() -> bool:
-    try:
-        if stop_path().exists():
-            return True
-        return any(p.exists() for p in legacy_paths())
-    except OSError:
-        # Fail closed: if we cannot tell, do not start new work.
-        return True
+    return _exists_fail_closed(stop_path())
 
 
 def stop_reason() -> dict | None:
