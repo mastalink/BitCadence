@@ -96,7 +96,8 @@ class RecoveryStaging:
                             f"score-recovery:{root['org']}:{root['id']}:{root['digest']}:{attempt}"))
                 if db.execute('SELECT 1 FROM runs WHERE id=?', (child,)).fetchone():
                     raise ScoreError('recovery child ID already exists outside this staging lineage')
-            proposal = dict(action=action, root_run_id=root['id'], parent_run_id=run_id,
+            proposal = dict(action=action, escalation_role='chief' if action == 'escalate' else None,
+                            root_run_id=root['id'], parent_run_id=run_id,
                             child_run_id=child, attempt=attempt, reason=reason,
                             standing_grant_id=standing_grant_id, digest=root['digest'],
                             resume_after=resume_after, accepted=list(accepted.values()),
