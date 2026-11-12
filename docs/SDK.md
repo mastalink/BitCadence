@@ -72,3 +72,14 @@ agent.recall(query="staging database", limit=3)
 `BitCadenceAgent(client=...)` accepts any object with the `GatewayClient` method
 shapes - inject a fake and drive `agent.process_job(job)` / `agent.run_once()`
 directly. See `tests/test_sdk.py` for a complete fake.
+
+## Do not log secrets
+
+Everything a worker writes to stdout or stderr is copied, verbatim, into
+`~/.mco/logs/` by the supervisor and can be read back through its log API. That
+API has its own token, separate from the one that can start and stop workers,
+but a secret that was printed is still a secret that was written to disk.
+
+Never print a token, an API key, a password, or a payload that contains one.
+Log the *name* of the credential you used and whether it worked; never its
+value. The supervisor does not redact for you.

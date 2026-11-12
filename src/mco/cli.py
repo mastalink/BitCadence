@@ -1655,6 +1655,185 @@ def fleet_set(
     console.print(f"[green][OK][/green] {message}")
 
 
+@fleet_app.command("migrate")
+def fleet_migrate(
+    dry_run: bool = typer.Option(
+        True, "--dry-run/--no-dry-run", help="Show the plan and change nothing (the default)."
+    ),
+    apply: bool = typer.Option(False, "--apply", help="Carry the plan out. Not available in this build."),
+):
+    """Plan the move from one OS service per worker to one supervisor.
+
+    Lists every legacy per-worker service, under the current and the older
+    brand names, and what a migration would do with each. Changes nothing.
+    """
+    from mco.agentd import migrate
+
+    if apply:
+        console.print(
+            "[yellow]--apply is not available in this build.[/yellow] It stops live workers, "
+            "so it ships separately, after the supervisor has been reviewed. "
+            "Nothing was changed. Run without --apply to see the plan."
+        )
+        raise typer.Exit(code=2)
+
+    plan = migrate.plan_migration()
+    console.print("[bold]Dry run - nothing was changed.[/bold]")
+    if plan.fleet_error:
+        console.print(f"[yellow]{plan.fleet_error}[/yellow]")
+
+    if plan.legacy:
+        table = Table(title="Legacy per-worker services")
+        for column in ("Service", "Kind", "Running", "Worker in fleet.toml", "Plan", "Note"):
+            table.add_column(column)
+        for item in plan.legacy:
+            table.add_row(
+                item.name,
+                item.kind,
+                "yes" if item.running else "no",
+                item.worker or "-",
+                item.action,
+                item.note,
+            )
+        console.print(table)
+    else:
+        console.print("[green][OK][/green] No legacy per-worker services are installed.")
+
+    if plan.orphans:
+        console.print(
+            f"[yellow]{len(plan.orphans)} orphan(s)[/yellow] have no matching worker in "
+            "fleet.toml. They are left alone until you say what to do with them."
+        )
+    if plan.workers_without_service:
+        console.print(
+            "Workers in fleet.toml with no legacy service (the supervisor simply starts them): "
+            + ", ".join(plan.workers_without_service)
+        )
+    if plan.left_alone:
+        console.print("Left alone (not per-worker services): " + ", ".join(plan.left_alone))
+    console.print(
+        f"{migrate.AGENTD_SERVICE_NAME}: "
+        + ("already installed" if plan.agentd_installed else "not installed yet")
+    )
+
+    console.print("\n[bold]What --apply would do, in this order:[/bold]")
+    for number, step in enumerate(plan.steps(), start=1):
+        console.print(f"  {number}. {step}")
+    console.print("\nServices registered afterwards: " + ", ".join(plan.services_after))
+    console.print(
+        "[dim]The supervisor runs per user: workers start when you log in. "
+        "Running before login is an opt-in platform setting.[/dim]"
+    )
+
+
+agentd_app = typer.Typer(help="The one supervisor that runs every local worker for this user.")
+app.add_typer(agentd_app, name="agentd")
+
+
+def _agentd_request(method: str, path: str, *, logs: bool = False):
+    """Call this user's supervisor. Reads the token; never creates one."""
+    import httpx
+    from mco.agentd.control import CONTROL_HOST, control_port
+    from mco.agentd.tokens import AGENTD_LOG_TOKEN_PATH, AGENTD_TOKEN_PATH
+
+    token_path = AGENTD_LOG_TOKEN_PATH if logs else AGENTD_TOKEN_PATH
+    try:
+        token = token_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        token = ""
+    if not token:
+        console.print("[yellow]The supervisor is not running[/yellow] (no token found). Start it with: mco agentd run")
+        raise typer.Exit(code=1)
+    url = f"http://{CONTROL_HOST}:{control_port()}{path}"
+    try:
+        response = httpx.request(
+            method, url, headers={"Authorization": f"Bearer {token}"}, timeout=30.0, trust_env=False
+        )
+    except httpx.HTTPError:
+        console.print("[yellow]The supervisor is not running.[/yellow] Start it with: mco agentd run")
+        raise typer.Exit(code=1)
+    if response.status_code >= 400:
+        console.print(f"[red][X][/red] {response.status_code}: {response.text}")
+        raise typer.Exit(code=1)
+    return response.json()
+
+
+@agentd_app.command("run")
+def agentd_run(
+    port: Optional[int] = typer.Option(None, "--port", help="Control port. Default: this user's own port."),
+):
+    """Run the supervisor in the foreground. One per user; a second copy exits."""
+    from mco.agentd.daemon import run_daemon
+
+    raise typer.Exit(code=run_daemon(port=port, say=console.print))
+
+
+@agentd_app.command("status")
+def agentd_status():
+    """Show the supervisor and every worker it owns."""
+    status = _agentd_request("GET", "/v1/status")
+    daemon = status.get("daemon", {})
+    console.print(f"Supervisor: [bold]{daemon.get('state', 'unknown')}[/bold]")
+    if daemon.get("config_error"):
+        console.print(f"[yellow]Config: {daemon['config_error']}[/yellow]")
+    for item in (daemon.get("orphans") or {}).get("left_alone", []):
+        console.print(f"[yellow]Left alone, identity not proven:[/yellow] {item}")
+    table = Table(title="Workers")
+    for column in ("Worker", "Mode", "State", "Wanted", "PID", "Restarts", "Last error"):
+        table.add_column(column)
+    for worker in status.get("workers", []):
+        table.add_row(
+            str(worker.get("name")),
+            str(worker.get("mode")),
+            str(worker.get("state")),
+            str(worker.get("desired")),
+            str(worker.get("pid") or ""),
+            str(worker.get("restarts")),
+            str(worker.get("last_error") or ""),
+        )
+    console.print(table)
+
+
+def _agentd_worker_action(action: str, worker: str) -> None:
+    result = _agentd_request("POST", f"/v1/workers/{worker}/{action}")
+    console.print(f"[green][OK][/green] {worker}: {result.get('state')} (wanted: {result.get('desired')})")
+
+
+@agentd_app.command("start")
+def agentd_start(worker: str = typer.Argument(..., help="Worker name from fleet.toml.")):
+    """Start a worker, clearing an earlier manual stop."""
+    _agentd_worker_action("start", worker)
+
+
+@agentd_app.command("stop")
+def agentd_stop(worker: str = typer.Argument(..., help="Worker name from fleet.toml.")):
+    """Stop a worker. It stays stopped, across config edits and restarts, until started."""
+    _agentd_worker_action("stop", worker)
+
+
+@agentd_app.command("restart")
+def agentd_restart(worker: str = typer.Argument(..., help="Worker name from fleet.toml.")):
+    """Restart a worker."""
+    _agentd_worker_action("restart", worker)
+
+
+@agentd_app.command("reset")
+def agentd_reset(worker: str = typer.Argument(..., help="Worker name from fleet.toml.")):
+    """Clear a crash-loop and try the worker again now."""
+    _agentd_worker_action("reset", worker)
+
+
+@agentd_app.command("logs")
+def agentd_logs(
+    worker: Optional[str] = typer.Argument(None, help="Worker name; omit for every worker."),
+    tail: int = typer.Option(100, "--tail", help="How many lines."),
+):
+    """Show recent worker output. Uses the separate log-reading token."""
+    query = f"?tail={tail}" + (f"&worker={worker}" if worker else "")
+    for line in _agentd_request("GET", f"/v1/logs{query}", logs=True).get("lines", []):
+        print(line)
+
+
 @service_app.command("install-scheduler")
 def service_install_scheduler(
     interval: float = typer.Option(30.0, "--interval", help="Seconds between scheduler passes."),
