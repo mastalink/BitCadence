@@ -45,4 +45,4 @@ Send via `mco_send`:
 - **Fix:** Restart worker session; verify mounts at `/Volumes/AI` and `/Volumes/beast`.
 
 ## Who reviews its work
-Video Shepherd `tick` validates verdict JSON; Joseph.
+Video Shepherd `tick` validates verdict JSON; the owner.

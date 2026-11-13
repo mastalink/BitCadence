@@ -177,7 +177,7 @@
       "hidden": false,
       "help": "Run any original command, e.g. `bitcadence advanced audit <job-id>`.",
       "source": "src/mco/cli.py",
-      "line": 3454,
+      "line": 3511,
       "inherited_groups": [
         "mco"
       ],
@@ -195,7 +195,7 @@
       "hidden": false,
       "help": "List all registered agents and their current online presence status.",
       "source": "src/mco/cli.py",
-      "line": 2328,
+      "line": 2385,
       "inherited_groups": [
         "mco"
       ],
@@ -238,7 +238,7 @@
       "hidden": false,
       "help": "Approve what's waiting for you, one at a time.",
       "source": "src/mco/cli.py",
-      "line": 2640,
+      "line": 2697,
       "inherited_groups": [
         "mco"
       ],
@@ -330,7 +330,7 @@
       "hidden": false,
       "help": "Archive a completed/failed/rejected/cancelled job (reversible).",
       "source": "src/mco/cli.py",
-      "line": 2695,
+      "line": 2752,
       "inherited_groups": [
         "mco"
       ],
@@ -397,7 +397,7 @@
       "hidden": false,
       "help": "Say what you want done. You see the plan and OK it before anything runs.",
       "source": "src/mco/cli.py",
-      "line": 3362,
+      "line": 3419,
       "inherited_groups": [
         "mco"
       ],
@@ -585,7 +585,7 @@
       "hidden": false,
       "help": "Print a job's tamper-evident audit trail (oldest event first).",
       "source": "src/mco/cli.py",
-      "line": 2560,
+      "line": 2617,
       "inherited_groups": [
         "mco"
       ],
@@ -700,7 +700,7 @@
       "hidden": false,
       "help": "Export a signed checkpoint. Keep it outside the database/backup volume.",
       "source": "src/mco/cli.py",
-      "line": 2602,
+      "line": 2659,
       "inherited_groups": [
         "mco"
       ],
@@ -791,7 +791,7 @@
       "hidden": false,
       "help": "Call off a job that hasn't finished yet (approver-role token).",
       "source": "src/mco/cli.py",
-      "line": 2681,
+      "line": 2738,
       "inherited_groups": [
         "mco"
       ],
@@ -925,7 +925,7 @@
       "hidden": false,
       "help": "Check one proposal against the brief's mechanical rules and print a verdict.\n\nThis is the mechanical half of the sidecar's own judgment, not a\nreplacement for it: `claude-cio` (or any session reading\nops/cio-sidecar-brief.md) runs this before approving/rejecting/escalating\na plan, so the parts of the brief that are a fixed rule - a self-approval\ncheck, a spend cap, a prohibited category - are enforced the same way\nevery time instead of re-derived from a vibe. Exits 0 with JSON always;\nthe verdict field carries approve/reject/escalate.",
       "source": "src/mco/cli.py",
-      "line": 1504,
+      "line": 1561,
       "inherited_groups": [
         "mco",
         "mco cio"
@@ -1089,7 +1089,7 @@
       "hidden": false,
       "help": "Connect an AI app to BitCadence.",
       "source": "src/mco/cli.py",
-      "line": 3428,
+      "line": 3485,
       "inherited_groups": [
         "mco"
       ],
@@ -1229,7 +1229,7 @@
       "hidden": false,
       "help": "List configured enterprise connectors and their health (via the gateway).",
       "source": "src/mco/cli.py",
-      "line": 3290,
+      "line": 3347,
       "inherited_groups": [
         "mco"
       ],
@@ -1272,7 +1272,7 @@
       "hidden": false,
       "help": "Remove an agent registration. Its token stops working immediately.",
       "source": "src/mco/cli.py",
-      "line": 3051,
+      "line": 3108,
       "inherited_groups": [
         "mco"
       ],
@@ -1364,7 +1364,7 @@
       "hidden": false,
       "help": "Diagnose an install end to end: Python, config, secret store, database,\ngateway, agents, vendor CLIs. Exit code 1 if anything is broken.",
       "source": "src/mco/cli.py",
-      "line": 2047,
+      "line": 2104,
       "inherited_groups": [
         "mco"
       ],
@@ -1431,7 +1431,7 @@
       "hidden": false,
       "help": "List other jobs that look like the same work as this one.",
       "source": "src/mco/cli.py",
-      "line": 2717,
+      "line": 2774,
       "inherited_groups": [
         "mco"
       ],
@@ -1498,7 +1498,7 @@
       "hidden": false,
       "help": "Show the active edition (community/team/enterprise) and feature matrix.",
       "source": "src/mco/cli.py",
-      "line": 2307,
+      "line": 2364,
       "inherited_groups": [
         "mco"
       ],
@@ -1584,7 +1584,7 @@
       "hidden": false,
       "help": "List Agent Exchange messages (needs --job or --thread).",
       "source": "src/mco/cli.py",
-      "line": 2860,
+      "line": 2917,
       "inherited_groups": [
         "mco",
         "mco exchange"
@@ -1724,7 +1724,7 @@
       "hidden": false,
       "help": "Post one message to the Agent Exchange.",
       "source": "src/mco/cli.py",
-      "line": 2838,
+      "line": 2895,
       "inherited_groups": [
         "mco",
         "mco exchange"
@@ -1936,7 +1936,7 @@
       "hidden": false,
       "help": "Explicitly promote one exchange into canonical Drumline context (needs context:promote).",
       "source": "src/mco/cli.py",
-      "line": 2883,
+      "line": 2940,
       "inherited_groups": [
         "mco",
         "mco exchange"
@@ -2076,7 +2076,7 @@
       "hidden": false,
       "help": "Find what's wrong and offer to repair it.",
       "source": "src/mco/cli.py",
-      "line": 3379,
+      "line": 3436,
       "inherited_groups": [
         "mco"
       ],
@@ -2187,7 +2187,7 @@
       "hidden": false,
       "help": "Reconcile OS services to ~/.mco/fleet.toml.",
       "source": "src/mco/cli.py",
-      "line": 1588,
+      "line": 1645,
       "inherited_groups": [
         "mco",
         "mco fleet"
@@ -2231,7 +2231,7 @@
       "hidden": false,
       "help": "Update one worker field in ~/.mco/fleet.toml.",
       "source": "src/mco/cli.py",
-      "line": 1640,
+      "line": 1697,
       "inherited_groups": [
         "mco",
         "mco fleet"
@@ -2323,7 +2323,7 @@
       "hidden": false,
       "help": "Show configured workers and their installed/running state.",
       "source": "src/mco/cli.py",
-      "line": 1607,
+      "line": 1664,
       "inherited_groups": [
         "mco",
         "mco fleet"
@@ -2367,7 +2367,7 @@
       "hidden": false,
       "help": "Open the BitCadence console in your browser.\n\nUntil now the CLI only printed the URL and left you to copy it - this is\nthe one-step version.",
       "source": "src/mco/cli.py",
-      "line": 1100,
+      "line": 1104,
       "inherited_groups": [
         "mco"
       ],
@@ -2482,7 +2482,7 @@
       "hidden": false,
       "help": "Your helpers: who is ready, busy or stuck.",
       "source": "src/mco/cli.py",
-      "line": 3390,
+      "line": 3447,
       "inherited_groups": [
         "mco"
       ],
@@ -2549,7 +2549,7 @@
       "hidden": false,
       "help": "Add a helper (same as `mco register`, asking for what it needs).",
       "source": "src/mco/cli.py",
-      "line": 3401,
+      "line": 3458,
       "inherited_groups": [
         "mco",
         "mco helpers"
@@ -2641,7 +2641,7 @@
       "hidden": false,
       "help": "Find a locked notes file or a second copy of a helper, and offer to fix it.",
       "source": "src/mco/cli.py",
-      "line": 3421,
+      "line": 3478,
       "inherited_groups": [
         "mco",
         "mco helpers"
@@ -2753,7 +2753,7 @@
       "hidden": false,
       "help": "Suggest a Claude Code model tier (haiku/sonnet/opus) for a task.\n\nAlways advisory: prints a JSON suggestion and exits 0 even on any failure\n(disabled, unconfigured, network error, timeout). Never switches a\nrunning session or spawns anything - a session, or a person via\n/model, still decides. Safe to call from a hook on every prompt.",
       "source": "src/mco/cli.py",
-      "line": 1534,
+      "line": 1591,
       "inherited_groups": [
         "mco",
         "mco jev"
@@ -3080,7 +3080,7 @@
       "hidden": false,
       "help": "Fire a launcher right now, by name.\n\nIdentical to what a schedule does at 3am - same code path, same governance -\nso testing a launcher by hand proves the scheduled run too.",
       "source": "src/mco/cli.py",
-      "line": 1153,
+      "line": 1157,
       "inherited_groups": [
         "mco"
       ],
@@ -3172,7 +3172,7 @@
       "hidden": false,
       "help": "Spawn the background daemon client that polls and executes Job Board tasks.",
       "source": "src/mco/cli.py",
-      "line": 1876,
+      "line": 1933,
       "inherited_groups": [
         "mco"
       ],
@@ -3287,7 +3287,7 @@
       "hidden": false,
       "help": "Run the MCO dropbox as an MCP server: stdio (Claude/Codex/Antigravity) or HTTP (remote agents).",
       "source": "src/mco/cli.py",
-      "line": 1857,
+      "line": 1914,
       "inherited_groups": [
         "mco"
       ],
@@ -3402,7 +3402,7 @@
       "hidden": false,
       "help": "List orgs available for registration (Control Panel tenancy dropdown, from the terminal).",
       "source": "src/mco/cli.py",
-      "line": 2981,
+      "line": 3038,
       "inherited_groups": [
         "mco"
       ],
@@ -3445,7 +3445,7 @@
       "hidden": false,
       "help": "Pause everything: stop work in progress and hold new work.",
       "source": "src/mco/cli.py",
-      "line": 3440,
+      "line": 3497,
       "inherited_groups": [
         "mco"
       ],
@@ -3513,7 +3513,7 @@
       "hidden": false,
       "help": "Run a connector control action directly (requires an approver-role token).",
       "source": "src/mco/cli.py",
-      "line": 3328,
+      "line": 3385,
       "inherited_groups": [
         "mco"
       ],
@@ -3628,7 +3628,7 @@
       "hidden": false,
       "help": "Clone a failed job onto a new target, link both rows, and archive the\nold one (approver-role token).",
       "source": "src/mco/cli.py",
-      "line": 2738,
+      "line": 2795,
       "inherited_groups": [
         "mco"
       ],
@@ -3767,7 +3767,7 @@
       "hidden": false,
       "help": "Recall the most relevant Drumline shared-context entries.",
       "source": "src/mco/cli.py",
-      "line": 2760,
+      "line": 2817,
       "inherited_groups": [
         "mco"
       ],
@@ -3906,7 +3906,7 @@
       "hidden": false,
       "help": "Register a new client agent, generating a secure access token.",
       "source": "src/mco/cli.py",
-      "line": 2186,
+      "line": 2243,
       "inherited_groups": [
         "mco"
       ],
@@ -4045,7 +4045,7 @@
       "hidden": false,
       "help": "Reject a job paused at the human-in-the-loop gate (terminal).",
       "source": "src/mco/cli.py",
-      "line": 2656,
+      "line": 2713,
       "inherited_groups": [
         "mco"
       ],
@@ -4136,7 +4136,7 @@
       "hidden": false,
       "help": "Append an entry to the Drumline shared context.",
       "source": "src/mco/cli.py",
-      "line": 2803,
+      "line": 2860,
       "inherited_groups": [
         "mco"
       ],
@@ -4275,7 +4275,7 @@
       "hidden": false,
       "help": "Rotate an agent's access token. The old token stops working immediately.",
       "source": "src/mco/cli.py",
-      "line": 3002,
+      "line": 3059,
       "inherited_groups": [
         "mco"
       ],
@@ -4367,7 +4367,7 @@
       "hidden": false,
       "help": "Restart the background gateway (stop if running, then start).",
       "source": "src/mco/cli.py",
-      "line": 784,
+      "line": 788,
       "inherited_groups": [
         "mco"
       ],
@@ -4458,7 +4458,7 @@
       "hidden": false,
       "help": "After a DB restore, pause work and invalidate every pre-restore claim.\n\nRun before reconnecting workers. Review halted jobs, turn off Stop work in\nSettings, then retry selected jobs explicitly.",
       "source": "src/mco/cli.py",
-      "line": 2619,
+      "line": 2676,
       "inherited_groups": [
         "mco"
       ],
@@ -4501,7 +4501,7 @@
       "hidden": false,
       "help": "Resume after a pause.",
       "source": "src/mco/cli.py",
-      "line": 3447,
+      "line": 3504,
       "inherited_groups": [
         "mco"
       ],
@@ -4544,7 +4544,7 @@
       "hidden": false,
       "help": "Re-queue a failed or rejected job back to pending (approver-role token).",
       "source": "src/mco/cli.py",
-      "line": 2670,
+      "line": 2727,
       "inherited_groups": [
         "mco"
       ],
@@ -4611,7 +4611,7 @@
       "hidden": false,
       "help": "Schedules and loops: what work gets created, and when.",
       "source": "src/mco/cli.py",
-      "line": 809,
+      "line": 813,
       "inherited_groups": [
         "mco"
       ],
@@ -4654,7 +4654,7 @@
       "hidden": false,
       "help": "Add a schedule by asking what, how often and what time.",
       "source": "src/mco/cli.py",
-      "line": 841,
+      "line": 845,
       "inherited_groups": [
         "mco",
         "mco schedule"
@@ -4771,7 +4771,7 @@
       "hidden": false,
       "help": "Disable a schedule or loop, leaving its definition and history intact.",
       "source": "src/mco/cli.py",
-      "line": 994,
+      "line": 998,
       "inherited_groups": [
         "mco",
         "mco schedule"
@@ -4839,7 +4839,7 @@
       "hidden": false,
       "help": "Enable a schedule or loop (without hand-editing YAML).",
       "source": "src/mco/cli.py",
-      "line": 988,
+      "line": 992,
       "inherited_groups": [
         "mco",
         "mco schedule"
@@ -4907,7 +4907,7 @@
       "hidden": false,
       "help": "Write a starter ~/.mco/schedules.yaml.",
       "source": "src/mco/cli.py",
-      "line": 866,
+      "line": 870,
       "inherited_groups": [
         "mco",
         "mco schedule"
@@ -4975,7 +4975,7 @@
       "hidden": false,
       "help": "Show every schedule and loop with its next fire time.",
       "source": "src/mco/cli.py",
-      "line": 882,
+      "line": 886,
       "inherited_groups": [
         "mco",
         "mco schedule"
@@ -5019,7 +5019,7 @@
       "hidden": false,
       "help": "Turn a schedule off.",
       "source": "src/mco/cli.py",
-      "line": 859,
+      "line": 863,
       "inherited_groups": [
         "mco",
         "mco schedule"
@@ -5087,7 +5087,7 @@
       "hidden": false,
       "help": "Turn a schedule on.",
       "source": "src/mco/cli.py",
-      "line": 852,
+      "line": 856,
       "inherited_groups": [
         "mco",
         "mco schedule"
@@ -5155,7 +5155,7 @@
       "hidden": false,
       "help": "Clear a schedule's run history so a finished loop can run again.\n\nCompletion is sticky by design - a loop that ended because its queue\ndrained must not resurrect when the queue refills. This is the deliberate\nundo.",
       "source": "src/mco/cli.py",
-      "line": 1000,
+      "line": 1004,
       "inherited_groups": [
         "mco",
         "mco schedule"
@@ -5248,7 +5248,7 @@
       "hidden": false,
       "help": "Run the scheduler in the foreground, ticking until interrupted.",
       "source": "src/mco/cli.py",
-      "line": 1070,
+      "line": 1074,
       "inherited_groups": [
         "mco",
         "mco schedule"
@@ -5316,7 +5316,7 @@
       "hidden": false,
       "help": "Run one scheduler pass (what `mco schedule run` does on a timer).\n\nUse this to drive BitCadence from an existing cron/Task Scheduler entry\ninstead of running the daemon.",
       "source": "src/mco/cli.py",
-      "line": 1036,
+      "line": 1040,
       "inherited_groups": [
         "mco",
         "mco schedule"
@@ -5427,7 +5427,7 @@
       "hidden": false,
       "help": "Bundle code, tests, README, reviews and a DRAFT client message (never sent).",
       "source": "src/mco/cli.py",
-      "line": 1462,
+      "line": 1519,
       "inherited_groups": [
         "mco",
         "mco score"
@@ -5567,7 +5567,7 @@
       "hidden": false,
       "help": "Issue a locally auditable, interactive Score grant on Windows SQLite only.\n\nThe command never accepts a bearer token, is off by default, and requires a\nterminal confirmation after displaying the exact authority being granted.",
       "source": "src/mco/cli.py",
-      "line": 1295,
+      "line": 1302,
       "inherited_groups": [
         "mco",
         "mco score"
@@ -5794,6 +5794,122 @@
       "ignore_unknown_options": false
     },
     {
+      "path": "mco score grant-standing-local",
+      "aliases": [
+        "bitcadence score grant-standing-local"
+      ],
+      "anchor": "cli-mco-score-grant-standing-local",
+      "group": false,
+      "hidden": false,
+      "help": "Approve an exact Score class once for unattended local runs (max 316h).",
+      "source": "src/mco/cli.py",
+      "line": 1361,
+      "inherited_groups": [
+        "mco",
+        "mco score"
+      ],
+      "parameters": [
+        {
+          "name": "score_file",
+          "kind": "argument",
+          "tokens": [
+            "score_file"
+          ],
+          "type": "PATH",
+          "required": true,
+          "default": null,
+          "multiple": false,
+          "nargs": 1,
+          "is_flag": false,
+          "hidden": false,
+          "help": "",
+          "prompt": null,
+          "envvar": null,
+          "choices": null,
+          "min": null,
+          "max": null,
+          "path_exists": true,
+          "path_readable": true,
+          "path_writable": false,
+          "anchor": "cli-mco-score-grant-standing-local-param-score-file"
+        },
+        {
+          "name": "environment",
+          "kind": "option",
+          "tokens": [
+            "--environment"
+          ],
+          "type": "TEXT",
+          "required": false,
+          "default": "test",
+          "multiple": false,
+          "nargs": 1,
+          "is_flag": false,
+          "hidden": false,
+          "help": "",
+          "prompt": null,
+          "envvar": null,
+          "choices": null,
+          "min": null,
+          "max": null,
+          "path_exists": null,
+          "path_readable": null,
+          "path_writable": null,
+          "anchor": "cli-mco-score-grant-standing-local-param-environment"
+        },
+        {
+          "name": "expires_hours",
+          "kind": "option",
+          "tokens": [
+            "--expires-hours"
+          ],
+          "type": "INTEGER RANGE",
+          "required": false,
+          "default": 24,
+          "multiple": false,
+          "nargs": 1,
+          "is_flag": false,
+          "hidden": false,
+          "help": "",
+          "prompt": null,
+          "envvar": null,
+          "choices": null,
+          "min": 1,
+          "max": 316,
+          "path_exists": null,
+          "path_readable": null,
+          "path_writable": null,
+          "anchor": "cli-mco-score-grant-standing-local-param-expires-hours"
+        },
+        {
+          "name": "help",
+          "kind": "option",
+          "tokens": [
+            "--help"
+          ],
+          "type": "BOOLEAN",
+          "required": false,
+          "default": null,
+          "multiple": false,
+          "nargs": 1,
+          "is_flag": true,
+          "hidden": false,
+          "help": "Show this message and exit.",
+          "prompt": null,
+          "envvar": null,
+          "choices": null,
+          "min": null,
+          "max": null,
+          "path_exists": null,
+          "path_readable": null,
+          "path_writable": null,
+          "anchor": "cli-mco-score-grant-standing-local-param-help"
+        }
+      ],
+      "allow_extra_args": false,
+      "ignore_unknown_options": false
+    },
+    {
       "path": "mco score intake",
       "aliases": [
         "bitcadence score intake"
@@ -5803,7 +5919,7 @@
       "hidden": false,
       "help": "Draft a SCOPE from a client brief (with guardrail flags), or `approve` a clean scope into a Score.",
       "source": "src/mco/cli.py",
-      "line": 1428,
+      "line": 1485,
       "inherited_groups": [
         "mco",
         "mco score"
@@ -5991,7 +6107,7 @@
       "hidden": false,
       "help": "Runs in this conductor database.",
       "source": "src/mco/cli.py",
-      "line": 1480,
+      "line": 1537,
       "inherited_groups": [
         "mco",
         "mco score"
@@ -6050,6 +6166,74 @@
       "ignore_unknown_options": false
     },
     {
+      "path": "mco score revoke-standing-local",
+      "aliases": [
+        "bitcadence score revoke-standing-local"
+      ],
+      "anchor": "cli-mco-score-revoke-standing-local",
+      "group": false,
+      "hidden": false,
+      "help": "Revoke a standing class immediately; existing runs are checked again.",
+      "source": "src/mco/cli.py",
+      "line": 1396,
+      "inherited_groups": [
+        "mco",
+        "mco score"
+      ],
+      "parameters": [
+        {
+          "name": "grant_id",
+          "kind": "argument",
+          "tokens": [
+            "grant_id"
+          ],
+          "type": "TEXT",
+          "required": true,
+          "default": null,
+          "multiple": false,
+          "nargs": 1,
+          "is_flag": false,
+          "hidden": false,
+          "help": "",
+          "prompt": null,
+          "envvar": null,
+          "choices": null,
+          "min": null,
+          "max": null,
+          "path_exists": null,
+          "path_readable": null,
+          "path_writable": null,
+          "anchor": "cli-mco-score-revoke-standing-local-param-grant-id"
+        },
+        {
+          "name": "help",
+          "kind": "option",
+          "tokens": [
+            "--help"
+          ],
+          "type": "BOOLEAN",
+          "required": false,
+          "default": null,
+          "multiple": false,
+          "nargs": 1,
+          "is_flag": true,
+          "hidden": false,
+          "help": "Show this message and exit.",
+          "prompt": null,
+          "envvar": null,
+          "choices": null,
+          "min": null,
+          "max": null,
+          "path_exists": null,
+          "path_readable": null,
+          "path_writable": null,
+          "anchor": "cli-mco-score-revoke-standing-local-param-help"
+        }
+      ],
+      "allow_extra_args": false,
+      "ignore_unknown_options": false
+    },
+    {
       "path": "mco score scaffold",
       "aliases": [
         "bitcadence score scaffold"
@@ -6059,7 +6243,7 @@
       "hidden": false,
       "help": "Turn a plain-language brief into a validated Score with build, review, and two fix attempts per step.",
       "source": "src/mco/cli.py",
-      "line": 1402,
+      "line": 1459,
       "inherited_groups": [
         "mco",
         "mco score"
@@ -6151,7 +6335,7 @@
       "hidden": false,
       "help": "Initialize a run. Safe to repeat: identical policy and identities resume it.",
       "source": "src/mco/cli.py",
-      "line": 1222,
+      "line": 1226,
       "inherited_groups": [
         "mco",
         "mco score"
@@ -6302,6 +6486,30 @@
           "anchor": "cli-mco-score-start-param-root"
         },
         {
+          "name": "standing_grant",
+          "kind": "option",
+          "tokens": [
+            "--standing-grant"
+          ],
+          "type": "TEXT",
+          "required": false,
+          "default": null,
+          "multiple": false,
+          "nargs": 1,
+          "is_flag": false,
+          "hidden": false,
+          "help": "Approved local standing grant ID; rechecked on each conductor step.",
+          "prompt": null,
+          "envvar": null,
+          "choices": null,
+          "min": null,
+          "max": null,
+          "path_exists": null,
+          "path_readable": null,
+          "path_writable": null,
+          "anchor": "cli-mco-score-start-param-standing-grant"
+        },
+        {
           "name": "live_repository_write",
           "kind": "option",
           "tokens": [
@@ -6314,7 +6522,7 @@
           "nargs": 1,
           "is_flag": true,
           "hidden": false,
-          "help": "Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start — a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.",
+          "help": "Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start \u2014 a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.",
           "prompt": null,
           "envvar": null,
           "choices": null,
@@ -6363,7 +6571,7 @@
       "hidden": false,
       "help": "Where the run actually is: per task, per phase, with the last events.",
       "source": "src/mco/cli.py",
-      "line": 1387,
+      "line": 1444,
       "inherited_groups": [
         "mco",
         "mco score"
@@ -6479,7 +6687,7 @@
       "hidden": false,
       "help": "Advance the run: plan what can start, dispatch it, accept finished work.",
       "source": "src/mco/cli.py",
-      "line": 1354,
+      "line": 1411,
       "inherited_groups": [
         "mco",
         "mco score"
@@ -6642,7 +6850,7 @@
           "nargs": 1,
           "is_flag": true,
           "hidden": false,
-          "help": "Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start — a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.",
+          "help": "Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start \u2014 a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.",
           "prompt": null,
           "envvar": null,
           "choices": null,
@@ -6691,7 +6899,7 @@
       "hidden": false,
       "help": "Drop a job into an agent's dropbox from the terminal.",
       "source": "src/mco/cli.py",
-      "line": 2430,
+      "line": 2487,
       "inherited_groups": [
         "mco"
       ],
@@ -6928,7 +7136,7 @@
       "hidden": false,
       "help": "Start the BitCadence FastAPI WebSocket/REST API Server.",
       "source": "src/mco/cli.py",
-      "line": 622,
+      "line": 626,
       "inherited_groups": [
         "mco"
       ],
@@ -7062,7 +7270,7 @@
       "hidden": false,
       "help": "Install the gateway as an OS service that starts on boot/login.",
       "source": "src/mco/cli.py",
-      "line": 1678,
+      "line": 1735,
       "inherited_groups": [
         "mco",
         "mco service"
@@ -7154,7 +7362,7 @@
       "hidden": false,
       "help": "Install the schedule/loop scheduler as a boot-persistent OS service.\n\nWithout this the scheduler only runs while a terminal is open - and a\nscheduler that quietly died on reboot is the failure nobody notices until\nthe nightly job hasn't run for a week.",
       "source": "src/mco/cli.py",
-      "line": 1658,
+      "line": 1715,
       "inherited_groups": [
         "mco",
         "mco service"
@@ -7222,7 +7430,7 @@
       "hidden": false,
       "help": "Install a self-restarting waker service for one role/instance.",
       "source": "src/mco/cli.py",
-      "line": 1696,
+      "line": 1753,
       "inherited_groups": [
         "mco",
         "mco service"
@@ -7386,7 +7594,7 @@
       "hidden": false,
       "help": "Tail a service log file.",
       "source": "src/mco/cli.py",
-      "line": 1779,
+      "line": 1836,
       "inherited_groups": [
         "mco",
         "mco service"
@@ -7504,7 +7712,7 @@
       "hidden": false,
       "help": "Restart the boot-persistent gateway service.",
       "source": "src/mco/cli.py",
-      "line": 1765,
+      "line": 1822,
       "inherited_groups": [
         "mco",
         "mco service"
@@ -7572,7 +7780,7 @@
       "hidden": false,
       "help": "Show installed BitCadence services, or one selected service.",
       "source": "src/mco/cli.py",
-      "line": 1733,
+      "line": 1790,
       "inherited_groups": [
         "mco",
         "mco service"
@@ -7640,7 +7848,7 @@
       "hidden": false,
       "help": "Remove the boot-persistent service (does not stop a running gateway).",
       "source": "src/mco/cli.py",
-      "line": 1719,
+      "line": 1776,
       "inherited_groups": [
         "mco",
         "mco service"
@@ -7708,7 +7916,7 @@
       "hidden": false,
       "help": "View or change gateway settings. With nothing else, a plain summary.",
       "source": "src/mco/cli.py",
-      "line": 2898,
+      "line": 2955,
       "inherited_groups": [
         "mco"
       ],
@@ -7939,7 +8147,7 @@
       "hidden": false,
       "help": "Start BitCadence quietly in the background (the pair of 'mco stop').\n\nNo window stays open: the gateway runs hidden, a small status icon appears\nnear the clock, and the app opens already signed in. Unlike 'mco serve'\n(foreground, for terminals/systemd/Docker), your terminal stays free. Output\ngoes to ~/.mco/logs/gateway.log and 'mco stop' shuts it down.",
       "source": "src/mco/cli.py",
-      "line": 726,
+      "line": 730,
       "inherited_groups": [
         "mco"
       ],
@@ -8078,7 +8286,7 @@
       "hidden": false,
       "help": "Plain summary: what needs you, what's running, any problems.",
       "source": "src/mco/cli.py",
-      "line": 1927,
+      "line": 1984,
       "inherited_groups": [
         "mco"
       ],
@@ -8193,7 +8401,7 @@
       "hidden": false,
       "help": "Stop a running BitCadence gateway (by port).",
       "source": "src/mco/cli.py",
-      "line": 1799,
+      "line": 1856,
       "inherited_groups": [
         "mco"
       ],
@@ -8285,7 +8493,7 @@
       "hidden": false,
       "help": "Pull open platform objects (incidents/problems) onto the job board.",
       "source": "src/mco/cli.py",
-      "line": 3315,
+      "line": 3372,
       "inherited_groups": [
         "mco"
       ],
@@ -8352,7 +8560,7 @@
       "hidden": false,
       "help": "Live-tail a filtered mailbox feed from the gateway broadcast socket.",
       "source": "src/mco/cli.py",
-      "line": 3172,
+      "line": 3229,
       "inherited_groups": [
         "mco"
       ],
@@ -8491,7 +8699,7 @@
       "hidden": false,
       "help": "Status light and a door into the console (Windows tray / macOS menu bar / Linux AppIndicator).",
       "source": "src/mco/cli.py",
-      "line": 1136,
+      "line": 1140,
       "inherited_groups": [
         "mco"
       ],
@@ -8558,7 +8766,7 @@
       "hidden": false,
       "help": "Undo archive.",
       "source": "src/mco/cli.py",
-      "line": 2706,
+      "line": 2763,
       "inherited_groups": [
         "mco"
       ],
@@ -8625,7 +8833,7 @@
       "hidden": false,
       "help": "Apply schema migrations to the configured backend.\n\nLocalStore needs none. Postgres/Supabase auto-applies when DATABASE_URL\nand a psycopg driver are present; otherwise a combined script is written\nfor the Supabase SQL editor.",
       "source": "src/mco/cli.py",
-      "line": 1987,
+      "line": 2044,
       "inherited_groups": [
         "mco"
       ],
@@ -8692,7 +8900,7 @@
       "hidden": false,
       "help": "Wake a local worker command when this agent's inbox has pending jobs.",
       "source": "src/mco/cli.py",
-      "line": 3245,
+      "line": 3302,
       "inherited_groups": [
         "mco"
       ],
@@ -8903,7 +9111,7 @@
       "hidden": false,
       "help": "Live-tail job events from the gateway's broadcast feed (Ctrl-C to stop).",
       "source": "src/mco/cli.py",
-      "line": 3071,
+      "line": 3128,
       "inherited_groups": [
         "mco"
       ],
@@ -8970,7 +9178,7 @@
       "hidden": false,
       "help": "Submit a declarative YAML workflow (DAG of jobs) to the Job Board.",
       "source": "src/mco/cli.py",
-      "line": 2471,
+      "line": 2528,
       "inherited_groups": [
         "mco"
       ],

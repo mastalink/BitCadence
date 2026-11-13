@@ -21,7 +21,8 @@ Prefer a single walkthrough? [From installed to your first result](quick-start.m
 | Find what needs you | [Home](Console-home.md) and [Approvals](Approvals.md) |
 | Give a helper a task and inspect the result | [Job board](job-board-and-tasks.md) |
 | Add a helper or understand its light | [Helpers](Helpers.md) and [worker setup](workers-and-daemon-listening.md) |
-| Group work into a project | [Projects](projects-dashboard.md) |
+| See each project's roadmap, queues and flow warnings | [Portfolio](gui-reference.md#portfolio) |
+| Tag a job with a project | [Project assignment](projects-dashboard.md) |
 | Repeat a task | [Schedules](Schedules.md) |
 | Share facts between helpers | [Drumline memory](drumline-memory.md) |
 | Follow a longer autonomous run | [Live Score](Score-live.md) and [Score contracts](scores-and-autonomy.md) |

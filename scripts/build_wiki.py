@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GROUPS = [
     ('Start here', ['Home', 'quick-start', 'install-first-run', 'everyday-commands', 'connecting-console', 'desktop-app-and-tray']),
     ('Get work done', ['Console-home', 'Ask', 'Connect-an-AI', 'Helpers', 'job-board-and-tasks', 'projects-dashboard', 'Approvals', 'Schedules', 'Score-live']),
-    ('Learn the system', ['drumline-memory', 'drumline-agent-exchange', 'scores-and-autonomy', 'jev-routing', 'workflows-and-flow-control']),
+    ('Learn the system', ['drumline-memory', 'drumline-agent-exchange', 'scores-and-autonomy', 'standing-score-grants', 'jev-routing', 'workflows-and-flow-control']),
     ('Manage your setup', ['Settings', 'settings-and-configuration', 'agent-fleet-and-presence', 'workers-and-daemon-listening', 'scheduling-and-loops', 'services-and-fleet', 'sidecars-and-fleet-daemons', 'approvals-and-governance']),
     ('Reference & product review', ['mco-cli-reference', 'gui-reference', 'coverage', 'UX-REVIEW']),
 ]

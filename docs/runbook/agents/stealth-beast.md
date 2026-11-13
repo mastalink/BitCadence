@@ -1,13 +1,13 @@
 # stealth-beast
 
 ## Purpose
-UNVERIFIED: ask Joseph. Registered role `stealth` on Beast in the gateway registry.
+UNVERIFIED: ask the owner. Registered role `stealth` on Beast in the gateway registry.
 
 ## Good at
-UNVERIFIED: ask Joseph.
+UNVERIFIED: ask the owner.
 
 ## Not allowed (hard rules)
-- Do not route production media builds, code changes, or publishing jobs to this instance until purpose is verified by Joseph.
+- Do not route production media builds, code changes, or publishing jobs to this instance until purpose is verified by the owner.
 - Never grant elevated permissions or assign financial/external actions.
 - Never print or commit secrets.
 
@@ -16,7 +16,7 @@ Send via `mco_send`:
 - `to_role`: `stealth`
 - `to_instance`: `stealth-beast`
 - `title`: Explicit inquiry or assigned experimental task
-- `instructions`: Plain instructions approved directly by Joseph
+- `instructions`: Plain instructions approved directly by the owner
 - `priority`: 0 to 1
 
 ## Job template and worked example
@@ -31,11 +31,11 @@ Send via `mco_send`:
 ```
 
 ## What it needs in the job
-- Direct confirmation from Joseph regarding expected role and capabilities.
+- Direct confirmation from the owner regarding expected role and capabilities.
 
 ## Signs it is stuck and the fix
 - **Signs:** Jobs addressed to it sit untaken or fail immediately.
-- **Fix:** Reassign work to verified instances (`claude-beast`, `codex-beast`, or `grok-beast`) until Joseph defines role.
+- **Fix:** Reassign work to verified instances (`claude-beast`, `codex-beast`, or `grok-beast`) until the owner defines role.
 
 ## Who reviews its work
-UNVERIFIED: ask Joseph.
+UNVERIFIED: ask the owner.

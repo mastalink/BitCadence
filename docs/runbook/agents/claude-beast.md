@@ -6,7 +6,7 @@ The primary media builder on Beast. Builds video, audio, and visual pipelines fo
 ## Good at
 - Running video generation, assembly, and QA scripts (`carlo_v12_*.py`, `assemble*.py`).
 - ComfyUI workflows for stills and Wan 2.2 animation.
-- Generating ElevenLabs speech takes with Storytime Joe.
+- Generating ElevenLabs speech takes with Storytime the owner.
 - FFmpeg compositing, loudness normalization (-14 LUFS), and subtitle generation.
 
 ## Not allowed (hard rules)
@@ -46,4 +46,4 @@ Send via `mco_send`:
 - **Fix:** Launch `powershell -File %USERPROFILE%\.mco\bin\claude-worker-run.ps1 -Instance claude-beast`. If Claude quota is exhausted, switch immediately to backup builder `codex-beast` using `docs/runbook/BACKUP_BUILDER.md`.
 
 ## Who reviews its work
-Reviewer-beast (theology, visual, brand), agy-studio-1..4 (watch, audio timing, motion), Gemini 4 relay, and Joseph.
+Reviewer-beast (theology, visual, brand), agy-studio-1..4 (watch, audio timing, motion), Gemini 4 relay, and the owner.

@@ -61,7 +61,7 @@ mco agents
   ```text
   Live • 127.0.0.1:18789 • local-operator (admin)
   ```
-- **Real Data Sync:** The Job Board, Projects and Helpers pages now display the actual rows from your local SQLite database (`~/.mco/local.db`).
+- **Real Data Sync:** The Job Board, Portfolio and Helpers pages now display the actual rows from your local SQLite database (`~/.mco/local.db`).
 - **Live WebSocket:** A real-time WebSocket connection is established to `/ws/broadcast`. Any job created by CLI or another helper immediately animates onto your screen without refreshing.
 
 ---

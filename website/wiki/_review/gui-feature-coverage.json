@@ -25,7 +25,7 @@
       "id": "gui-002",
       "surface": "console",
       "screen": "shell",
-      "control": "Projects",
+      "control": "Portfolio",
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
@@ -150,7 +150,7 @@
       "effect": "local_view",
       "verification": "source_verified",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 169,
+      "line": 174,
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
     {
@@ -161,7 +161,7 @@
       "effect": "local_view",
       "verification": "source_verified",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 169,
+      "line": 174,
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
     {
@@ -194,7 +194,7 @@
       "effect": "local_view",
       "verification": "host_edit_mode_only",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 231,
+      "line": 236,
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
     {
@@ -205,7 +205,7 @@
       "effect": "local_view",
       "verification": "host_edit_mode_only",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 231,
+      "line": 236,
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
     {
@@ -216,7 +216,7 @@
       "effect": "local_view",
       "verification": "host_edit_mode_only",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 231,
+      "line": 236,
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
     {
@@ -227,7 +227,7 @@
       "effect": "local_view",
       "verification": "host_edit_mode_only",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 231,
+      "line": 236,
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
     {
@@ -321,90 +321,90 @@
     {
       "id": "gui-029",
       "surface": "console",
-      "screen": "Projects",
-      "control": "Open",
+      "screen": "Portfolio",
+      "control": "Refresh",
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 105,
-      "documentation": "gui-reference.md#projects"
+      "line": 173,
+      "documentation": "gui-reference.md#portfolio"
     },
     {
       "id": "gui-030",
       "surface": "console",
-      "screen": "Projects",
-      "control": "Needs attention",
+      "screen": "Portfolio",
+      "control": "Try again",
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 105,
-      "documentation": "gui-reference.md#projects"
+      "line": 173,
+      "documentation": "gui-reference.md#portfolio"
     },
     {
       "id": "gui-031",
       "surface": "console",
-      "screen": "Projects",
-      "control": "All",
+      "screen": "Portfolio",
+      "control": "Project card expand/collapse",
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 105,
-      "documentation": "gui-reference.md#projects"
+      "line": 173,
+      "documentation": "gui-reference.md#portfolio"
     },
     {
       "id": "gui-032",
       "surface": "console",
-      "screen": "Projects",
-      "control": "Search projects or work",
+      "screen": "Portfolio",
+      "control": "Recent board jobs / open job",
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 105,
-      "documentation": "gui-reference.md#projects"
+      "line": 173,
+      "documentation": "gui-reference.md#portfolio"
     },
     {
       "id": "gui-033",
       "surface": "console",
-      "screen": "Projects",
-      "control": "Job title",
+      "screen": "Portfolio",
+      "control": "Open pull request links",
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 105,
-      "documentation": "gui-reference.md#projects"
+      "line": 173,
+      "documentation": "gui-reference.md#portfolio"
     },
     {
       "id": "gui-034",
       "surface": "console",
-      "screen": "Projects",
-      "control": "Open Job Board",
+      "screen": "Portfolio",
+      "control": "Flow flag rows",
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 105,
-      "documentation": "gui-reference.md#projects"
+      "line": 173,
+      "documentation": "gui-reference.md#portfolio"
     },
     {
       "id": "gui-035",
       "surface": "console",
-      "screen": "Projects",
-      "control": "Partial counts notice",
+      "screen": "Portfolio",
+      "control": "Capacity strip (GPU queue, CPU queue, Workers)",
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 105,
-      "documentation": "gui-reference.md#projects"
+      "line": 173,
+      "documentation": "gui-reference.md#portfolio"
     },
     {
       "id": "gui-036",
       "surface": "console",
-      "screen": "Projects",
-      "control": "Move / project name prompt",
-      "effect": "metadata_write",
+      "screen": "Portfolio",
+      "control": "Priority and pause controls (read-only notice)",
+      "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 120,
-      "documentation": "gui-reference.md#projects"
+      "line": 257,
+      "documentation": "gui-reference.md#portfolio"
     },
     {
       "id": "gui-037",
@@ -414,7 +414,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -425,7 +425,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -436,7 +436,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -447,7 +447,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -458,7 +458,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -469,7 +469,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -480,7 +480,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -491,7 +491,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -502,7 +502,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -513,7 +513,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -524,7 +524,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 206,
+      "line": 372,
       "documentation": "gui-reference.md#find-and-order-work"
     },
     {
@@ -535,7 +535,7 @@
       "effect": "draft",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 657,
+      "line": 823,
       "documentation": "gui-reference.md#create-a-job"
     },
     {
@@ -546,7 +546,7 @@
       "effect": "draft",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 657,
+      "line": 823,
       "documentation": "gui-reference.md#create-a-job"
     },
     {
@@ -557,7 +557,7 @@
       "effect": "draft",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 657,
+      "line": 823,
       "documentation": "gui-reference.md#create-a-job"
     },
     {
@@ -568,7 +568,7 @@
       "effect": "draft",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 657,
+      "line": 823,
       "documentation": "gui-reference.md#create-a-job"
     },
     {
@@ -579,7 +579,7 @@
       "effect": "draft",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 657,
+      "line": 823,
       "documentation": "gui-reference.md#create-a-job"
     },
     {
@@ -590,7 +590,7 @@
       "effect": "draft",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 657,
+      "line": 823,
       "documentation": "gui-reference.md#create-a-job"
     },
     {
@@ -601,7 +601,7 @@
       "effect": "draft",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 657,
+      "line": 823,
       "documentation": "gui-reference.md#create-a-job"
     },
     {
@@ -612,7 +612,7 @@
       "effect": "draft",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 657,
+      "line": 823,
       "documentation": "gui-reference.md#create-a-job"
     },
     {
@@ -623,7 +623,7 @@
       "effect": "work_write",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 712,
+      "line": 878,
       "documentation": "gui-reference.md#create-a-job"
     },
     {
@@ -634,7 +634,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 502,
+      "line": 668,
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
@@ -645,7 +645,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 502,
+      "line": 668,
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
@@ -656,7 +656,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 502,
+      "line": 668,
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
@@ -667,7 +667,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 502,
+      "line": 668,
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
@@ -678,7 +678,7 @@
       "effect": "approval",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 536,
+      "line": 702,
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
@@ -689,7 +689,7 @@
       "effect": "approval",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 536,
+      "line": 702,
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
@@ -700,7 +700,7 @@
       "effect": "work_write",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 557,
+      "line": 723,
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
@@ -711,7 +711,7 @@
       "effect": "work_write",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 557,
+      "line": 723,
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
@@ -722,7 +722,7 @@
       "effect": "work_write",
       "verification": "baseline_inconsistent_pending_repair",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 561,
+      "line": 727,
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
@@ -733,7 +733,7 @@
       "effect": "local_view",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 399,
+      "line": 565,
       "documentation": "gui-reference.md#batch-controls"
     },
     {
@@ -744,7 +744,7 @@
       "effect": "local_view",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 399,
+      "line": 565,
       "documentation": "gui-reference.md#batch-controls"
     },
     {
@@ -755,7 +755,7 @@
       "effect": "local_view",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 399,
+      "line": 565,
       "documentation": "gui-reference.md#batch-controls"
     },
     {
@@ -766,7 +766,7 @@
       "effect": "approval",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 375,
+      "line": 541,
       "documentation": "gui-reference.md#batch-controls"
     },
     {
@@ -777,7 +777,7 @@
       "effect": "approval",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 375,
+      "line": 541,
       "documentation": "gui-reference.md#batch-controls"
     },
     {
@@ -788,7 +788,7 @@
       "effect": "work_write",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 377,
+      "line": 543,
       "documentation": "gui-reference.md#batch-controls"
     },
     {
@@ -799,7 +799,7 @@
       "effect": "work_write",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 377,
+      "line": 543,
       "documentation": "gui-reference.md#batch-controls"
     },
     {
@@ -810,7 +810,7 @@
       "effect": "work_write",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 377,
+      "line": 543,
       "documentation": "gui-reference.md#batch-controls"
     },
     {
@@ -821,7 +821,7 @@
       "effect": "work_write",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 377,
+      "line": 543,
       "documentation": "gui-reference.md#batch-controls"
     },
     {
@@ -1712,7 +1712,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 783,
+      "line": 949,
       "documentation": "gui-reference.md#activity"
     },
     {
@@ -1723,7 +1723,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 783,
+      "line": 949,
       "documentation": "gui-reference.md#activity"
     },
     {
@@ -1734,7 +1734,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 783,
+      "line": 949,
       "documentation": "gui-reference.md#activity"
     },
     {
@@ -1745,7 +1745,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 783,
+      "line": 949,
       "documentation": "gui-reference.md#activity"
     },
     {
@@ -1756,7 +1756,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 783,
+      "line": 949,
       "documentation": "gui-reference.md#activity"
     },
     {
@@ -1767,7 +1767,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 783,
+      "line": 949,
       "documentation": "gui-reference.md#activity"
     },
     {
@@ -1778,7 +1778,7 @@
       "effect": "read",
       "verification": "source_verified",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 783,
+      "line": 949,
       "documentation": "gui-reference.md#activity"
     },
     {
@@ -3083,15 +3083,15 @@
   "sources": [
     {
       "path": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "sha256": "9aba9992ace6448d36518cfd73907d8be6b8f75dee9dd65e92982a2c9e782ca4"
+      "sha256": "f9045c6fa5d92fbb2e5048afb1ae52904e34a827a6e42f4258c178cc1babdb5b"
     },
     {
       "path": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "sha256": "ec35284a51b24e61cb8024f759fd2856f7e3a0e8e4482b337736d94499cb4cfc"
+      "sha256": "02e26a1b9f207a2fab2888f9ed2488e94807a318b209645598fba0827b5cd9cf"
     },
     {
       "path": "src/mco/console_src/43b328d0-9d0e-4fce-a105-be0a939d7e48.js",
-      "sha256": "4bdcb0e8b71019e8a1ba4714374c08bd382ec82d52fdf4f12cb734925daad884"
+      "sha256": "3c5600a36376ab67b762d044b034fcf82f8c8c35834c482a9aa496984c2d5500"
     },
     {
       "path": "src/mco/console_src/2ed3f6b1-e1c6-43fc-8b29-31917195cbd5.js",

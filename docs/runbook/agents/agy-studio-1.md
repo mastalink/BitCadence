@@ -30,7 +30,7 @@ Send via `mco_send`:
   "to_role": "antigravity",
   "to_instance": "agy-studio-1",
   "title": "Watch gate review for Saints Storybook Carlo Acutis preview",
-  "instructions": "Review /Volumes/beast/SaintsStudio/saints/2027/1012_carlo-acutis/out/carlo_v14_cut.mp4 (sha256: 4b29c...). Listen to audio for clicks, verify narrator is Storytime Joe, verify locked camera with no zoom, and ensure no frame is held frozen >1s. Write report to /Volumes/beast/SaintsStudio/saints/2027/1012_carlo-acutis/reviews/watch_review.md and write /Volumes/beast/SaintsStudio/saints/2027/1012_carlo-acutis/reviews/watch.verdict.json.",
+  "instructions": "Review /Volumes/beast/SaintsStudio/saints/2027/1012_carlo-acutis/out/carlo_v14_cut.mp4 (sha256: 4b29c...). Listen to audio for clicks, verify narrator is Storytime the owner, verify locked camera with no zoom, and ensure no frame is held frozen >1s. Write report to /Volumes/beast/SaintsStudio/saints/2027/1012_carlo-acutis/reviews/watch_review.md and write /Volumes/beast/SaintsStudio/saints/2027/1012_carlo-acutis/reviews/watch.verdict.json.",
   "priority": 3
 }
 ```
@@ -45,4 +45,4 @@ Send via `mco_send`:
 - **Fix:** Ensure scripts invoke `/opt/homebrew/bin/python3` and `/opt/homebrew/bin/ffmpeg`. Make a 480p proxy in `/tmp` if the full MP4 exceeds memory limits.
 
 ## Who reviews its work
-Video Shepherd `tick` validates verdict JSON; Joseph.
+Video Shepherd `tick` validates verdict JSON; the owner.

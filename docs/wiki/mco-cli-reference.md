@@ -78,8 +78,10 @@ This reference covers every registered command and group recursively, every posi
 - [mco score](#cli-mco-score) — Run a Score: start, advance and inspect a conductor run.
   - [mco score deliver](#cli-mco-score-deliver) — Bundle code, tests, README, reviews and a DRAFT client message (never sent).
   - [mco score grant-local](#cli-mco-score-grant-local) — Issue a locally auditable, interactive Score grant on Windows SQLite only.
+  - [mco score grant-standing-local](#cli-mco-score-grant-standing-local) — Approve an exact Score class once for unattended local runs (max 316h).
   - [mco score intake](#cli-mco-score-intake) — Draft a SCOPE from a client brief (with guardrail flags), or `approve` a clean scope into a Score.
   - [mco score list](#cli-mco-score-list) — Runs in this conductor database.
+  - [mco score revoke-standing-local](#cli-mco-score-revoke-standing-local) — Revoke a standing class immediately; existing runs are checked again.
   - [mco score scaffold](#cli-mco-score-scaffold) — Turn a plain-language brief into a validated Score with build, review, and two fix attempts per step.
   - [mco score start](#cli-mco-score-start) — Initialize a run. Safe to repeat: identical policy and identities resume it.
   - [mco score status](#cli-mco-score-status) — Where the run actually is: per task, per phase, with the last events.
@@ -141,7 +143,7 @@ Usage example: `bitcadence advanced status --details`
 
 **If it fails / before changing state:** With no following command, prints an example and exits 1. This is a forwarding command, not a separate restricted permission mode. It intentionally has no own --help; use the forwarded command's help.
 
-Implementation: [src/mco/cli.py:3454](../../src/mco/cli.py#L3454). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3511](../../src/mco/cli.py#L3511). Global/group options: [mco](#cli-mco).
 
 All remaining tokens are forwarded, including otherwise unknown options. `bitcadence advanced status --help` displays the forwarded status help. No separate advanced-only option list exists.
 
@@ -159,7 +161,7 @@ Usage example: `bitcadence agents`
 
 **If it fails / before changing state:** If the gateway cannot be reached, inspect status and doctor. Check the exact instance's credentials when presence and actual job execution disagree.
 
-Implementation: [src/mco/cli.py:2328](../../src/mco/cli.py#L2328). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2385](../../src/mco/cli.py#L2385). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -176,7 +178,7 @@ Usage example: `bitcadence approve`
 
 **If it fails / before changing state:** Approval releases work for execution. Use the displayed job details to resolve ambiguous names; --yes removes the question. The caller still needs approval authority.
 
-Implementation: [src/mco/cli.py:2640](../../src/mco/cli.py#L2640). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2697](../../src/mco/cli.py#L2697). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -195,7 +197,7 @@ Usage example: `bitcadence archive JOB_ID`
 
 **If it fails / before changing state:** Use a completed, failed, rejected or cancelled job ID. Undo with unarchive; an active job must reach a terminal state first.
 
-Implementation: [src/mco/cli.py:2695](../../src/mco/cli.py#L2695). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2752](../../src/mco/cli.py#L2752). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -213,7 +215,7 @@ Usage example: `bitcadence ask "Review the install instructions"`
 
 **If it fails / before changing state:** --yes skips plan confirmation, not the first-step approval gate. Exception: --file submits the YAML workflow immediately through the workflow command path; it does not preview or ask. Preview a saved workflow with workflow --dry-run.
 
-Implementation: [src/mco/cli.py:3362](../../src/mco/cli.py#L3362). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3419](../../src/mco/cli.py#L3419). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -236,7 +238,7 @@ Usage example: `bitcadence audit JOB_ID --verify`
 
 **If it fails / before changing state:** A broken chain exits 1 and identifies the first broken event. Preserve the evidence. Verification needs the configured data plane even when the gateway is running; an empty event list alone does not establish integrity.
 
-Implementation: [src/mco/cli.py:2560](../../src/mco/cli.py#L2560). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2617](../../src/mco/cli.py#L2617). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -256,7 +258,7 @@ Usage example: `bitcadence audit-checkpoint JOB_ID checkpoint.json`
 
 **If it fails / before changing state:** The file is opened exclusively: an existing output causes failure. Choose a new file and retain it outside the database and backup volume so a restored database can be checked independently.
 
-Implementation: [src/mco/cli.py:2602](../../src/mco/cli.py#L2602). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2659](../../src/mco/cli.py#L2659). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -275,7 +277,7 @@ Usage example: `bitcadence cancel JOB_ID --reason "Work is no longer needed"`
 
 **If it fails / before changing state:** Requires an approver-role credential. If the job has finished, inspect its audit/history rather than trying to cancel it again.
 
-Implementation: [src/mco/cli.py:2681](../../src/mco/cli.py#L2681). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2738](../../src/mco/cli.py#L2738). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -309,7 +311,7 @@ Usage example: `bitcadence cio check --decider reviewer --proposed-by builder --
 
 **If it fails / before changing state:** Exit 0 does not mean approval: read the verdict field. This check is advisory to the decision process and does not issue grants, spend money or approve a job.
 
-Implementation: [src/mco/cli.py:1504](../../src/mco/cli.py#L1504). Global/group options: [mco](#cli-mco), [mco cio](#cli-mco-cio).
+Implementation: [src/mco/cli.py:1561](../../src/mco/cli.py#L1561). Global/group options: [mco](#cli-mco), [mco cio](#cli-mco-cio).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -331,7 +333,7 @@ Usage example: `bitcadence connect claude --test`
 
 **If it fails / before changing state:** Supported target names come from the option help. --disconnect removes the integration, while --yes suppresses questions. Back up any custom app settings before intentionally replacing them.
 
-Implementation: [src/mco/cli.py:3428](../../src/mco/cli.py#L3428). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3485](../../src/mco/cli.py#L3485). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -352,7 +354,7 @@ Usage example: `bitcadence connectors`
 
 **If it fails / before changing state:** An empty result prints configuration guidance for ServiceNow/Dynatrace. Configure endpoint and credentials, then restart the gateway; use the displayed names for sync/platform.
 
-Implementation: [src/mco/cli.py:3290](../../src/mco/cli.py#L3290). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3347](../../src/mco/cli.py#L3347). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -369,7 +371,7 @@ Usage example: `bitcadence deregister INSTANCE_ID`
 
 **If it fails / before changing state:** Removal cannot be undone. Cancel the prompt to leave it unchanged; use helpers add/register to create a new identity when required. --yes skips this confirmation.
 
-Implementation: [src/mco/cli.py:3051](../../src/mco/cli.py#L3051). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3108](../../src/mco/cli.py#L3108). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -388,7 +390,7 @@ Usage example: `bitcadence doctor`
 
 **If it fails / before changing state:** Follow the failing component's message. A passing diagnostic is installation evidence; verify an actual job before declaring worker execution healthy.
 
-Implementation: [src/mco/cli.py:2047](../../src/mco/cli.py#L2047). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2104](../../src/mco/cli.py#L2104). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -406,7 +408,7 @@ Usage example: `bitcadence duplicates JOB_ID`
 
 **If it fails / before changing state:** This inspects candidates and does not merge or delete them. Check audit details before deciding which job to retain.
 
-Implementation: [src/mco/cli.py:2717](../../src/mco/cli.py#L2717). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2774](../../src/mco/cli.py#L2774). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -424,7 +426,7 @@ Usage example: `bitcadence edition`
 
 **If it fails / before changing state:** Use the displayed capabilities to explain unavailable features; this command does not change licensing or upgrade the installation.
 
-Implementation: [src/mco/cli.py:2307](../../src/mco/cli.py#L2307). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2364](../../src/mco/cli.py#L2364). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -456,7 +458,7 @@ Usage example: `bitcadence exchange list --job JOB_ID --limit 20`
 
 **If it fails / before changing state:** Supply --job or --thread. The gateway must enable MCO_AGENT_EXCHANGE=true and the caller needs the appropriate access. These messages are discussion, not approval.
 
-Implementation: [src/mco/cli.py:2860](../../src/mco/cli.py#L2860). Global/group options: [mco](#cli-mco), [mco exchange](#cli-mco-exchange).
+Implementation: [src/mco/cli.py:2917](../../src/mco/cli.py#L2917). Global/group options: [mco](#cli-mco), [mco exchange](#cli-mco-exchange).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -477,7 +479,7 @@ Usage example: `bitcadence exchange post question "Which checks should we run?" 
 
 **If it fails / before changing state:** Use a valid kind and real message/job IDs. Enable Agent Exchange at the gateway. Posting a decision message does not itself promote it into canonical context or authorize effects.
 
-Implementation: [src/mco/cli.py:2838](../../src/mco/cli.py#L2838). Global/group options: [mco](#cli-mco), [mco exchange](#cli-mco-exchange).
+Implementation: [src/mco/cli.py:2895](../../src/mco/cli.py#L2895). Global/group options: [mco](#cli-mco), [mco exchange](#cli-mco-exchange).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -501,7 +503,7 @@ Usage example: `bitcadence exchange promote EXCHANGE_ID --to decision`
 
 **If it fails / before changing state:** Requires context:promote authority. Use a valid target kind and review the message first; this does not grant execution or approval authority.
 
-Implementation: [src/mco/cli.py:2883](../../src/mco/cli.py#L2883). Global/group options: [mco](#cli-mco), [mco exchange](#cli-mco-exchange).
+Implementation: [src/mco/cli.py:2940](../../src/mco/cli.py#L2940). Global/group options: [mco](#cli-mco), [mco exchange](#cli-mco-exchange).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -522,7 +524,7 @@ Usage example: `bitcadence fix`
 
 **If it fails / before changing state:** Repairs can change the installation. Read each offered repair; --yes accepts all offered repairs without prompting. For a diagnostic-only pass, use doctor/status.
 
-Implementation: [src/mco/cli.py:3379](../../src/mco/cli.py#L3379). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3436](../../src/mco/cli.py#L3436). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -555,7 +557,7 @@ Usage example: `bitcadence fleet apply`
 
 **If it fails / before changing state:** Can install/remove/start service processes. Inspect fleet status and the intended config first. Missing config prints a sample and exits 0; that is not evidence that any worker exists.
 
-Implementation: [src/mco/cli.py:1588](../../src/mco/cli.py#L1588). Global/group options: [mco](#cli-mco), [mco fleet](#cli-mco-fleet).
+Implementation: [src/mco/cli.py:1645](../../src/mco/cli.py#L1645). Global/group options: [mco](#cli-mco), [mco fleet](#cli-mco-fleet).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -572,7 +574,7 @@ Usage example: `bitcadence fleet set WORKER_NAME mode=waker`
 
 **If it fails / before changing state:** The assignment must be KEY=VALUE and the worker must exist. Read fleet status, review the config, then run fleet apply only when ready to reconcile OS services.
 
-Implementation: [src/mco/cli.py:1640](../../src/mco/cli.py#L1640). Global/group options: [mco](#cli-mco), [mco fleet](#cli-mco-fleet).
+Implementation: [src/mco/cli.py:1697](../../src/mco/cli.py#L1697). Global/group options: [mco](#cli-mco), [mco fleet](#cli-mco-fleet).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -591,7 +593,7 @@ Usage example: `bitcadence fleet status`
 
 **If it fails / before changing state:** Missing config prints a sample and exits 0. An empty fleet is reported explicitly. Running service state does not prove a job lease or completion.
 
-Implementation: [src/mco/cli.py:1607](../../src/mco/cli.py#L1607). Global/group options: [mco](#cli-mco), [mco fleet](#cli-mco-fleet).
+Implementation: [src/mco/cli.py:1664](../../src/mco/cli.py#L1664). Global/group options: [mco](#cli-mco), [mco fleet](#cli-mco-fleet).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -608,7 +610,7 @@ Usage example: `bitcadence gui --print`
 
 **If it fails / before changing state:** --dashboard selects the legacy dashboard. Hidden --flow is retained for old scripts and opens the console. Browser launch does not prove a signed-in session or healthy worker.
 
-Implementation: [src/mco/cli.py:1100](../../src/mco/cli.py#L1100). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:1104](../../src/mco/cli.py#L1104). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -628,7 +630,7 @@ Usage example: `bitcadence helpers --json`
 
 **If it fails / before changing state:** Put this group's --json before a subcommand. For a full technical presence list use agents. Investigate the actual failing helper rather than assuming all workers need restarting.
 
-Implementation: [src/mco/cli.py:3390](../../src/mco/cli.py#L3390). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3447](../../src/mco/cli.py#L3447). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -646,7 +648,7 @@ Usage example: `bitcadence helpers add`
 
 **If it fails / before changing state:** This creates an identity and writes credentials. The success text reports where they were saved. Do not paste credential output into public logs; use a distinct instance name per helper.
 
-Implementation: [src/mco/cli.py:3401](../../src/mco/cli.py#L3401). Global/group options: [mco](#cli-mco), [mco helpers](#cli-mco-helpers).
+Implementation: [src/mco/cli.py:3458](../../src/mco/cli.py#L3458). Global/group options: [mco](#cli-mco), [mco helpers](#cli-mco-helpers).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -665,7 +667,7 @@ Usage example: `bitcadence helpers fix`
 
 **If it fails / before changing state:** Review the offered repair before answering; --yes skips questions. This is a focused helper repair, whereas fix covers broader problems.
 
-Implementation: [src/mco/cli.py:3421](../../src/mco/cli.py#L3421). Global/group options: [mco](#cli-mco), [mco helpers](#cli-mco-helpers).
+Implementation: [src/mco/cli.py:3478](../../src/mco/cli.py#L3478). Global/group options: [mco](#cli-mco), [mco helpers](#cli-mco-helpers).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -698,7 +700,7 @@ Usage example: `bitcadence jev route-model --task "Review a documentation change
 
 **If it fails / before changing state:** Disabled/unconfigured/network/timeout cases also exit 0. Read outcome, tier and reason; deterministic-tier supplies the advisory fallback (default sonnet).
 
-Implementation: [src/mco/cli.py:1534](../../src/mco/cli.py#L1534). Global/group options: [mco](#cli-mco), [mco jev](#cli-mco-jev).
+Implementation: [src/mco/cli.py:1591](../../src/mco/cli.py#L1591). Global/group options: [mco](#cli-mco), [mco jev](#cli-mco-jev).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -755,7 +757,7 @@ Usage example: `bitcadence launch LAUNCHER_NAME`
 
 **If it fails / before changing state:** Uses ~/.mco/schedules.yaml. Missing config or an unknown launcher produces guidance; --approve/--no-approve override the launcher's approval gate. Launching can create real jobs or open local applications even when done as a manual test.
 
-Implementation: [src/mco/cli.py:1153](../../src/mco/cli.py#L1153). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:1157](../../src/mco/cli.py#L1157). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -774,7 +776,7 @@ Usage example: `bitcadence listen --role codex --instance demo-worker --config-f
 
 **If it fails / before changing state:** This is an executor, not a passive status monitor. Supply the correct agent config and credential. Use the exact identity you intend to claim work; stop with Ctrl+C. A caught critical listener error is printed without an explicit nonzero exit, so inspect the output as well as the process status.
 
-Implementation: [src/mco/cli.py:1876](../../src/mco/cli.py#L1876). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:1933](../../src/mco/cli.py#L1933). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -794,7 +796,7 @@ Safe inspection example (prints help only): `bitcadence mcp --help`
 
 **If it fails / before changing state:** For stdio, let the AI application's MCP client own the process. Do not send terminal chatter into the MCP protocol stream. HTTP binding is separate from the gateway's default port.
 
-Implementation: [src/mco/cli.py:1857](../../src/mco/cli.py#L1857). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:1914](../../src/mco/cli.py#L1914). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -814,7 +816,7 @@ Usage example: `bitcadence orgs`
 
 **If it fails / before changing state:** If unavailable, check gateway connectivity and the caller's tenancy authority before registering into another organization.
 
-Implementation: [src/mco/cli.py:2981](../../src/mco/cli.py#L2981). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3038](../../src/mco/cli.py#L3038). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -831,7 +833,7 @@ Usage example: `bitcadence pause`
 
 **If it fails / before changing state:** This affects the whole system, not one helper. Read the affected work before confirming; --yes removes the question. Resume deliberately with resume.
 
-Implementation: [src/mco/cli.py:3440](../../src/mco/cli.py#L3440). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3497](../../src/mco/cli.py#L3497). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -849,7 +851,7 @@ Safe inspection example (prints help only): `bitcadence platform --help`
 
 **If it fails / before changing state:** Use connectors to discover supported action names and confirm required parameters in the connector's documentation. Invalid JSON exits 1. Requires an approver-role credential; this can change the external platform.
 
-Implementation: [src/mco/cli.py:3328](../../src/mco/cli.py#L3328). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3385](../../src/mco/cli.py#L3385). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -869,7 +871,7 @@ Usage example: `bitcadence reassign JOB_ID --to-role codex --to-instance TARGET_
 
 **If it fails / before changing state:** Requires an approver-role credential. Inspect the old audit first; --instructions overrides rather than appends to the original instructions. The printed new ID is the job to follow.
 
-Implementation: [src/mco/cli.py:2738](../../src/mco/cli.py#L2738). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2795](../../src/mco/cli.py#L2795). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -890,7 +892,7 @@ Usage example: `bitcadence recall "release checklist" --limit 5`
 
 **If it fails / before changing state:** --tags is comma-separated; --role biases relevance and does not create authority. No matches is a normal empty result. On connection failure the command points to doctor.
 
-Implementation: [src/mco/cli.py:2760](../../src/mco/cli.py#L2760). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2817](../../src/mco/cli.py#L2817). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -911,7 +913,7 @@ Safe inspection example (prints help only): `bitcadence register --help`
 
 **If it fails / before changing state:** Use helpers add for the everyday guided path and choose a distinct identity per helper. Unknown organizations/scopes are rejected. On an older database without a scopes column, registration can fall back to role-derived scopes with an explicit migration warning; inspect the output before assuming the requested scope restriction was stored.
 
-Implementation: [src/mco/cli.py:2186](../../src/mco/cli.py#L2186). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2243](../../src/mco/cli.py#L2243). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -932,7 +934,7 @@ Usage example: `bitcadence reject JOB_ID --reason "Requirements need revision"`
 
 **If it fails / before changing state:** Use the correct pending approval ID. Rejection is terminal for that attempt; a later intentional retry can requeue eligible rejected jobs.
 
-Implementation: [src/mco/cli.py:2656](../../src/mco/cli.py#L2656). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2713](../../src/mco/cli.py#L2713). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -951,7 +953,7 @@ Usage example: `bitcadence remember "Demo convention" "Use the agreed release ch
 
 **If it fails / before changing state:** Use fact/decision/lesson/handoff/artifact as described by the CLI. This is an authoritative context write, unlike Agent Exchange discussion; review what you are recording first.
 
-Implementation: [src/mco/cli.py:2803](../../src/mco/cli.py#L2803). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2860](../../src/mco/cli.py#L2860). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -972,7 +974,7 @@ Safe inspection example (prints help only): `bitcadence reset-token --help`
 
 **If it fails / before changing state:** The old token immediately stops working. --no-save leaves local token files untouched. Embedded MCP client configs require a separate update even when the token file is saved; avoid rotation during active work without coordinating the consumer.
 
-Implementation: [src/mco/cli.py:3002](../../src/mco/cli.py#L3002). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3059](../../src/mco/cli.py#L3059). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -991,7 +993,7 @@ Usage example: `bitcadence restart`
 
 **If it fails / before changing state:** Interrupts gateway availability. For a boot-persistent OS service use service restart. Recheck status and browser access after restart rather than treating process launch as full readiness.
 
-Implementation: [src/mco/cli.py:784](../../src/mco/cli.py#L784). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:788](../../src/mco/cli.py#L788). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1010,7 +1012,7 @@ Safe inspection example (prints help only): `bitcadence restore-fence --help`
 
 **If it fails / before changing state:** Recovery operation: run before reconnecting workers. Review halted jobs, clear Stop work in Settings deliberately, then retry selected work. This is not a general-purpose health check.
 
-Implementation: [src/mco/cli.py:2619](../../src/mco/cli.py#L2619). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2676](../../src/mco/cli.py#L2676). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1027,7 +1029,7 @@ Usage example: `bitcadence resume`
 
 **If it fails / before changing state:** Check the reason for the pause and the waiting work first. Resume can make pending work eligible to execute immediately.
 
-Implementation: [src/mco/cli.py:3447](../../src/mco/cli.py#L3447). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3504](../../src/mco/cli.py#L3504). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1044,7 +1046,7 @@ Usage example: `bitcadence retry JOB_ID`
 
 **If it fails / before changing state:** Requires an approver-role credential. Inspect the prior failure before retrying; requeueing without addressing the cause can repeat it.
 
-Implementation: [src/mco/cli.py:2670](../../src/mco/cli.py#L2670). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2727](../../src/mco/cli.py#L2727). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1062,7 +1064,7 @@ Usage example: `bitcadence schedule`
 
 **If it fails / before changing state:** This group has a real default action. Use schedule list for the technical list or --help to inspect its subcommands.
 
-Implementation: [src/mco/cli.py:809](../../src/mco/cli.py#L809). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:813](../../src/mco/cli.py#L813). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1079,7 +1081,7 @@ Usage example: `bitcadence schedule add`
 
 **If it fails / before changing state:** The command is implemented; it is no longer roadmap-only. --what and --when supply answers, and --yes skips saving confirmation. Inspect schedule list after saving.
 
-Implementation: [src/mco/cli.py:841](../../src/mco/cli.py#L841). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
+Implementation: [src/mco/cli.py:845](../../src/mco/cli.py#L845). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1099,7 +1101,7 @@ Usage example: `bitcadence schedule disable SCHEDULE_NAME`
 
 **If it fails / before changing state:** An unknown name prints known names and exits 1. It prevents future firings; it is not a cancellation command for jobs already created.
 
-Implementation: [src/mco/cli.py:994](../../src/mco/cli.py#L994). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
+Implementation: [src/mco/cli.py:998](../../src/mco/cli.py#L998). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1117,7 +1119,7 @@ Usage example: `bitcadence schedule enable SCHEDULE_NAME`
 
 **If it fails / before changing state:** Enabling does not clear sticky completion. If an exhausted loop must run again, inspect and deliberately use schedule reset.
 
-Implementation: [src/mco/cli.py:988](../../src/mco/cli.py#L988). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
+Implementation: [src/mco/cli.py:992](../../src/mco/cli.py#L992). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1135,7 +1137,7 @@ Usage example: `bitcadence schedule init`
 
 **If it fails / before changing state:** An existing file is refused with exit 1. --force overwrites it, so preserve existing definitions before intentionally replacing them.
 
-Implementation: [src/mco/cli.py:866](../../src/mco/cli.py#L866). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
+Implementation: [src/mco/cli.py:870](../../src/mco/cli.py#L870). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1153,7 +1155,7 @@ Usage example: `bitcadence schedule list`
 
 **If it fails / before changing state:** Missing config prints the starter guidance and exits 0. Initialize and edit a config; no listed schedule is not evidence that a scheduler service is running.
 
-Implementation: [src/mco/cli.py:882](../../src/mco/cli.py#L882). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
+Implementation: [src/mco/cli.py:886](../../src/mco/cli.py#L886). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1170,7 +1172,7 @@ Usage example: `bitcadence schedule off SCHEDULE_NAME`
 
 **If it fails / before changing state:** Check schedule list to confirm the disabled state. Existing jobs remain separate work items.
 
-Implementation: [src/mco/cli.py:859](../../src/mco/cli.py#L859). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
+Implementation: [src/mco/cli.py:863](../../src/mco/cli.py#L863). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1188,7 +1190,7 @@ Usage example: `bitcadence schedule on SCHEDULE_NAME`
 
 **If it fails / before changing state:** Check schedule list for its next run and completion bounds. Re-enabling an exhausted loop does not by itself promise a new firing.
 
-Implementation: [src/mco/cli.py:852](../../src/mco/cli.py#L852). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
+Implementation: [src/mco/cli.py:856](../../src/mco/cli.py#L856). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1206,7 +1208,7 @@ Usage example: `bitcadence schedule reset SCHEDULE_NAME`
 
 **If it fails / before changing state:** Sticky completion prevents accidental resurrection when a queue refills. --yes skips the question. Unknown names fail; a schedule with no history reports that there is nothing to clear.
 
-Implementation: [src/mco/cli.py:1000](../../src/mco/cli.py#L1000). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
+Implementation: [src/mco/cli.py:1004](../../src/mco/cli.py#L1004). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1225,7 +1227,7 @@ Usage example: `bitcadence schedule run --interval 30`
 
 **If it fails / before changing state:** Ctrl+C stops this foreground scheduler. Use a boot-persistent scheduler service for unattended operation; avoid running duplicate scheduler drivers unintentionally.
 
-Implementation: [src/mco/cli.py:1070](../../src/mco/cli.py#L1070). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
+Implementation: [src/mco/cli.py:1074](../../src/mco/cli.py#L1074). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1243,7 +1245,7 @@ Usage example: `bitcadence schedule tick --dry-run`
 
 **If it fails / before changing state:** Nothing due is a normal result. Reports distinguish fired/would-fire/skipped-overlap/error. Validate the config before wiring a real tick into cron/Task Scheduler.
 
-Implementation: [src/mco/cli.py:1036](../../src/mco/cli.py#L1036). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
+Implementation: [src/mco/cli.py:1040](../../src/mco/cli.py#L1040). Global/group options: [mco](#cli-mco), [mco schedule](#cli-mco-schedule).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1257,7 +1259,7 @@ Run a Score: start, advance and inspect a conductor run.
 
 Safe example: `bitcadence score --help`. Expected result: list the following subcommands and group options. Select a child command for its operation and recovery instructions.
 
-Subcommands: [deliver](#cli-mco-score-deliver), [grant-local](#cli-mco-score-grant-local), [intake](#cli-mco-score-intake), [list](#cli-mco-score-list), [scaffold](#cli-mco-score-scaffold), [start](#cli-mco-score-start), [status](#cli-mco-score-status), [tick](#cli-mco-score-tick).
+Subcommands: [deliver](#cli-mco-score-deliver), [grant-local](#cli-mco-score-grant-local), [grant-standing-local](#cli-mco-score-grant-standing-local), [intake](#cli-mco-score-intake), [list](#cli-mco-score-list), [revoke-standing-local](#cli-mco-score-revoke-standing-local), [scaffold](#cli-mco-score-scaffold), [start](#cli-mco-score-start), [status](#cli-mco-score-status), [tick](#cli-mco-score-tick).
 
 Global/group options: [mco](#cli-mco).
 
@@ -1276,7 +1278,7 @@ Usage example: `bitcadence score deliver CLIENT_WORKTREE --out delivery-bundle`
 
 **If it fails / before changing state:** The message is never sent by this command. Confirm the client worktree and optional evidence directory; inspect the produced bundle before handing it over.
 
-Implementation: [src/mco/cli.py:1462](../../src/mco/cli.py#L1462). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
+Implementation: [src/mco/cli.py:1519](../../src/mco/cli.py#L1519). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1297,7 +1299,7 @@ Safe inspection example (prints help only): `bitcadence score grant-local --help
 
 **If it fails / before changing state:** Disabled by default. Requires explicitly enabled MCO_LOCAL_HUMAN_GRANTS, interactive Windows terminal and local SQLite store; bearer credentials cannot satisfy the human check. Score file must exist. The grant binds exact digest/run/actions/resources/environment/expiry/budget; it does not replace repository-write opt-in.
 
-Implementation: [src/mco/cli.py:1295](../../src/mco/cli.py#L1295). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
+Implementation: [src/mco/cli.py:1302](../../src/mco/cli.py#L1302). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1311,6 +1313,26 @@ Implementation: [src/mco/cli.py:1295](../../src/mco/cli.py#L1295). Global/group 
 | <a id="cli-mco-score-grant-local-param-budget-cents"></a>`--budget-cents` | INTEGER RANGE; optional | `0` | Maximum budget in cents included in this grant. Range: 0 to unbounded. |
 | <a id="cli-mco-score-grant-local-param-help"></a>`--help` | BOOLEAN; flag; optional | not set | Show this message and exit. |
 
+<a id="cli-mco-score-grant-standing-local"></a>
+## `mco score grant-standing-local`
+
+Approve an exact Score class once for unattended local runs (max 316h).
+
+Safe inspection example (prints help only): `bitcadence score grant-standing-local --help`
+
+**Operation result (when run with the required values):** Shows the Score's digest, constraints, per-run budget ceiling, capabilities, resources, environment and expiry, then issues a standing grant ID only after you type the exact confirmation phrase. Runs of that exact Score class can then be started with the `--standing-grant` option of [mco score start](#cli-mco-score-start). See [Standing Score grants](standing-score-grants.md).
+
+**If it fails / before changing state:** Requires the same interactive Windows local-human boundary as `mco score grant-local` (explicitly enabled MCO_LOCAL_HUMAN_GRANTS, local SQLite store, no bearer credential). Score file must exist. A confirmation that does not match issues nothing.
+
+Implementation: [src/mco/cli.py:1361](../../src/mco/cli.py#L1361). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
+
+| Argument / option | Type and requirement | Default | Meaning / constraints |
+|---|---|---|---|
+| <a id="cli-mco-score-grant-standing-local-param-score-file"></a>`SCORE_FILE` (positional) | PATH; required | required | Score JSON file whose exact canonical digest becomes the approved class. Path must already exist. Existing path is checked for readability. |
+| <a id="cli-mco-score-grant-standing-local-param-environment"></a>`--environment` | TEXT; optional | `test` | Environment named in the grant (standing authority allows test, development or staging). |
+| <a id="cli-mco-score-grant-standing-local-param-expires-hours"></a>`--expires-hours` | INTEGER RANGE; optional | `24` | Grant lifetime in hours. Range: 1 to 316. |
+| <a id="cli-mco-score-grant-standing-local-param-help"></a>`--help` | BOOLEAN; flag; optional | not set | Show this message and exit. |
+
 <a id="cli-mco-score-intake"></a>
 ## `mco score intake`
 
@@ -1322,7 +1344,7 @@ Usage example: `bitcadence score intake BRIEF.txt --out scope.json`
 
 **If it fails / before changing state:** Approve mode requires exactly approve SCOPE.json plus --worktree, --branch, --before-sha and --out. Correct flagged scope issues first; drafting a scope is not an execution grant.
 
-Implementation: [src/mco/cli.py:1428](../../src/mco/cli.py#L1428). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
+Implementation: [src/mco/cli.py:1485](../../src/mco/cli.py#L1485). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1345,12 +1367,30 @@ Usage example: `bitcadence score list`
 
 **If it fails / before changing state:** No runs is normal for an empty/new database. Use the same --db when listing, starting, ticking and inspecting a run.
 
-Implementation: [src/mco/cli.py:1480](../../src/mco/cli.py#L1480). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
+Implementation: [src/mco/cli.py:1537](../../src/mco/cli.py#L1537). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
 | <a id="cli-mco-score-list-param-database"></a>`--db` | PATH; optional | `~/.mco/score-runs.db` | Conductor SQLite database to list. Existing path is checked for readability. |
 | <a id="cli-mco-score-list-param-help"></a>`--help` | BOOLEAN; flag; optional | not set | Show this message and exit. |
+
+<a id="cli-mco-score-revoke-standing-local"></a>
+## `mco score revoke-standing-local`
+
+Revoke a standing class immediately; existing runs are checked again.
+
+Safe inspection example (prints help only): `bitcadence score revoke-standing-local --help`
+
+**Operation result (when run with the required values):** Revokes the named standing grant. Future authority checks fail, including for runs already started from it; commands that already passed their check may finish. No second confirmation phrase is asked. See [Standing Score grants](standing-score-grants.md).
+
+**If it fails / before changing state:** Requires the same interactive Windows local-human boundary as `mco score grant-local`. Use the grant ID that `grant-standing-local` printed.
+
+Implementation: [src/mco/cli.py:1396](../../src/mco/cli.py#L1396). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
+
+| Argument / option | Type and requirement | Default | Meaning / constraints |
+|---|---|---|---|
+| <a id="cli-mco-score-revoke-standing-local-param-grant-id"></a>`GRANT_ID` (positional) | TEXT; required | required | ID of the standing grant to revoke. |
+| <a id="cli-mco-score-revoke-standing-local-param-help"></a>`--help` | BOOLEAN; flag; optional | not set | Show this message and exit. |
 
 <a id="cli-mco-score-scaffold"></a>
 ## `mco score scaffold`
@@ -1363,7 +1403,7 @@ Safe inspection example (prints help only): `bitcadence score scaffold --help`
 
 **If it fails / before changing state:** The spec must exist and be readable. It needs score_id, objective, steps, worktree_path, target_branch and expected_before_sha (see argument details). Invalid spec/compile failures exit 1. Review the output before starting it.
 
-Implementation: [src/mco/cli.py:1402](../../src/mco/cli.py#L1402). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
+Implementation: [src/mco/cli.py:1459](../../src/mco/cli.py#L1459). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1382,7 +1422,7 @@ Usage example: `bitcadence score start score.json --run-id demo-run --target bui
 
 **If it fails / before changing state:** Provide role=instance for every required role. Changed policy/identity under a reused run ID can fail; inspect the existing run rather than guessing. This prepares a run; it does not prove tasks executed.
 
-Implementation: [src/mco/cli.py:1222](../../src/mco/cli.py#L1222). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
+Implementation: [src/mco/cli.py:1226](../../src/mco/cli.py#L1226). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1392,6 +1432,7 @@ Implementation: [src/mco/cli.py:1222](../../src/mco/cli.py#L1222). Global/group 
 | <a id="cli-mco-score-start-param-org"></a>`--org` | TEXT; optional | `default` | Organization bound to the conductor run. |
 | <a id="cli-mco-score-start-param-database"></a>`--db` | PATH; optional | `~/.mco/score-runs.db` | Conductor SQLite database used for this run. Existing path is checked for readability. |
 | <a id="cli-mco-score-start-param-root"></a>`--artifact-root` | PATH; optional | `~/.mco/score-artifacts` | Directory for conductor task artifacts. Existing path is checked for readability. |
+| <a id="cli-mco-score-start-param-standing-grant"></a>`--standing-grant` | TEXT; optional | not set | Approved local standing grant ID; rechecked on each conductor step. See [Standing Score grants](standing-score-grants.md). |
 | <a id="cli-mco-score-start-param-live-repository-write"></a>`--live-repository-write` | BOOLEAN; flag; optional | `false` | Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start — a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes. |
 | <a id="cli-mco-score-start-param-help"></a>`--help` | BOOLEAN; flag; optional | not set | Show this message and exit. |
 
@@ -1406,7 +1447,7 @@ Usage example: `bitcadence score status --run-id demo-run`
 
 **If it fails / before changing state:** Use the same --db/--artifact-root as the run. A timeout is reported as stopped, not completion. Inspect blocked/failed evidence before deciding to tick again.
 
-Implementation: [src/mco/cli.py:1387](../../src/mco/cli.py#L1387). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
+Implementation: [src/mco/cli.py:1444](../../src/mco/cli.py#L1444). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1426,7 +1467,7 @@ Usage example: `bitcadence score tick --run-id demo-run`
 
 **If it fails / before changing state:** Ticking can dispatch real work. --live-repository-write must be present on every tick that needs that adapter; an eligible human grant must also authorize the digest/run. Watch exits 1 for blocked/failed/timed out; inspect score status.
 
-Implementation: [src/mco/cli.py:1354](../../src/mco/cli.py#L1354). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
+Implementation: [src/mco/cli.py:1411](../../src/mco/cli.py#L1411). Global/group options: [mco](#cli-mco), [mco score](#cli-mco-score).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1450,7 +1491,7 @@ Usage example: `bitcadence send codex --title "Review documentation" --message "
 
 **If it fails / before changing state:** Without --approve, work may be immediately claimable. Empty --message reuses the title. Higher numeric priority runs first; a successful submission is not proof of completion.
 
-Implementation: [src/mco/cli.py:2430](../../src/mco/cli.py#L2430). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2487](../../src/mco/cli.py#L2487). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1475,7 +1516,7 @@ Usage example: `bitcadence serve`
 
 **If it fails / before changing state:** Keep this terminal alive or use start/service install for the appropriate lifecycle. A bind error usually needs inspection of the chosen port/process, not force-killing an unidentified process.
 
-Implementation: [src/mco/cli.py:622](../../src/mco/cli.py#L622). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:626](../../src/mco/cli.py#L626). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1509,7 +1550,7 @@ Safe inspection example (prints help only): `bitcadence service install --help`
 
 **If it fails / before changing state:** Changes OS startup/service configuration. Check service status afterward. It is separate from starting a temporary background gateway with start.
 
-Implementation: [src/mco/cli.py:1678](../../src/mco/cli.py#L1678). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
+Implementation: [src/mco/cli.py:1735](../../src/mco/cli.py#L1735). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1528,7 +1569,7 @@ Safe inspection example (prints help only): `bitcadence service install-schedule
 
 **If it fails / before changing state:** Check service status BitCadence-scheduler. An installed gateway does not imply that the scheduler service is installed or running.
 
-Implementation: [src/mco/cli.py:1658](../../src/mco/cli.py#L1658). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
+Implementation: [src/mco/cli.py:1715](../../src/mco/cli.py#L1715). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1546,7 +1587,7 @@ Safe inspection example (prints help only): `bitcadence service install-waker --
 
 **If it fails / before changing state:** Provide the command either positionally or with --exec; positional wins if both are supplied. Missing command exits 1. This launches the configured executor when work is pending, so select the exact identity and command deliberately.
 
-Implementation: [src/mco/cli.py:1696](../../src/mco/cli.py#L1696). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
+Implementation: [src/mco/cli.py:1753](../../src/mco/cli.py#L1753). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1568,7 +1609,7 @@ Usage example: `bitcadence service logs --lines 80`
 
 **If it fails / before changing state:** Missing logs are reported and exit 0. Use service status to distinguish a never-started service from an idle log. Logs may contain operational details; review before sharing.
 
-Implementation: [src/mco/cli.py:1779](../../src/mco/cli.py#L1779). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
+Implementation: [src/mco/cli.py:1836](../../src/mco/cli.py#L1836). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1588,7 +1629,7 @@ Safe inspection example (prints help only): `bitcadence service restart --help`
 
 **If it fails / before changing state:** Use a service name or waker role selector. This can interrupt work; inspect status/logs before intentionally restarting a busy worker.
 
-Implementation: [src/mco/cli.py:1765](../../src/mco/cli.py#L1765). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
+Implementation: [src/mco/cli.py:1822](../../src/mco/cli.py#L1822). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1606,7 +1647,7 @@ Usage example: `bitcadence service status`
 
 **If it fails / before changing state:** No services found is a normal exit-0 result. It proves absence from the backend inventory, not that all unrelated background processes are stopped.
 
-Implementation: [src/mco/cli.py:1733](../../src/mco/cli.py#L1733). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
+Implementation: [src/mco/cli.py:1790](../../src/mco/cli.py#L1790). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1624,7 +1665,7 @@ Safe inspection example (prints help only): `bitcadence service uninstall --help
 
 **If it fails / before changing state:** Does not stop an already running gateway. Inspect processes/status separately and use the appropriate stop command when a shutdown is intended.
 
-Implementation: [src/mco/cli.py:1719](../../src/mco/cli.py#L1719). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
+Implementation: [src/mco/cli.py:1776](../../src/mco/cli.py#L1776). Global/group options: [mco](#cli-mco), [mco service](#cli-mco-service).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1642,7 +1683,7 @@ Usage example: `bitcadence settings`
 
 **If it fails / before changing state:** Writes affect gateway configuration; review the exact setting and any restart guidance. A bare summary is an inspection; adding a value or --unset changes state.
 
-Implementation: [src/mco/cli.py:2898](../../src/mco/cli.py#L2898). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2955](../../src/mco/cli.py#L2955). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1682,7 +1723,7 @@ Usage example: `bitcadence start --no-open`
 
 **If it fails / before changing state:** Use status and inspect the log if it does not come up. --no-open suppresses browser opening (the tray is still ensured); --no-autostart suppresses first-run login startup registration. stop is the paired shutdown command.
 
-Implementation: [src/mco/cli.py:726](../../src/mco/cli.py#L726). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:730](../../src/mco/cli.py#L730). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1703,7 +1744,7 @@ Usage example: `bitcadence status --details`
 
 **If it fails / before changing state:** --all includes all resolved configuration keys, including unrelated process environment, and selects diagnostics. --json does not make --details/--all JSON. Review diagnostics before sharing; process health alone does not establish work completion.
 
-Implementation: [src/mco/cli.py:1927](../../src/mco/cli.py#L1927). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:1984](../../src/mco/cli.py#L1984). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1723,7 +1764,7 @@ Safe inspection example (prints help only): `bitcadence stop --help`
 
 **If it fails / before changing state:** Inspect the port and intended process first: the implementation targets listeners on that port, not a verified BitCadence process identity. No listener is a normal exit-0 result. This does not cancel queued jobs or remove service registration.
 
-Implementation: [src/mco/cli.py:1799](../../src/mco/cli.py#L1799). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:1856](../../src/mco/cli.py#L1856). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1742,7 +1783,7 @@ Usage example: `bitcadence sync servicenow`
 
 **If it fails / before changing state:** This creates board work. Run connectors first to check configured names/health. Existing imported objects are skipped rather than all recreated.
 
-Implementation: [src/mco/cli.py:3315](../../src/mco/cli.py#L3315). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3372](../../src/mco/cli.py#L3372). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1760,7 +1801,7 @@ Usage example: `bitcadence tail --role codex --instance demo-worker`
 
 **If it fails / before changing state:** Uses configured identity/gateway/token when flags are absent. Authentication failure prints guidance; disconnections retry with backoff. An empty feed does not prove an empty inbox.
 
-Implementation: [src/mco/cli.py:3172](../../src/mco/cli.py#L3172). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3229](../../src/mco/cli.py#L3229). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1781,7 +1822,7 @@ Safe inspection example (prints help only): `bitcadence tray --help`
 
 **If it fails / before changing state:** Needs the tray desktop dependencies and a usable desktop session. This is an interface, not the gateway or an executor.
 
-Implementation: [src/mco/cli.py:1136](../../src/mco/cli.py#L1136). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:1140](../../src/mco/cli.py#L1140). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1799,7 +1840,7 @@ Usage example: `bitcadence unarchive JOB_ID`
 
 **If it fails / before changing state:** Does not retry or reopen the job. Use audit/status to inspect its existing terminal result.
 
-Implementation: [src/mco/cli.py:2706](../../src/mco/cli.py#L2706). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2763](../../src/mco/cli.py#L2763). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1817,7 +1858,7 @@ Usage example: `bitcadence upgrade`
 
 **If it fails / before changing state:** Without --apply, prints pending migration SQL/instructions rather than applying it. Where automatic execution is unavailable, writes a combined script for the Supabase SQL editor. Review output before applying schema changes.
 
-Implementation: [src/mco/cli.py:1987](../../src/mco/cli.py#L1987). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2044](../../src/mco/cli.py#L2044). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1835,7 +1876,7 @@ Safe inspection example (prints help only): `bitcadence wake --help`
 
 **If it fails / before changing state:** Requires --exec and the exact agent identity/credential. Missing or invalid per-instance credentials fail explicitly instead of silently borrowing the operator credential. Ctrl+C stops the waker; starting an executor is not a job lease/completion proof.
 
-Implementation: [src/mco/cli.py:3245](../../src/mco/cli.py#L3245). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3302](../../src/mco/cli.py#L3302). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1859,7 +1900,7 @@ Usage example: `bitcadence watch`
 
 **If it fails / before changing state:** Ctrl+C stops watching. Authentication failures require the configured MCO_AGENT_TOKEN/MCO_LOCAL_TOKEN to be fixed. This is a live stream, not a replay of all historical events.
 
-Implementation: [src/mco/cli.py:3071](../../src/mco/cli.py#L3071). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:3128](../../src/mco/cli.py#L3128). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|
@@ -1877,7 +1918,7 @@ Usage example: `bitcadence workflow plan.yaml --dry-run`
 
 **If it fails / before changing state:** Without --dry-run, creates real jobs and prints step-to-job IDs. Correct invalid files/dependencies first. Use the printed IDs to follow outcomes; submission alone is not workflow completion.
 
-Implementation: [src/mco/cli.py:2471](../../src/mco/cli.py#L2471). Global/group options: [mco](#cli-mco).
+Implementation: [src/mco/cli.py:2528](../../src/mco/cli.py#L2528). Global/group options: [mco](#cli-mco).
 
 | Argument / option | Type and requirement | Default | Meaning / constraints |
 |---|---|---|---|

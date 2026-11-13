@@ -14,7 +14,7 @@ from tests.test_routes import FakeDB
 
 ACME = {"instance_id": "acme-1", "role": "codex", "status": "online", "org_id": "acme"}
 GLOBEX = {"instance_id": "globex-1", "role": "codex", "status": "online", "org_id": "globex"}
-ACME_HUMAN = {"instance_id": "acme-joe", "role": "human", "status": "online", "org_id": "acme"}
+ACME_HUMAN = {"instance_id": "acme-alex", "role": "human", "status": "online", "org_id": "acme"}
 
 
 class _TenancyBase:

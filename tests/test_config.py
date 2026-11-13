@@ -267,8 +267,8 @@ def test_explicit_plaintext_opt_out_still_available(fresh_config):
 
 def test_non_secret_values_stay_readable_in_env(fresh_config):
     cfg, env = fresh_config(with_store=True)
-    cfg.set("OPERATOR_NAME", "joe")
-    assert "OPERATOR_NAME=joe" in env.read_text(encoding="utf-8")
+    cfg.set("OPERATOR_NAME", "alex")
+    assert "OPERATOR_NAME=alex" in env.read_text(encoding="utf-8")
 
 
 def test_encrypt_false_still_forces_plaintext(fresh_config):

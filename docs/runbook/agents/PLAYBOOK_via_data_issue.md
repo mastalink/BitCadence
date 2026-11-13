@@ -3,7 +3,7 @@
 Handling Catholic parish data errors from public API discovery to merged pull request. Plain words, short sentences.
 
 ## Standing Safety Rules
-1. **Nobody deploys to production except Joseph.** Agents create Git PRs only.
+1. **Nobody deploys to production except the owner.** Agents create Git PRs only.
 2. **Never modify production database tables directly.**
 3. **Two model families must review the fix.**
 4. **Never print secrets, database credentials, or tokens.**
@@ -56,8 +56,8 @@ Handling Catholic parish data errors from public API discovery to merged pull re
   - Post review verdict to the job board and PR comments.
 
 ## Step 6: Owner Review and Merge
-- **Who:** Joseph Arroyo (owner).
+- **Who:** The owner Owner (owner).
 - **Process:**
-  - Joseph inspects the PR and review evidence.
-  - Joseph clicks merge on GitHub.
-  - Deployment occurs only after Joseph approves the release.
+  - The owner inspects the PR and review evidence.
+  - The owner clicks merge on GitHub.
+  - Deployment occurs only after the owner approves the release.

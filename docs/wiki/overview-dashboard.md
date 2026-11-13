@@ -23,7 +23,7 @@ Below that, each card is one piece of work in flight, with a state word (**Worki
 Home refreshes by itself and shows recent work only. See [Console Home](Console-home.md) for the exact rules, including when a job is called **Stuck**.
 
 ### 4. Look at the rest of the menu
-The left menu also has [Projects](projects-dashboard.md), the [Job Board](job-board-and-tasks.md), [Approvals](Approvals.md), Governance, [Ask for something](Ask.md), [Helpers](Helpers.md), [Connect an AI](Connect-an-AI.md), [Schedules](Schedules.md), Drumline, **Activity** and [Settings](Settings.md). **Activity** shows every step every helper took, newest first, with event, failure and helper counts.
+The left menu also has [Portfolio](gui-reference.md#portfolio), the [Job Board](job-board-and-tasks.md), [Approvals](Approvals.md), Governance, [Ask for something](Ask.md), [Helpers](Helpers.md), [Connect an AI](Connect-an-AI.md), [Schedules](Schedules.md), Drumline, **Activity** and [Settings](Settings.md). **Activity** shows every step every helper took, newest first, with event, failure and helper counts.
 
 ![Activity](img/10-console-activity-audit.png)
 

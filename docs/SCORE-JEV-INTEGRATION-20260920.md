@@ -92,7 +92,7 @@ tasks that therefore need staging before execution:
 
 ## Owner amendment 2026-09-22: Jev-authoritative Lorain schedule times
 
-Joseph approved making Jev authoritative for one path: choosing which
+The owner approved making Jev authoritative for one path: choosing which
 evidence-backed schedule candidate VIA publishes for a Lorain County campus.
 This supersedes the "may not publish a schedule fact" rule above for that path
 only, and replaces the J07/J09 qualification-then-canary gate for it ("we do it

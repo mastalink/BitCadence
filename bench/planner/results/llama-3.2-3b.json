@@ -45,7 +45,7 @@
   },
   {
    "id": 5,
-   "output": "{\"title\":\"Avon Lake Library Hours\",\"schedule\":{\"kind\":\"on_demand\",\"detail\":\"\"},\"steps\":[{\"id\":\"s1\",\"action\":\"search_web\",\"what\":\"opening hours of Avon Lake library\",\"depends_on\":[],\"condition\":\"\",\"needs_approval\":false},{\"id\":\"s2\",\"action\":\"summarize\",\"what\":\"library hours\",\"depends_on\":[\"s1\"],\"condition\":\"\",\"needs_approval\":false}],\"confidence\":\"high\"}",
+   "output": "{\"title\":\"Springfield Library Hours\",\"schedule\":{\"kind\":\"on_demand\",\"detail\":\"\"},\"steps\":[{\"id\":\"s1\",\"action\":\"search_web\",\"what\":\"opening hours of Springfield library\",\"depends_on\":[],\"condition\":\"\",\"needs_approval\":false},{\"id\":\"s2\",\"action\":\"summarize\",\"what\":\"library hours\",\"depends_on\":[\"s1\"],\"condition\":\"\",\"needs_approval\":false}],\"confidence\":\"high\"}",
    "seconds": 8.308633804321289,
    "tokens": 86,
    "mean_logprob": null,

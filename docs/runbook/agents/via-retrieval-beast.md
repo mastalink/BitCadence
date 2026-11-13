@@ -42,4 +42,4 @@ Send via `mco_send`:
 - **Fix:** Inspect retrieval logs; adjust scraping delays or user-agent headers; fall back to manual bulletin download.
 
 ## Who reviews its work
-`codex-beast`, `antigravity-beast`, and Joseph before data merge.
+`codex-beast`, `antigravity-beast`, and the owner before data merge.

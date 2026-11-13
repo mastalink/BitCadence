@@ -1,5 +1,7 @@
 # Projects Dashboard
 
+> **Note:** The console sidebar now opens **Portfolio** (see [Portfolio](gui-reference.md#portfolio)) in place of the **Projects** page described below. The earlier project grouping view is no longer reachable from the sidebar. The project metadata, assignment and API details on this page still describe how jobs are tagged with a project.
+
 ## Goal
 Group disparate helper tasks into cohesive business projects and initiatives, observe project-level health and completion velocity, and detect blocked or stalled initiatives.
 

@@ -102,7 +102,7 @@ Collective memory from prior agent work. Use it; correct it via mco_remember if 
 - [handoff] Job outcome: Triage P-99 (claude-worker-1, 2026-06-10)
   Asked: Investigate high CPU on web-01
   Outcome: Root cause: runaway cron. Disabled job foo.
-- [fact] Prod DB read-only on Sundays (joe, 2026-06-08)
+- [fact] Prod DB read-only on Sundays (alex, 2026-06-08)
   Maintenance window 02:00-06:00 UTC.
 === END SHARED CONTEXT ===
 

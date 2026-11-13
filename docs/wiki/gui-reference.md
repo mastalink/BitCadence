@@ -28,7 +28,7 @@ If authentication fails, obtain the correct existing token and check its scopes.
 
 ## Navigation and display controls
 
-The sidebar has twelve entries: **Home**, **Projects**, **Job Board**, **Approvals**, **Governance**, **Ask for something**, **Helpers**, **Connect an AI**, **Schedules**, **Drumline**, **Activity**, **Settings**. Selecting one changes the view, not job state. The selected page and Advanced preference are stored locally.
+The sidebar has twelve entries: **Home**, **Portfolio**, **Job Board**, **Approvals**, **Governance**, **Ask for something**, **Helpers**, **Connect an AI**, **Schedules**, **Drumline**, **Activity**, **Settings**. Selecting one changes the view, not job state. The selected page and Advanced preference are stored locally.
 
 The topbar **Advanced** switch reveals technical details such as payloads, full job IDs and retry/escalation fields. It does not grant authority. In clean main, plain-tone Helpers remains the simple Helpers page even with Advanced enabled. In the shared pending change, Advanced switches it to Agent Fleet and **Manage fleet tokens** is another way to enter that view. Turn Advanced off to return.
 
@@ -44,19 +44,22 @@ Drawer **×**, **Cancel**, **Back**, and backdrop clicks close or dismiss their 
 
 Home marks an active job Stuck after ten minutes without a usable recent work/heartbeat timestamp. That label is a view flag, not a cancellation or a restart. Waiting and approval jobs do not become Stuck merely for being old. Score cards group by run and obtain actual plan step counts when available; missing plan data can omit counts. Home uses at most 200 recent jobs and displays a coverage notice at that limit; at most twenty visible plans refresh every thirty seconds. See [Home rules](Console-home.md) and [Score live](Score-live.md).
 
-## Projects
+## Portfolio
 
-Choose **Projects** to group work by explicit project metadata, then workflow metadata, with unmatched jobs under **Unassigned work**. This is a view over jobs, not another queue.
+Choose **Portfolio** for one read-only run sheet of the projects you have listed in a local portfolio file. It replaces the earlier **Projects** sidebar entry (a saved "Projects" page choice now opens Portfolio). Roadmaps and milestone states come only from your local configuration; shared queues, workers, board jobs and flow warnings are live. Nothing on this page starts, pauses, moves or changes work.
+
+If the page says **Portfolio is not configured**, copy `configs/portfolio.example.yaml` to your local BitCadence configuration location and list your own projects there (real project data stays out of the repository). If it says **Portfolio could not be refreshed**, read the message and choose **Try again**.
 
 | Control | Steps and expected outcome | Effect |
 |---|---|---|
-| Open / Needs attention / All | Choose a filter. Open hides complete/closed groups; Needs attention keeps decisions/problems; All widens the view. | Read |
-| Search projects or work | Type a project name or job title. Clear the field to restore results. | Read |
-| Job title | Select the title to open details. Cards show four jobs, or eight in Unassigned; search for hidden jobs. | Read |
-| Move | Choose the job's Move button, type the destination project name, and accept. Cancel the prompt to leave it alone. Blank clears an explicit assignment; workflow fallback may still group the job. Check the resulting card after the write. | Write metadata |
-| Open Job Board | Opens the board. It does not apply a project filter. | Read |
+| Flow flags | A red band at the top lists warnings such as a worker reported broken, work pending for a long time, or a recent stalled chain. Read each title and detail, then fix the cause where it happens. | Read |
+| Capacity strip | Shows the GPU queue, CPU queue and worker counts (online, broken, away). It is a status view only. | Read |
+| Project card | Select a card to expand it. It shows priority, status, the done definition, health (On track, Watch or Blocked), roadmap progress and the next milestone. Select it again to collapse. | Read |
+| Recent board jobs | In an expanded card, select a job title to open its details drawer. Jobs appear only when they match the project's configured aliases. | Read |
+| Open pull requests | Links open in a new tab when a repository command is configured; otherwise the card shows a notice or "No open pull requests." | Read |
+| Refresh | Reloads the snapshot now. The page also refreshes itself every thirty seconds while it is open. | Read |
 
-Read the partial-count warning when the 5,000-job project-view ceiling is reached. Counts/progress are for fetched jobs. The next-action sentence is advice, not a Start button. Recovery: clear search, select All, inspect metadata, and check write permissions before repeating a Move. See [project assignment](projects-dashboard.md#4-assigning-a-job-to-a-project).
+The card's "Priority and pause controls" line is a visible placeholder: those controls are read-only in this version. Assigning an existing job to a project is still possible through the job metadata and API described in [Projects and assignment](projects-dashboard.md#4-assigning-a-job-to-a-project).
 
 ## Job Board and job details
 

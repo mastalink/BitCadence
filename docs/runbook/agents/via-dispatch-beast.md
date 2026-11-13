@@ -42,4 +42,4 @@ Send via `mco_send`:
 - **Fix:** Start dispatch supervisor on Beast or trigger queue sweep via `codex-beast`.
 
 ## Who reviews its work
-`codex-beast`, `claude-code`, and Joseph.
+`codex-beast`, `claude-code`, and the owner.

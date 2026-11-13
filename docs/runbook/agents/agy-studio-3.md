@@ -45,4 +45,4 @@ Send via `mco_send`:
 - **Fix:** Keep operations bounded; do not launch long-lived background watchers; restart worker.
 
 ## Who reviews its work
-Video Shepherd `tick` validates verdict JSON; Joseph.
+Video Shepherd `tick` validates verdict JSON; the owner.
