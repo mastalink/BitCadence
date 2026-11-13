@@ -23,6 +23,9 @@ jobs:
         run: pytest tests/ -q
       - name: Wiki command and screen coverage
         run: |
+          # The recorded CLI inventory reads Click parameter metadata that Typer 0.29
+          # builds lazily; check it against the Typer series it was recorded with.
+          pip install "typer>=0.26,<0.27"
           python docs/wiki/_review/verify_cli_coverage.py --repo .
           python docs/wiki/_review/verify_gui_coverage.py --repo . --strict-hashes
           python scripts/build_wiki.py
