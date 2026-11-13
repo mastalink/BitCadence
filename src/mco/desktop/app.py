@@ -57,7 +57,8 @@ class DesktopApp:
         ttk.Button(toolbar, text="Open console", command=lambda: webbrowser.open(controller.url + "/console")).pack(side="right")
         self.status = tk.StringVar(value="Checking local processes…")
         ttk.Label(frame, textvariable=self.status).pack(anchor="w", pady=12)
-        self.table = ttk.Treeview(frame, columns=("state", "pid", "error"), height=8)
+        self.table = ttk.Treeview(frame, columns=("state", "pid", "error"), height=8, selectmode="browse")
+        self.table.bind("<<TreeviewSelect>>", self.update_selection_actions)
         self.table.heading("#0", text="Component")
         self.table.column("#0", width=180)
         for column, title, width in (("state", "Status", 165), ("pid", "Process", 115), ("error", "Last error", 330)):
@@ -66,21 +67,25 @@ class DesktopApp:
         self.table.pack(fill="x")
         actions = ttk.Frame(frame)
         actions.pack(fill="x", pady=10)
+        self.selected_buttons = []
         for label, action in (("Start selected", "start"), ("Stop selected", "stop"), ("Restart selected", "restart")):
             button = ttk.Button(actions, text=label, command=lambda op=action: self.selected_action(op))
             button.pack(side="left", padx=(0, 6))
             self.action_buttons.append(button)
+            self.selected_buttons.append(button)
+            button.state(["disabled"])
         ttk.Button(actions, text="Fleet settings", command=self.edit_fleet).pack(side="right")
-        button = ttk.Button(actions, text="Reload settings", command=lambda: self.submit(controller.reload))
+        button = ttk.Button(actions, text="Apply fleet changes…", command=self.review_reload)
         button.pack(side="right", padx=6)
         self.action_buttons.append(button)
-        migration = ttk.Button(frame, text="Move workers into app", command=lambda: self.submit(controller.take_control))
+        migration = ttk.Button(frame, text="Move workers into app…", command=self.review_handoff)
         migration.pack(anchor="w", pady=(0, 8))
         self.action_buttons.append(migration)
         ttk.Label(frame, text="Live logs • select a component to filter").pack(anchor="w")
         self.log = tk.Text(frame, height=12, background="#122238", foreground="#dce8f4", font=("Consolas", 9), state="disabled", wrap="word")
         self.log.pack(fill="both", expand=True, pady=(6, 10))
-        ttk.Label(frame, text="Closing this window keeps BitCadence in the tray. Exit stops processes started by this app.").pack(anchor="w")
+        ttk.Label(frame, text="Stop all also stops matching external components and disables their scheduled tasks.").pack(anchor="w")
+        ttk.Label(frame, text="Closing keeps the app in the tray when available. Exit stops only processes started by this app.").pack(anchor="w")
         self.tray = None
         try:
             import pystray
@@ -100,6 +105,45 @@ class DesktopApp:
     def restart_all(self):
         self.controller.stop_all()
         self.controller.start_all()
+
+    def update_selection_actions(self, _event=None):
+        enabled = bool(self.table.selection()) and not self.busy and not self.closing
+        for button in self.selected_buttons:
+            button.state(["!disabled"] if enabled else ["disabled"])
+
+    def review_handoff(self):
+        if self.busy or self.closing:
+            return
+        try:
+            plan = self.controller.preview_handoff()
+        except Exception as exc:
+            messagebox.showerror("Cannot review handoff", str(exc), parent=self.root)
+            return
+        components = "\n".join(f"• {item['name']}: {item['state']} (processes: {', '.join(item['pids']) or 'none'})"
+                               for item in plan['components'])
+        tasks = "\n".join("• " + task for task in plan['tasks']) or "None enabled."
+        message = ("Move and restart workers?\n\nThis disables the recurring tasks below, stops the configured component trees "
+                   "(including matching external processes), then starts them under this app. Active work may be interrupted. "
+                   "Wait for current jobs to finish before proceeding.\n\nComponents:\n" + components +
+                   "\n\nScheduled tasks to disable:\n" + tasks + "\n\nNothing has changed yet. Scope is checked again when applied.")
+        if messagebox.askokcancel("Move and restart workers", message, icon="warning", parent=self.root):
+            self.submit(self.controller.take_control)
+
+    def review_reload(self):
+        if self.busy or self.closing:
+            return
+        try:
+            plan = self.controller.preview_reload()
+        except Exception as exc:
+            messagebox.showerror("Cannot review fleet changes", str(exc), parent=self.root)
+            return
+        message = ("Apply fleet changes?\n\nRemoved and changed workers are stopped, including matching external processes. "
+                   "Matching scheduled tasks may be disabled. Added workers are configured but not started.\n\n" +
+                   "\n".join(f"{label}: {', '.join(plan[key]) or 'none'}" for key, label in
+                             (("removed", "Remove and stop"), ("changed", "Update and stop"), ("added", "Add"))) +
+                   "\n\nNothing has changed yet. The fleet file is read again when applied.")
+        if messagebox.askokcancel("Apply fleet changes", message, icon="warning", parent=self.root):
+            self.submit(self.controller.reload)
 
     def edit_fleet(self):
         path = self.controller.fleet_path
@@ -188,6 +232,7 @@ class DesktopApp:
                 self.busy = False
                 for button in self.action_buttons:
                     button.state(["!disabled"])
+                self.update_selection_actions()
                 if kind == "error":
                     self.status.set(value)
                     # A modal dialog blocks this pump - start requests, tray
@@ -204,6 +249,7 @@ class DesktopApp:
                         self.table.item(name, values=values)
                     else:
                         self.table.insert("", "end", iid=name, text=name, values=values)
+                self.update_selection_actions()
                 if not self.busy:
                     self.status.set(f"Gateway {'ready' if ready else 'offline or not ready'} • {self.controller.url}")
                 selected = self.table.selection()

@@ -11,6 +11,7 @@
 <h3 id="the-easy-way-the-schedules-page">The easy way: the Schedules page</h3>
 <p>In the console, click <strong>Schedules</strong>. Each saved schedule is a card with its name, when it runs (for example <em>Every day at 2:00 AM</em>), the next run, and an <strong>On</strong> switch. To add one, use <strong>New schedule</strong>: choose what should run, how often (<strong>Every day</strong>, <strong>Every weekday</strong>, <strong>Certain days</strong> or <strong>Every hour</strong>) and the time. The sentence at the bottom shows exactly what you are saving. See <a href="Schedules.html">Schedules</a>. To make something repeat straight from a request, use <strong>Make it repeat</strong> on <a href="Ask.html">Ask for something</a>.</p>
 <p><img src="img/23-console-schedules.png" alt="Schedules" loading="lazy" decoding="async" /></p>
+<p>The current form also exposes <strong>Time zone (IANA)</strong>, initially detected from the browser. Review the validated zone and next date/time/offset before Save. Invalid/stale previews disable saving. Existing schedules and legacy CLI/Ask-repeat defaults are not migrated; inspect their stored server-default zone separately.</p>
 <p>The rest of this page covers the file behind it, for launchers, cron and loops.</p>
 <h3 id="1-initialize-scheduling-configuration">1. Initialize Scheduling Configuration</h3>
 <p>Generate the default schedules file in your user home:</p>

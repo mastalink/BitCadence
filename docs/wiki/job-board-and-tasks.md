@@ -8,19 +8,19 @@ Submit new tasks to helper dropboxes, inspect real-time queue states, examine ta
 ## Step-by-Step Instructions
 
 ### 1. Open the Job Board
-In the left menu, click **Job Board**. Its heading reads **All work**.
+In the left menu, click **Job Board**. Its heading has the same name in both copy tones. The coverage sentence states the fetched window, at most 200 latest jobs; search and counts apply to that window.
 
 ![Job Board Table View](img/04-console-job-board.png)
 
 ### 2. Filter and Search Tasks
 1. Use the tabs at the top to focus on one kind of work. Each shows a count:
    - **All**
-   - **Active:** picked up by a helper and running.
+   - **Active:** pending, leased or in progress.
    - **Needs approval:** paused at a human gate.
    - **Waiting:** waiting for an earlier step.
    - **Done**
-   - **Problems:** failed or rejected.
-2. Type in **Search jobs** to filter, pick a role from **All roles**, or change the sort order (the default is **Priority, then oldest**).
+   - **Problems:** failed, rejected, halted or cancelled.
+2. Type in **Search loaded jobs** to filter the fetched window, pick **All roles**, or change sort (default **Priority, then oldest**). Native job-title/sort buttons and the sort dropdown support keyboard operation.
 
 ### 3. Creating a New Job
 For most work, [Ask for something](Ask.md) is easier. To drop one job on the board yourself:
@@ -35,10 +35,10 @@ For most work, [Ask for something](Ask.md) is easier. To drop one job on the boa
 
 ![New Job Creation Composer](img/14-job-create-modal.png)
 
-3. Click **Create job**. The task appears on the Job Board.
+3. Click **Create job**. Submission is guarded while pending; an error retains the open form's values. Verify the actual created job. Dismissing an unsaved form does not save a persistent draft.
 
 ### 4. Inspecting Job Details & History
-Click any job row. The job panel slides in from the right:
+Choose a job title/open control. The panel can fetch that exact job ID outside the board's latest window:
 - **Header:** the status word and the job title.
 - **Change this job:** the actions that make sense for its state (see below).
 - **Assigned to / Requested by / Created / Job ID.**
@@ -50,9 +50,11 @@ Click any job row. The job panel slides in from the right:
 Under **Change this job**, depending on the job's state:
 - **Approve / Reject:** when the job needs your OK. See [Approvals](Approvals.md).
 - **Retry:** puts a failed or rejected job back in line.
-- **Reassign…:** copies the job to a different role and archives the original.
+- **Reassign…:** for failed/rejected/cancelled/halted attempts, creates replacement work for a selected role. Active work must be cancelled first; completed work is ineligible. Inspect the returned replacement identity/link.
 - **Call it off…:** stops an in-flight or waiting job.
-- **Archive / Unarchive:** hides finished work without deleting its history.
+- **Archive:** batch action for eligible finished work. Unarchive is available through the CLI; this console has no matching unarchive button.
+
+Batch requests include only eligible visible selected jobs. Results show succeeded/failed/skipped with reasons; failures stay selected and results survive navigation in this session. Cancel a reason prompt to submit nothing. Failed individual actions keep their input while the editor remains open. An accepted request is not proof of execution completion. See [complete controls](gui-reference.md#batch-controls).
 
 ---
 

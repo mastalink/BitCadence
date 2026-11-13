@@ -9,15 +9,15 @@
 <hr />
 <h2 id="step-by-step-instructions">Step-by-Step Instructions</h2>
 <h3 id="1-open-settings">1. Open Settings</h3>
-<p>Click <strong>Settings</strong> at the bottom of the left menu. The top of the page has the everyday cards: <strong>Pause everything</strong>, <strong>Tell me on my phone</strong> and <strong>Memory</strong>. Everything else is under <strong>Show advanced</strong> (see <a href="Settings.html">Settings</a>).</p>
+<p>Click <strong>Settings</strong>. Disconnected connection fields appear directly; once connected the everyday cards are <strong>Stop work</strong>, <strong>Tell me on my phone</strong> and <strong>Memory</strong>. Expand <strong>Server administration</strong> for specialist fields (see <a href="Settings.html">Settings</a>). Older screenshots may show previous labels.</p>
 <p><img src="img/02-console-settings.png" alt="Settings Panel" loading="lazy" decoding="async" /></p>
 <h3 id="2-advanced-mode">2. Advanced mode</h3>
-<p>Under <strong>Show advanced → Experience</strong>, <strong>Advanced mode</strong> shows the technical layer: raw IDs, payloads, retry budgets and YAML. Leave it off for the plain wording used on every page of this wiki. The <strong>Advanced</strong> switch in the top bar does the same thing.</p>
+<p>Under <strong>Server administration → Experience</strong>, <strong>Technical details</strong> shows IDs, payloads and retry fields. The same topbar switch changes only display, never permissions. Use <strong>Administration</strong> to discover helper credentials and the retained specialist dashboard screens.</p>
 <h3 id="3-gateway-controls">3. Gateway controls</h3>
-<p>Under <strong>Show advanced → Gateway controls</strong>: stop work, approver roles, always-gated roles, the escalation connector, the default job board sort order, ntfy notifications, how long before a helper counts as offline, and the two Drumline memory switches. Click <strong>Save gateway settings</strong> to apply them.</p>
+<p>Under <strong>Server administration → Gateway controls</strong>, edit operational fields and metadata choices, then <strong>Save gateway settings</strong>. Only changed fields are submitted. A stop request confirms its effect. <strong>Stop work… → Stop work now</strong> halts active attempts and pauses intake; Resume permits new work but does not retry halted jobs. Cancel changes nothing.</p>
 <h3 id="4-connectors-and-tenancy">4. Connectors and tenancy</h3>
 <ul>
-<li><strong>Connectors</strong> holds the ServiceNow and Dynatrace connection details, each with <strong>Test connection</strong>. Passwords and tokens show as <code>not set</code> or are masked, and are stored encrypted.</li>
+<li><strong>Connectors</strong> holds ServiceNow/Dynatrace fields. Choose <strong>Save connectors</strong>, then <strong>Test connection</strong>. Unsaved edits invalidate prior tests and disable import availability. A successful current test offers <strong>Import now</strong>, which can create/update work. Blank secret fields preserve saved secrets; no import dry-run is provided.</li>
 <li><strong>Tenancy</strong> lists the organizations that keep teams' jobs and memory separate. The edition decides which of these you have: Core covers the job board, governance, workflows, Drumline memory, console and MCP server; Team adds shared gateway, multi-tenant orgs and RBAC; Enterprise adds connectors, SSO and audit export. Run <code>mco edition</code> to see yours.</li>
 </ul>
 <hr />
@@ -42,7 +42,7 @@ mco doctor
 <h2 id="what-youll-see">What You'll See</h2>
 <ul>
 <li><strong>Automatic Secret Encryption:</strong> Whenever you set a sensitive key (such as <code>ANTHROPIC_API_KEY</code> or <code>SERVICENOW_TOKEN</code>), BitCadence writes <code>encrypted_in_secret_store</code> to <code>.env</code> and encrypts the real secret inside <code>secrets.enc</code>.</li>
-<li><strong>Hot Reloading:</strong> Configuration changes made via the settings API take effect immediately in the running gateway process.</li>
+<li><strong>Apply timing:</strong> The API applies supported settings and records changes. Respect field-specific restart requirements, such as structured logging; a saved setting is not proof of completed work.</li>
 </ul>
 <hr />
 <h2 id="if-it-goes-wrong">If It Goes Wrong</h2>

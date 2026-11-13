@@ -12,17 +12,14 @@ Settings
 Pause or resume with `bitcadence pause` / `bitcadence resume`.
 For people who like details: bitcadence settings --show-advanced
 </code></pre>
-<p>Everyday things use plain labels: <strong>Pause everything</strong> (helpers stop taking new
-work; jobs in progress finish) and <strong>Tell me on my phone</strong>. Memory lives under
-Drumline in the menu.</p>
+<p>The CLI retains its existing “Pause everything” wording. The browser uses <strong>Stop work…</strong>: review its effect, then <strong>Stop work now</strong> to halt active attempts and pause new work, or <strong>Cancel</strong> to change nothing. <strong>Resume</strong> allows new work; halted jobs still need Retry. External effects already performed are not undone. <strong>Tell me on my phone</strong> reports notification status. Memory lives under Drumline.</p>
 <h2 id="show-advanced">Show advanced</h2>
-<p>Addresses, ports and sign-in tokens appear only here. In the console, open
-<strong>Show advanced</strong> (the connection, the raw gateway settings and connectors). In a
-terminal:</p>
+<p>In the current browser, <strong>Connect</strong> opens directly visible connection fields when disconnected. Once connected, <strong>Settings → Server administration</strong> reveals Connection, Gateway controls and Connectors. <strong>Technical details</strong> in the topbar/Experience controls displayed IDs, payloads and retry fields; it does not grant permissions. The old Show advanced browser label is retained here as a historical heading. In a terminal:</p>
 <pre><code>bitcadence settings --show-advanced     # also: --all
 </code></pre>
 <p>adds where BitCadence listens and this computer's sign-in, always masked as
 <code>mco_tok_...1a2b</code>, followed by every raw setting. Reading or changing one setting
 by name still works exactly as before: <code>mco settings KEY</code> and <code>mco settings KEY VALUE</code>.</p>
+<p>For agent credentials and specialist model/workflow/server screens, use <strong>Administration</strong>. See the <a href="gui-reference.html#administration">full GUI instructions</a>. These instructions describe source/fixture-tested behavior; they do not assert an update to your running app.</p>
 </article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#show-advanced">Show advanced</a></aside></div>
 <dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

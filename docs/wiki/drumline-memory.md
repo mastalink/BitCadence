@@ -14,12 +14,12 @@ In the left menu, click **Drumline**. The **Context** tab is the memory.
 
 ### 2. Searching Collective Memory
 1. In the search box, enter keywords or concepts (e.g., *"auth token"*, *"flaky test"*, or *"postgres timeout"*).
-2. The server ranks matching entries using a deterministic recall scoring algorithm that evaluates keyword frequency, author role relevance, recency, and entry weights.
+2. The server ranks results; the console requests up to 25 entries and states that limit. Search/tags apply to this recall window; an empty result does not establish that no memory exists.
 3. Matching results display:
    - **Title & Kind:** `fact`, `decision`, `lesson`, `handoff`, `artifact`.
    - **Author:** The agent instance or human operator that recorded it.
    - **Snippet:** Summary content preview.
-   - **Score Badge:** Semantic relevance match percentage.
+   - **Provenance:** author, source job and tags; Technical details can show recall weight. The UI does not claim a semantic relevance percentage.
 
 ### 3. Inspecting Memory Entries
 Click on any memory row. The **Memory Detail Drawer** slides open:

@@ -199,6 +199,20 @@ def plan(frequency: str, time_text: str = "", days: Optional[List[int]] = None) 
     return {"cron": cron, "words": describe_cron(cron)}
 
 
+def preview_schedule(cron: str, timezone_name: Optional[str] = None, *, now: Optional[datetime] = None) -> dict:
+    """Validate the selected zone and preview with the existing scheduler; no writes."""
+    zone = timezone_name if timezone_name is not None else detect_timezone()
+    # Restrict this value before it can be interpolated into a YAML entry.
+    if not isinstance(zone, str) or not re.fullmatch(r"[A-Za-z0-9_+\-]+(?:/[A-Za-z0-9_+\-]+)*", zone) or len(zone) > 128:
+        raise ScheduleWordsError("Choose a valid IANA time zone, such as America/New_York or UTC.")
+    try:
+        when = scheduler.next_cron_time(scheduler.parse_cron(cron), now or datetime.now(timezone.utc), zone)
+    except scheduler.ScheduleConfigError as exc:
+        raise ScheduleWordsError(f"I couldn't use time zone {zone!r}. Choose an IANA time zone such as America/New_York or UTC.") from exc
+    return {"timezone": zone, "next_run": when.isoformat(),
+            "next_words": when.strftime("%Y-%m-%d %H:%M %Z (UTC%z)")}
+
+
 # ── reading the file ────────────────────────────────────────────────────────
 def next_run_words(schedule: scheduler.Schedule, state=None, now: Optional[datetime] = None) -> str:
     now = now or datetime.now(timezone.utc)
@@ -278,7 +292,10 @@ def add_schedule(launcher: str, cron: str, *, timezone_name: Optional[str] = Non
         known = ", ".join(sorted(n for n, l in launchers.items() if not l.is_local)) or "nothing yet"
         raise ScheduleWordsError(f"I don't know {launcher!r}. I can schedule: {known}.")
     scheduler.parse_cron(cron)  # last guard before anything touches the file
-    zone = timezone_name or detect_timezone()
+    # Legacy save clients use a blank zone for the gateway default. The new
+    # explicit-zone preview remains strict so its visible choice is truthful.
+    preview = preview_schedule(cron, timezone_name or None)
+    zone = preview["timezone"]
     base = _slug(launcher)
     name, n = base, 2
     while name in schedules:
@@ -299,7 +316,7 @@ def add_schedule(launcher: str, cron: str, *, timezone_name: Optional[str] = Non
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(new, encoding="utf-8")
     os.replace(tmp, path)
-    return {"id": name, "words": describe_cron(cron)}
+    return {"id": name, "words": describe_cron(cron), **preview}
 
 
 def set_enabled(name: str, on: bool) -> None:

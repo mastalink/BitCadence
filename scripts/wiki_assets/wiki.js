@@ -3,6 +3,7 @@ const dialog=document.getElementById('search-dialog');
 const input=document.getElementById('search');
 const results=document.getElementById('search-results');
 const status=document.getElementById('search-status');
+dialog.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();dialog.close()}});
 const base=new URL('.',document.currentScript.src);
 let index=null,loading=null;
 function node(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}

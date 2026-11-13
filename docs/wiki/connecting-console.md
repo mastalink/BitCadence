@@ -15,7 +15,7 @@ http://127.0.0.1:18789/console
 When first opened, the console loads in **Demo mode — simulated data**. The bottom of the left menu says **Demo · simulated data**: every job, helper and event shown is a simulation, so you can explore without running real work.
 
 ### 2. Open Connection Settings
-Click **Settings** in the left menu, then open **Show advanced** at the bottom of the page. The connection form is inside it.
+Choose the disconnected shell's **Connect** button or **Settings**. Connection fields are directly visible while disconnected. When already connected, they appear under **Server administration**.
 
 ![Console Settings Connection Panel](img/02-console-settings.png)
 
@@ -23,16 +23,16 @@ Click **Settings** in the left menu, then open **Show advanced** at the bottom o
 In the **Connection** section:
 1. **Gateway URL:** Ensure it is set to `http://127.0.0.1:18789` (already populated by default).
 2. **Agent token:** Paste the operator access token generated during installation (`Ctrl+V`). The token begins with `mco_tok_`.
-   - *Where to find your token:* Look at the server terminal window, or open `~/.mco/.env` in Notepad and copy the value of `MCO_LOCAL_TOKEN`.
+   - Use your existing authorized token from setup. Secrets may be encrypted; do not copy an `encrypted_in_secret_store` marker as a token or expose the secret in a URL.
 
 ### 4. Click Connect
 Click the **Connect** button.
 - The bottom of the left menu changes from **Demo · simulated data** to **Live**, and a toast says your helpers are ready.
-- The connection parameters are stored safely in your browser's `localStorage` (`bitcadence_conn`), meaning you will not have to re-enter them on subsequent visits.
+- Connection parameters are stored in this browser's `localStorage` (`bitcadence_conn`) for later visits. Browser storage is a credential location, not a server-side grant of authority.
 
 ### 5. Returning to Demo Mode (Optional)
 If you ever want to return to sandbox exploration with mock data:
-1. In **Settings → Show advanced → Connection**, click **Disconnect**.
+1. In **Settings → Server administration → Connection**, click **Disconnect**.
 2. The UI instantly reverts to simulated state, allowing you to click all controls safely.
 
 ---

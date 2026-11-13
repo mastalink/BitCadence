@@ -4,6 +4,8 @@ Open `/console` and choose **Connect an AI**, or run `bitcadence connect` in a
 terminal. Both do the same thing: find the app on this computer and add
 BitCadence to its connection settings. You never edit a file.
 
+In the browser, the target is the **gateway computer**, whose host is shown on the page. A remote browser does not configure apps on its own laptop. Send a test checks the configuration/executable path; it does not prove a completed live MCP/job interaction.
+
 ![Connect an AI](img/22-console-connect-ai.png)
 
 The screenshot is from a computer with none of these apps installed, so every card says **Not found**. On your computer, a card for an app that is installed has a **Connect** button you can tap.

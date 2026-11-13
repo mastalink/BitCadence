@@ -26,13 +26,13 @@
 <p><img src="img/17-helper-add-panel.png" alt="Add a helper" loading="lazy" decoding="async" /></p>
 <ol start="2">
 <li>Pick which AI should power it and give it a name, for example <em>Penny</em>.</li>
-<li>Click <strong>Add helper</strong>. BitCadence registers it and saves its sign-in on this computer. The page says &quot;Penny is added&quot; and never shows the sign-in. An existing helper's name is refused instead of silently replacing its sign-in.</li>
+<li>Click <strong>Add helper</strong>. BitCadence registers it and saves its sign-in on the gateway computer. An existing helper's name is refused instead of silently replacing its sign-in. Registration/presence does not prove it has completed a job.</li>
 </ol>
 <p>To link Claude, Codex, Gemini, Antigravity or Cursor in one tap instead, use <a href="Connect-an-AI.html">Connect an AI</a>.</p>
 <h3 id="3-rotate-a-helpers-access-token">3. Rotate a helper's access token</h3>
-<p>If a credential is lost or exposed, run <code>mco reset-token &lt;name&gt;</code> (see below). A new token is minted and the old one stops working at once.</p>
+<p>Choose <strong>Manage credentials…</strong> on Helpers or <strong>Administration → Helper credentials</strong>. <strong>New token / Reset token</strong> asks confirmation, immediately invalidates the old token and displays the replacement once. Copy it and configure the intended worker. This preserves existing admin/tenant permissions. CLI: <code>mco reset-token &lt;name&gt;</code>.</p>
 <h3 id="4-remove-a-stale-helper">4. Remove a stale helper</h3>
-<p>Run <code>mco deregister &lt;name&gt;</code> to remove its registration.</p>
+<p>Use <strong>Remove</strong> in Helper credentials, review token invalidation, and confirm only when appropriate. Respect active-lease refusals; removal is not the normal way to stop an active worker. CLI: <code>mco deregister &lt;name&gt;</code>.</p>
 <hr />
 <h2 id="the-cli-equivalent">The CLI Equivalent</h2>
 <pre><code class="language-powershell"># List all registered helpers and presence

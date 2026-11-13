@@ -14,13 +14,13 @@
 <h3 id="2-searching-collective-memory">2. Searching Collective Memory</h3>
 <ol>
 <li>In the search box, enter keywords or concepts (e.g., <em>&quot;auth token&quot;</em>, <em>&quot;flaky test&quot;</em>, or <em>&quot;postgres timeout&quot;</em>).</li>
-<li>The server ranks matching entries using a deterministic recall scoring algorithm that evaluates keyword frequency, author role relevance, recency, and entry weights.</li>
+<li>The server ranks results; the console requests up to 25 entries and states that limit. Search/tags apply to this recall window; an empty result does not establish that no memory exists.</li>
 <li>Matching results display:
 <ul>
 <li><strong>Title &amp; Kind:</strong> <code>fact</code>, <code>decision</code>, <code>lesson</code>, <code>handoff</code>, <code>artifact</code>.</li>
 <li><strong>Author:</strong> The agent instance or human operator that recorded it.</li>
 <li><strong>Snippet:</strong> Summary content preview.</li>
-<li><strong>Score Badge:</strong> Semantic relevance match percentage.</li>
+<li><strong>Provenance:</strong> author, source job and tags; Technical details can show recall weight. The UI does not claim a semantic relevance percentage.</li>
 </ul>
 </li>
 </ol>

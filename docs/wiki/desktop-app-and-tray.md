@@ -172,6 +172,10 @@ In the Desktop Control window:
 2. The bottom log viewer instantly filters to show the last 100 lines of output for that selected component.
 3. Deselecting rows returns to the unified log stream.
 
+Selection now permits one component. Start/Stop/Restart selected disable without a selection or while busy. External workers retain their original logs; an empty app log is not evidence of no external work. Readiness alone does not prove worker delivery.
+
+**Apply fleet changes…** previews added/changed/removed names before reconciliation. Cancel changes nothing. Applying can stop changed/removed components and disable matching tasks; added definitions are not automatically started. **Move workers into app…** previews states/PIDs and enabled tasks before the existing disable/stop/restart handoff. Do this between jobs with appropriate authorization; the preview is not a live lease inspection. **Stop all** can stop exact matching external components and disable their tasks; **Exit** stops only app-owned children.
+
 ---
 
 ### 7. Updating BitCadence
@@ -182,7 +186,7 @@ The setup script includes automated upstream update checks:
    ```powershell
    git pull --ff-only origin main
    ```
-2. In the Desktop Control window, click **Reload settings** to pick up configuration changes, or click **Restart all** to restart services with updated code.
+2. In Desktop Control, review **Apply fleet changes…** for configuration changes. **Restart all** stops then starts components, potentially interrupting work; verify current ownership and choose an appropriate between-job window before using it. Merely updating source/docs does not update already running processes.
 
 #### Updating Package Installations:
 If installed via pip:
@@ -201,7 +205,7 @@ To cleanly remove BitCadence from your computer:
    powershell -ExecutionPolicy Bypass -File scripts\desktop_autostart.ps1 -Remove
    ```
 3. **Remove Shortcuts:** Delete `BitCadence.lnk` from your Desktop and Start Menu Programs folders.
-4. **Clean up Configuration & Logs:** Delete the `~/.mco` directory (`Remove-Item -Recurse ~/.mco`).
+4. **Preserve configuration and evidence:** Keep `~/.mco` unless intentionally retiring its jobs, schedules, credentials and history under a separate data-removal plan. Removing the app/shortcut does not require erasing this directory.
 5. **Delete Repository / Environment:** Delete the BitCadence installation folder.
 
 ---
@@ -255,4 +259,4 @@ Access the UI via browser at `http://127.0.0.1:18789/console`.
   ```powershell
   Get-NetTCPConnection -LocalPort 18789 -ErrorAction SilentlyContinue | Select-Object OwningProcess
   ```
-  Terminate the lingering process or change the port in Desktop settings.
+  Identify the owning component before stopping anything. The GUI has no port editor; use the supported launcher `--port` configuration if a different local port is intended. Do not kill unrelated Python processes as a readiness repair.

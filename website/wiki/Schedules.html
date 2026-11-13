@@ -9,8 +9,8 @@ terminal. Both show each schedule as a sentence, such as <strong>Every weekday a
 2:00 AM</strong>, with when it runs next and an On/Off switch. No file is ever shown.</p>
 <h2 id="add-one">Add one</h2>
 <p>Pick what should run, how often (Every day, Every weekday, Certain days, Every
-hour) and the time. The sentence you will get is shown before you save. Your time
-zone is detected from your computer.</p>
+hour) and the time. The browser's <strong>Time zone (IANA)</strong> starts with its detected zone and is editable. Review the validated zone and next occurrence including date/offset; Save stays disabled until the current choices have a valid matching preview. Unknown zones change nothing. For example, choose <code>America/New_York</code> or <code>UTC</code>.</p>
+<p>Existing schedules are not migrated by this form. Legacy clients/CLI defaults and Ask repeat retain their existing server-default path; inspect the saved zone and next run on remote gateways. This uses the existing scheduler, including its existing DST behavior.</p>
 <pre><code>bitcadence schedule
 bitcadence schedule add
 bitcadence schedule add --what &quot;Nightly dependency audit&quot; --when &quot;every weekday at 2 AM&quot;

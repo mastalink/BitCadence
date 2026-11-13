@@ -73,7 +73,7 @@ function SectionTitle({ children, action }) {
   );
 }
 
-function Btn({ children, kind = "default", small, onClick, disabled, style }) {
+function Btn({ children, kind = "default", small, onClick, disabled, style, ...rest }) {
   const base = {
     border: "1px solid var(--border-strong)", background: "var(--surface)", color: "var(--text)",
     borderRadius: "var(--radius-s)", padding: small ? "5px 10px" : "7px 14px",
@@ -87,7 +87,7 @@ function Btn({ children, kind = "default", small, onClick, disabled, style }) {
     ghost: { background: "transparent", borderColor: "transparent", boxShadow: "none", color: "var(--text-2)" },
   };
   return (
-    <button disabled={disabled} onClick={onClick}
+    <button type="button" {...rest} disabled={disabled} onClick={onClick}
       style={Object.assign(base, kinds[kind] || {}, style)}
       onMouseEnter={(e) => { if (!disabled && (kind === "default" || kind === "ghost")) e.currentTarget.style.background = "var(--surface-2)"; }}
       onMouseLeave={(e) => { if (kind === "default") e.currentTarget.style.background = "var(--surface)"; if (kind === "ghost") e.currentTarget.style.background = "transparent"; }}
@@ -141,12 +141,50 @@ function EmptyState({ icon, title, body }) {
 }
 
 // ----- Drawer -----
-function Drawer({ open, onClose, children, width = 480 }) {
+const DRAWER_STACK = [];
+let DRAWER_ORIGINAL_OVERFLOW = "";
+function Drawer({ open, onClose, children, width = 480, title = "Details" }) {
+  const panel = useRef(null);
+  const close = useRef(onClose); close.current = onClose;
+  const returnFocus = useRef(null);
+  // Capture before children mount: a child's autoFocus runs before this effect.
+  if (open && !panel.current) returnFocus.current = document.activeElement;
+  useEffect(() => {
+    if (!open) return;
+    const activePanel = panel.current;
+    if (!activePanel) return;
+    const previous = returnFocus.current;
+    if (!DRAWER_STACK.length) DRAWER_ORIGINAL_OVERFLOW = document.body.style.overflow;
+    DRAWER_STACK.push(activePanel);
+    document.body.style.overflow = "hidden";
+    const focusable = () => Array.from(panel.current ? panel.current.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]') : []).filter((el) => el.getClientRects().length);
+    const first = focusable()[0] || panel.current; if (first) first.focus();
+    function key(e) {
+      if (DRAWER_STACK[DRAWER_STACK.length - 1] !== activePanel) return;
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close.current(); }
+      if (e.key === "Tab") {
+        const items = focusable(); const start = items[0], end = items[items.length - 1];
+        if (!start) { e.preventDefault(); if (panel.current) panel.current.focus(); }
+        else if (e.shiftKey && (document.activeElement === start || document.activeElement === panel.current)) { e.preventDefault(); end.focus(); }
+        else if (!e.shiftKey && (document.activeElement === end || !panel.current.contains(document.activeElement))) { e.preventDefault(); start.focus(); }
+      }
+    }
+    document.addEventListener("keydown", key, true);
+    return () => {
+      document.removeEventListener("keydown", key, true);
+      const index = DRAWER_STACK.indexOf(activePanel); if (index >= 0) DRAWER_STACK.splice(index, 1);
+      document.body.style.overflow = DRAWER_STACK.length ? "hidden" : DRAWER_ORIGINAL_OVERFLOW;
+      const top = DRAWER_STACK[DRAWER_STACK.length - 1];
+      const restore = top && (!previous || !top.contains(previous))
+        ? top.querySelector('button:not([disabled]),a[href],input:not([disabled]),[tabindex="0"]') || top : previous;
+      if (restore && restore.isConnected && restore.focus) restore.focus();
+    };
+  }, [open]);
   if (!open) return null;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 60 }}>
-      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(23,23,28,0.28)" }}></div>
-      <div style={{
+      <div aria-hidden="true" onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(23,23,28,0.28)" }}></div>
+      <div ref={panel} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} style={{
         position: "absolute", top: 10, right: 10, bottom: 10, width, maxWidth: "calc(100vw - 40px)",
         background: "var(--surface)", borderRadius: "var(--radius-l)", border: "1px solid var(--border)",
         boxShadow: "var(--shadow-l)", display: "flex", flexDirection: "column", overflow: "hidden",
@@ -157,12 +195,19 @@ function Drawer({ open, onClose, children, width = 480 }) {
 }
 
 // ----- Toasts -----
+function notificationRecord(t) {
+  return { id: t.id || String(Date.now()) + Math.random(), kind: t.kind || "info", title: String(t.title || "Update"), body: String(t.body || "") };
+}
 function ToastHost() {
   const [toasts, setToasts] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
   useEffect(() => {
     return window.BitCadenceStore.onToast((t) => {
-      setToasts((prev) => [...prev.slice(-3), t]);
-      setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== t.id)), 4200);
+      const record = notificationRecord(t);
+      setToasts((prev) => [...prev.slice(-3), record]);
+      setHistory((prev) => [...prev.slice(-39), record]);
+      if (record.kind !== "err" && record.kind !== "approval") setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== record.id)), 6000);
     });
   }, []);
   const KIND = {
@@ -170,9 +215,9 @@ function ToastHost() {
     approval: { dot: "var(--st-approval-dot)" }, info: { dot: "var(--st-active-dot)" },
   };
   return (
-    <div style={{ position: "fixed", bottom: 18, right: 18, zIndex: 80, display: "flex", flexDirection: "column", gap: 8, width: 300 }}>
+    <><div style={{ position: "fixed", bottom: 18, right: 18, zIndex: 80, display: "flex", flexDirection: "column", gap: 8, width: "min(340px, calc(100vw - 36px))" }}>
       {toasts.map((t) => (
-        <div key={t.id} style={{
+        <div key={t.id} role={t.kind === "err" ? "alert" : "status"} style={{
           background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-m)",
           boxShadow: "var(--shadow-m)", padding: "10px 14px", display: "flex", gap: 10, alignItems: "flex-start",
           animation: "cadence-toast-in .2s ease-out",
@@ -180,11 +225,17 @@ function ToastHost() {
           <span style={{ width: 8, height: 8, borderRadius: 99, marginTop: 5, flex: "none", background: (KIND[t.kind] || KIND.info).dot }}></span>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 13 }}>{t.title}</div>
-            {t.body ? <div style={{ fontSize: 12.5, color: "var(--text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.body}</div> : null}
+            {t.body ? <div style={{ fontSize: 12.5, color: "var(--text-2)", overflowWrap: "anywhere", whiteSpace: "normal" }}>{t.body}</div> : null}
           </div>
+          <button type="button" aria-label={"Dismiss " + t.title} onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))} style={{ marginLeft: "auto", border: 0, background: "none", color: "var(--text-2)", cursor: "pointer" }}>×</button>
         </div>
       ))}
-    </div>
+      {history.length ? <button type="button" onClick={() => setShowHistory(true)} style={{ alignSelf: "flex-end", border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)", color: "var(--text-2)", padding: "6px 10px" }}>Recent notifications ({history.length})</button> : null}
+    </div><Drawer open={showHistory} title="Recent notifications" onClose={() => setShowHistory(false)}>
+      <div style={{ padding: 20, overflowY: "auto" }}><Btn onClick={() => setShowHistory(false)}>Close</Btn><h2>Recent notifications</h2><p>Latest 40 notifications in this session. Job History keeps the audited record.</p>
+        {[...history].reverse().map((t) => <section key={t.id} style={{ borderBottom: "1px solid var(--border)", padding: "12px 0", overflowWrap: "anywhere" }}><strong>{t.title}</strong><p>{t.body}</p></section>)}
+      </div>
+    </Drawer></>
   );
 }
 

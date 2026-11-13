@@ -28,7 +28,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>BitCadence Control Plane</title>
+<title>BitCadence Administration</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -107,7 +107,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
 <div id="lock">
   <div class="card">
     <div class="logo">&#129345;</div>
-    <h1>BitCadence Control Plane</h1>
+    <h1>BitCadence Administration</h1><a id="back-console" href="/console">Back to workspace</a>
     <p class="muted">Paste an agent bearer token to unlock.<br>Approver/admin tokens see everything; scoped tokens see what they may.</p>
     <input id="lock-token" type="password" placeholder="mco_tok_..." onkeydown="if(event.key==='Enter')unlock()">
     <button class="primary" style="width:100%" onclick="unlock()">Unlock</button>
@@ -234,12 +234,12 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
 </div>
 
 <div id="modal-bg" onclick="if(event.target===this)closeModal()">
-  <div id="modal"></div>
+  <div id="modal" role="dialog" aria-modal="true" aria-label="Administration details" tabindex="-1"></div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-let token = localStorage.getItem("mco_token") || "";
+let token = localStorage.getItem("mco_token") || consoleToken(localStorage.getItem("bitcadence_conn") || localStorage.getItem("baton_conn"), window.location.href);
 let SCOPES = ["admin","agents:manage","agents:read","context:read","context:write",
               "integrations:manage","integrations:read","jobs:approve","jobs:read","jobs:write"];
 let opsTimer = null;
@@ -251,7 +251,7 @@ function short(id) { return String(id ?? "").slice(0, 8); }
 function badge(s) { return `<span class="badge s-${esc(s)}">${esc(s)}</span>`; }
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, {
+  const res = await fetch(dashboardApiPath(path, window.location.href), {
     ...opts,
     headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json", ...(opts.headers || {}) },
   });
@@ -272,6 +272,7 @@ async function unlock() {
     $("lock").style.display = "none";
     $("shell").classList.add("on");
     startOps();
+    nav(dashboardView(window.location.hash), false);
   } catch (e) {
     $("lock-msg").textContent = e.status === 401 ? "Invalid token." : "Gateway error: " + e.message;
   }
@@ -284,7 +285,27 @@ function lockUp() {
 }
 
 /* ── navigation ──────────────────────────────────────────────── */
-function nav(view) {
+function dashboardView(hash) {
+  const view = String(hash || "").replace(/^#/, "");
+  return ["ops","agents","models","workflows","settings"].includes(view) ? view : "ops";
+}
+function consoleToken(raw, pageUrl) {
+  try {
+    const cfg = JSON.parse(raw || "null");
+    const page = new URL(pageUrl), gateway = new URL(cfg.url);
+    if (!["http:","https:"].includes(gateway.protocol) || gateway.username || gateway.password) return "";
+    if (page.origin !== gateway.origin || page.pathname.replace(/\/$/, "") !== gateway.pathname.replace(/\/+$/, "") + "/dashboard") return "";
+    return typeof cfg.token === "string" ? cfg.token : "";
+  } catch (e) { return ""; }
+}
+function dashboardApiPath(path, pageUrl) {
+  const prefix = new URL(pageUrl).pathname.replace(/\/dashboard\/?$/, "");
+  if (!path.startsWith("/api/")) throw new Error("Administration requests must target the gateway API.");
+  return prefix + path;
+}
+function nav(view, updateHash = true) {
+  view = dashboardView(view);
+  if (updateHash && window.location.hash !== "#" + view) window.location.hash = view;
   for (const v of ["ops","agents","models","workflows","settings"]) {
     $("view-" + v).classList.toggle("on", v === view);
     $("nav-" + v).classList.toggle("active", v === view);
@@ -293,6 +314,7 @@ function nav(view) {
   if (view === "models") loadModels();
   if (view === "settings") loadSettings();
 }
+window.addEventListener("hashchange", () => { if ($("shell").classList.contains("on")) nav(dashboardView(window.location.hash), false); });
 
 /* ── operations & multi-select & sorting ─────────────────────── */
 let selectedJobs = new Set();
@@ -436,6 +458,9 @@ async function abortActiveRun(runId) {
   }
 }
 
+function copyDiagnostics(button) {
+  navigator.clipboard.writeText(button.dataset.diagnostics || "").then(() => {button.textContent = "Copied";}).catch(() => {alert("Copy is unavailable. Select the shown details to copy them.");});
+}
 async function openLiveLook() {
   try {
     const a = await api("/api/score/autonomy");
@@ -459,7 +484,7 @@ async function openLiveLook() {
         <span class="muted">Autonomy State:</span> <b>${badge(a.status)}</b>
         <span class="muted">Conductor Sweep:</span> <span>${a.interval_seconds}s interval (${a.paused ? "PAUSED" : (a.configured ? "Running" : "Standby")})</span>
         <span class="muted">Live Repository:</span> <span>${a.live_repository_write ? '<span class="good">Enabled</span>' : '<span class="muted">Shadow / Read-Only</span>'}</span>
-        <span class="muted">Conductor State DB:</span> <span style="font-family:monospace; font-size:.78rem">${esc(a.database)}</span>
+        <span class="muted">Diagnostics:</span> <details><summary>Show technical details</summary><p>State database: <code>${esc(a.database)}</code></p><button type="button" data-diagnostics="${esc(JSON.stringify({database:a.database,status:a.status,interval_seconds:a.interval_seconds},null,2))}" onclick="copyDiagnostics(this)">Copy diagnostic details</button></details>
       </div>
       <div style="margin-bottom:1rem">
         <button onclick="triggerManualTick()">Trigger Sweep Now</button>
@@ -528,7 +553,11 @@ async function refreshOps() {
 
 async function decide(jobId, action) {
   let body = {};
-  if (action === "reject") body.reason = prompt("Reason for rejection?") || "";
+  if (action === "reject") {
+    const reason = prompt("Reason for rejection?");
+    if (reason === null) return;
+    body.reason = reason;
+  }
   try { await api(`/api/jobs/${jobId}/${action}`, { method: "POST", body: JSON.stringify(body) }); refreshOps(); }
   catch (e) { alert(action + " failed: " + e.message); }
 }
@@ -548,8 +577,28 @@ async function showAudit(jobId) {
 }
 
 /* ── modal helpers ───────────────────────────────────────────── */
-function openModal(html) { $("modal").innerHTML = html; $("modal-bg").classList.add("on"); }
-function closeModal() { $("modal-bg").classList.remove("on"); }
+let modalOpener = null;
+function modalKeys(event) {
+  if (event.key === "Escape") { event.preventDefault(); closeModal(); return; }
+  if (event.key !== "Tab") return;
+  const modal = $("modal");
+  const items = Array.from(modal.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')).filter(el => el.getClientRects().length);
+  if (!items.length) { event.preventDefault(); modal.focus(); }
+  else if (event.shiftKey && (document.activeElement === items[0] || document.activeElement === modal)) { event.preventDefault(); items[items.length - 1].focus(); }
+  else if (!event.shiftKey && (document.activeElement === items[items.length - 1] || !modal.contains(document.activeElement))) { event.preventDefault(); items[0].focus(); }
+}
+function openModal(html) {
+  if (!$("modal-bg").classList.contains("on")) modalOpener = document.activeElement;
+  $("modal").innerHTML = html; $("modal-bg").classList.add("on");
+  const heading = $("modal").querySelector("h2,h3");
+  $("modal").setAttribute("aria-label", heading ? heading.textContent : "Administration details");
+  const first = $("modal").querySelector('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled])');
+  (first || $("modal")).focus(); document.addEventListener("keydown", modalKeys, true);
+}
+function closeModal() {
+  $("modal-bg").classList.remove("on"); document.removeEventListener("keydown", modalKeys, true);
+  if (modalOpener && modalOpener.isConnected && modalOpener.focus) modalOpener.focus();
+}
 
 function connectHelp(instance, role, tok) {
   const origin = location.origin;
@@ -898,6 +947,8 @@ async function syncConn(name) {
 }
 
 /* ── boot ────────────────────────────────────────────────────── */
+const backConsole = document.getElementById("back-console");
+if (backConsole) backConsole.href = window.location.pathname.replace(/\/dashboard\/?$/, "/console");
 if (token) { $("lock-token").value = token; unlock(); }
 </script>
 </body>

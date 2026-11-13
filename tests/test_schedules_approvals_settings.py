@@ -383,7 +383,7 @@ def test_the_repair_edits_only_this_computers_account(tmp_path, monkeypatch):
     db = LocalStore(tmp_path / "board.db")
     for who in ("me", "someone-else"):
         db.table("agent_registry").insert({"instance_id": who, "role": "claude", "status": "offline",
-                                           "auth_token_hash": hash_token("tok-" + who)}).execute()
+                                           "auth_token_hash": hash_token("tok-" + who), "scopes": ["jobs:read"]}).execute()
     monkeypatch.setattr(approver, "_db", lambda: db)
     monkeypatch.setattr(approver, "_token", lambda: "tok-me")
     account = _real_own_account()
@@ -476,11 +476,10 @@ def test_console_schedules_page_follows_the_design_rules():
     page = _read("2ed3f6b1")
     mine = page.split("function SchedulesPage")[1].split("// ----- Settings")[0]
     for text in ("Pick a time like you would for an alarm.", "What should run?", "How often?",
-                 "At what time?", "New schedule", "Next run:", "detected from your computer"):
+                 "At what time?", "New schedule", "Next run:", "Time zone (IANA)"):
         assert text in mine
     assert "aria-pressed" in mine and "aria-live" in mine  # a word as well as a colour
-    for jargon in ("cron", "yaml", "json", "token"):
-        assert jargon not in mine.lower()
+    assert 'id="sc-zone"' in mine and 'timezone: zone' in mine
 
 
 def test_console_shows_no_raw_403_and_approvals_page_explains_it():
@@ -488,19 +487,19 @@ def test_console_shows_no_raw_403_and_approvals_page_explains_it():
     for action in ("Approve failed", "Reject failed"):
         assert f'toast("err", "{action}", plainFailure(e))' in store
     assert 'toast("err", "Approve failed", e.message)' not in store
-    assert "bc-approver-blocked" in store and "bc-approver-blocked" in approvals
+    assert "error.denialKind" in store and "Access denied" in store
     assert "You can't approve this yet." in approvals
-    assert "bitcadence fix" in approvals and 'role="alert"' in approvals
+    assert 'role="alert"' in approvals and "Ask your operator" in approvals
+    assert "one-key fix" not in approvals
 
 
 def test_console_settings_keep_tokens_ports_and_addresses_under_show_advanced():
     page = _read("2ed3f6b1")
     plain_part = page.split("function PlainSettings")[1].split("Object.assign(window")[0]
-    for text in ("Pause everything", "Tell me on my phone", "Memory", "Show advanced"):
+    for text in ("Stop work", "Tell me on my phone", "Memory", "Server administration"):
         assert text in plain_part
-    before_details = plain_part.split("<details")[0]
-    for jargon in ("token", "http", "127.0.0.1", "Gateway URL", "port"):
-        assert jargon not in before_details
+    assert '!live ? children : <details' in plain_part
+    assert "Halts active attempts" in plain_part
     settings_fn = page.split("function Settings(")[1].split("function PlainSettings")[0]
     assert 'tone === "plain" ? <PlainSettings>{body}</PlainSettings> : body' in settings_fn
     assert "Gateway URL" in settings_fn and "Agent token" in settings_fn  # still reachable, inside {body}

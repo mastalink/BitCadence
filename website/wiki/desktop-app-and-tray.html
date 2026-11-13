@@ -201,6 +201,8 @@ Start In: &lt;repo-root&gt;
 <li>The bottom log viewer instantly filters to show the last 100 lines of output for that selected component.</li>
 <li>Deselecting rows returns to the unified log stream.</li>
 </ol>
+<p>Selection now permits one component. Start/Stop/Restart selected disable without a selection or while busy. External workers retain their original logs; an empty app log is not evidence of no external work. Readiness alone does not prove worker delivery.</p>
+<p><strong>Apply fleet changes…</strong> previews added/changed/removed names before reconciliation. Cancel changes nothing. Applying can stop changed/removed components and disable matching tasks; added definitions are not automatically started. <strong>Move workers into app…</strong> previews states/PIDs and enabled tasks before the existing disable/stop/restart handoff. Do this between jobs with appropriate authorization; the preview is not a live lease inspection. <strong>Stop all</strong> can stop exact matching external components and disable their tasks; <strong>Exit</strong> stops only app-owned children.</p>
 <hr />
 <h3 id="7-updating-bitcadence">7. Updating BitCadence</h3>
 <h4 id="updating-source-installations">Updating Source Installations:</h4>
@@ -209,7 +211,7 @@ Start In: &lt;repo-root&gt;
 <li>Open PowerShell in the BitCadence directory:<pre><code class="language-powershell">git pull --ff-only origin main
 </code></pre>
 </li>
-<li>In the Desktop Control window, click <strong>Reload settings</strong> to pick up configuration changes, or click <strong>Restart all</strong> to restart services with updated code.</li>
+<li>In Desktop Control, review <strong>Apply fleet changes…</strong> for configuration changes. <strong>Restart all</strong> stops then starts components, potentially interrupting work; verify current ownership and choose an appropriate between-job window before using it. Merely updating source/docs does not update already running processes.</li>
 </ol>
 <h4 id="updating-package-installations">Updating Package Installations:</h4>
 <p>If installed via pip:</p>
@@ -224,7 +226,7 @@ Start In: &lt;repo-root&gt;
 </code></pre>
 </li>
 <li><strong>Remove Shortcuts:</strong> Delete <code>BitCadence.lnk</code> from your Desktop and Start Menu Programs folders.</li>
-<li><strong>Clean up Configuration &amp; Logs:</strong> Delete the <code>~/.mco</code> directory (<code>Remove-Item -Recurse ~/.mco</code>).</li>
+<li><strong>Preserve configuration and evidence:</strong> Keep <code>~/.mco</code> unless intentionally retiring its jobs, schedules, credentials and history under a separate data-removal plan. Removing the app/shortcut does not require erasing this directory.</li>
 <li><strong>Delete Repository / Environment:</strong> Delete the BitCadence installation folder.</li>
 </ol>
 <hr />
@@ -293,7 +295,7 @@ launchctl load ~/Library/LaunchAgents/com.bitcadence.gateway.plist
 <li><strong>Cause:</strong> Port 18789 is occupied by an orphaned process or external server.</li>
 <li><strong>Fix:</strong> Check what process is listening on port 18789:<pre><code class="language-powershell">Get-NetTCPConnection -LocalPort 18789 -ErrorAction SilentlyContinue | Select-Object OwningProcess
 </code></pre>
-Terminate the lingering process or change the port in Desktop settings.</li>
+Identify the owning component before stopping anything. The GUI has no port editor; use the supported launcher <code>--port</code> configuration if a different local port is intended. Do not kill unrelated Python processes as a readiness repair.</li>
 </ul>
 </article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#goal">Goal</a><a href="#architecture-overview">Architecture Overview</a><a href="#step-by-step-instructions">Step-by-Step Instructions</a><a href="#operating-system-compatibility-linux-macos-status">Operating System Compatibility: Linux &amp; macOS Status</a><a href="#if-it-goes-wrong">If It Goes Wrong</a></aside></div>
 <dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>
