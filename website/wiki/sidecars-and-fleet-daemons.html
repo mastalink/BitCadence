@@ -1,0 +1,345 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidecars &amp; Autonomous Fleet Daemons · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/sidecars-and-fleet-daemons.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="standing-score-grants.html">Standing Score grants (local authority store)</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html" aria-current="page">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="sidecars-autonomous-fleet-daemons">Sidecars &amp; Autonomous Fleet Daemons</h1>
+<h2 id="goal">Goal</h2>
+<p>Understand, install, operate, monitor, and troubleshoot BitCadence background sidecars and worker daemons, including the <code>claude-cio</code> Chief sidecar, declarative <code>fleet.toml</code> management via <code>mco fleet apply</code>, and generic elevated administration.</p>
+<hr />
+<h2 id="what-sidecars-are-in-plain-english">What Sidecars Are (In Plain English)</h2>
+<p>In human organizations, high-stakes decisions and dispatch cannot halt simply because an executive steps away from their desk. In BitCadence:</p>
+<ul>
+<li><strong>The Problem:</strong> An interactive AI agent session (such as <code>claude-desktop</code> or a developer's IDE session) only runs while the human operator has their computer unlocked and the desktop application running in the foreground. If the operator closes their laptop, locks Windows, or leaves for the evening, the fleet stops: pending approval gates stall, incoming workflow jobs sit unleased in the queue, and background tasks cannot advance.</li>
+<li><strong>The Solution (Sidecars):</strong> A <strong>sidecar</strong> is an always-on, headless background service that runs alongside the primary agent seat or system component. It acts as an autonomous deputy or event-driven waker:
+<ol>
+<li>It monitors incoming mail and job queues in SQLite/gateway memory.</li>
+<li>It evaluates strict, deterministic policy checks (e.g., verifying spend budgets, forbidden actions, or test requirements).</li>
+<li>When the primary interactive seat is offline, it can approve safe, pre-authorized routine actions or queue/escalate high-risk tasks to the human operator.</li>
+<li>When tasks addressed to specialized worker roles arrive, event-driven sidecars wake up the corresponding agent runtime on demand.</li>
+</ol>
+</li>
+</ul>
+<p>In BitCadence, sidecars do not bypass governance — they <strong>enforce</strong> governance 24/7 without requiring an open terminal window on your screen.</p>
+<hr />
+<h2 id="anatomy-of-the-fleet-wakers-runners-and-the-cio">Anatomy of the Fleet: Wakers, Runners, and the CIO</h2>
+<p>BitCadence distinguishes between three interrelated background concepts:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>How It Operates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Event Waker (<code>mco wake</code>)</strong></td>
+<td>The doorbell listener</td>
+<td>A lightweight process holding an event connection to the gateway. When a job addressed to its role/instance arrives, it spawns the heavy worker script.</td>
+</tr>
+<tr>
+<td><strong>Worker Runner (<code>scripts/workers/*</code>)</strong></td>
+<td>The task executor</td>
+<td>The actual shell/PowerShell script (or AI CLI like Codex, Claude, Grok, or Antigravity) that claims the job, checks out a git worktree, runs tests, and submits completion receipts.</td>
+</tr>
+<tr>
+<td><strong><code>claude-cio</code> Sidecar</strong></td>
+<td>The Chief deputy</td>
+<td>An always-on sidecar for the fleet's Chief seat. Governed by <code>ops/cio-sidecar-brief.md</code>, it evaluates mechanical policies via <code>mco cio check</code>, approves safe proposals when <code>claude-desktop</code> is offline, and escalates out-of-bounds requests.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="step-by-step-instructions">Step-by-Step Instructions</h2>
+<h3 id="1-declarative-fleet-configuration-fleettoml">1. Declarative Fleet Configuration (<code>fleet.toml</code>)</h3>
+<p>All background workers and sidecars are configured declaratively in <code>~/.mco/fleet.toml</code>. The system supervisor and <code>mco fleet apply</code> consult <strong>only</strong> this file.</p>
+<p>Sample configuration (<code>~/.mco/fleet.toml</code>):</p>
+<pre><code class="language-toml"># ============================================================================
+# BitCadence Fleet Configuration
+# ~/.mco/fleet.toml
+# ============================================================================
+
+[workers.claude-cio]
+role = &quot;chief&quot;
+instance = &quot;claude-cio&quot;
+mode = &quot;waker&quot;
+exec = &quot;python -m mco.orchestrator.cio_runner&quot;
+min_interval = 10
+poll_interval = 300
+background = true       # Installs as unattended Windows Task (S4U logon)
+
+[workers.codex-worker]
+role = &quot;codex&quot;
+instance = &quot;codex-beast&quot;
+mode = &quot;waker&quot;
+exec = &quot;C:/AI/BitCadence/scripts/workers/codex-worker-run.ps1&quot;
+min_interval = 10
+poll_interval = 1800
+background = false      # Runs during active interactive desktop session
+
+[workers.research-poller]
+role = &quot;claude&quot;
+instance = &quot;claude-research&quot;
+mode = &quot;poll&quot;           # Runs on a repeating timer rather than instant wake events
+exec = &quot;C:/AI/BitCadence/scripts/workers/claude-worker-run.ps1&quot;
+poll_interval = 900     # Runs every 15 minutes
+</code></pre>
+<h4 id="supported-fields">Supported Fields:</h4>
+<ul>
+<li><code>role</code>: The target mailbox role (<code>chief</code>, <code>codex</code>, <code>claude</code>, <code>antigravity</code>, <code>grok</code>).</li>
+<li><code>instance</code>: The unique instance ID of the worker.</li>
+<li><code>mode</code>:
+<ul>
+<li><code>waker</code>: Event-driven waker that triggers within seconds of job arrival.</li>
+<li><code>poll</code>: Fixed-interval polling loop.</li>
+<li><code>off</code>: Configured but disabled; any installed OS service will be uninstalled.</li>
+</ul>
+</li>
+<li><code>exec</code>: Absolute path or executable command line invoked when work arrives.</li>
+<li><code>min_interval</code>: Minimum seconds between executions (throttling debounce).</li>
+<li><code>poll_interval</code>: Fallback polling interval in seconds.</li>
+<li><code>background</code>: (<code>true</code>/<code>false</code>, default <code>false</code>). On Windows, setting to <code>true</code> installs the service with <code>LogonType = S4U</code>, allowing it to run unattended when the user is logged off. (Requires administrator privileges during installation).</li>
+</ul>
+<hr />
+<h3 id="2-applying-fleet-run-modes-mco-fleet-apply">2. Applying Fleet Run Modes (<code>mco fleet apply</code>)</h3>
+<p>To reconcile operating system services or scheduled tasks with your <code>fleet.toml</code>:</p>
+<pre><code class="language-powershell">mco fleet apply
+</code></pre>
+<p>What <code>mco fleet apply</code> does:</p>
+<ol>
+<li>Validates <code>~/.mco/fleet.toml</code> against schema and allowed fields.</li>
+<li>Checks for missing agent tokens in <code>~/.mco/tokens/&lt;instance&gt;.token</code>. If a token is missing, it prints an upfront warning:<pre><code>claude-cio: WARNING no token at ~/.mco/tokens/claude-cio.token - the waker will fail to authenticate unless MCO_AGENT_TOKEN is set. Fix: mco reset-token claude-cio
+</code></pre>
+</li>
+<li>Compares installed OS services against the configuration:
+<ul>
+<li>Installs new wakers or polling services.</li>
+<li>Updates changed service configurations.</li>
+<li>Safely removes services set to <code>mode = &quot;off&quot;</code> or omitted from the file.</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h3 id="3-checking-fleet-status">3. Checking Fleet Status</h3>
+<p>Query the reconciled state of all declared workers:</p>
+<pre><code class="language-powershell">mco fleet status
+</code></pre>
+<p>Output displays:</p>
+<ul>
+<li><strong>Worker Name &amp; Instance ID</strong></li>
+<li><strong>Role</strong></li>
+<li><strong>Mode (<code>waker</code>, <code>poll</code>, <code>off</code>)</strong></li>
+<li><strong>Active Service Name</strong> (e.g., <code>BitCadence-wake-chief-claude-cio</code>)</li>
+<li><strong>OS Service Status</strong> (<code>Running</code>, <code>Ready</code>, <code>Disabled</code>, or <code>Not Installed</code>)</li>
+</ul>
+<p>To check live presence reported by the gateway:</p>
+<pre><code class="language-powershell">mco agents
+</code></pre>
+<p>Inspect <code>last_seen_seconds</code> and <code>connected</code> status.</p>
+<hr />
+<h3 id="4-stopping-and-removing-sidecars">4. Stopping and Removing Sidecars</h3>
+<p>To stop or remove a sidecar cleanly:</p>
+<ol>
+<li>
+<p><strong>Via <code>fleet.toml</code>:</strong>
+Change the worker's mode to <code>off</code>:</p>
+<pre><code class="language-powershell">mco fleet set claude-cio mode=off
+mco fleet apply
+</code></pre>
+<p>Or remove the <code>[workers.claude-cio]</code> section entirely from <code>~/.mco/fleet.toml</code> and run <code>mco fleet apply</code>.</p>
+</li>
+<li>
+<p><strong>Via <code>mco service</code> CLI:</strong></p>
+<pre><code class="language-powershell"># Stop a running task immediately (there is no `mco service stop`)
+Stop-ScheduledTask -TaskName BitCadence-wake-chief-claude-cio
+
+# Uninstall the scheduled task from the OS
+mco service uninstall BitCadence-wake-chief-claude-cio
+</code></pre>
+</li>
+<li>
+<p><strong>Via the Desktop Control Window:</strong></p>
+<ul>
+<li>In the component table, select the worker row.</li>
+<li>Click <strong>Stop selected</strong>.</li>
+<li>Click <strong>Fleet settings</strong> to edit <code>fleet.toml</code>, then click <strong>Reload settings</strong>.</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h3 id="5-the-elevated-admin-pack-step-generic-open-source-guide">5. The Elevated Admin-Pack Step (Generic Open-Source Guide)</h3>
+<p>While standard wakers can run in the user's interactive session without administrator privileges, unattended background sidecars (and local CI/CD service runners) require operating system capabilities that standard user accounts cannot grant.</p>
+<h4 id="why-administrator-elevation-is-required-on-windows">Why Administrator Elevation Is Required on Windows:</h4>
+<ol>
+<li><strong>Unattended Execution (<code>S4U</code> Logon):</strong> When <code>background = true</code> is set, Task Scheduler registers the task with <code>LogonType = S4U</code>. Windows requires Administrator elevation to register S4U tasks without storing cleartext passwords.</li>
+<li><strong>Dedicated Service Accounts:</strong> Creating an isolated local user account (e.g., <code>bc-runner</code>) to sandbox code execution prevents workers from accessing private personal folders (<code>%USERPROFILE%\Documents</code>, SSH keys, or cloud credentials).</li>
+<li><strong>Firewall Binding:</strong> Narrowing local model listening ports (e.g., binding model servers strictly to <code>127.0.0.1</code>) requires Windows Advanced Firewall modifications.</li>
+</ol>
+<h4 id="generic-administrator-script-flow">Generic Administrator Script Flow:</h4>
+<p>When setting up elevated services, maintainers use a generic administrator script (e.g., <code>admin-pack.ps1</code>). It must follow these strict security principles:</p>
+<ul>
+<li><strong>No Personal Paths:</strong> Uses environment variables (<code>$env:USERPROFILE</code>, <code>$env:ProgramData</code>, <code>$PSScriptRoot</code>) rather than hardcoded developer paths.</li>
+<li><strong>Elevation Check:</strong> Checks for admin rights at startup:<pre><code class="language-powershell">$principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)) {
+    Write-Error &quot;This script must be run as Administrator (right-click PowerShell &gt; Run as administrator).&quot;
+    exit 1
+}
+</code></pre>
+</li>
+<li><strong>Plain-English Confirmation:</strong> Outlines all pending changes and requires typing <code>YES</code> before modifying system state.</li>
+<li><strong>Idempotency:</strong> Safe to run repeatedly; skips tasks that are already configured.</li>
+<li><strong>Clean <code>-Undo</code> Support:</strong> Allows one-step uninstallation of all services, rules, and accounts:<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File scripts\admin-pack.ps1 -Undo
+</code></pre>
+</li>
+</ul>
+<hr />
+<h2 id="operating-the-claude-cio-sidecar">Operating the <code>claude-cio</code> Sidecar</h2>
+<p>The <code>claude-cio</code> sidecar operates under a formal operating policy defined in <code>ops/cio-sidecar-brief.md</code>.</p>
+<h3 id="presence-dual-mode-behavior">Presence &amp; Dual-Mode Behavior</h3>
+<p>Before making any decision, <code>claude-cio</code> queries <code>mco_agents</code>:</p>
+<pre><code>                 +-----------------------------------------+
+                 |            mco_agents Query             |
+                 +-----------------------------------------+
+                                      |
+                 Is claude-desktop online? (heartbeat &lt; 300s)
+                                      |
+                      +---------------+---------------+
+                      |                               |
+                   [ YES ]                         [ NO ]
+                      |                               |
+             +-----------------+             +-----------------+
+             |     Mode A      |             |     Mode B      |
+             |   DEFER / CIO   |             |   ACT AS CHIEF  |
+             +-----------------+             +-----------------+
+             | Posts advisory  |             | Full dispatch   |
+             | recommendations |             | authority under |
+             | only; leaves    |             | standing policy |
+             | binding votes   |             | limits.         |
+             | to desktop.     |             |                 |
+             +-----------------+             +-----------------+
+</code></pre>
+<h3 id="policy-checks-mco-cio-check">Policy Checks (<code>mco cio check</code>)</h3>
+<p>When approving plans, <code>claude-cio</code> executes deterministic command-line checks before applying LLM reasoning:</p>
+<pre><code class="language-powershell">mco cio check --decider claude-cio --project Via --spend-cents 450 --proposed-by codex-beast --category code_review
+</code></pre>
+<h4 id="hard-standing-policies-enforced">Hard Standing Policies Enforced:</h4>
+<ol>
+<li><strong>Self-Approval Forbidden:</strong> An agent cannot approve its own proposal. Missing, whitespace, or case-mismatched proposer IDs fail closed.</li>
+<li><strong>Project Spend Caps:</strong> Hard monthly limits (e.g., Via: $150, Sim Lab: $25 paper only, Operate: $10). Unrecognized projects or proposals exceeding caps automatically escalate.</li>
+<li><strong>Strict Escalation to Humans:</strong> Requires escalation to human operators for:
+<ul>
+<li>Credential or token modifications.</li>
+<li>Financial transactions or live broker connections.</li>
+<li>Deleting databases or household data.</li>
+<li>Bypassing bot protections or CAPTCHAs.</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2 id="how-to-know-a-sidecar-is-healthy-or-stuck">How to Know a Sidecar is Healthy or Stuck</h2>
+<p>Do not rely solely on &quot;Green&quot; or &quot;Online&quot; lights in dashboards. True operational health follows <strong>four distinct verification levels</strong>:</p>
+<pre><code>+------------------------------------------------------------------------+
+| Level 1: Supervised Process Exists                                     |
+|          OS process or Task Scheduler task is active (PID assigned)    |
++------------------------------------------------------------------------+
+                                   |
++------------------------------------------------------------------------+
+| Level 2: Token Authenticates                                           |
+|          Gateway accepts credentials without HTTP 401 Unauthorized     |
++------------------------------------------------------------------------+
+                                   |
++------------------------------------------------------------------------+
+| Level 3: Leases Pending Work                                           |
+|          Pulls jobs from queue when assigned; state changes to leased  |
++------------------------------------------------------------------------+
+                                   |
++------------------------------------------------------------------------+
+| Level 4: Delivers Completed Receipts                                   |
+|          Executes instructions, runs tests, posts mco_complete         |
++------------------------------------------------------------------------+
+</code></pre>
+<h3 id="end-to-end-fleet-smoke-test">End-to-End Fleet Smoke Test</h3>
+<p>To verify that a sidecar is actually capable of executing work, send an inert, reply-only smoke test:</p>
+<pre><code class="language-powershell">mco send chief --instance claude-cio --title &quot;FLEET SMOKE TEST - reply only&quot; `
+  --message &quot;Do NOT edit files or commit. Call mco_complete(task_id, output) with your AGENT_INSTANCE_ID, the UTC time, and 'fleet smoke ok'. Then stop.&quot;
+</code></pre>
+<p>Then follow the job (the job id is printed by <code>mco send</code>) in the Job Board or its audit trail:</p>
+<pre><code class="language-powershell">mco audit &lt;job-id&gt;
+</code></pre>
+<p>Verify the task moves from <strong><code>pending</code></strong> to <strong><code>leased</code></strong> and finally <strong><code>completed</code></strong>.</p>
+<hr />
+<h2 id="if-it-goes-wrong-real-incident-field-guide">If It Goes Wrong (Real Incident Field Guide)</h2>
+<h3 id="incident-1-worker-shows-onlinestandby-but-silently-never-runs-locked-log-file">Incident 1: Worker Shows &quot;Online/Standby&quot; but Silently Never Runs (Locked Log File)</h3>
+<h4 id="the-symptom">The Symptom:</h4>
+<p>The web console and <code>mco agents</code> show the worker with a green dot and status <code>online</code> or <code>standby</code>. Jobs dispatched to the role sit in the queue indefinitely without being leased. No errors appear on the web dashboard.</p>
+<h4 id="the-root-cause">The Root Cause:</h4>
+<p>On Windows, file streams use mandatory file sharing locks. If a previous run crashed or a zombie process held an open handle to <code>~/.mco/logs/&lt;instance&gt;.log</code> without shared write permissions:</p>
+<ol>
+<li>The waker process maintains a healthy WebSocket/SSE connection to the gateway (reporting <code>online</code>).</li>
+<li>When a job arrives, the waker attempts to spawn the worker script (<code>--exec</code>) and redirect stdout/stderr to <code>~/.mco/logs/&lt;instance&gt;.log</code>.</li>
+<li>Windows denies the file open request (<code>PermissionError: [Errno 13]</code> or <code>The process cannot access the file because it is being used by another process</code>).</li>
+<li>The worker executor exits with code 1 immediately without ever claiming or leasing the job.</li>
+</ol>
+<h4 id="how-to-diagnose">How to Diagnose:</h4>
+<ol>
+<li>Inspect the waker log:<pre><code class="language-powershell">Get-Content ~\.mco\logs\BitCadence-wake-&lt;role&gt;-&lt;instance&gt;.log -Tail 30
+</code></pre>
+</li>
+<li>Test whether the log file is locked:<pre><code class="language-powershell">[IO.File]::Open(&quot;$env:USERPROFILE\.mco\logs\&lt;instance&gt;.log&quot;, &quot;Open&quot;, &quot;Write&quot;, &quot;None&quot;).Close()
+</code></pre>
+If this throws an IOException, the file is locked by a lingering process.</li>
+</ol>
+<h4 id="how-to-fix">How to Fix:</h4>
+<ol>
+<li>Find and terminate orphaned processes holding the lock:<pre><code class="language-powershell">Get-Process -Name python, pythonw, powershell | Where-Object { $_.Path -like &quot;*BitCadence*&quot; }
+</code></pre>
+</li>
+<li>Kill the zombie process:<pre><code class="language-powershell">Stop-Process -Id &lt;PID&gt; -Force
+</code></pre>
+</li>
+<li>Restart the waker service:<pre><code class="language-powershell">mco service restart BitCadence-wake-&lt;role&gt;-&lt;instance&gt;
+</code></pre>
+</li>
+</ol>
+<hr />
+<h3 id="incident-2-duplicate-wake-processes-competing-for-jobs">Incident 2: Duplicate Wake Processes Competing for Jobs</h3>
+<h4 id="the-symptom-1">The Symptom:</h4>
+<p>When a single job is posted, two different instances attempt to process it simultaneously. You observe:</p>
+<ul>
+<li>HTTP <code>409 Conflict</code> lease errors in logs.</li>
+<li>Two git worktree folders created for the same job.</li>
+<li>Git merge collisions (<code>index.lock</code> errors) in the repository.</li>
+<li>Alternating heartbeats in <code>mco agents</code> with flickering process IDs.</li>
+</ul>
+<h4 id="the-root-cause-1">The Root Cause:</h4>
+<p>A waker was registered in multiple supervisors at the same time:</p>
+<ol>
+<li>Installed as a Windows Scheduled Task or systemd service via <code>mco service install-waker ROLE --exec COMMAND</code> or <code>mco fleet apply</code>.</li>
+<li>Simultaneously started manually in a PowerShell terminal via <code>mco wake</code> or <code>mco listen</code>, OR launched by the Desktop Control Manager (<code>desktop.pyw</code>).</li>
+</ol>
+<p>Both processes receive the SSE notification simultaneously and race to lease the job.</p>
+<h4 id="how-to-diagnose-1">How to Diagnose:</h4>
+<ol>
+<li>Search all running processes for duplicate wakers:<pre><code class="language-powershell">Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like &quot;*mco.cli wake*&quot; } | Select-Object ProcessId, CommandLine
+</code></pre>
+</li>
+<li>Inspect active Task Scheduler tasks:<pre><code class="language-powershell">schtasks /query /fo LIST /v | Select-String &quot;TaskName:.*BitCadence-wake&quot;
+</code></pre>
+</li>
+</ol>
+<h4 id="how-to-fix-1">How to Fix:</h4>
+<ol>
+<li>Terminate all duplicate instances:<pre><code class="language-powershell">Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like &quot;*mco.cli wake*&quot; } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+</code></pre>
+</li>
+<li>Decide on a single supervision method:
+<ul>
+<li><strong>Either</strong> use the Windows Desktop Control Manager (<code>scripts/desktop.pyw --start-all</code>), which automatically handles single-instance deduplication and Job Object cleanup.</li>
+<li><strong>Or</strong> use OS Task Scheduler via <code>mco fleet apply</code>. If using the Desktop Control Manager, click <strong>Move workers into app</strong> to disable redundant Task Scheduler entries.</li>
+</ul>
+</li>
+<li>Verify that exactly one waker process is running per configured worker.</li>
+</ol>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#goal">Goal</a><a href="#what-sidecars-are-in-plain-english">What Sidecars Are (In Plain English)</a><a href="#anatomy-of-the-fleet-wakers-runners-and-the-cio">Anatomy of the Fleet: Wakers, Runners, and the CIO</a><a href="#step-by-step-instructions">Step-by-Step Instructions</a><a href="#operating-the-claude-cio-sidecar">Operating the `claude-cio` Sidecar</a><a href="#how-to-know-a-sidecar-is-healthy-or-stuck">How to Know a Sidecar is Healthy or Stuck</a><a href="#if-it-goes-wrong-real-incident-field-guide">If It Goes Wrong (Real Incident Field Guide)</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

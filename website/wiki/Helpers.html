@@ -1,0 +1,80 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Helpers · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/Helpers.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html" aria-current="page">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="standing-score-grants.html">Standing Score grants (local authority store)</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="helpers">Helpers</h1>
+<p>Open <code>/console</code> and choose <strong>Helpers</strong>, or run <code>bitcadence helpers</code> in a
+terminal. Both show the same thing: each helper's friendly name, a health light
+with a word, and what it is doing in plain words.</p>
+<h2 id="the-light-and-the-word">The light and the word</h2>
+<table>
+<thead>
+<tr>
+<th>Light</th>
+<th>Word</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>● green</td>
+<td>Working</td>
+<td>It has a job right now.</td>
+</tr>
+<tr>
+<td>● green</td>
+<td>Ready</td>
+<td>It is connected and waiting for a job.</td>
+</tr>
+<tr>
+<td>▲ red</td>
+<td>Stuck</td>
+<td>Something needs fixing (see Fix it).</td>
+</tr>
+<tr>
+<td>○ grey</td>
+<td>Not connected</td>
+<td>No sign of life.</td>
+</tr>
+<tr>
+<td>○ grey</td>
+<td>Paused</td>
+<td>Turned off on purpose.</td>
+</tr>
+</tbody>
+</table>
+<p>Colour is never the only signal: every light has a shape and its word. A name
+like <code>claude-worker_3</code> is shown as &quot;Claude worker 3&quot;. Each card also says when
+the helper was last heard from. Tokens and credentials are never on this page.</p>
+<h2 id="add-a-helper">Add a helper</h2>
+<p><strong>+ Add a helper</strong> asks which AI should power it (Claude, ChatGPT / Codex,
+Gemini / Antigravity) and a name. It uses the same code as
+<code>bitcadence helpers add</code>: the helper is registered and its sign-in is saved on
+this computer. The page confirms &quot;Penny is added&quot; and never shows the sign-in; the
+terminal shows it only masked, as <code>mco_tok_...1a2b</code>. An existing helper's name is
+refused instead of silently replacing its sign-in.</p>
+<pre><code>bitcadence helpers add --name penny --role codex
+</code></pre>
+<h2 id="fix-it">Fix it</h2>
+<p>Two problems look fine from outside, so BitCadence checks for them:</p>
+<ul>
+<li><strong>A locked notes file.</strong> Another BitCadence process has the helper's
+<code>&lt;name&gt;.log</code> open, so it cannot save its notes. The light turns red even
+though the helper looks online.</li>
+<li><strong>Two copies running.</strong> More than one <code>wake</code> process is watching the same
+helper. The oldest copy stays; the extras are stopped.</li>
+</ul>
+<p><strong>Fix it</strong> looks first and changes nothing: it lists what it found and what it
+would do. Only after you answer <strong>Yes, fix it</strong> (in a terminal, <code>Y</code>) does it stop
+the extra copy. Without an answer, nothing is stopped. A program that is not
+BitCadence is never stopped; you are told to close it yourself.</p>
+<pre><code>bitcadence helpers fix
+bitcadence fix
+</code></pre>
+<p><code>--yes</code> skips the question for scripts. In the gateway API, <code>POST /api/helpers/fix</code> is a dry run unless the body has <code>&quot;confirm&quot;: true</code>.</p>
+<p>Checking for these problems reads the list of running programs on this computer
+only. It does not change anything, and a program it is not allowed to inspect is
+skipped.</p>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#the-light-and-the-word">The light and the word</a><a href="#add-a-helper">Add a helper</a><a href="#fix-it">Fix it</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

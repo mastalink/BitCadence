@@ -55,6 +55,8 @@ mco score tick --run-id <run-id>
 mco score grant-local examples/scores/via-cloud.score.json --run-id <run-id> --action <action> --resource <resource>
 ```
 
+To approve a reusable Score class once for unattended local runs, with immediate revocation, see [Standing Score grants](standing-score-grants.md).
+
 ---
 
 ## What You'll See

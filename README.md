@@ -20,6 +20,10 @@ talk to ntfy.sh by default.
 
 ---
 
+## User guide
+
+The [BitCadence help site](https://bitcadence.ai/wiki/) has task walkthroughs, searchable GUI controls and a complete CLI reference. Source guides and coverage checks live in [docs/wiki](docs/wiki/Home.md).
+
 ## Install
 
 For one Windows window and tray icon to manage the local server, scheduler, and

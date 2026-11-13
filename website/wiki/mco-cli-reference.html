@@ -1,0 +1,3796 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Complete CLI reference · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/mco-cli-reference.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="standing-score-grants.html">Standing Score grants (local authority store)</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html" aria-current="page">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="complete-cli-reference">Complete CLI reference</h1>
+<p>Use <code>bitcadence</code> for everyday work. <code>mco</code> is a supported compatibility name for the <strong>same command tree</strong>: every path below works with either executable. The desktop entry point is separate: <code>bitcadence-desktop</code> launches the native desktop app; its pages are covered by the <a href="gui-reference.html">GUI reference</a>.</p>
+<p>This reference covers every registered command and group recursively, every positional argument, option spelling, parser default, repeatable/variadic parameter, prompt and declared range/path constraint. It includes generated completion/help options and the hidden compatibility option <code>gui --flow</code>. Defaults are parser defaults; configuration or the implementation may resolve unset values at runtime. <code>~</code> means your home directory; <code>.mco</code>, <code>MCO_</code> and the Python package <code>mco</code> remain supported compatibility names.</p>
+<h2 id="read-this-first">Read this first</h2>
+<ul>
+<li>Run <code>bitcadence</code> in an interactive terminal for the menu. In scripts/non-interactive use it prints help and exits 2; <code>bitcadence --no-menu</code> deliberately prints help and exits 0. <code>MCO_NO_MENU=1</code> also disables the menu.</li>
+<li>Put global options before the command: <code>bitcadence --debug status</code>. Group options belong before their subcommand, for example <code>bitcadence helpers --json</code>.</li>
+<li>Add <code>--help</code> to a specific command to inspect it safely, for example <code>bitcadence score start --help</code>. Except for the transparent <code>advanced</code> forwarder, help exits before operational callbacks. No credentials or production commands were executed to produce this reference.</li>
+<li>Examples containing JOB_ID, INSTANCE_ID, WORKER_NAME, SCHEDULE_NAME, EXCHANGE_ID, CLIENT_WORKTREE, or file names require your actual values/files. They describe intended operations; they are not a script to run from top to bottom. Commands that change state say so in their expected result/recovery notes. For effectful/restricted operations the example may intentionally stop at help.</li>
+<li><code>--yes</code> only exists where listed. It skips that command's questions; it does not add permission. A daemon running, a job submitted, or an exit-0 policy reply does not prove the work succeeded.</li>
+<li>Most failures exit 1; syntax errors typically exit 2. Important exceptions are documented per command (empty results/missing schedule or fleet config/advisory verdicts). Do not infer success from exit code alone.</li>
+</ul>
+<h2 id="find-a-command">Find a command</h2>
+<ul>
+<li><a href="#cli-mco-advanced">mco advanced</a> — Run any original command, e.g. <code>bitcadence advanced audit &lt;job-id&gt;</code>.</li>
+<li><a href="#cli-mco-agents">mco agents</a> — List all registered agents and their current online presence status.</li>
+<li><a href="#cli-mco-approve">mco approve</a> — Approve what's waiting for you, one at a time.</li>
+<li><a href="#cli-mco-archive">mco archive</a> — Archive a completed/failed/rejected/cancelled job (reversible).</li>
+<li><a href="#cli-mco-ask">mco ask</a> — Say what you want done. You see the plan and OK it before anything runs.</li>
+<li><a href="#cli-mco-audit">mco audit</a> — Print a job's tamper-evident audit trail (oldest event first).</li>
+<li><a href="#cli-mco-audit-checkpoint">mco audit-checkpoint</a> — Export a signed checkpoint. Keep it outside the database/backup volume.</li>
+<li><a href="#cli-mco-cancel">mco cancel</a> — Call off a job that hasn't finished yet (approver-role token).</li>
+<li><a href="#cli-mco-cio">mco cio</a> — Deterministic policy checks backing ops/cio-sidecar-brief.md.
+<ul>
+<li><a href="#cli-mco-cio-check">mco cio check</a> — Check one proposal against the brief's mechanical rules and print a verdict.</li>
+</ul>
+</li>
+<li><a href="#cli-mco-connect">mco connect</a> — Connect an AI app to BitCadence.</li>
+<li><a href="#cli-mco-connectors">mco connectors</a> — List configured enterprise connectors and their health (via the gateway).</li>
+<li><a href="#cli-mco-deregister">mco deregister</a> — Remove an agent registration. Its token stops working immediately.</li>
+<li><a href="#cli-mco-doctor">mco doctor</a> — Diagnose an install end to end: Python, config, secret store, database, gateway, agents, vendor CLIs. Exit code 1 if anything is broken.</li>
+<li><a href="#cli-mco-duplicates">mco duplicates</a> — List other jobs that look like the same work as this one.</li>
+<li><a href="#cli-mco-edition">mco edition</a> — Show the active edition (community/team/enterprise) and feature matrix.</li>
+<li><a href="#cli-mco-exchange">mco exchange</a> — Drumline Agent Exchange: non-authoritative agent discussion.
+<ul>
+<li><a href="#cli-mco-exchange-list">mco exchange list</a> — List Agent Exchange messages (needs --job or --thread).</li>
+<li><a href="#cli-mco-exchange-post">mco exchange post</a> — Post one message to the Agent Exchange.</li>
+<li><a href="#cli-mco-exchange-promote">mco exchange promote</a> — Explicitly promote one exchange into canonical Drumline context (needs context:promote).</li>
+</ul>
+</li>
+<li><a href="#cli-mco-fix">mco fix</a> — Find what's wrong and offer to repair it.</li>
+<li><a href="#cli-mco-fleet">mco fleet</a> — Apply declarative per-worker service run modes.
+<ul>
+<li><a href="#cli-mco-fleet-apply">mco fleet apply</a> — Reconcile OS services to ~/.mco/fleet.toml.</li>
+<li><a href="#cli-mco-fleet-set">mco fleet set</a> — Update one worker field in ~/.mco/fleet.toml.</li>
+<li><a href="#cli-mco-fleet-status">mco fleet status</a> — Show configured workers and their installed/running state.</li>
+</ul>
+</li>
+<li><a href="#cli-mco-gui">mco gui</a> — Open the BitCadence console in your browser.</li>
+<li><a href="#cli-mco-helpers">mco helpers</a> — Your helpers: who is ready, busy or stuck.
+<ul>
+<li><a href="#cli-mco-helpers-add">mco helpers add</a> — Add a helper (same as <code>mco register</code>, asking for what it needs).</li>
+<li><a href="#cli-mco-helpers-fix">mco helpers fix</a> — Find a locked notes file or a second copy of a helper, and offer to fix it.</li>
+</ul>
+</li>
+<li><a href="#cli-mco-jev">mco jev</a> — Ask Jev bounded, annotation-only questions. Never authorizes an effect.
+<ul>
+<li><a href="#cli-mco-jev-route-model">mco jev route-model</a> — Suggest a Claude Code model tier (haiku/sonnet/opus) for a task.</li>
+</ul>
+</li>
+<li><a href="#cli-mco-jobs">mco jobs</a> — BitCadence Job Board: score client jobs for fit, value, and risk.
+<ul>
+<li><a href="#cli-mco-jobs-rank">mco jobs rank</a> — Score every available client job for fit, value and risk using Jev and hard filters.</li>
+</ul>
+</li>
+<li><a href="#cli-mco-launch">mco launch</a> — Fire a launcher right now, by name.</li>
+<li><a href="#cli-mco-listen">mco listen</a> — Spawn the background daemon client that polls and executes Job Board tasks.</li>
+<li><a href="#cli-mco-mcp">mco mcp</a> — Run the MCO dropbox as an MCP server: stdio (Claude/Codex/Antigravity) or HTTP (remote agents).</li>
+<li><a href="#cli-mco-orgs">mco orgs</a> — List orgs available for registration (Control Panel tenancy dropdown, from the terminal).</li>
+<li><a href="#cli-mco-pause">mco pause</a> — Pause everything: stop work in progress and hold new work.</li>
+<li><a href="#cli-mco-platform">mco platform</a> — Run a connector control action directly (requires an approver-role token).</li>
+<li><a href="#cli-mco-reassign">mco reassign</a> — Clone a failed job onto a new target, link both rows, and archive the old one (approver-role token).</li>
+<li><a href="#cli-mco-recall">mco recall</a> — Recall the most relevant Drumline shared-context entries.</li>
+<li><a href="#cli-mco-register">mco register</a> — Register a new client agent, generating a secure access token.</li>
+<li><a href="#cli-mco-reject">mco reject</a> — Reject a job paused at the human-in-the-loop gate (terminal).</li>
+<li><a href="#cli-mco-remember">mco remember</a> — Append an entry to the Drumline shared context.</li>
+<li><a href="#cli-mco-reset-token">mco reset-token</a> — Rotate an agent's access token. The old token stops working immediately.</li>
+<li><a href="#cli-mco-restart">mco restart</a> — Restart the background gateway (stop if running, then start).</li>
+<li><a href="#cli-mco-restore-fence">mco restore-fence</a> — After a DB restore, pause work and invalidate every pre-restore claim.</li>
+<li><a href="#cli-mco-resume">mco resume</a> — Resume after a pause.</li>
+<li><a href="#cli-mco-retry">mco retry</a> — Re-queue a failed or rejected job back to pending (approver-role token).</li>
+<li><a href="#cli-mco-schedule">mco schedule</a> — Schedules and loops: what work gets created, and when.
+<ul>
+<li><a href="#cli-mco-schedule-add">mco schedule add</a> — Add a schedule by asking what, how often and what time.</li>
+<li><a href="#cli-mco-schedule-disable">mco schedule disable</a> — Disable a schedule or loop, leaving its definition and history intact.</li>
+<li><a href="#cli-mco-schedule-enable">mco schedule enable</a> — Enable a schedule or loop (without hand-editing YAML).</li>
+<li><a href="#cli-mco-schedule-init">mco schedule init</a> — Write a starter ~/.mco/schedules.yaml.</li>
+<li><a href="#cli-mco-schedule-list">mco schedule list</a> — Show every schedule and loop with its next fire time.</li>
+<li><a href="#cli-mco-schedule-off">mco schedule off</a> — Turn a schedule off.</li>
+<li><a href="#cli-mco-schedule-on">mco schedule on</a> — Turn a schedule on.</li>
+<li><a href="#cli-mco-schedule-reset">mco schedule reset</a> — Clear a schedule's run history so a finished loop can run again.</li>
+<li><a href="#cli-mco-schedule-run">mco schedule run</a> — Run the scheduler in the foreground, ticking until interrupted.</li>
+<li><a href="#cli-mco-schedule-tick">mco schedule tick</a> — Run one scheduler pass (what <code>mco schedule run</code> does on a timer).</li>
+</ul>
+</li>
+<li><a href="#cli-mco-score">mco score</a> — Run a Score: start, advance and inspect a conductor run.
+<ul>
+<li><a href="#cli-mco-score-deliver">mco score deliver</a> — Bundle code, tests, README, reviews and a DRAFT client message (never sent).</li>
+<li><a href="#cli-mco-score-grant-local">mco score grant-local</a> — Issue a locally auditable, interactive Score grant on Windows SQLite only.</li>
+<li><a href="#cli-mco-score-grant-standing-local">mco score grant-standing-local</a> — Approve an exact Score class once for unattended local runs (max 316h).</li>
+<li><a href="#cli-mco-score-intake">mco score intake</a> — Draft a SCOPE from a client brief (with guardrail flags), or <code>approve</code> a clean scope into a Score.</li>
+<li><a href="#cli-mco-score-list">mco score list</a> — Runs in this conductor database.</li>
+<li><a href="#cli-mco-score-revoke-standing-local">mco score revoke-standing-local</a> — Revoke a standing class immediately; existing runs are checked again.</li>
+<li><a href="#cli-mco-score-scaffold">mco score scaffold</a> — Turn a plain-language brief into a validated Score with build, review, and two fix attempts per step.</li>
+<li><a href="#cli-mco-score-start">mco score start</a> — Initialize a run. Safe to repeat: identical policy and identities resume it.</li>
+<li><a href="#cli-mco-score-status">mco score status</a> — Where the run actually is: per task, per phase, with the last events.</li>
+<li><a href="#cli-mco-score-tick">mco score tick</a> — Advance the run: plan what can start, dispatch it, accept finished work.</li>
+</ul>
+</li>
+<li><a href="#cli-mco-send">mco send</a> — Drop a job into an agent's dropbox from the terminal.</li>
+<li><a href="#cli-mco-serve">mco serve</a> — Start the BitCadence FastAPI WebSocket/REST API Server.</li>
+<li><a href="#cli-mco-service">mco service</a> — Run BitCadence processes as boot-persistent OS services.
+<ul>
+<li><a href="#cli-mco-service-install">mco service install</a> — Install the gateway as an OS service that starts on boot/login.</li>
+<li><a href="#cli-mco-service-install-scheduler">mco service install-scheduler</a> — Install the schedule/loop scheduler as a boot-persistent OS service.</li>
+<li><a href="#cli-mco-service-install-waker">mco service install-waker</a> — Install a self-restarting waker service for one role/instance.</li>
+<li><a href="#cli-mco-service-logs">mco service logs</a> — Tail a service log file.</li>
+<li><a href="#cli-mco-service-restart">mco service restart</a> — Restart the boot-persistent gateway service.</li>
+<li><a href="#cli-mco-service-status">mco service status</a> — Show installed BitCadence services, or one selected service.</li>
+<li><a href="#cli-mco-service-uninstall">mco service uninstall</a> — Remove the boot-persistent service (does not stop a running gateway).</li>
+</ul>
+</li>
+<li><a href="#cli-mco-settings">mco settings</a> — View or change gateway settings. With nothing else, a plain summary.</li>
+<li><a href="#cli-mco-setup">mco setup</a> — Configure BitCadence - a guided walkthrough or a jump-anywhere settings menu.</li>
+<li><a href="#cli-mco-start">mco start</a> — Start BitCadence quietly in the background (the pair of 'mco stop').</li>
+<li><a href="#cli-mco-status">mco status</a> — Plain summary: what needs you, what's running, any problems.</li>
+<li><a href="#cli-mco-stop">mco stop</a> — Stop a running BitCadence gateway (by port).</li>
+<li><a href="#cli-mco-sync">mco sync</a> — Pull open platform objects (incidents/problems) onto the job board.</li>
+<li><a href="#cli-mco-tail">mco tail</a> — Live-tail a filtered mailbox feed from the gateway broadcast socket.</li>
+<li><a href="#cli-mco-tray">mco tray</a> — Status light and a door into the console (Windows tray / macOS menu bar / Linux AppIndicator).</li>
+<li><a href="#cli-mco-unarchive">mco unarchive</a> — Undo archive.</li>
+<li><a href="#cli-mco-upgrade">mco upgrade</a> — Apply schema migrations to the configured backend.</li>
+<li><a href="#cli-mco-wake">mco wake</a> — Wake a local worker command when this agent's inbox has pending jobs.</li>
+<li><a href="#cli-mco-watch">mco watch</a> — Live-tail job events from the gateway's broadcast feed (Ctrl-C to stop).</li>
+<li><a href="#cli-mco-workflow">mco workflow</a> — Submit a declarative YAML workflow (DAG of jobs) to the Job Board.</li>
+</ul>
+<h2 id="shared-recovery">Shared recovery</h2>
+<p>For gateway/credential failures, inspect <code>bitcadence status --details</code> and <code>bitcadence doctor</code>; check the configured gateway and the exact caller identity. An authorization failure needs an authorized operator, not a different worker's token. Read the specific diagnostic before using an effectful repair/restart. For continuous foreground commands use Ctrl+C to stop observing/driving that process.</p>
+<p><a id="cli-mco"></a></p>
+<h2 id="mco"><code>mco</code></h2>
+<p>Root menu and global options. Both installed console entry points (<code>mco</code>, <code>bitcadence</code>) call <code>mco.cli:main</code>.</p>
+<p>Safe example: <code>bitcadence --no-menu</code>. Expected result: print root help, exit 0.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L73">src/mco/cli.py:73</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-param-version"></a><code>--version</code> / <code>-V</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Show the version and exit.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-param-no-menu"></a><code>--no-menu</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Print help instead of opening the interactive menu.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-param-debug"></a><code>--debug</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Show full error details instead of plain-English messages.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-param-install-completion"></a><code>--install-completion</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Install completion for the current shell.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-param-show-completion"></a><code>--show-completion</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show completion for the current shell, to copy it or customize the installation.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-advanced"></a></p>
+<h2 id="mco-advanced"><code>mco advanced</code></h2>
+<p>Run any original command, e.g. <code>bitcadence advanced audit &lt;job-id&gt;</code>.</p>
+<p>Usage example: <code>bitcadence advanced status --details</code></p>
+<p><strong>Expected result:</strong> Forwards all following tokens to the original mco command tree. Every documented path remains directly available under either executable.</p>
+<p><strong>If it fails / before changing state:</strong> With no following command, prints an example and exits 1. This is a forwarding command, not a separate restricted permission mode. It intentionally has no own --help; use the forwarded command's help.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3511">src/mco/cli.py:3511</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<p>All remaining tokens are forwarded, including otherwise unknown options. <code>bitcadence advanced status --help</code> displays the forwarded status help. No separate advanced-only option list exists.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+</table>
+<p><a id="cli-mco-agents"></a></p>
+<h2 id="mco-agents"><code>mco agents</code></h2>
+<p>List all registered agents and their current online presence status.</p>
+<p>Usage example: <code>bitcadence agents</code></p>
+<p><strong>Expected result:</strong> Shows registered agent identity, role and presence. Presence alone does not prove that a worker can claim or complete a job.</p>
+<p><strong>If it fails / before changing state:</strong> If the gateway cannot be reached, inspect status and doctor. Check the exact instance's credentials when presence and actual job execution disagree.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2385">src/mco/cli.py:2385</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-agents-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-approve"></a></p>
+<h2 id="mco-approve"><code>mco approve</code></h2>
+<p>Approve what's waiting for you, one at a time.</p>
+<p>Usage example: <code>bitcadence approve</code></p>
+<p><strong>Expected result:</strong> Shows waiting jobs one at a time and asks before approval; a supplied selector can be a waiting-list number, name or ID.</p>
+<p><strong>If it fails / before changing state:</strong> Approval releases work for execution. Use the displayed job details to resolve ambiguous names; --yes removes the question. The caller still needs approval authority.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2697">src/mco/cli.py:2697</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-approve-param-job-id"></a><code>JOB_ID</code> (positional)</td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Job to approve: its name, number in the waiting list, or ID. Leave out to go through what's waiting.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-approve-param-yes"></a><code>--yes</code> / <code>-y</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Approve without asking.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-approve-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-archive"></a></p>
+<h2 id="mco-archive"><code>mco archive</code></h2>
+<p>Archive a completed/failed/rejected/cancelled job (reversible).</p>
+<p>Usage example: <code>bitcadence archive JOB_ID</code></p>
+<p><strong>Expected result:</strong> Hides a terminal job from the default board without deleting its history.</p>
+<p><strong>If it fails / before changing state:</strong> Use a completed, failed, rejected or cancelled job ID. Undo with unarchive; an active job must reach a terminal state first.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2752">src/mco/cli.py:2752</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-archive-param-job-id"></a><code>JOB_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Terminal job ID to hide from the default board view.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-archive-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-ask"></a></p>
+<h2 id="mco-ask"><code>mco ask</code></h2>
+<p>Say what you want done. You see the plan and OK it before anything runs.</p>
+<p>Usage example: <code>bitcadence ask &quot;Review the install instructions&quot;</code></p>
+<p><strong>Expected result:</strong> Builds a visible plan and asks before submitting the selected steps. The first step still waits for a separate approval afterward; run approve when ready. --remove can omit more than one numbered step.</p>
+<p><strong>If it fails / before changing state:</strong> --yes skips plan confirmation, not the first-step approval gate. Exception: --file submits the YAML workflow immediately through the workflow command path; it does not preview or ask. Preview a saved workflow with workflow --dry-run.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3419">src/mco/cli.py:3419</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-ask-param-request"></a><code>REQUEST</code> (positional)</td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>What you'd like done, in plain words.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-ask-param-file"></a><code>--file</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Load a workflow YAML file instead.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-ask-param-yes"></a><code>--yes</code> / <code>-y</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Start without asking.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-ask-param-remove"></a><code>--remove</code></td>
+<td>INTEGER; optional; repeatable</td>
+<td><code>[]</code></td>
+<td>Leave out step N of the plan (repeat for more).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-ask-param-ask-me"></a><code>--ask-me</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Always ask me at the end.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-ask-param-repeat"></a><code>--repeat</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Make it repeat, e.g. &quot;every Friday at 9 AM&quot;.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-ask-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-audit"></a></p>
+<h2 id="mco-audit"><code>mco audit</code></h2>
+<p>Print a job's tamper-evident audit trail (oldest event first).</p>
+<p>Usage example: <code>bitcadence audit JOB_ID --verify</code></p>
+<p><strong>Expected result:</strong> Without verification flags, prints events oldest first from the gateway. --verify checks the stored hash chain directly; --checkpoint also enables verification against the saved signed checkpoint.</p>
+<p><strong>If it fails / before changing state:</strong> A broken chain exits 1 and identifies the first broken event. Preserve the evidence. Verification needs the configured data plane even when the gateway is running; an empty event list alone does not establish integrity.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2617">src/mco/cli.py:2617</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-audit-param-job-id"></a><code>JOB_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Job ID to inspect.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-audit-param-verify"></a><code>--verify</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Walk the hash chain and report OK or the first broken link.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-audit-param-checkpoint"></a><code>--checkpoint</code></td>
+<td>PATH; optional</td>
+<td>not set</td>
+<td>Verify against a previously exported signed checkpoint. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-audit-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-audit-checkpoint"></a></p>
+<h2 id="mco-audit-checkpoint"><code>mco audit-checkpoint</code></h2>
+<p>Export a signed checkpoint. Keep it outside the database/backup volume.</p>
+<p>Usage example: <code>bitcadence audit-checkpoint JOB_ID checkpoint.json</code></p>
+<p><strong>Expected result:</strong> Drains pending audit events and writes a signed checkpoint to a new file.</p>
+<p><strong>If it fails / before changing state:</strong> The file is opened exclusively: an existing output causes failure. Choose a new file and retain it outside the database and backup volume so a restored database can be checked independently.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2659">src/mco/cli.py:2659</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-audit-checkpoint-param-job-id"></a><code>JOB_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Job whose stored audit chain will be checkpointed.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-audit-checkpoint-param-output"></a><code>OUTPUT</code> (positional)</td>
+<td>PATH; required</td>
+<td>required</td>
+<td>New checkpoint file path; an existing file is refused. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-audit-checkpoint-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-cancel"></a></p>
+<h2 id="mco-cancel"><code>mco cancel</code></h2>
+<p>Call off a job that hasn't finished yet (approver-role token).</p>
+<p>Usage example: <code>bitcadence cancel JOB_ID --reason &quot;Work is no longer needed&quot;</code></p>
+<p><strong>Expected result:</strong> Calls off a non-terminal job and prints its new status.</p>
+<p><strong>If it fails / before changing state:</strong> Requires an approver-role credential. If the job has finished, inspect its audit/history rather than trying to cancel it again.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2738">src/mco/cli.py:2738</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-cancel-param-job-id"></a><code>JOB_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Non-terminal job ID to call off.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-cancel-param-reason"></a><code>--reason</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Why the job was cancelled.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-cancel-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-cio"></a></p>
+<h2 id="mco-cio"><code>mco cio</code></h2>
+<p>Deterministic policy checks backing ops/cio-sidecar-brief.md.</p>
+<p>Safe example: <code>bitcadence cio --help</code>. Expected result: list the following subcommands and group options. Select a child command for its operation and recovery instructions.</p>
+<p>Subcommands: <a href="#cli-mco-cio-check">check</a>.</p>
+<p>Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-cio-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-cio-check"></a></p>
+<h2 id="mco-cio-check"><code>mco cio check</code></h2>
+<p>Check one proposal against the brief's mechanical rules and print a verdict.</p>
+<p>Usage example: <code>bitcadence cio check --decider reviewer --proposed-by builder --project demo --spend-cents 0</code></p>
+<p><strong>Expected result:</strong> Prints a JSON verdict and reasons from deterministic policy. Verdict is approve, reject or escalate.</p>
+<p><strong>If it fails / before changing state:</strong> Exit 0 does not mean approval: read the verdict field. This check is advisory to the decision process and does not issue grants, spend money or approve a job.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1561">src/mco/cli.py:1561</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-cio">mco cio</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-cio-check-param-decider"></a><code>--decider</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Identity about to render the verdict (e.g. claude-cio).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-cio-check-param-project"></a><code>--project</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Project the spend/plan is against.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-cio-check-param-spend-cents"></a><code>--spend-cents</code></td>
+<td>INTEGER; optional</td>
+<td><code>0</code></td>
+<td>Proposed spend, in cents.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-cio-check-param-proposed-by"></a><code>--proposed-by</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Identity that authored the proposal.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-cio-check-param-category"></a><code>--category</code></td>
+<td>TEXT; optional; repeatable</td>
+<td><code>[]</code></td>
+<td>Repeatable; a policy category the proposal touches.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-cio-check-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-connect"></a></p>
+<h2 id="mco-connect"><code>mco connect</code></h2>
+<p>Connect an AI app to BitCadence.</p>
+<p>Usage example: <code>bitcadence connect claude --test</code></p>
+<p><strong>Expected result:</strong> With --test, checks the app's integration. Without --test, configures the chosen AI app, asking before settings changes; blank target offers a pick list.</p>
+<p><strong>If it fails / before changing state:</strong> Supported target names come from the option help. --disconnect removes the integration, while --yes suppresses questions. Back up any custom app settings before intentionally replacing them.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3485">src/mco/cli.py:3485</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-connect-param-target"></a><code>TARGET</code> (positional)</td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Which AI: claude, codex, gemini, antigravity, cursor or other. Leave out for a pick list.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-connect-param-yes"></a><code>--yes</code> / <code>-y</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Don't ask before changing its settings.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-connect-param-disconnect"></a><code>--disconnect</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Take BitCadence back out of that app.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-connect-param-test"></a><code>--test</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Check that the app is set up.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-connect-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-connectors"></a></p>
+<h2 id="mco-connectors"><code>mco connectors</code></h2>
+<p>List configured enterprise connectors and their health (via the gateway).</p>
+<p>Usage example: <code>bitcadence connectors</code></p>
+<p><strong>Expected result:</strong> Lists configured connector names, health and available action names.</p>
+<p><strong>If it fails / before changing state:</strong> An empty result prints configuration guidance for ServiceNow/Dynatrace. Configure endpoint and credentials, then restart the gateway; use the displayed names for sync/platform.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3347">src/mco/cli.py:3347</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-connectors-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-deregister"></a></p>
+<h2 id="mco-deregister"><code>mco deregister</code></h2>
+<p>Remove an agent registration. Its token stops working immediately.</p>
+<p>Usage example: <code>bitcadence deregister INSTANCE_ID</code></p>
+<p><strong>Expected result:</strong> Asks before deleting the registration; its token immediately stops authenticating.</p>
+<p><strong>If it fails / before changing state:</strong> Removal cannot be undone. Cancel the prompt to leave it unchanged; use helpers add/register to create a new identity when required. --yes skips this confirmation.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3108">src/mco/cli.py:3108</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-deregister-param-instance-id"></a><code>INSTANCE_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Instance ID of the agent to remove.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-deregister-param-yes"></a><code>--yes</code> / <code>-y</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Skip the confirmation prompt.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-deregister-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-doctor"></a></p>
+<h2 id="mco-doctor"><code>mco doctor</code></h2>
+<p>Diagnose an install end to end: Python, config, secret store, database, gateway, agents, vendor CLIs. Exit code 1 if anything is broken.</p>
+<p>Usage example: <code>bitcadence doctor</code></p>
+<p><strong>Expected result:</strong> Checks Python, config, secret store, database, gateway, registrations and vendor CLIs. Any broken check produces exit 1.</p>
+<p><strong>If it fails / before changing state:</strong> Follow the failing component's message. A passing diagnostic is installation evidence; verify an actual job before declaring worker execution healthy.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2104">src/mco/cli.py:2104</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-doctor-param-port"></a><code>--port</code></td>
+<td>INTEGER; optional</td>
+<td><code>18789</code></td>
+<td>Gateway port to probe.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-doctor-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-duplicates"></a></p>
+<h2 id="mco-duplicates"><code>mco duplicates</code></h2>
+<p>List other jobs that look like the same work as this one.</p>
+<p>Usage example: <code>bitcadence duplicates JOB_ID</code></p>
+<p><strong>Expected result:</strong> Lists potential look-alike or linked jobs with status and relationship; an empty list is reported explicitly.</p>
+<p><strong>If it fails / before changing state:</strong> This inspects candidates and does not merge or delete them. Check audit details before deciding which job to retain.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2774">src/mco/cli.py:2774</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-duplicates-param-job-id"></a><code>JOB_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Job ID to check for look-alike or linked jobs.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-duplicates-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-edition"></a></p>
+<h2 id="mco-edition"><code>mco edition</code></h2>
+<p>Show the active edition (community/team/enterprise) and feature matrix.</p>
+<p>Usage example: <code>bitcadence edition</code></p>
+<p><strong>Expected result:</strong> Prints the active community/team/enterprise edition and feature matrix.</p>
+<p><strong>If it fails / before changing state:</strong> Use the displayed capabilities to explain unavailable features; this command does not change licensing or upgrade the installation.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2364">src/mco/cli.py:2364</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-edition-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-exchange"></a></p>
+<h2 id="mco-exchange"><code>mco exchange</code></h2>
+<p>Drumline Agent Exchange: non-authoritative agent discussion.</p>
+<p>Safe example: <code>bitcadence exchange --help</code>. Expected result: list the following subcommands and group options. Select a child command for its operation and recovery instructions.</p>
+<p>Subcommands: <a href="#cli-mco-exchange-list">list</a>, <a href="#cli-mco-exchange-post">post</a>, <a href="#cli-mco-exchange-promote">promote</a>.</p>
+<p>Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-exchange-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-exchange-list"></a></p>
+<h2 id="mco-exchange-list"><code>mco exchange list</code></h2>
+<p>List Agent Exchange messages (needs --job or --thread).</p>
+<p>Usage example: <code>bitcadence exchange list --job JOB_ID --limit 20</code></p>
+<p><strong>Expected result:</strong> Reads Agent Exchange messages attached to a job or thread and prints a table of IDs, kinds, authors and message excerpts.</p>
+<p><strong>If it fails / before changing state:</strong> Supply --job or --thread. The gateway must enable MCO_AGENT_EXCHANGE=true and the caller needs the appropriate access. These messages are discussion, not approval.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2917">src/mco/cli.py:2917</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-exchange">mco exchange</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-exchange-list-param-job"></a><code>--job</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Filter by job id.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-list-param-thread"></a><code>--thread</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Filter by thread id.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-list-param-kind"></a><code>--kind</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Filter by kind.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-list-param-limit"></a><code>--limit</code></td>
+<td>INTEGER; optional</td>
+<td><code>20</code></td>
+<td>Max messages (cap 100).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-list-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-exchange-post"></a></p>
+<h2 id="mco-exchange-post"><code>mco exchange post</code></h2>
+<p>Post one message to the Agent Exchange.</p>
+<p>Usage example: <code>bitcadence exchange post question &quot;Which checks should we run?&quot; --job JOB_ID</code></p>
+<p><strong>Expected result:</strong> Adds a non-authoritative discussion message; reply/resolution/supersession links are explicit options.</p>
+<p><strong>If it fails / before changing state:</strong> Use a valid kind and real message/job IDs. Enable Agent Exchange at the gateway. Posting a decision message does not itself promote it into canonical context or authorize effects.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2895">src/mco/cli.py:2895</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-exchange">mco exchange</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-exchange-post-param-kind"></a><code>KIND</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>question, proposal, blocker, reply, decision, handoff, resolution, supersession.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-post-param-body"></a><code>BODY</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Message text. Discussion is reference, not instructions or approval.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-post-param-job"></a><code>--job</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Job id to attach the thread to.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-post-param-reply-to"></a><code>--reply-to</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Exchange id being replied to.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-post-param-resolves"></a><code>--resolves</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Exchange id a resolution closes.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-post-param-supersedes"></a><code>--supersedes</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Exchange id a supersession replaces.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-post-param-key"></a><code>--key</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Idempotency key (default: random; reuse it to retry safely).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-post-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-exchange-promote"></a></p>
+<h2 id="mco-exchange-promote"><code>mco exchange promote</code></h2>
+<p>Explicitly promote one exchange into canonical Drumline context (needs context:promote).</p>
+<p>Usage example: <code>bitcadence exchange promote EXCHANGE_ID --to decision</code></p>
+<p><strong>Expected result:</strong> Promotes one discussion entry into canonical Drumline context and prints the context ID. The default idempotency key is derived from the message ID and target kind.</p>
+<p><strong>If it fails / before changing state:</strong> Requires context:promote authority. Use a valid target kind and review the message first; this does not grant execution or approval authority.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2940">src/mco/cli.py:2940</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-exchange">mco exchange</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-exchange-promote-param-exchange-id"></a><code>EXCHANGE_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Exchange id (a decision or handoff).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-promote-param-target"></a><code>--to</code></td>
+<td>TEXT; optional</td>
+<td><code>decision</code></td>
+<td>Context kind: decision, lesson, or handoff.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-promote-param-title"></a><code>--title</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Context title (default: derived from the message).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-promote-param-key"></a><code>--key</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Idempotency key (default: derived from the exchange id).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-exchange-promote-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-fix"></a></p>
+<h2 id="mco-fix"><code>mco fix</code></h2>
+<p>Find what's wrong and offer to repair it.</p>
+<p>Usage example: <code>bitcadence fix</code></p>
+<p><strong>Expected result:</strong> Finds problems and offers supported repairs one by one.</p>
+<p><strong>If it fails / before changing state:</strong> Repairs can change the installation. Read each offered repair; --yes accepts all offered repairs without prompting. For a diagnostic-only pass, use doctor/status.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3436">src/mco/cli.py:3436</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-fix-param-yes"></a><code>--yes</code> / <code>-y</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Repair everything without asking.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-fix-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-fleet"></a></p>
+<h2 id="mco-fleet"><code>mco fleet</code></h2>
+<p>Apply declarative per-worker service run modes.</p>
+<p>Safe example: <code>bitcadence fleet --help</code>. Expected result: list the following subcommands and group options. Select a child command for its operation and recovery instructions.</p>
+<p>Subcommands: <a href="#cli-mco-fleet-apply">apply</a>, <a href="#cli-mco-fleet-set">set</a>, <a href="#cli-mco-fleet-status">status</a>.</p>
+<p>Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-fleet-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-fleet-apply"></a></p>
+<h2 id="mco-fleet-apply"><code>mco fleet apply</code></h2>
+<p>Reconcile OS services to ~/.mco/fleet.toml.</p>
+<p>Usage example: <code>bitcadence fleet apply</code></p>
+<p><strong>Expected result:</strong> Reconciles declared worker service modes from ~/.mco/fleet.toml and prints per-worker summaries.</p>
+<p><strong>If it fails / before changing state:</strong> Can install/remove/start service processes. Inspect fleet status and the intended config first. Missing config prints a sample and exits 0; that is not evidence that any worker exists.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1645">src/mco/cli.py:1645</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-fleet">mco fleet</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-fleet-apply-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-fleet-set"></a></p>
+<h2 id="mco-fleet-set"><code>mco fleet set</code></h2>
+<p>Update one worker field in ~/.mco/fleet.toml.</p>
+<p>Usage example: <code>bitcadence fleet set WORKER_NAME mode=waker</code></p>
+<p><strong>Expected result:</strong> Changes one declared worker field in ~/.mco/fleet.toml.</p>
+<p><strong>If it fails / before changing state:</strong> The assignment must be KEY=VALUE and the worker must exist. Read fleet status, review the config, then run fleet apply only when ready to reconcile OS services.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1697">src/mco/cli.py:1697</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-fleet">mco fleet</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-fleet-set-param-worker"></a><code>WORKER</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Worker table name under [workers].</td>
+</tr>
+<tr>
+<td><a id="cli-mco-fleet-set-param-assignment"></a><code>ASSIGNMENT</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>KEY=VALUE assignment, for example mode=waker.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-fleet-set-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-fleet-status"></a></p>
+<h2 id="mco-fleet-status"><code>mco fleet status</code></h2>
+<p>Show configured workers and their installed/running state.</p>
+<p>Usage example: <code>bitcadence fleet status</code></p>
+<p><strong>Expected result:</strong> Shows each configured worker's role, instance, mode, installed/running service state and service name.</p>
+<p><strong>If it fails / before changing state:</strong> Missing config prints a sample and exits 0. An empty fleet is reported explicitly. Running service state does not prove a job lease or completion.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1664">src/mco/cli.py:1664</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-fleet">mco fleet</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-fleet-status-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-gui"></a></p>
+<h2 id="mco-gui"><code>mco gui</code></h2>
+<p>Open the BitCadence console in your browser.</p>
+<p>Usage example: <code>bitcadence gui --print</code></p>
+<p><strong>Expected result:</strong> With --print, prints the console URL; otherwise opens the browser console.</p>
+<p><strong>If it fails / before changing state:</strong> --dashboard selects the legacy dashboard. Hidden --flow is retained for old scripts and opens the console. Browser launch does not prove a signed-in session or healthy worker.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1104">src/mco/cli.py:1104</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-gui-param-flow"></a><code>--flow</code> (hidden compatibility)</td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Old option, kept so scripts keep working: opens the console.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-gui-param-dashboard"></a><code>--dashboard</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Open the minimal dashboard instead of the full console.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-gui-param-print-only"></a><code>--print</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Print the URL instead of opening a browser.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-gui-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-helpers"></a></p>
+<h2 id="mco-helpers"><code>mco helpers</code></h2>
+<p>Your helpers: who is ready, busy or stuck.</p>
+<p>Usage example: <code>bitcadence helpers --json</code></p>
+<p><strong>Expected result:</strong> Lists helpers and whether they are ready, busy or stuck; --json returns machine-readable output.</p>
+<p><strong>If it fails / before changing state:</strong> Put this group's --json before a subcommand. For a full technical presence list use agents. Investigate the actual failing helper rather than assuming all workers need restarting.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3447">src/mco/cli.py:3447</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-helpers-param-as-json"></a><code>--json</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Machine-readable list.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-helpers-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-helpers-add"></a></p>
+<h2 id="mco-helpers-add"><code>mco helpers add</code></h2>
+<p>Add a helper (same as <code>mco register</code>, asking for what it needs).</p>
+<p>Usage example: <code>bitcadence helpers add</code></p>
+<p><strong>Expected result:</strong> Prompts for helper name and role, registers it and saves its credential using the helper-registration path.</p>
+<p><strong>If it fails / before changing state:</strong> This creates an identity and writes credentials. The success text reports where they were saved. Do not paste credential output into public logs; use a distinct instance name per helper.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3458">src/mco/cli.py:3458</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-helpers">mco helpers</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-helpers-add-param-name"></a><code>--name</code></td>
+<td>TEXT; required</td>
+<td>required (prompted if omitted)</td>
+<td>New helper's name; prompted if omitted. Prompts if omitted: What should this helper be called?.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-helpers-add-param-role"></a><code>--role</code></td>
+<td>TEXT; required</td>
+<td>required (prompted if omitted)</td>
+<td>New helper's role; prompted if omitted. Prompts if omitted: What is it good at (its role, e.g. codex)?.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-helpers-add-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-helpers-fix"></a></p>
+<h2 id="mco-helpers-fix"><code>mco helpers fix</code></h2>
+<p>Find a locked notes file or a second copy of a helper, and offer to fix it.</p>
+<p>Usage example: <code>bitcadence helpers fix</code></p>
+<p><strong>Expected result:</strong> Finds locked notes files or second copies of helpers and offers repairs.</p>
+<p><strong>If it fails / before changing state:</strong> Review the offered repair before answering; --yes skips questions. This is a focused helper repair, whereas fix covers broader problems.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3478">src/mco/cli.py:3478</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-helpers">mco helpers</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-helpers-fix-param-yes"></a><code>--yes</code> / <code>-y</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Repair without asking.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-helpers-fix-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-jev"></a></p>
+<h2 id="mco-jev"><code>mco jev</code></h2>
+<p>Ask Jev bounded, annotation-only questions. Never authorizes an effect.</p>
+<p>Safe example: <code>bitcadence jev --help</code>. Expected result: list the following subcommands and group options. Select a child command for its operation and recovery instructions.</p>
+<p>Subcommands: <a href="#cli-mco-jev-route-model">route-model</a>.</p>
+<p>Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-jev-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-jev-route-model"></a></p>
+<h2 id="mco-jev-route-model"><code>mco jev route-model</code></h2>
+<p>Suggest a Claude Code model tier (haiku/sonnet/opus) for a task.</p>
+<p>Usage example: <code>bitcadence jev route-model --task &quot;Review a documentation change&quot;</code></p>
+<p><strong>Expected result:</strong> Prints JSON with a suggested Claude Code tier and routing outcome. Does not switch sessions or spawn a worker.</p>
+<p><strong>If it fails / before changing state:</strong> Disabled/unconfigured/network/timeout cases also exit 0. Read outcome, tier and reason; deterministic-tier supplies the advisory fallback (default sonnet).</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1591">src/mco/cli.py:1591</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-jev">mco jev</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-jev-route-model-param-task"></a><code>--task</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Short description of the upcoming task.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-jev-route-model-param-context"></a><code>--context</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Optional recent-conversation excerpt for scope.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-jev-route-model-param-deterministic-tier"></a><code>--deterministic-tier</code></td>
+<td>TEXT; optional</td>
+<td><code>sonnet</code></td>
+<td>Tier used if Jev is disabled, unavailable, or times out.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-jev-route-model-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-jobs"></a></p>
+<h2 id="mco-jobs"><code>mco jobs</code></h2>
+<p>BitCadence Job Board: score client jobs for fit, value, and risk.</p>
+<p>Safe example: <code>bitcadence jobs --help</code>. Expected result: list the following subcommands and group options. Select a child command for its operation and recovery instructions.</p>
+<p>Subcommands: <a href="#cli-mco-jobs-rank">rank</a>.</p>
+<p>Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-jobs-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-jobs-rank"></a></p>
+<h2 id="mco-jobs-rank"><code>mco jobs rank</code></h2>
+<p>Score every available client job for fit, value and risk using Jev and hard filters.</p>
+<p>Usage example: <code>bitcadence jobs rank postings.json --top 10</code></p>
+<p><strong>Expected result:</strong> Loads JSON/CSV postings and prints ranked fit/value/safety/reasons/URLs. --out writes full ranked records and audit receipts.</p>
+<p><strong>If it fails / before changing state:</strong> With --source upwork, needs configured Upwork OAuth and can use --query; without that source a postings file is required. Jev ranking can use its configured provider or deterministic fallback. Ranking does not apply to a job or contact a client.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/jobs/cli.py#L79">src/mco/jobs/cli.py:79</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-jobs">mco jobs</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-jobs-rank-param-postings-path"></a><code>POSTINGS_PATH</code> (positional)</td>
+<td>PATH; optional</td>
+<td>not set</td>
+<td>Path to JSON or CSV file containing job postings. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-jobs-rank-param-top"></a><code>--top</code> / <code>-n</code></td>
+<td>INTEGER; optional</td>
+<td><code>20</code></td>
+<td>Number of top ranked jobs to display in table.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-jobs-rank-param-out"></a><code>--out</code> / <code>-o</code></td>
+<td>PATH; optional</td>
+<td>not set</td>
+<td>Path to output JSON file with full ranked records and audit receipts. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-jobs-rank-param-source"></a><code>--source</code> / <code>-s</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Job source: 'file', 'upwork', etc.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-jobs-rank-param-query"></a><code>--query</code> / <code>-q</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Optional search query filter for marketplace API search.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-jobs-rank-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-launch"></a></p>
+<h2 id="mco-launch"><code>mco launch</code></h2>
+<p>Fire a launcher right now, by name.</p>
+<p>Usage example: <code>bitcadence launch LAUNCHER_NAME</code></p>
+<p><strong>Expected result:</strong> Runs a named launcher immediately through the scheduled-launch code path; job launchers print job IDs, while local app/URL launchers act locally and queue nothing.</p>
+<p><strong>If it fails / before changing state:</strong> Uses ~/.mco/schedules.yaml. Missing config or an unknown launcher produces guidance; --approve/--no-approve override the launcher's approval gate. Launching can create real jobs or open local applications even when done as a manual test.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1157">src/mco/cli.py:1157</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-launch-param-name"></a><code>NAME</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Launcher name from ~/.mco/schedules.yaml.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-launch-param-approve"></a><code>--approve</code> / <code>--no-approve</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Override the launcher's approval gate for this run.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-launch-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-listen"></a></p>
+<h2 id="mco-listen"><code>mco listen</code></h2>
+<p>Spawn the background daemon client that polls and executes Job Board tasks.</p>
+<p>Usage example: <code>bitcadence listen --role codex --instance demo-worker --config-file agent_config.json</code></p>
+<p><strong>Expected result:</strong> Starts the polling/execution listener for the selected role and identity in the current process.</p>
+<p><strong>If it fails / before changing state:</strong> This is an executor, not a passive status monitor. Supply the correct agent config and credential. Use the exact identity you intend to claim work; stop with Ctrl+C. A caught critical listener error is printed without an explicit nonzero exit, so inspect the output as well as the process status.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1933">src/mco/cli.py:1933</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-listen-param-role"></a><code>--role</code></td>
+<td>TEXT; optional</td>
+<td><code>codex</code></td>
+<td>Agent execution role (e.g. codex, script).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-listen-param-instance"></a><code>--instance</code></td>
+<td>TEXT; optional</td>
+<td><code>default_agent</code></td>
+<td>Unique ID of this client listener instance.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-listen-param-config-file"></a><code>--config-file</code></td>
+<td>TEXT; optional</td>
+<td><code>agent_config.json</code></td>
+<td>Path to local worker config file.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-listen-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-mcp"></a></p>
+<h2 id="mco-mcp"><code>mco mcp</code></h2>
+<p>Run the MCO dropbox as an MCP server: stdio (Claude/Codex/Antigravity) or HTTP (remote agents).</p>
+<p>Safe inspection example (prints help only): <code>bitcadence mcp --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Starts the MCP server over stdio by default; --http selects the HTTP server with the configured bind host/port.</p>
+<p><strong>If it fails / before changing state:</strong> For stdio, let the AI application's MCP client own the process. Do not send terminal chatter into the MCP protocol stream. HTTP binding is separate from the gateway's default port.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1914">src/mco/cli.py:1914</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-mcp-param-http"></a><code>--http</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Serve streamable HTTP (bearer = MCO_AGENT_TOKEN) instead of stdio.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-mcp-param-host"></a><code>--host</code></td>
+<td>TEXT; optional</td>
+<td><code>127.0.0.1</code></td>
+<td>HTTP bind address; use a private address such as a Tailscale IP.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-mcp-param-port"></a><code>--port</code></td>
+<td>INTEGER; optional</td>
+<td><code>18790</code></td>
+<td>HTTP port.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-mcp-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-orgs"></a></p>
+<h2 id="mco-orgs"><code>mco orgs</code></h2>
+<p>List orgs available for registration (Control Panel tenancy dropdown, from the terminal).</p>
+<p>Usage example: <code>bitcadence orgs</code></p>
+<p><strong>Expected result:</strong> Lists organizations available for registration, which are in use and whether the caller is a host operator.</p>
+<p><strong>If it fails / before changing state:</strong> If unavailable, check gateway connectivity and the caller's tenancy authority before registering into another organization.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3038">src/mco/cli.py:3038</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-orgs-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-pause"></a></p>
+<h2 id="mco-pause"><code>mco pause</code></h2>
+<p>Pause everything: stop work in progress and hold new work.</p>
+<p>Usage example: <code>bitcadence pause</code></p>
+<p><strong>Expected result:</strong> Asks before stopping work in progress and holding new work.</p>
+<p><strong>If it fails / before changing state:</strong> This affects the whole system, not one helper. Read the affected work before confirming; --yes removes the question. Resume deliberately with resume.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3497">src/mco/cli.py:3497</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-pause-param-yes"></a><code>--yes</code> / <code>-y</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Don't ask first.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-pause-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-platform"></a></p>
+<h2 id="mco-platform"><code>mco platform</code></h2>
+<p>Run a connector control action directly (requires an approver-role token).</p>
+<p>Safe inspection example (prints help only): <code>bitcadence platform --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Runs a named connector control action with a JSON parameter object and prints the returned result.</p>
+<p><strong>If it fails / before changing state:</strong> Use connectors to discover supported action names and confirm required parameters in the connector's documentation. Invalid JSON exits 1. Requires an approver-role credential; this can change the external platform.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3385">src/mco/cli.py:3385</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-platform-param-connector"></a><code>CONNECTOR</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Connector name (servicenow, dynatrace).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-platform-param-action"></a><code>ACTION</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Action name (see 'mco connectors').</td>
+</tr>
+<tr>
+<td><a id="cli-mco-platform-param-params"></a><code>--params</code></td>
+<td>TEXT; optional</td>
+<td><code>{}</code></td>
+<td>JSON parameters for the action.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-platform-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-reassign"></a></p>
+<h2 id="mco-reassign"><code>mco reassign</code></h2>
+<p>Clone a failed job onto a new target, link both rows, and archive the old one (approver-role token).</p>
+<p>Usage example: <code>bitcadence reassign JOB_ID --to-role codex --to-instance TARGET_INSTANCE</code></p>
+<p><strong>Expected result:</strong> Clones eligible failed/rejected/cancelled work to a new target, links old/new jobs and archives the old one.</p>
+<p><strong>If it fails / before changing state:</strong> Requires an approver-role credential. Inspect the old audit first; --instructions overrides rather than appends to the original instructions. The printed new ID is the job to follow.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2795">src/mco/cli.py:2795</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-reassign-param-job-id"></a><code>JOB_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Failed/rejected/cancelled job ID to redo elsewhere.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-reassign-param-to-role"></a><code>--to-role</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Target agent role for the new job.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-reassign-param-to-instance"></a><code>--to-instance</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Target agent instance (optional).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-reassign-param-instructions"></a><code>--instructions</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Override instructions (default: reuse the original).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-reassign-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-recall"></a></p>
+<h2 id="mco-recall"><code>mco recall</code></h2>
+<p>Recall the most relevant Drumline shared-context entries.</p>
+<p>Usage example: <code>bitcadence recall &quot;release checklist&quot; --limit 5</code></p>
+<p><strong>Expected result:</strong> Prints the most relevant Drumline entries, including kind/title/content/tags/author. Blank query reads recent entries.</p>
+<p><strong>If it fails / before changing state:</strong> --tags is comma-separated; --role biases relevance and does not create authority. No matches is a normal empty result. On connection failure the command points to doctor.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2817">src/mco/cli.py:2817</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-recall-param-query"></a><code>QUERY</code> (positional)</td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Free-text search over shared context (blank = most recent).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-recall-param-tags"></a><code>--tags</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Comma-separated tag filter.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-recall-param-limit"></a><code>--limit</code></td>
+<td>INTEGER; optional</td>
+<td><code>5</code></td>
+<td>Max entries to return.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-recall-param-role"></a><code>--role</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Bias results toward this role (role-affine scoring).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-recall-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-register"></a></p>
+<h2 id="mco-register"><code>mco register</code></h2>
+<p>Register a new client agent, generating a secure access token.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence register --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Writes the named client agent registration and generates a token shown once. The implementation upserts by instance ID: reusing a name replaces that registration's token, role and supplied fields.</p>
+<p><strong>If it fails / before changing state:</strong> Use helpers add for the everyday guided path and choose a distinct identity per helper. Unknown organizations/scopes are rejected. On an older database without a scopes column, registration can fall back to role-derived scopes with an explicit migration warning; inspect the output before assuming the requested scope restriction was stored.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2243">src/mco/cli.py:2243</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-register-param-name"></a><code>--name</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Unique name (instance ID) of the agent.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-register-param-role"></a><code>--role</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Target role of the agent (e.g. antigravity, codex).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-register-param-org"></a><code>--org</code></td>
+<td>TEXT; optional</td>
+<td><code>default</code></td>
+<td>Tenant org the agent belongs to (multi-tenant installs).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-register-param-scope"></a><code>--scope</code></td>
+<td>TEXT; optional; repeatable</td>
+<td>not set</td>
+<td>Explicit token scope (repeatable, e.g. --scope jobs:read --scope context:read). Omit for role-derived defaults; 'admin' grants everything.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-register-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-reject"></a></p>
+<h2 id="mco-reject"><code>mco reject</code></h2>
+<p>Reject a job paused at the human-in-the-loop gate (terminal).</p>
+<p>Usage example: <code>bitcadence reject JOB_ID --reason &quot;Requirements need revision&quot;</code></p>
+<p><strong>Expected result:</strong> Moves a job waiting for human approval into rejected and prints the resulting status.</p>
+<p><strong>If it fails / before changing state:</strong> Use the correct pending approval ID. Rejection is terminal for that attempt; a later intentional retry can requeue eligible rejected jobs.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2713">src/mco/cli.py:2713</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-reject-param-job-id"></a><code>JOB_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Job ID awaiting approval.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-reject-param-reason"></a><code>--reason</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Why the job was rejected.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-reject-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-remember"></a></p>
+<h2 id="mco-remember"><code>mco remember</code></h2>
+<p>Append an entry to the Drumline shared context.</p>
+<p>Usage example: <code>bitcadence remember &quot;Demo convention&quot; &quot;Use the agreed release checklist&quot; --kind decision --tags demo</code></p>
+<p><strong>Expected result:</strong> Appends canonical Drumline context and prints its entry ID. With only one sentence, the sentence becomes content and a shortened title.</p>
+<p><strong>If it fails / before changing state:</strong> Use fact/decision/lesson/handoff/artifact as described by the CLI. This is an authoritative context write, unlike Agent Exchange discussion; review what you are recording first.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2860">src/mco/cli.py:2860</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-remember-param-title"></a><code>TITLE</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>What to remember (or a short title when you also give the content).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-remember-param-content"></a><code>CONTENT</code> (positional)</td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>The content to remember (optional: the title alone is enough).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-remember-param-kind"></a><code>--kind</code></td>
+<td>TEXT; optional</td>
+<td><code>fact</code></td>
+<td>Entry kind: fact, decision, lesson, handoff, or artifact.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-remember-param-tags"></a><code>--tags</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Comma-separated tags.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-remember-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-reset-token"></a></p>
+<h2 id="mco-reset-token"><code>mco reset-token</code></h2>
+<p>Rotate an agent's access token. The old token stops working immediately.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence reset-token --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Rotates an instance credential, prints it once, and saves it to ~/.mco/tokens/INSTANCE.token by default.</p>
+<p><strong>If it fails / before changing state:</strong> The old token immediately stops working. --no-save leaves local token files untouched. Embedded MCP client configs require a separate update even when the token file is saved; avoid rotation during active work without coordinating the consumer.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3059">src/mco/cli.py:3059</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-reset-token-param-instance-id"></a><code>INSTANCE_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Instance ID of the agent to rotate.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-reset-token-param-save"></a><code>--save</code> / <code>--no-save</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>true</code></td>
+<td>Write the new token to ~/.mco/tokens/&lt;instance&gt;.token so this machine's waker picks it up.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-reset-token-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-restart"></a></p>
+<h2 id="mco-restart"><code>mco restart</code></h2>
+<p>Restart the background gateway (stop if running, then start).</p>
+<p>Usage example: <code>bitcadence restart</code></p>
+<p><strong>Expected result:</strong> Stops the background gateway if present and starts it again with the selected host/port.</p>
+<p><strong>If it fails / before changing state:</strong> Interrupts gateway availability. For a boot-persistent OS service use service restart. Recheck status and browser access after restart rather than treating process launch as full readiness.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L788">src/mco/cli.py:788</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-restart-param-host"></a><code>--host</code></td>
+<td>TEXT; optional</td>
+<td><code>127.0.0.1</code></td>
+<td>The host to bind to.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-restart-param-port"></a><code>--port</code></td>
+<td>INTEGER; optional</td>
+<td><code>18789</code></td>
+<td>The port the gateway runs on.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-restart-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-restore-fence"></a></p>
+<h2 id="mco-restore-fence"><code>mco restore-fence</code></h2>
+<p>After a DB restore, pause work and invalidate every pre-restore claim.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence restore-fence --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> After a database restore, halts active jobs, rotates the store incarnation to invalidate old claims and leaves work paused.</p>
+<p><strong>If it fails / before changing state:</strong> Recovery operation: run before reconnecting workers. Review halted jobs, clear Stop work in Settings deliberately, then retry selected work. This is not a general-purpose health check.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2676">src/mco/cli.py:2676</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-restore-fence-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-resume"></a></p>
+<h2 id="mco-resume"><code>mco resume</code></h2>
+<p>Resume after a pause.</p>
+<p>Usage example: <code>bitcadence resume</code></p>
+<p><strong>Expected result:</strong> Resumes work after a global pause.</p>
+<p><strong>If it fails / before changing state:</strong> Check the reason for the pause and the waiting work first. Resume can make pending work eligible to execute immediately.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3504">src/mco/cli.py:3504</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-resume-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-retry"></a></p>
+<h2 id="mco-retry"><code>mco retry</code></h2>
+<p>Re-queue a failed or rejected job back to pending (approver-role token).</p>
+<p>Usage example: <code>bitcadence retry JOB_ID</code></p>
+<p><strong>Expected result:</strong> Moves eligible failed/rejected work back to pending and prints the new status.</p>
+<p><strong>If it fails / before changing state:</strong> Requires an approver-role credential. Inspect the prior failure before retrying; requeueing without addressing the cause can repeat it.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2727">src/mco/cli.py:2727</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-retry-param-job-id"></a><code>JOB_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Failed/rejected job ID to re-queue.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-retry-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule"></a></p>
+<h2 id="mco-schedule"><code>mco schedule</code></h2>
+<p>Schedules and loops: what work gets created, and when.</p>
+<p>Usage example: <code>bitcadence schedule</code></p>
+<p><strong>Expected result:</strong> Shows the everyday schedule view when no subcommand is supplied.</p>
+<p><strong>If it fails / before changing state:</strong> This group has a real default action. Use schedule list for the technical list or --help to inspect its subcommands.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L813">src/mco/cli.py:813</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule-add"></a></p>
+<h2 id="mco-schedule-add"><code>mco schedule add</code></h2>
+<p>Add a schedule by asking what, how often and what time.</p>
+<p>Usage example: <code>bitcadence schedule add</code></p>
+<p><strong>Expected result:</strong> Prompts for what should run, how often and when, then offers to save the schedule.</p>
+<p><strong>If it fails / before changing state:</strong> The command is implemented; it is no longer roadmap-only. --what and --when supply answers, and --yes skips saving confirmation. Inspect schedule list after saving.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L845">src/mco/cli.py:845</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-schedule">mco schedule</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-add-param-what"></a><code>--what</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>What should run (its name). Leave out for a pick list.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-add-param-when"></a><code>--when</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>In plain words, e.g. &quot;every weekday at 2 AM&quot;.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-add-param-yes"></a><code>--yes</code> / <code>-y</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Save without asking.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-add-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule-disable"></a></p>
+<h2 id="mco-schedule-disable"><code>mco schedule disable</code></h2>
+<p>Disable a schedule or loop, leaving its definition and history intact.</p>
+<p>Usage example: <code>bitcadence schedule disable SCHEDULE_NAME</code></p>
+<p><strong>Expected result:</strong> Sets enabled=false for one schedule/loop while preserving its definition, comments and history.</p>
+<p><strong>If it fails / before changing state:</strong> An unknown name prints known names and exits 1. It prevents future firings; it is not a cancellation command for jobs already created.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L998">src/mco/cli.py:998</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-schedule">mco schedule</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-disable-param-name"></a><code>NAME</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Schedule or loop name.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-disable-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule-enable"></a></p>
+<h2 id="mco-schedule-enable"><code>mco schedule enable</code></h2>
+<p>Enable a schedule or loop (without hand-editing YAML).</p>
+<p>Usage example: <code>bitcadence schedule enable SCHEDULE_NAME</code></p>
+<p><strong>Expected result:</strong> Sets enabled=true for one schedule/loop while preserving definition and history.</p>
+<p><strong>If it fails / before changing state:</strong> Enabling does not clear sticky completion. If an exhausted loop must run again, inspect and deliberately use schedule reset.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L992">src/mco/cli.py:992</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-schedule">mco schedule</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-enable-param-name"></a><code>NAME</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Schedule or loop name.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-enable-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule-init"></a></p>
+<h2 id="mco-schedule-init"><code>mco schedule init</code></h2>
+<p>Write a starter ~/.mco/schedules.yaml.</p>
+<p>Usage example: <code>bitcadence schedule init</code></p>
+<p><strong>Expected result:</strong> Writes a starter ~/.mco/schedules.yaml and tells you to edit it, then list schedules.</p>
+<p><strong>If it fails / before changing state:</strong> An existing file is refused with exit 1. --force overwrites it, so preserve existing definitions before intentionally replacing them.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L870">src/mco/cli.py:870</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-schedule">mco schedule</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-init-param-force"></a><code>--force</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Overwrite an existing config.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-init-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule-list"></a></p>
+<h2 id="mco-schedule-list"><code>mco schedule list</code></h2>
+<p>Show every schedule and loop with its next fire time.</p>
+<p>Usage example: <code>bitcadence schedule list</code></p>
+<p><strong>Expected result:</strong> Shows name/kind/trigger/launcher/next run/run count/bound. Disabled and exhausted states are shown explicitly; technical next-run timestamps are UTC.</p>
+<p><strong>If it fails / before changing state:</strong> Missing config prints the starter guidance and exits 0. Initialize and edit a config; no listed schedule is not evidence that a scheduler service is running.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L886">src/mco/cli.py:886</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-schedule">mco schedule</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-list-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule-off"></a></p>
+<h2 id="mco-schedule-off"><code>mco schedule off</code></h2>
+<p>Turn a schedule off.</p>
+<p>Usage example: <code>bitcadence schedule off SCHEDULE_NAME</code></p>
+<p><strong>Expected result:</strong> Turns one named schedule off through the everyday command path.</p>
+<p><strong>If it fails / before changing state:</strong> Check schedule list to confirm the disabled state. Existing jobs remain separate work items.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L863">src/mco/cli.py:863</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-schedule">mco schedule</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-off-param-name"></a><code>NAME</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Which schedule (its name).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-off-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule-on"></a></p>
+<h2 id="mco-schedule-on"><code>mco schedule on</code></h2>
+<p>Turn a schedule on.</p>
+<p>Usage example: <code>bitcadence schedule on SCHEDULE_NAME</code></p>
+<p><strong>Expected result:</strong> Turns one named schedule on through the everyday command path.</p>
+<p><strong>If it fails / before changing state:</strong> Check schedule list for its next run and completion bounds. Re-enabling an exhausted loop does not by itself promise a new firing.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L856">src/mco/cli.py:856</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-schedule">mco schedule</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-on-param-name"></a><code>NAME</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Which schedule (its name).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-on-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule-reset"></a></p>
+<h2 id="mco-schedule-reset"><code>mco schedule reset</code></h2>
+<p>Clear a schedule's run history so a finished loop can run again.</p>
+<p>Usage example: <code>bitcadence schedule reset SCHEDULE_NAME</code></p>
+<p><strong>Expected result:</strong> Asks to clear the named schedule's run history, allowing a finished loop to run again.</p>
+<p><strong>If it fails / before changing state:</strong> Sticky completion prevents accidental resurrection when a queue refills. --yes skips the question. Unknown names fail; a schedule with no history reports that there is nothing to clear.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1004">src/mco/cli.py:1004</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-schedule">mco schedule</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-reset-param-name"></a><code>NAME</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Schedule or loop name.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-reset-param-yes"></a><code>--yes</code> / <code>-y</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Skip the confirmation prompt.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-reset-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule-run"></a></p>
+<h2 id="mco-schedule-run"><code>mco schedule run</code></h2>
+<p>Run the scheduler in the foreground, ticking until interrupted.</p>
+<p>Usage example: <code>bitcadence schedule run --interval 30</code></p>
+<p><strong>Expected result:</strong> Runs scheduler passes in the foreground until interrupted.</p>
+<p><strong>If it fails / before changing state:</strong> Ctrl+C stops this foreground scheduler. Use a boot-persistent scheduler service for unattended operation; avoid running duplicate scheduler drivers unintentionally.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1074">src/mco/cli.py:1074</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-schedule">mco schedule</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-run-param-interval"></a><code>--interval</code></td>
+<td>FLOAT; optional</td>
+<td><code>30.0</code></td>
+<td>Seconds between scheduler passes.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-run-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-schedule-tick"></a></p>
+<h2 id="mco-schedule-tick"><code>mco schedule tick</code></h2>
+<p>Run one scheduler pass (what <code>mco schedule run</code> does on a timer).</p>
+<p>Usage example: <code>bitcadence schedule tick --dry-run</code></p>
+<p><strong>Expected result:</strong> Reports what is due without creating jobs when --dry-run is used. Without it, executes one real scheduler pass.</p>
+<p><strong>If it fails / before changing state:</strong> Nothing due is a normal result. Reports distinguish fired/would-fire/skipped-overlap/error. Validate the config before wiring a real tick into cron/Task Scheduler.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1040">src/mco/cli.py:1040</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-schedule">mco schedule</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-schedule-tick-param-dry-run"></a><code>--dry-run</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Show what would fire without creating jobs.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-schedule-tick-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score"></a></p>
+<h2 id="mco-score"><code>mco score</code></h2>
+<p>Run a Score: start, advance and inspect a conductor run.</p>
+<p>Safe example: <code>bitcadence score --help</code>. Expected result: list the following subcommands and group options. Select a child command for its operation and recovery instructions.</p>
+<p>Subcommands: <a href="#cli-mco-score-deliver">deliver</a>, <a href="#cli-mco-score-grant-local">grant-local</a>, <a href="#cli-mco-score-grant-standing-local">grant-standing-local</a>, <a href="#cli-mco-score-intake">intake</a>, <a href="#cli-mco-score-list">list</a>, <a href="#cli-mco-score-revoke-standing-local">revoke-standing-local</a>, <a href="#cli-mco-score-scaffold">scaffold</a>, <a href="#cli-mco-score-start">start</a>, <a href="#cli-mco-score-status">status</a>, <a href="#cli-mco-score-tick">tick</a>.</p>
+<p>Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score-deliver"></a></p>
+<h2 id="mco-score-deliver"><code>mco score deliver</code></h2>
+<p>Bundle code, tests, README, reviews and a DRAFT client message (never sent).</p>
+<p>Usage example: <code>bitcadence score deliver CLIENT_WORKTREE --out delivery-bundle</code></p>
+<p><strong>Expected result:</strong> Bundles the client code/tests/README/review reports and a draft client message into the output directory.</p>
+<p><strong>If it fails / before changing state:</strong> The message is never sent by this command. Confirm the client worktree and optional evidence directory; inspect the produced bundle before handing it over.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1519">src/mco/cli.py:1519</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-score">mco score</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-deliver-param-worktree"></a><code>WORKTREE</code> (positional)</td>
+<td>PATH; required</td>
+<td>required</td>
+<td>Worktree of the finished client branch. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-deliver-param-out"></a><code>--out</code></td>
+<td>PATH; required</td>
+<td>required</td>
+<td>Delivery directory. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-deliver-param-evidence"></a><code>--evidence</code></td>
+<td>PATH; optional</td>
+<td>not set</td>
+<td>Directory of review reports. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-deliver-param-client"></a><code>--client</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Client label used by the delivery bundler.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-deliver-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score-grant-local"></a></p>
+<h2 id="mco-score-grant-local"><code>mco score grant-local</code></h2>
+<p>Issue a locally auditable, interactive Score grant on Windows SQLite only.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence score grant-local --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Issues a local auditable Score grant only after displaying exact authority and receiving a typed confirmation.</p>
+<p><strong>If it fails / before changing state:</strong> Disabled by default. Requires explicitly enabled MCO_LOCAL_HUMAN_GRANTS, interactive Windows terminal and local SQLite store; bearer credentials cannot satisfy the human check. Score file must exist. The grant binds exact digest/run/actions/resources/environment/expiry/budget; it does not replace repository-write opt-in.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1302">src/mco/cli.py:1302</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-score">mco score</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-grant-local-param-score-file"></a><code>SCORE_FILE</code> (positional)</td>
+<td>PATH; required</td>
+<td>required</td>
+<td>Score JSON file whose canonical digest will be authorized. Path must already exist. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-local-param-run-id"></a><code>--run-id</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Run ID this grant may authorize.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-local-param-action"></a><code>--action</code></td>
+<td>TEXT; required; repeatable</td>
+<td>required</td>
+<td>Allowed capability; repeat for more than one.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-local-param-resource"></a><code>--resource</code></td>
+<td>TEXT; required; repeatable</td>
+<td>required</td>
+<td>Exact allowed resource; repeat for more than one.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-local-param-environment"></a><code>--environment</code></td>
+<td>TEXT; optional</td>
+<td><code>test</code></td>
+<td>Environment named in the grant authority.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-local-param-expires-minutes"></a><code>--expires-minutes</code></td>
+<td>INTEGER RANGE; optional</td>
+<td><code>240</code></td>
+<td>Grant lifetime in minutes unless expires-hours is supplied. Range: 1 to 18960.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-local-param-expires-hours"></a><code>--expires-hours</code></td>
+<td>INTEGER RANGE; optional</td>
+<td>not set</td>
+<td>Grant lifetime in hours (1-316); overrides --expires-minutes. Range: 1 to 316.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-local-param-budget-cents"></a><code>--budget-cents</code></td>
+<td>INTEGER RANGE; optional</td>
+<td><code>0</code></td>
+<td>Maximum budget in cents included in this grant. Range: 0 to unbounded.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-local-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score-grant-standing-local"></a></p>
+<h2 id="mco-score-grant-standing-local"><code>mco score grant-standing-local</code></h2>
+<p>Approve an exact Score class once for unattended local runs (max 316h).</p>
+<p>Safe inspection example (prints help only): <code>bitcadence score grant-standing-local --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Shows the Score's digest, constraints, per-run budget ceiling, capabilities, resources, environment and expiry, then issues a standing grant ID only after you type the exact confirmation phrase. Runs of that exact Score class can then be started with the <code>--standing-grant</code> option of <a href="#cli-mco-score-start">mco score start</a>. See <a href="standing-score-grants.html">Standing Score grants</a>.</p>
+<p><strong>If it fails / before changing state:</strong> Requires the same interactive Windows local-human boundary as <code>mco score grant-local</code> (explicitly enabled MCO_LOCAL_HUMAN_GRANTS, local SQLite store, no bearer credential). Score file must exist. A confirmation that does not match issues nothing.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1361">src/mco/cli.py:1361</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-score">mco score</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-grant-standing-local-param-score-file"></a><code>SCORE_FILE</code> (positional)</td>
+<td>PATH; required</td>
+<td>required</td>
+<td>Score JSON file whose exact canonical digest becomes the approved class. Path must already exist. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-standing-local-param-environment"></a><code>--environment</code></td>
+<td>TEXT; optional</td>
+<td><code>test</code></td>
+<td>Environment named in the grant (standing authority allows test, development or staging).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-standing-local-param-expires-hours"></a><code>--expires-hours</code></td>
+<td>INTEGER RANGE; optional</td>
+<td><code>24</code></td>
+<td>Grant lifetime in hours. Range: 1 to 316.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-grant-standing-local-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score-intake"></a></p>
+<h2 id="mco-score-intake"><code>mco score intake</code></h2>
+<p>Draft a SCOPE from a client brief (with guardrail flags), or <code>approve</code> a clean scope into a Score.</p>
+<p>Usage example: <code>bitcadence score intake BRIEF.txt --out scope.json</code></p>
+<p><strong>Expected result:</strong> Drafts a scope from a brief and reports guardrail flags. The approve mode turns a clean reviewed scope into a Score and also updates that scope file.</p>
+<p><strong>If it fails / before changing state:</strong> Approve mode requires exactly approve SCOPE.json plus --worktree, --branch, --before-sha and --out. Correct flagged scope issues first; drafting a scope is not an execution grant.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1485">src/mco/cli.py:1485</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-score">mco score</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-intake-param-args"></a><code>ARGS</code> (positional)</td>
+<td>TEXT; required; one or more values</td>
+<td>required</td>
+<td>BRIEF.txt to draft a scope, or <code>approve SCOPE.json</code>.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-intake-param-out"></a><code>--out</code></td>
+<td>PATH; required</td>
+<td>required</td>
+<td>Where to write the scope (draft) or the Score (approve). Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-intake-param-client"></a><code>--client</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Client name (draft).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-intake-param-worktree"></a><code>--worktree</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>approve: client worktree path.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-intake-param-branch"></a><code>--branch</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>approve: client branch.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-intake-param-before-sha"></a><code>--before-sha</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>approve: starting commit.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-intake-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score-list"></a></p>
+<h2 id="mco-score-list"><code>mco score list</code></h2>
+<p>Runs in this conductor database.</p>
+<p>Usage example: <code>bitcadence score list</code></p>
+<p><strong>Expected result:</strong> Lists run ID, digest, organization and status from the selected conductor database.</p>
+<p><strong>If it fails / before changing state:</strong> No runs is normal for an empty/new database. Use the same --db when listing, starting, ticking and inspecting a run.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1537">src/mco/cli.py:1537</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-score">mco score</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-list-param-database"></a><code>--db</code></td>
+<td>PATH; optional</td>
+<td><code>~/.mco/score-runs.db</code></td>
+<td>Conductor SQLite database to list. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-list-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score-revoke-standing-local"></a></p>
+<h2 id="mco-score-revoke-standing-local"><code>mco score revoke-standing-local</code></h2>
+<p>Revoke a standing class immediately; existing runs are checked again.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence score revoke-standing-local --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Revokes the named standing grant. Future authority checks fail, including for runs already started from it; commands that already passed their check may finish. No second confirmation phrase is asked. See <a href="standing-score-grants.html">Standing Score grants</a>.</p>
+<p><strong>If it fails / before changing state:</strong> Requires the same interactive Windows local-human boundary as <code>mco score grant-local</code>. Use the grant ID that <code>grant-standing-local</code> printed.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1396">src/mco/cli.py:1396</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-score">mco score</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-revoke-standing-local-param-grant-id"></a><code>GRANT_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>ID of the standing grant to revoke.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-revoke-standing-local-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score-scaffold"></a></p>
+<h2 id="mco-score-scaffold"><code>mco score scaffold</code></h2>
+<p>Turn a plain-language brief into a validated Score with build, review, and two fix attempts per step.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence score scaffold --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Reads a JSON spec, builds a Score with build/review/fix phases, validates it and writes the output file plus digest.</p>
+<p><strong>If it fails / before changing state:</strong> The spec must exist and be readable. It needs score_id, objective, steps, worktree_path, target_branch and expected_before_sha (see argument details). Invalid spec/compile failures exit 1. Review the output before starting it.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1459">src/mco/cli.py:1459</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-score">mco score</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-scaffold-param-spec"></a><code>SPEC</code> (positional)</td>
+<td>PATH; required</td>
+<td>required</td>
+<td>JSON spec: score_id, objective, steps[{id,title,brief}], worktree_path, target_branch, expected_before_sha, and optional builders, third_reviewer, allowed_paths, test_command, constraints. Path must already exist. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-scaffold-param-out"></a><code>--out</code></td>
+<td>PATH; required</td>
+<td>required</td>
+<td>Where to write the Score document. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-scaffold-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score-start"></a></p>
+<h2 id="mco-score-start"><code>mco score start</code></h2>
+<p>Initialize a run. Safe to repeat: identical policy and identities resume it.</p>
+<p>Usage example: <code>bitcadence score start score.json --run-id demo-run --target builder=builder-instance</code></p>
+<p><strong>Expected result:</strong> Initializes a conductor run; an identical policy and identities can resume the same run ID. Reports the Score ID and a suggested tick command.</p>
+<p><strong>If it fails / before changing state:</strong> Provide role=instance for every required role. Changed policy/identity under a reused run ID can fail; inspect the existing run rather than guessing. This prepares a run; it does not prove tasks executed.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1226">src/mco/cli.py:1226</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-score">mco score</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-start-param-score-file"></a><code>SCORE_FILE</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Path to the score JSON document.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-start-param-run-id"></a><code>--run-id</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Identity of this run; re-using one resumes it.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-start-param-target"></a><code>--target</code></td>
+<td>TEXT; optional; repeatable</td>
+<td>not set</td>
+<td>role=instance for every role in the score.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-start-param-org"></a><code>--org</code></td>
+<td>TEXT; optional</td>
+<td><code>default</code></td>
+<td>Organization bound to the conductor run.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-start-param-database"></a><code>--db</code></td>
+<td>PATH; optional</td>
+<td><code>~/.mco/score-runs.db</code></td>
+<td>Conductor SQLite database used for this run. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-start-param-root"></a><code>--artifact-root</code></td>
+<td>PATH; optional</td>
+<td><code>~/.mco/score-artifacts</code></td>
+<td>Directory for conductor task artifacts. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-start-param-standing-grant"></a><code>--standing-grant</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Approved local standing grant ID; rechecked on each conductor step. See <a href="standing-score-grants.html">Standing Score grants</a>.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-start-param-live-repository-write"></a><code>--live-repository-write</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start — a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-start-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score-status"></a></p>
+<h2 id="mco-score-status"><code>mco score status</code></h2>
+<p>Where the run actually is: per task, per phase, with the last events.</p>
+<p>Usage example: <code>bitcadence score status --run-id demo-run</code></p>
+<p><strong>Expected result:</strong> Prints actual per-task/per-phase dispatch, recent events, acceptance counts and launch state.</p>
+<p><strong>If it fails / before changing state:</strong> Use the same --db/--artifact-root as the run. A timeout is reported as stopped, not completion. Inspect blocked/failed evidence before deciding to tick again.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1444">src/mco/cli.py:1444</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-score">mco score</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-status-param-run-id"></a><code>--run-id</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Run identity to inspect.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-status-param-database"></a><code>--db</code></td>
+<td>PATH; optional</td>
+<td><code>~/.mco/score-runs.db</code></td>
+<td>Conductor SQLite database containing the run. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-status-param-root"></a><code>--artifact-root</code></td>
+<td>PATH; optional</td>
+<td><code>~/.mco/score-artifacts</code></td>
+<td>Artifact directory for the run. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-status-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-score-tick"></a></p>
+<h2 id="mco-score-tick"><code>mco score tick</code></h2>
+<p>Advance the run: plan what can start, dispatch it, accept finished work.</p>
+<p>Usage example: <code>bitcadence score tick --run-id demo-run</code></p>
+<p><strong>Expected result:</strong> Advances planning/dispatch/acceptance once; --watch repeats until settled or timeout.</p>
+<p><strong>If it fails / before changing state:</strong> Ticking can dispatch real work. --live-repository-write must be present on every tick that needs that adapter; an eligible human grant must also authorize the digest/run. Watch exits 1 for blocked/failed/timed out; inspect score status.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1411">src/mco/cli.py:1411</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-score">mco score</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-score-tick-param-run-id"></a><code>--run-id</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Run identity to advance; must identify an initialized run.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-tick-param-watch"></a><code>--watch</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Keep ticking until the run settles.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-tick-param-interval"></a><code>--interval</code></td>
+<td>FLOAT; optional</td>
+<td><code>5.0</code></td>
+<td>Seconds between ticks in watch mode.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-tick-param-timeout"></a><code>--timeout</code></td>
+<td>FLOAT; optional</td>
+<td><code>900.0</code></td>
+<td>Maximum watch duration in seconds; timeout is not success.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-tick-param-database"></a><code>--db</code></td>
+<td>PATH; optional</td>
+<td><code>~/.mco/score-runs.db</code></td>
+<td>Conductor SQLite database containing the run. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-tick-param-root"></a><code>--artifact-root</code></td>
+<td>PATH; optional</td>
+<td><code>~/.mco/score-artifacts</code></td>
+<td>Artifact directory for the run. Existing path is checked for readability.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-tick-param-live-repository-write"></a><code>--live-repository-write</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start — a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-score-tick-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-send"></a></p>
+<h2 id="mco-send"><code>mco send</code></h2>
+<p>Drop a job into an agent's dropbox from the terminal.</p>
+<p>Usage example: <code>bitcadence send codex --title &quot;Review documentation&quot; --message &quot;Read and report findings only&quot; --approve</code></p>
+<p><strong>Expected result:</strong> Creates a job for a role or exact instance and prints its ID/status. --approve holds it at the approval gate.</p>
+<p><strong>If it fails / before changing state:</strong> Without --approve, work may be immediately claimable. Empty --message reuses the title. Higher numeric priority runs first; a successful submission is not proof of completion.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2487">src/mco/cli.py:2487</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-send-param-to-role"></a><code>TO_ROLE</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Target role's dropbox (e.g. codex, claude).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-send-param-title"></a><code>--title</code> / <code>-t</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Short job title.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-send-param-message"></a><code>--message</code> / <code>-m</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Instructions (defaults to the title).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-send-param-instance"></a><code>--instance</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Address one specific instance instead of the whole role.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-send-param-approve"></a><code>--approve</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Pause at the human approval gate before execution.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-send-param-retries"></a><code>--retries</code></td>
+<td>INTEGER; optional</td>
+<td><code>0</code></td>
+<td>Retry budget on failure.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-send-param-escalate"></a><code>--escalate</code></td>
+<td>TEXT; optional</td>
+<td><code>&quot;&quot;</code> (empty)</td>
+<td>Role to escalate to after retries are exhausted.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-send-param-priority"></a><code>--priority</code></td>
+<td>INTEGER; optional</td>
+<td><code>0</code></td>
+<td>Higher runs first (default 0). Workers take the first job in their inbox, so this is what jumps the queue.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-send-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-serve"></a></p>
+<h2 id="mco-serve"><code>mco serve</code></h2>
+<p>Start the BitCadence FastAPI WebSocket/REST API Server.</p>
+<p>Usage example: <code>bitcadence serve</code></p>
+<p><strong>Expected result:</strong> Runs the HTTP/WebSocket gateway in the foreground on 127.0.0.1:18789 by default.</p>
+<p><strong>If it fails / before changing state:</strong> Keep this terminal alive or use start/service install for the appropriate lifecycle. A bind error usually needs inspection of the chosen port/process, not force-killing an unidentified process.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L626">src/mco/cli.py:626</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-serve-param-host"></a><code>--host</code></td>
+<td>TEXT; optional</td>
+<td><code>127.0.0.1</code></td>
+<td>The host to bind to.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-serve-param-port"></a><code>--port</code></td>
+<td>INTEGER; optional</td>
+<td><code>18789</code></td>
+<td>The port to bind to.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-serve-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-service"></a></p>
+<h2 id="mco-service"><code>mco service</code></h2>
+<p>Run BitCadence processes as boot-persistent OS services.</p>
+<p>Safe example: <code>bitcadence service --help</code>. Expected result: list the following subcommands and group options. Select a child command for its operation and recovery instructions.</p>
+<p>Subcommands: <a href="#cli-mco-service-install">install</a>, <a href="#cli-mco-service-install-scheduler">install-scheduler</a>, <a href="#cli-mco-service-install-waker">install-waker</a>, <a href="#cli-mco-service-logs">logs</a>, <a href="#cli-mco-service-restart">restart</a>, <a href="#cli-mco-service-status">status</a>, <a href="#cli-mco-service-uninstall">uninstall</a>.</p>
+<p>Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-service-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-service-install"></a></p>
+<h2 id="mco-service-install"><code>mco service install</code></h2>
+<p>Install the gateway as an OS service that starts on boot/login.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence service install --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Installs the gateway using the platform's boot/login service backend and prints the console address/removal command.</p>
+<p><strong>If it fails / before changing state:</strong> Changes OS startup/service configuration. Check service status afterward. It is separate from starting a temporary background gateway with start.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1735">src/mco/cli.py:1735</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-service">mco service</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-service-install-param-host"></a><code>--host</code></td>
+<td>TEXT; optional</td>
+<td><code>127.0.0.1</code></td>
+<td>Host the service binds to.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-install-param-port"></a><code>--port</code></td>
+<td>INTEGER; optional</td>
+<td><code>18789</code></td>
+<td>Port the service binds to.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-install-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-service-install-scheduler"></a></p>
+<h2 id="mco-service-install-scheduler"><code>mco service install-scheduler</code></h2>
+<p>Install the schedule/loop scheduler as a boot-persistent OS service.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence service install-scheduler --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Installs a scheduler service so schedule passes survive terminal closure/reboot.</p>
+<p><strong>If it fails / before changing state:</strong> Check service status BitCadence-scheduler. An installed gateway does not imply that the scheduler service is installed or running.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1715">src/mco/cli.py:1715</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-service">mco service</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-service-install-scheduler-param-interval"></a><code>--interval</code></td>
+<td>FLOAT; optional</td>
+<td><code>30.0</code></td>
+<td>Seconds between scheduler passes.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-install-scheduler-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-service-install-waker"></a></p>
+<h2 id="mco-service-install-waker"><code>mco service install-waker</code></h2>
+<p>Install a self-restarting waker service for one role/instance.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence service install-waker --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Installs a self-restarting waker service for one role/instance and a configured worker shell command.</p>
+<p><strong>If it fails / before changing state:</strong> Provide the command either positionally or with --exec; positional wins if both are supplied. Missing command exits 1. This launches the configured executor when work is pending, so select the exact identity and command deliberately.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1753">src/mco/cli.py:1753</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-service">mco service</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-service-install-waker-param-role"></a><code>ROLE</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Agent role this waker should watch.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-install-waker-param-exec-command"></a><code>EXEC_COMMAND</code> (positional)</td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Shell command to run when jobs are pending.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-install-waker-param-exec-option"></a><code>--exec</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Shell command to run when jobs are pending.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-install-waker-param-instance"></a><code>--instance</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Optional agent instance ID this waker should watch.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-install-waker-param-min-interval"></a><code>--min-interval</code></td>
+<td>FLOAT; optional</td>
+<td><code>10.0</code></td>
+<td>Minimum seconds between spawn starts.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-install-waker-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-service-logs"></a></p>
+<h2 id="mco-service-logs"><code>mco service logs</code></h2>
+<p>Tail a service log file.</p>
+<p>Usage example: <code>bitcadence service logs --lines 80</code></p>
+<p><strong>Expected result:</strong> Prints recent lines from the selected service's log; --follow streams until Ctrl+C.</p>
+<p><strong>If it fails / before changing state:</strong> Missing logs are reported and exit 0. Use service status to distinguish a never-started service from an idle log. Logs may contain operational details; review before sharing.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1836">src/mco/cli.py:1836</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-service">mco service</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-service-logs-param-selector"></a><code>SELECTOR</code> (positional)</td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Service name or waker role. Defaults to the gateway.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-logs-param-lines"></a><code>--lines</code> / <code>-n</code></td>
+<td>INTEGER; optional</td>
+<td><code>80</code></td>
+<td>Number of recent log lines to print.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-logs-param-follow"></a><code>--follow</code> / <code>-f</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Keep streaming new log lines.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-logs-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-service-restart"></a></p>
+<h2 id="mco-service-restart"><code>mco service restart</code></h2>
+<p>Restart the boot-persistent gateway service.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence service restart --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Restarts the selected OS-managed service, defaulting to the gateway.</p>
+<p><strong>If it fails / before changing state:</strong> Use a service name or waker role selector. This can interrupt work; inspect status/logs before intentionally restarting a busy worker.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1822">src/mco/cli.py:1822</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-service">mco service</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-service-restart-param-selector"></a><code>SELECTOR</code> (positional)</td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Service name or waker role. Defaults to the gateway.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-restart-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-service-status"></a></p>
+<h2 id="mco-service-status"><code>mco service status</code></h2>
+<p>Show installed BitCadence services, or one selected service.</p>
+<p>Usage example: <code>bitcadence service status</code></p>
+<p><strong>Expected result:</strong> Prints installed/running/last-exit state for all discovered services or a selected service.</p>
+<p><strong>If it fails / before changing state:</strong> No services found is a normal exit-0 result. It proves absence from the backend inventory, not that all unrelated background processes are stopped.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1790">src/mco/cli.py:1790</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-service">mco service</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-service-status-param-selector"></a><code>SELECTOR</code> (positional)</td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Optional service name or waker role to inspect.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-status-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-service-uninstall"></a></p>
+<h2 id="mco-service-uninstall"><code>mco service uninstall</code></h2>
+<p>Remove the boot-persistent service (does not stop a running gateway).</p>
+<p>Safe inspection example (prints help only): <code>bitcadence service uninstall --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Removes boot-persistent registration for the selected service, default gateway.</p>
+<p><strong>If it fails / before changing state:</strong> Does not stop an already running gateway. Inspect processes/status separately and use the appropriate stop command when a shutdown is intended.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1776">src/mco/cli.py:1776</a>. Global/group options: <a href="#cli-mco">mco</a>, <a href="#cli-mco-service">mco service</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-service-uninstall-param-selector"></a><code>SELECTOR</code> (positional)</td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Service name or waker role. Defaults to the gateway.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-service-uninstall-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-settings"></a></p>
+<h2 id="mco-settings"><code>mco settings</code></h2>
+<p>View or change gateway settings. With nothing else, a plain summary.</p>
+<p>Usage example: <code>bitcadence settings</code></p>
+<p><strong>Expected result:</strong> Shows a plain settings summary. KEY reads one key, KEY VALUE writes it, --unset resets it, and --show-advanced/--all includes advanced settings.</p>
+<p><strong>If it fails / before changing state:</strong> Writes affect gateway configuration; review the exact setting and any restart guidance. A bare summary is an inspection; adding a value or --unset changes state.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2955">src/mco/cli.py:2955</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-settings-param-key"></a><code>KEY</code> (positional)</td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Setting key to read or write (blank = list all).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-settings-param-value"></a><code>VALUE</code> (positional)</td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>New value for the key (omit with --unset to clear).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-settings-param-unset"></a><code>--unset</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Clear the key back to its default.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-settings-param-show-advanced"></a><code>--show-advanced</code> / <code>--all</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Show every setting, the address and the masked sign-in.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-settings-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-setup"></a></p>
+<h2 id="mco-setup"><code>mco setup</code></h2>
+<p>Configure BitCadence - a guided walkthrough or a jump-anywhere settings menu.</p>
+<p>Usage example: <code>bitcadence setup</code></p>
+<p><strong>Expected result:</strong> Opens the configuration walkthrough/menu. --guided requests the complete walkthrough; --menu jumps straight to settings.</p>
+<p><strong>If it fails / before changing state:</strong> Can save configuration and credentials. Follow the selected path and then run doctor to find any remaining installation problem.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L106">src/mco/cli.py:106</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-setup-param-guided"></a><code>--guided</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Run the full guided walkthrough.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-setup-param-menu"></a><code>--menu</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Jump straight to the settings menu.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-setup-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-start"></a></p>
+<h2 id="mco-start"><code>mco start</code></h2>
+<p>Start BitCadence quietly in the background (the pair of 'mco stop').</p>
+<p>Usage example: <code>bitcadence start --no-open</code></p>
+<p><strong>Expected result:</strong> Starts the gateway hidden in the background, using ~/.mco/logs/gateway.log. Normally also opens the signed-in app, ensures a status icon and registers login startup on the first run.</p>
+<p><strong>If it fails / before changing state:</strong> Use status and inspect the log if it does not come up. --no-open suppresses browser opening (the tray is still ensured); --no-autostart suppresses first-run login startup registration. stop is the paired shutdown command.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L730">src/mco/cli.py:730</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-start-param-host"></a><code>--host</code></td>
+<td>TEXT; optional</td>
+<td><code>127.0.0.1</code></td>
+<td>The host to bind to.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-start-param-port"></a><code>--port</code></td>
+<td>INTEGER; optional</td>
+<td><code>18789</code></td>
+<td>The port to bind to.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-start-param-no-open"></a><code>--no-open</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Don't open the app in the browser.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-start-param-no-autostart"></a><code>--no-autostart</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Don't set BitCadence to start when you sign in.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-start-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-status"></a></p>
+<h2 id="mco-status"><code>mco status</code></h2>
+<p>Plain summary: what needs you, what's running, any problems.</p>
+<p>Usage example: <code>bitcadence status --details</code></p>
+<p><strong>Expected result:</strong> Without flags, prints a plain summary of waiting/running/problem work. --details returns technical diagnostics; --json is for the plain summary path.</p>
+<p><strong>If it fails / before changing state:</strong> --all includes all resolved configuration keys, including unrelated process environment, and selects diagnostics. --json does not make --details/--all JSON. Review diagnostics before sharing; process health alone does not establish work completion.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1984">src/mco/cli.py:1984</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-status-param-details"></a><code>--details</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Show the technical diagnostics (database path, profile, settings).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-status-param-show-all"></a><code>--all</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Show all resolved configuration keys, including unrelated process environment.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-status-param-as-json"></a><code>--json</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Machine-readable summary.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-status-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-stop"></a></p>
+<h2 id="mco-stop"><code>mco stop</code></h2>
+<p>Stop a running BitCadence gateway (by port).</p>
+<p>Safe inspection example (prints help only): <code>bitcadence stop --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Finds listening processes by port and terminates them without asking. Normally waits five seconds before escalating to a kill; --force kills immediately.</p>
+<p><strong>If it fails / before changing state:</strong> Inspect the port and intended process first: the implementation targets listeners on that port, not a verified BitCadence process identity. No listener is a normal exit-0 result. This does not cancel queued jobs or remove service registration.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1856">src/mco/cli.py:1856</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-stop-param-port"></a><code>--port</code></td>
+<td>INTEGER; optional</td>
+<td><code>18789</code></td>
+<td>Port the gateway is running on.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-stop-param-force"></a><code>--force</code> / <code>-f</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Send SIGKILL immediately instead of graceful SIGTERM.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-stop-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-sync"></a></p>
+<h2 id="mco-sync"><code>mco sync</code></h2>
+<p>Pull open platform objects (incidents/problems) onto the job board.</p>
+<p>Usage example: <code>bitcadence sync servicenow</code></p>
+<p><strong>Expected result:</strong> Pulls open external incidents/problems into the job board and prints pulled/created/skipped counts.</p>
+<p><strong>If it fails / before changing state:</strong> This creates board work. Run connectors first to check configured names/health. Existing imported objects are skipped rather than all recreated.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3372">src/mco/cli.py:3372</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-sync-param-connector"></a><code>CONNECTOR</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Connector name (servicenow, dynatrace).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-sync-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-tail"></a></p>
+<h2 id="mco-tail"><code>mco tail</code></h2>
+<p>Live-tail a filtered mailbox feed from the gateway broadcast socket.</p>
+<p>Usage example: <code>bitcadence tail --role codex --instance demo-worker</code></p>
+<p><strong>Expected result:</strong> Streams broadcast job events filtered by target role and instance; Ctrl+C stops the stream.</p>
+<p><strong>If it fails / before changing state:</strong> Uses configured identity/gateway/token when flags are absent. Authentication failure prints guidance; disconnections retry with backoff. An empty feed does not prove an empty inbox.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3229">src/mco/cli.py:3229</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-tail-param-role"></a><code>--role</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Agent role mailbox to tail.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-tail-param-instance"></a><code>--instance</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Agent instance mailbox to tail.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-tail-param-gateway"></a><code>--gateway</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Gateway HTTP URL.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-tail-param-token"></a><code>--token</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Agent or operator bearer token.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-tail-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-tray"></a></p>
+<h2 id="mco-tray"><code>mco tray</code></h2>
+<p>Status light and a door into the console (Windows tray / macOS menu bar / Linux AppIndicator).</p>
+<p>Safe inspection example (prints help only): <code>bitcadence tray --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Runs the optional system status light/console doorway. --daemon starts it hidden where supported.</p>
+<p><strong>If it fails / before changing state:</strong> Needs the tray desktop dependencies and a usable desktop session. This is an interface, not the gateway or an executor.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L1140">src/mco/cli.py:1140</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-tray-param-daemon"></a><code>--daemon</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>The advanced tray that drives the worker daemon.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-tray-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-unarchive"></a></p>
+<h2 id="mco-unarchive"><code>mco unarchive</code></h2>
+<p>Undo archive.</p>
+<p>Usage example: <code>bitcadence unarchive JOB_ID</code></p>
+<p><strong>Expected result:</strong> Makes an archived job visible again in the default board view.</p>
+<p><strong>If it fails / before changing state:</strong> Does not retry or reopen the job. Use audit/status to inspect its existing terminal result.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2763">src/mco/cli.py:2763</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-unarchive-param-job-id"></a><code>JOB_ID</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Archived job ID to restore to the default board view.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-unarchive-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-upgrade"></a></p>
+<h2 id="mco-upgrade"><code>mco upgrade</code></h2>
+<p>Apply schema migrations to the configured backend.</p>
+<p>Usage example: <code>bitcadence upgrade</code></p>
+<p><strong>Expected result:</strong> Checks schema upgrade requirements. Local SQLite needs no such migrations; supported Postgres/Supabase execution requires --apply.</p>
+<p><strong>If it fails / before changing state:</strong> Without --apply, prints pending migration SQL/instructions rather than applying it. Where automatic execution is unavailable, writes a combined script for the Supabase SQL editor. Review output before applying schema changes.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2044">src/mco/cli.py:2044</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-upgrade-param-apply"></a><code>--apply</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Actually apply (default: dry-run / show pending).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-upgrade-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-wake"></a></p>
+<h2 id="mco-wake"><code>mco wake</code></h2>
+<p>Wake a local worker command when this agent's inbox has pending jobs.</p>
+<p>Safe inspection example (prints help only): <code>bitcadence wake --help</code></p>
+<p><strong>Operation result (when run with the required values):</strong> Waits for pending work, then starts the configured local worker shell command, enforcing a minimum interval between starts and optional periodic inbox rechecks.</p>
+<p><strong>If it fails / before changing state:</strong> Requires --exec and the exact agent identity/credential. Missing or invalid per-instance credentials fail explicitly instead of silently borrowing the operator credential. Ctrl+C stops the waker; starting an executor is not a job lease/completion proof.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3302">src/mco/cli.py:3302</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-wake-param-exec-command"></a><code>--exec</code></td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Shell command to run when this worker has pending jobs.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-wake-param-role"></a><code>--role</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Agent role to watch for.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-wake-param-instance"></a><code>--instance</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Agent instance ID to watch for.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-wake-param-gateway"></a><code>--gateway</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Gateway HTTP URL.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-wake-param-token"></a><code>--token</code></td>
+<td>TEXT; optional</td>
+<td>not set</td>
+<td>Agent bearer token.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-wake-param-min-interval"></a><code>--min-interval</code></td>
+<td>FLOAT; optional</td>
+<td><code>10.0</code></td>
+<td>Minimum seconds between spawn starts.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-wake-param-repoll-interval"></a><code>--repoll-interval</code></td>
+<td>FLOAT; optional</td>
+<td><code>300.0</code></td>
+<td>Seconds between timer re-checks of the inbox (0 disables).</td>
+</tr>
+<tr>
+<td><a id="cli-mco-wake-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-watch"></a></p>
+<h2 id="mco-watch"><code>mco watch</code></h2>
+<p>Live-tail job events from the gateway's broadcast feed (Ctrl-C to stop).</p>
+<p>Usage example: <code>bitcadence watch</code></p>
+<p><strong>Expected result:</strong> Streams formatted job events; --raw emits raw JSON messages. Reconnects with exponential backoff up to 30 seconds.</p>
+<p><strong>If it fails / before changing state:</strong> Ctrl+C stops watching. Authentication failures require the configured MCO_AGENT_TOKEN/MCO_LOCAL_TOKEN to be fixed. This is a live stream, not a replay of all historical events.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L3128">src/mco/cli.py:3128</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-watch-param-raw"></a><code>--raw</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Print raw event JSON instead of formatted lines.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-watch-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<p><a id="cli-mco-workflow"></a></p>
+<h2 id="mco-workflow"><code>mco workflow</code></h2>
+<p>Submit a declarative YAML workflow (DAG of jobs) to the Job Board.</p>
+<p>Usage example: <code>bitcadence workflow plan.yaml --dry-run</code></p>
+<p><strong>Expected result:</strong> Loads YAML, validates the dependency graph and prints the ordered plan. --dry-run prevents submission.</p>
+<p><strong>If it fails / before changing state:</strong> Without --dry-run, creates real jobs and prints step-to-job IDs. Correct invalid files/dependencies first. Use the printed IDs to follow outcomes; submission alone is not workflow completion.</p>
+<p>Implementation: <a href="https://github.com/mastalink/BitCadence/blob/main/src/mco/cli.py#L2528">src/mco/cli.py:2528</a>. Global/group options: <a href="#cli-mco">mco</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Argument / option</th>
+<th>Type and requirement</th>
+<th>Default</th>
+<th>Meaning / constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a id="cli-mco-workflow-param-file"></a><code>FILE</code> (positional)</td>
+<td>TEXT; required</td>
+<td>required</td>
+<td>Path to a workflow YAML file.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-workflow-param-dry-run"></a><code>--dry-run</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>Validate and print the plan without submitting.</td>
+</tr>
+<tr>
+<td><a id="cli-mco-workflow-param-help"></a><code>--help</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td>not set</td>
+<td>Show this message and exit.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="keep-this-reference-current">Keep this reference current</h2>
+<p>Coverage metadata: <a href="_review/cli-coverage.json">_review/cli-coverage.json</a>. It maps command paths and all option/argument spellings to explicit documentation anchors, including aliases, source locations, constraints and defaults.</p>
+<p>From the repository root, using the project's Python environment:</p>
+<pre><code class="language-powershell">python docs/wiki/_review/verify_cli_coverage.py --repo .
+python docs/wiki/_review/verify_cli_examples.py
+</code></pre>
+<p>The coverage verifier imports the live Typer tree, <strong>never invokes command or parameter callbacks</strong>, compares documented metadata and checks every command/parameter anchor and option spelling. New/changed/removed commands or parameters fail coverage. Its <code>--dump</code> flag prints live metadata for a reviewer; it does not silently rewrite the reviewed reference. Example verification separately dry-parses command examples. Neither check establishes live gateway, browser, authorization, worker or external-platform behavior.</p>
+<p>Source boundary: this page documents the command tree at repository commit <code>0f9f36e</code> (2026-11-13). Runtime values, configured connectors/launchers and organization policy remain installation-specific. Options without help text were explained from their implementation; no undeclared command or future design was promoted into a shipped capability.</p>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#read-this-first">Read this first</a><a href="#find-a-command">Find a command</a><a href="#shared-recovery">Shared recovery</a><a href="#mco">`mco`</a><a href="#mco-advanced">`mco advanced`</a><a href="#mco-agents">`mco agents`</a><a href="#mco-approve">`mco approve`</a><a href="#mco-archive">`mco archive`</a><a href="#mco-ask">`mco ask`</a><a href="#mco-audit">`mco audit`</a><a href="#mco-audit-checkpoint">`mco audit-checkpoint`</a><a href="#mco-cancel">`mco cancel`</a><a href="#mco-cio">`mco cio`</a><a href="#mco-cio-check">`mco cio check`</a><a href="#mco-connect">`mco connect`</a><a href="#mco-connectors">`mco connectors`</a><a href="#mco-deregister">`mco deregister`</a><a href="#mco-doctor">`mco doctor`</a><a href="#mco-duplicates">`mco duplicates`</a><a href="#mco-edition">`mco edition`</a><a href="#mco-exchange">`mco exchange`</a><a href="#mco-exchange-list">`mco exchange list`</a><a href="#mco-exchange-post">`mco exchange post`</a><a href="#mco-exchange-promote">`mco exchange promote`</a><a href="#mco-fix">`mco fix`</a><a href="#mco-fleet">`mco fleet`</a><a href="#mco-fleet-apply">`mco fleet apply`</a><a href="#mco-fleet-set">`mco fleet set`</a><a href="#mco-fleet-status">`mco fleet status`</a><a href="#mco-gui">`mco gui`</a><a href="#mco-helpers">`mco helpers`</a><a href="#mco-helpers-add">`mco helpers add`</a><a href="#mco-helpers-fix">`mco helpers fix`</a><a href="#mco-jev">`mco jev`</a><a href="#mco-jev-route-model">`mco jev route-model`</a><a href="#mco-jobs">`mco jobs`</a><a href="#mco-jobs-rank">`mco jobs rank`</a><a href="#mco-launch">`mco launch`</a><a href="#mco-listen">`mco listen`</a><a href="#mco-mcp">`mco mcp`</a><a href="#mco-orgs">`mco orgs`</a><a href="#mco-pause">`mco pause`</a><a href="#mco-platform">`mco platform`</a><a href="#mco-reassign">`mco reassign`</a><a href="#mco-recall">`mco recall`</a><a href="#mco-register">`mco register`</a><a href="#mco-reject">`mco reject`</a><a href="#mco-remember">`mco remember`</a><a href="#mco-reset-token">`mco reset-token`</a><a href="#mco-restart">`mco restart`</a><a href="#mco-restore-fence">`mco restore-fence`</a><a href="#mco-resume">`mco resume`</a><a href="#mco-retry">`mco retry`</a><a href="#mco-schedule">`mco schedule`</a><a href="#mco-schedule-add">`mco schedule add`</a><a href="#mco-schedule-disable">`mco schedule disable`</a><a href="#mco-schedule-enable">`mco schedule enable`</a><a href="#mco-schedule-init">`mco schedule init`</a><a href="#mco-schedule-list">`mco schedule list`</a><a href="#mco-schedule-off">`mco schedule off`</a><a href="#mco-schedule-on">`mco schedule on`</a><a href="#mco-schedule-reset">`mco schedule reset`</a><a href="#mco-schedule-run">`mco schedule run`</a><a href="#mco-schedule-tick">`mco schedule tick`</a><a href="#mco-score">`mco score`</a><a href="#mco-score-deliver">`mco score deliver`</a><a href="#mco-score-grant-local">`mco score grant-local`</a><a href="#mco-score-grant-standing-local">`mco score grant-standing-local`</a><a href="#mco-score-intake">`mco score intake`</a><a href="#mco-score-list">`mco score list`</a><a href="#mco-score-revoke-standing-local">`mco score revoke-standing-local`</a><a href="#mco-score-scaffold">`mco score scaffold`</a><a href="#mco-score-start">`mco score start`</a><a href="#mco-score-status">`mco score status`</a><a href="#mco-score-tick">`mco score tick`</a><a href="#mco-send">`mco send`</a><a href="#mco-serve">`mco serve`</a><a href="#mco-service">`mco service`</a><a href="#mco-service-install">`mco service install`</a><a href="#mco-service-install-scheduler">`mco service install-scheduler`</a><a href="#mco-service-install-waker">`mco service install-waker`</a><a href="#mco-service-logs">`mco service logs`</a><a href="#mco-service-restart">`mco service restart`</a><a href="#mco-service-status">`mco service status`</a><a href="#mco-service-uninstall">`mco service uninstall`</a><a href="#mco-settings">`mco settings`</a><a href="#mco-setup">`mco setup`</a><a href="#mco-start">`mco start`</a><a href="#mco-status">`mco status`</a><a href="#mco-stop">`mco stop`</a><a href="#mco-sync">`mco sync`</a><a href="#mco-tail">`mco tail`</a><a href="#mco-tray">`mco tray`</a><a href="#mco-unarchive">`mco unarchive`</a><a href="#mco-upgrade">`mco upgrade`</a><a href="#mco-wake">`mco wake`</a><a href="#mco-watch">`mco watch`</a><a href="#mco-workflow">`mco workflow`</a><a href="#keep-this-reference-current">Keep this reference current</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

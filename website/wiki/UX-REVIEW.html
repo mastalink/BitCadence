@@ -1,0 +1,284 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BitCadence interface review · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/UX-REVIEW.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="standing-score-grants.html">Standing Score grants (local authority store)</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html" aria-current="page">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="bitcadence-interface-review">BitCadence interface review</h1>
+<p>Reviewed November 13, 2026. Lens: clear language, consistent meanings, details when needed, reliable feedback, and deliberate reversible actions. Findings below come from static source and routing inspection of clean main <code>0f9f36e</code> plus the existing shared checkout. They are not claims that a browser interaction or production failure was reproduced. No gateway, worker, token, schedule, job, approval or GPU state was changed.</p>
+<h2 id="highest-value-changes">Highest-value changes</h2>
+<p>Fix misleading stop/approval feedback and cancellation behavior first. Then make administrative functions discoverable without forcing users to learn two partially overlapping web apps. The current everyday surfaces already have useful foundations: Ask previews before starting, helper repair diagnoses before confirmation, card states use words plus shapes, and Context promotion explains its future effect. Extend those patterns consistently rather than adding another flow builder or control panel.</p>
+<h2 id="verified-static-findings">Verified static findings</h2>
+<p>Source paths are repository-relative. Long UUID source filenames are mapped at the end. Priority indicates user impact, not a release approval.</p>
+<table>
+<thead>
+<tr>
+<th>ID / priority</th>
+<th>Evidence and practical impact</th>
+<th>Concrete simpler proposal</th>
+<th>Acceptance check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>U01 / P1</td>
+<td><code>ops.js:1020–1039</code> says Pause lets in-progress jobs finish. Its handler writes <code>MCO_KILL_SWITCH</code>; <code>admin_routes.py:413–458</code> calls <code>set_paused</code>, and <code>leases.py:241–255</code> marks renewable jobs halted and increments lease epoch. The same screen's advanced copy says active work halts. A person cannot predict what Pause will do.</td>
+<td>Label it <strong>Stop work</strong>, explain <strong>Halts active attempts and pauses new work. Resume permits new work; halted jobs need Retry.</strong> Keep backend governance unchanged. Use a deliberate confirm summary for the existing effect; retain a fast emergency path where required.</td>
+<td>Assert displayed explanation matches halt behavior in an isolated test; Resume never implies halted work auto-resumes.</td>
+</tr>
+<tr>
+<td>U02 / P1</td>
+<td><code>dashboard.py:421–432</code>: `prompt(...)</td>
+<td></td>
+<td>'Aborted by operator'<code>submits an abort even when the user cancels.</code>:361–395<code>batch Cancel and</code>:526–530` individual Reject similarly convert prompt Cancel to an empty reason and continue.</td>
+</tr>
+<tr>
+<td>U03 / P1</td>
+<td>Console adapter <code>adapter.js:304–319</code> renders <code>res.success_count</code> and <code>res.failure_count</code>, but <code>routes.py:1670–1677</code> returns <code>succeeded</code> and <code>failed</code>. Batch feedback can say undefined succeeded/failed and mark partial failure as success. Selections are then cleared.</td>
+<td>Derive counts from <code>succeeded.length</code> and <code>Object.keys(failed).length</code>; retain failed selections and a durable per-item result panel.</td>
+<td>A controlled one-success/one-failure response shows accurate counts, reasons and retry scope.</td>
+</tr>
+<tr>
+<td>U04 / P1</td>
+<td>Clean-main <code>jobs.js:505–596</code> offers Reassign on active jobs, while the backend accepts unsuccessful terminal work. Clean <code>adapter.js:285–297</code> uses <code>to_role</code>/<code>to_instance</code> rather than required target fields. The shared dirty checkout repairs individual UI/body; that is pending work, not deployed proof. Batch UI still sends <code>to_role</code> (<code>jobs.js:385</code>) and adapter forwards it verbatim.</td>
+<td>Integrate the existing individual repair through review; make batch use <code>target_agent_role</code>, state eligibility and replacement semantics. Keep live cancellation separate.</td>
+<td>Failed/rejected/cancelled/halted can request a replacement; active/completed cannot. Single and batch body keys match schema and results show replacement identity.</td>
+</tr>
+<tr>
+<td>U05 / P1</td>
+<td><code>pages.js:820–825</code> renders every non-rejected Recent decision with completed status, even if the approved job is waiting/running. This turns approval into false delivery evidence.</td>
+<td>Show <strong>Approved</strong> as decision and actual job state separately.</td>
+<td>An approved pending job reads Approved / Waiting, never Completed.</td>
+</tr>
+<tr>
+<td>U06 / P1</td>
+<td><code>adapter.js:70–80</code> maps every HTTP 403 in <code>plainFailure</code> to “Your account isn't an approver yet” and <code>bitcadence fix</code>. This helper is used by batch and other operations. Scope, tenant or policy denial can receive an irrelevant privilege-repair instruction.</td>
+<td>Preserve a typed server denial; distinguish missing scope, approver authority, tenant boundary and policy. Link to operator-admin instructions, not automatic privilege elevation.</td>
+<td>Representative 403s retain their true reason and do not recommend unauthorized authority changes.</td>
+</tr>
+<tr>
+<td>U07 / P1</td>
+<td><code>ops.js:535–547,595</code> says timezone comes from “your computer,” but Save sends no zone. <code>schedules_routes.py:48</code> defaults to <code>schedules_plain.detect_timezone()</code> on gateway host (<code>schedules_plain.py:73–89</code>). Remote browsers can create schedules at the wrong local time. Fixed-offset fallback can also ignore future DST.</td>
+<td>Show <strong>Time zone: [explicit IANA zone]</strong> next to time and next occurrence. Send selected zone, validate it, and show the next occurrence including offset/date before save.</td>
+<td>Browser and gateway in different zones produce the selected zone; next-run checks span a DST change.</td>
+</tr>
+<tr>
+<td>U08 / P1</td>
+<td><code>desktop/app.py:77</code> directly calls <code>take_control</code>. <code>controller.py:153–161</code> disables scheduled tasks, stops all and restarts. UI label <strong>Move workers into app</strong> does not expose the process interruption or scheduled-task changes. <strong>Stop all</strong> also disables tasks and stops exact matching external workers (<code>controller.py:228–276</code>), while Exit only closes owned processes.</td>
+<td>Add a review sheet listing affected components/tasks and current work, then <strong>Move and restart workers</strong>. Clarify Stop all vs Exit scopes beside the actions. Keep duplicate-start guard and ownership boundaries.</td>
+<td>Read-only review sends no stop/task writes; confirmed handoff lists exact scope and preserves current ownership rules.</td>
+</tr>
+<tr>
+<td>U09 / P2</td>
+<td>Clean <code>shell.js:127</code> routes plain-tone Helpers without considering Advanced; token administration requires expert copy tone, available only through host prototype tweaks. Shared checkout introduces a pending Advanced/Manage fleet tokens doorway.</td>
+<td>Expose a visible <strong>Manage credentials…</strong> disclosure from Helpers, with explicit admin scope, no design-mode dependency. Reuse the pending doorway after review.</td>
+<td>Starting in default plain mode, an authorized user reaches token administration and returns without changing copy tone or unrelated preferences.</td>
+</tr>
+<tr>
+<td>U10 / P2</td>
+<td><code>shell.js:203–216</code> has global Advanced; plain Settings nests another <strong>Show advanced</strong> disclosure (<code>ops.js:1049–1054</code>). A user must open technical detail to connect at all. The controls have different scope under the same word.</td>
+<td>Put initial Connect setup directly in the disconnected empty state. Rename global toggle <strong>Technical details</strong>, local disclosure <strong>Server administration</strong>; retain the same permission checks.</td>
+<td>First-time user can connect from empty state without searching for hidden fields; toggles describe what they reveal.</td>
+</tr>
+<tr>
+<td>U11 / P2</td>
+<td><code>/console</code> has twelve pages; <code>/dashboard</code> has five overlapping pages and unique model connections, scoped agent editing, full settings and conductor controls (<code>dashboard.py:121–125</code>; <code>shell.js:4–17</code>). Current overview docs describe dashboard as merely “smaller, plainer.”</td>
+<td>Make <code>/console</code> the clear everyday entry. Add one <strong>Administration</strong> doorway containing advanced capabilities with shared terminology/component patterns. Until merged, document dashboard's full scope and cross-link it.</td>
+<td>Every unique action has one discoverable authoritative doorway; no feature is silently lost in consolidation.</td>
+</tr>
+<tr>
+<td>U12 / P2</td>
+<td><code>ui.js:144–158</code> Drawer has no dialog role, label, Escape handling, focus trap or restoration. Job rows (<code>jobs.js:446</code>) and sortable <code>&lt;th&gt;</code> (<code>:402–439</code>) are mouse-click targets without key handlers. Approval queue nests checkbox inputs inside buttons (<code>pages.js:767–774</code>). Several inputs have placeholders/div text without associated labels.</td>
+<td>Use accessible dialog primitives, native links/buttons inside cells, labelled controls and valid selectable-list markup. Keep sort dropdown as an alternative; add current-sort semantics.</td>
+<td>Keyboard-only open/close/operate/return focus on each drawer; screen-reader names/states; valid interactive nesting. Static absence is verified; assistive-tech experience still needs runtime tests.</td>
+</tr>
+<tr>
+<td>U13 / P2</td>
+<td>Sidebar is fixed 216px with 12 controls of minimum 48px, sticky <code>height:100vh</code> and no own scrolling (<code>shell.js:138–190</code>). Content padding and several minimum grid widths consume small screens. Responsive sidebar rules are embedded only in mounted Home/Score and Ask styles (<code>pages.js:631</code>, <code>ask.js:34</code>), so navigation can change geometry across pages.</td>
+<td>Collapsible navigation on narrow widths, independently scrollable sidebar for short screens, and single-column forms/details.</td>
+<td>At 320px width and short-height/200% zoom, every nav item and primary action remains reachable without horizontal page travel. Actual overflow needs browser verification.</td>
+</tr>
+<tr>
+<td>U14 / P2</td>
+<td><code>ui.js:160–188</code> removes toasts after 4.2 seconds, has no status/alert semantics, truncates bodies to one line, and offers no durable details. Several job handlers close editors without awaiting mutation success (<code>jobs.js:549,584,600</code>).</td>
+<td>Await results, disable duplicate submit, keep errors beside the input, and retain an accessible result record linked to History. Do not close an unsuccessful form.</td>
+<td>Controlled rejection stays visible and retains values; announcements are available; no double-submission while pending.</td>
+</tr>
+<tr>
+<td>U15 / P2</td>
+<td>JobBoard retains a selected-ID set while filters change (<code>jobs.js:225–303</code>); toolbar counts eligible jobs but several requests send all selected IDs (<code>:298–320</code>). Hidden selection and mixed eligibility undermine batch predictability.</td>
+<td>Clear selection on scope changes or visibly show <strong>N selected, M hidden</strong>. Before action show exact eligible count and skipped count; retain failures after response.</td>
+<td>Filtering a selected set never silently authorizes hidden work. Mixed-state batch describes all outcomes.</td>
+</tr>
+<tr>
+<td>U16 / P2</td>
+<td><code>ops.js:1074–1091</code> renders every non-bool Gateway control as a text input even for choice metadata such as default sort. <code>/dashboard</code> already honors choice fields (<code>dashboard.py:831–841</code>).</td>
+<td>Share the metadata renderer: switch, dropdown, labelled text or secret with field help.</td>
+<td>Only allowed values are offered for choices; errors identify the actual field and retain unsaved values.</td>
+</tr>
+<tr>
+<td>U17 / P2</td>
+<td>Console Connector Test uses saved settings (<code>ops.js:722</code>), while fields remain editable and Save is separate. A green test can coexist with unsaved form changes; Sync appears after test success and can create work (<code>:774</code>).</td>
+<td>Show dirty state and <strong>Save and test</strong>; invalidate prior success when relevant fields change. Label sync <strong>Import now</strong> with a preview/count where backend supports it.</td>
+<td>Unsaved credentials cannot appear successfully tested; save/test/sync outcomes are distinct and tied to a settings revision.</td>
+</tr>
+<tr>
+<td>U18 / P2</td>
+<td>Governance copy promises “PDF cover page plus JSON” (<code>pages.js:935</code>) while export handler creates a single JSON blob (<code>:862–874</code>).</td>
+<td>Call it <strong>Download evidence JSON</strong> and offer separate extract/download controls for returned file entries. Avoid implying legal certification.</td>
+<td>Download labels and resulting filenames/types match exactly; bounded count/date coverage is visible.</td>
+</tr>
+<tr>
+<td>U19 / P2</td>
+<td>Job Board takes the shared 200-job window (<code>adapter.js:98</code>), Activity fetch caps at 500 (<code>jobs.js:927</code>), Context at 25 (<code>pages.js:1124</code>), Projects at 5,000 (<code>adapter.js:34</code>). Home/Projects expose limits, but “All work” and “Every step every agent took” overstate completeness.</td>
+<td>Display <strong>Showing latest N</strong> and searched date/range consistently. Offer real server pagination/filtering rather than silently treating client filters as global search.</td>
+<td>Missing older items never produce an unqualified “nothing found”; every count states its window.</td>
+</tr>
+<tr>
+<td>U20 / P2</td>
+<td>Connect AI filesystem actions are performed by gateway-side implementation; UI says apps “on this computer” and offers one-tap configuration (<code>ops.js:414–496</code>). A remote browser can interpret that as its own machine.</td>
+<td>Show <strong>Apps on [gateway host]</strong> and a clear local/remote setup distinction. Only offer local installer-like claims for a local gateway.</td>
+<td>A remote session names the target host before changes; client-side app discovery is not implied.</td>
+</tr>
+<tr>
+<td>U21 / P3</td>
+<td>Sidebar Jobs/Approvals/Helpers/Activity names differ from plain page titles (All work/Needs your OK/Your helpers/What happened), <code>shell.js:71–73,162</code>. Project docs say Uncategorized while source says Unassigned work.</td>
+<td>Use one noun per destination in nav, headings, links and search aliases; preserve older names only as aliases.</td>
+<td>Search for either historical name finds the one canonical guide and current control name.</td>
+</tr>
+<tr>
+<td>U22 / P3</td>
+<td>Existing <code>jev-routing.md:18–25</code> claims Settings → LLM Connections / Routing and sample model/confidence output, but neither routed GUI contains that task-routing form. <code>Overview</code>, <code>AutonomyControlCard</code>, <code>DemoLaunchPanel</code> and live-look components remain defined in <code>pages.js</code> but only Home is routed (<code>shell.js:121</code>).</td>
+<td>Replace imaginary GUI steps with verified CLI instructions. Mark unreachable components as legacy/internal; remove obsolete guidance and screenshots after source owner review.</td>
+<td>Every documented button has a reachable route and source reference; no mockup is presented as an implemented workflow.</td>
+</tr>
+<tr>
+<td>U23 / P3</td>
+<td>Desktop row actions silently return without selection (<code>desktop/app.py:117–120</code>), operate only on <code>selection()[0]</code>, yet Tk table permits multiple selection by default (<code>:60</code>). Reload settings can stop changed/removed workers (<code>controller.py:163–186</code>) despite sounding read-only.</td>
+<td>Use single-row selection or implement explicit multi-row semantics; disable actions until selected. Label reload <strong>Apply fleet changes…</strong> and show affected workers before mutation.</td>
+<td>Selection/action scope is unambiguous; applying config never surprises the user by stopping an undisclosed worker.</td>
+</tr>
+<tr>
+<td>U24 / P3</td>
+<td>Source paths and technical state locations appear in dashboard Live Look, while basic console has nested routes and some capabilities only in a second URL. Docs often expose long manual command/path workarounds for everyday actions.</td>
+<td>Put operational effect and named host first, provide <strong>Copy diagnostic details</strong> disclosure for paths/IDs; make docs task-based with direct doorway links and recovery. Keep exact paths available for support.</td>
+<td>A first-time operator identifies what is waiting and chooses the next action without reading a UUID/path; an expert can still copy exact evidence.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="small-copy-patch-for-the-source-owner-to-review">Small copy patch for the source owner to review</h2>
+<p>This is a proposal, not an applied source edit. In <code>ops.js</code>, replace only these strings; rebuild the generated console bundle after normal source review. No backend authority or behavior changes are proposed here.</p>
+<pre><code class="language-diff">- setNote(paused ? &quot;Resumed. Work will pick up again.&quot; : &quot;Paused. Jobs in progress finish.&quot;);
++ setNote(paused ? &quot;New work can start again. Halted jobs need Retry.&quot; : &quot;Active attempts halted. New work is paused.&quot;);
+- &lt;b&gt;Pause everything&lt;/b&gt;
++ &lt;b&gt;Stop work&lt;/b&gt;
+- Stops helpers from taking new work. Jobs in progress finish.
++ Halts active attempts and pauses new work. Resume allows new work; halted jobs need Retry.
+</code></pre>
+<p>For every reason prompt that can cancel, the minimal behavioral fix is:</p>
+<pre><code class="language-javascript">const reason = prompt(&quot;Reason for aborting run &quot; + runId + &quot;?&quot;);
+if (reason === null) return;
+// Only here submit with reason || &quot;Aborted by operator&quot;.
+</code></pre>
+<p>The approval-role policy, kill-switch enforcement, scheduled-worker duplicate guard, tenant isolation and shadow/live-write gates must remain unchanged while simplifying wording and interaction.</p>
+<h2 id="documentation-corrections-to-integrate">Documentation corrections to integrate</h2>
+<p>The new <a href="gui-reference.html">GUI reference</a> addresses these, but old task guides must not contradict it:</p>
+<ul>
+<li><code>desktop-app-and-tray.md</code>: remove erase-<code>~/.mco</code> as casual uninstall/recovery, qualify external logs, explain Stop/Exit/Reload/task-handoff effects, remove nonexistent GUI port editor, distinguish readiness from end-to-end success.</li>
+<li><code>overview-dashboard.md</code>: <code>/dashboard</code> is a full technical admin interface; Activity is a fetched window; sidebar Advanced is not a universal admin doorway on clean main.</li>
+<li><code>jev-routing.md</code>: remove unsupported routing GUI, invented model-output examples and “Zero Hallucination Routing” guarantee; keep sourced advisory boundaries.</li>
+<li><code>Settings.md</code>, <code>approvals-and-governance.md</code>: use actual halt semantics, explain Resume/retry and conductor pause distinction; correct evidence-download type.</li>
+<li><code>Schedules.md</code>, <code>scheduling-and-loops.md</code>: name gateway-detected timezone and show the remote-host limitation.</li>
+<li><code>projects-dashboard.md</code>: use Unassigned work and explain clearing explicit assignment can fall back to workflow grouping.</li>
+<li><code>agent-fleet-and-presence.md</code>, <code>job-board-and-tasks.md</code>: distinguish clean main from pending admin doorway/reassignment repair; registration/presence is not task execution proof.</li>
+<li><code>drumline-memory.md</code>: eligible ranked recall is not every saved entry injected into every prompt; promotion is separate from discussion and approval.</li>
+</ul>
+<h2 id="controlled-runtime-checks-still-needed">Controlled runtime checks still needed</h2>
+<p>These are checks to run against a disposable fixture gateway with synthetic jobs/tokens/configuration, never permission to operate production:</p>
+<ol>
+<li>Capture desktop/mobile/short viewport at 100% and 200% zoom, light/dark, reduced motion, keyboard-only and screen-reader naming.</li>
+<li>Exercise disconnected, connecting, Live, Offline, invalid token and each relevant scoped denial; confirm no demo fallback is mistaken for successful production recovery.</li>
+<li>Use deterministic fixture responses for partial batch results, slow/error saves, duplicate clicks and dependency outside the loaded job window.</li>
+<li>Test Cancel in every destructive prompt and backdrop/drawer dismissal with an unsaved draft.</li>
+<li>Verify JSON evidence download, file entries and UTC date boundary handling without claiming certification.</li>
+<li>Exercise browser/gateway timezone differences and a DST transition with the scheduler disabled; inspect written fixture schedule only.</li>
+<li>Run desktop controller mocks for selected/all/Exit/task handoff with active ownership records; no actual worker termination needed for the UI test.</li>
+<li>Model-provider Test should use a mocked response unless a provider owner authorizes a real request; service health is not a replacement for an end-to-end worker receipt.</li>
+</ol>
+<h2 id="source-key">Source key</h2>
+<table>
+<thead>
+<tr>
+<th>Alias</th>
+<th>Repository path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>shell.js</td>
+<td><code>src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js</code></td>
+</tr>
+<tr>
+<td>jobs.js</td>
+<td><code>src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js</code></td>
+</tr>
+<tr>
+<td>pages.js</td>
+<td><code>src/mco/console_src/43b328d0-9d0e-4fce-a105-be0a939d7e48.js</code></td>
+</tr>
+<tr>
+<td>ops.js</td>
+<td><code>src/mco/console_src/2ed3f6b1-e1c6-43fc-8b29-31917195cbd5.js</code></td>
+</tr>
+<tr>
+<td>adapter.js</td>
+<td><code>src/mco/console_src/47e66145-9c4d-41a1-acbb-42b12848f160.js</code></td>
+</tr>
+<tr>
+<td>ui.js</td>
+<td><code>src/mco/console_src/32c20ad6-cc53-43b3-a432-3a75e249b495.js</code></td>
+</tr>
+<tr>
+<td>dashboard.py</td>
+<td><code>src/mco/dashboard.py</code></td>
+</tr>
+<tr>
+<td>admin_routes.py</td>
+<td><code>src/mco/orchestrator/admin_routes.py</code></td>
+</tr>
+<tr>
+<td>routes.py</td>
+<td><code>src/mco/orchestrator/routes.py</code></td>
+</tr>
+<tr>
+<td>leases.py</td>
+<td><code>src/mco/orchestrator/leases.py</code></td>
+</tr>
+<tr>
+<td>schedules_routes.py</td>
+<td><code>src/mco/orchestrator/schedules_routes.py</code></td>
+</tr>
+<tr>
+<td>schedules_plain.py</td>
+<td><code>src/mco/schedules_plain.py</code></td>
+</tr>
+<tr>
+<td>desktop/app.py / controller.py</td>
+<td><code>src/mco/desktop/app.py</code>, <code>src/mco/desktop/controller.py</code></td>
+</tr>
+</tbody>
+</table>
+<p>Line numbers describe the inspected shared snapshot. Clean-main source hashes and pending-change classifications are recorded in <a href="_review/gui-feature-coverage.json">GUI coverage</a>; verify line positions after concurrent edits. Hidden design tools and unreachable legacy components are not counted as normal operational screens. No claim of screenshot/runtime verification is made.</p>
+<h2 id="changes-included-in-this-refresh">Changes included in this refresh</h2>
+<p>The documentation refresh branch fixes the technical dashboard's <strong>Cancel</strong> behavior for Abort Run and batch cancellation. Cancel now returns before any request. Six JavaScript regression cases exercise cancelled, blank-confirmed and reason-confirmed paths. This source patch has not been applied to an already running gateway; installed builds may still need the update. No execution policy or approval requirement changed.</p>
+<p>The help site now uses one task-first home, searchable sections, stable command/control anchors, progressive disclosure for secondary guides, keyboard search, copy feedback and mobile navigation. These are implemented help-site improvements, not a claim that all product recommendations above have shipped.</p>
+<h2 id="apple-guidance-used-for-the-review">Apple guidance used for the review</h2>
+<ul>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/design-principles/" rel="noopener">Design principles</a>: keep meanings and interactions consistent, with useful feedback and room for character.</li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/layout" rel="noopener">Layout</a>: use progressive disclosure to keep common work easy to find.</li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/writing" rel="noopener">Writing</a>: use concise action labels and familiar terms.</li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/feedback" rel="noopener">Feedback</a>: make status visible without unnecessary interruption.</li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/alerts" rel="noopener">Alerts</a>: reserve disruptive confirmation for consequential actions; a cancelled action must remain cancelled.</li>
+</ul>
+<p>Apple's guidance is a design lens, not a claim of Apple certification or an instruction to copy an Apple product.</p>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#highest-value-changes">Highest-value changes</a><a href="#verified-static-findings">Verified static findings</a><a href="#small-copy-patch-for-the-source-owner-to-review">Small copy patch for the source owner to review</a><a href="#documentation-corrections-to-integrate">Documentation corrections to integrate</a><a href="#controlled-runtime-checks-still-needed">Controlled runtime checks still needed</a><a href="#source-key">Source key</a><a href="#changes-included-in-this-refresh">Changes included in this refresh</a><a href="#apple-guidance-used-for-the-review">Apple guidance used for the review</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

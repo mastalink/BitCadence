@@ -98,6 +98,9 @@ def check(argv: list[str], bare_ok: bool = False) -> str | None:
             rest = rest[2:] if takes_value else rest[1:]
         if not rest:
             return None
+        if rest[0] == '--help':
+            # Click synthesizes this option; it does not necessarily live in params.
+            return None
         if rest[0].startswith("-"):
             return f"{' '.join(path)}: unknown option {rest[0]}"
         name = rest[0]

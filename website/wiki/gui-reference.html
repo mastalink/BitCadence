@@ -1,0 +1,538 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GUI reference: console, control plane, and Windows app · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/gui-reference.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="standing-score-grants.html">Standing Score grants (local authority store)</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html" aria-current="page">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="gui-reference-console-control-plane-and-windows-app">GUI reference: console, control plane, and Windows app</h1>
+<p>This guide inventories the controls implemented in the browser console (<code>/console</code>), technical control plane (<code>/dashboard</code>), and Windows Local Control app. It was checked against source on November 13, 2026, not against an authenticated production session. A visible button is not evidence that its operation is permitted or working. Your token, tenant, edition, policy, and the current job state still govern every action.</p>
+<p><strong>Version boundary:</strong> clean main <code>0f9f36e</code> and an existing shared checkout have small differences. The shared checkout adds <strong>Manage fleet tokens</strong>, makes Advanced expose Agent Fleet in plain tone, and repairs individual reassignment. Those changes are pending checkout work, not a verified release. Instructions below identify that difference explicitly.</p>
+<h2 id="choose-the-right-window">Choose the right window</h2>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Use it for</th>
+<th>Prerequisites</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Browser <code>/console</code></td>
+<td>Everyday work, approvals, projects, Ask, helpers, schedules, memory</td>
+<td>Running reachable gateway; connect in Settings with an existing token</td>
+</tr>
+<tr>
+<td>Browser <code>/dashboard</code></td>
+<td>Agent scopes/status, model credentials, all server settings, workflow YAML, conductor controls</td>
+<td>Gateway URL plus token with the required scopes; no demo mode</td>
+</tr>
+<tr>
+<td>Windows <strong>BitCadence — Local Control</strong></td>
+<td>Starting/stopping local processes, fleet configuration, component logs</td>
+<td>Windows and desktop dependencies; configured local installation</td>
+</tr>
+</tbody>
+</table>
+<p>The browser pages do not start local workers merely by being opened. The Windows app manages processes; it does not itself approve jobs. <code>/dashboard</code> is an administrative interface with capabilities absent from <code>/console</code>; it is not just a smaller status page.</p>
+<p>In this guide, <strong>read</strong> means inspect or change the current view; <strong>write</strong> means change saved configuration, work, credentials, or process state; <strong>approve</strong> means an authorization decision. Copying a token/snippet places credentials or configuration on your clipboard. An external connection test may contact another service; a model Test makes a real provider request.</p>
+<h2 id="open-and-connect-the-console">Open and connect the console</h2>
+<ol>
+<li>Open your gateway's <code>/console</code> URL. The usual local address is <code>http://127.0.0.1:18789/console</code>. Use the actual configured gateway if different.</li>
+<li>Choose <strong>Settings</strong>. In plain tone expand <strong>Show advanced</strong>. This disclosure is separate from the topbar <strong>Advanced</strong> switch.</li>
+<li>In <strong>Connection</strong>, enter <strong>Gateway URL</strong> and <strong>Agent token</strong>, then <strong>Connect</strong>. Connection validates against the gateway before the console changes to Live.</li>
+<li>Check the footer: <strong>Live</strong>, <strong>Connecting…</strong>, <strong>Offline · connection failed</strong>, or <strong>Demo · simulated data</strong>. Only Live indicates a current connection. Demo job actions change examples, not production jobs. Several features require Live and show an explanatory empty state in Demo.</li>
+<li>To change gateway/token, choose <strong>Disconnect</strong> first, edit the fields, then Connect. Disconnecting this browser does not stop the gateway or workers. Saved connection data uses this browser's storage; do not treat it as a server identity change.</li>
+</ol>
+<p>If authentication fails, obtain the correct existing token and check its scopes. A 403 is not proof that a worker should be promoted to approver. For network failures verify the actual URL and gateway availability. An Offline view can contain previously fetched data; reconnect before relying on it. See <a href="connecting-console.html#if-it-goes-wrong">connection troubleshooting</a>.</p>
+<h2 id="navigation-and-display-controls">Navigation and display controls</h2>
+<p>The sidebar has twelve entries: <strong>Home</strong>, <strong>Portfolio</strong>, <strong>Job Board</strong>, <strong>Approvals</strong>, <strong>Governance</strong>, <strong>Ask for something</strong>, <strong>Helpers</strong>, <strong>Connect an AI</strong>, <strong>Schedules</strong>, <strong>Drumline</strong>, <strong>Activity</strong>, <strong>Settings</strong>. Selecting one changes the view, not job state. The selected page and Advanced preference are stored locally.</p>
+<p>The topbar <strong>Advanced</strong> switch reveals technical details such as payloads, full job IDs and retry/escalation fields. It does not grant authority. In clean main, plain-tone Helpers remains the simple Helpers page even with Advanced enabled. In the shared pending change, Advanced switches it to Agent Fleet and <strong>Manage fleet tokens</strong> is another way to enter that view. Turn Advanced off to return.</p>
+<p>Some headings have two names: Job Board is <strong>All work</strong> in plain tone, Approvals is <strong>Needs your OK</strong>, Helpers is <strong>Your helpers</strong>, Activity is <strong>What happened</strong>. The sidebar keeps the original navigation name. The prototype Tweaks panel exposes accent, density, copy tone and live simulation only when the host activates edit mode; it is not a normal settings workflow. Do not depend on that hidden design tool to administer an installation.</p>
+<p>Drawer <strong>×</strong>, <strong>Cancel</strong>, <strong>Back</strong>, and backdrop clicks close or dismiss their respective draft controls. They do not reverse a request already submitted. The shared Drawer has no implemented Escape handler/focus trap; use its visible close control. Notifications disappear after about four seconds; inspect History/Activity for durable evidence.</p>
+<h2 id="home-and-the-score-live-view">Home and the Score live view</h2>
+<ol>
+<li>Choose <strong>Home</strong>. Read <strong>What needs you</strong> first. <strong>Look first</strong> opens job details. <strong>Approve</strong> is an immediate approval request and can release work; review the job first when unsure.</li>
+<li>Read <strong>What's running</strong>. Click a normal card to inspect its job. A Score card opens <strong>Live view</strong>, an automatically drawn, read-only run view. <strong>Back to Home</strong> returns without changing the run.</li>
+<li><strong>See all work</strong> opens Job Board. Its initial data is still the bounded recent job collection, not complete history.</li>
+</ol>
+<p>Home marks an active job Stuck after ten minutes without a usable recent work/heartbeat timestamp. That label is a view flag, not a cancellation or a restart. Waiting and approval jobs do not become Stuck merely for being old. Score cards group by run and obtain actual plan step counts when available; missing plan data can omit counts. Home uses at most 200 recent jobs and displays a coverage notice at that limit; at most twenty visible plans refresh every thirty seconds. See <a href="Console-home.html">Home rules</a> and <a href="Score-live.html">Score live</a>.</p>
+<h2 id="portfolio">Portfolio</h2>
+<p>Choose <strong>Portfolio</strong> for one read-only run sheet of the projects you have listed in a local portfolio file. It replaces the earlier <strong>Projects</strong> sidebar entry (a saved &quot;Projects&quot; page choice now opens Portfolio). Roadmaps and milestone states come only from your local configuration; shared queues, workers, board jobs and flow warnings are live. Nothing on this page starts, pauses, moves or changes work.</p>
+<p>If the page says <strong>Portfolio is not configured</strong>, copy <code>configs/portfolio.example.yaml</code> to your local BitCadence configuration location and list your own projects there (real project data stays out of the repository). If it says <strong>Portfolio could not be refreshed</strong>, read the message and choose <strong>Try again</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Steps and expected outcome</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flow flags</td>
+<td>A red band at the top lists warnings such as a worker reported broken, work pending for a long time, or a recent stalled chain. Read each title and detail, then fix the cause where it happens.</td>
+<td>Read</td>
+</tr>
+<tr>
+<td>Capacity strip</td>
+<td>Shows the GPU queue, CPU queue and worker counts (online, broken, away). It is a status view only.</td>
+<td>Read</td>
+</tr>
+<tr>
+<td>Project card</td>
+<td>Select a card to expand it. It shows priority, status, the done definition, health (On track, Watch or Blocked), roadmap progress and the next milestone. Select it again to collapse.</td>
+<td>Read</td>
+</tr>
+<tr>
+<td>Recent board jobs</td>
+<td>In an expanded card, select a job title to open its details drawer. Jobs appear only when they match the project's configured aliases.</td>
+<td>Read</td>
+</tr>
+<tr>
+<td>Open pull requests</td>
+<td>Links open in a new tab when a repository command is configured; otherwise the card shows a notice or &quot;No open pull requests.&quot;</td>
+<td>Read</td>
+</tr>
+<tr>
+<td>Refresh</td>
+<td>Reloads the snapshot now. The page also refreshes itself every thirty seconds while it is open.</td>
+<td>Read</td>
+</tr>
+</tbody>
+</table>
+<p>The card's &quot;Priority and pause controls&quot; line is a visible placeholder: those controls are read-only in this version. Assigning an existing job to a project is still possible through the job metadata and API described in <a href="projects-dashboard.html#4-assigning-a-job-to-a-project">Projects and assignment</a>.</p>
+<h2 id="job-board-and-job-details">Job Board and job details</h2>
+<h3 id="find-and-order-work">Find and order work</h3>
+<p>Choose <strong>Job Board</strong>, then combine <strong>All</strong>, <strong>Active</strong>, <strong>Needs approval</strong>, <strong>Waiting</strong>, <strong>Done</strong>, or <strong>Problems</strong> with search and <strong>All roles</strong>. Search checks title, role and workflow; it is not full payload or full-history search. Active includes pending/leased/in-progress; Problems includes failed/rejected/halted/cancelled. Clearing a filter changes only the view.</p>
+<p><strong>Sort jobs</strong> offers Priority then oldest, Newest first, Oldest first, Status, Assigned role and Title A–Z. The preference is saved locally. Clicking Job/Status/Assigned to/Updated table headings also sorts (the dropdown provides the keyboard-accessible alternative). Sorting does not edit priority or grant a lease. Click a job row to open its drawer.</p>
+<h3 id="create-a-job">Create a job</h3>
+<ol>
+<li>Choose <strong>+ New job</strong>.</li>
+<li>Fill <strong>What needs to happen?</strong>, optional <strong>Details</strong>, and <strong>Who should do it?</strong>. Available roles come from enabled registered agents; no roles means register a worker first.</li>
+<li>Select <strong>Ask me before it runs</strong> when this job needs its own approval gate. Server policy may impose a gate independently.</li>
+<li>With Advanced enabled, set <strong>Retry budget</strong> (the form allows 0–5) and optional <strong>Escalate to role</strong>.</li>
+<li>Choose <strong>Create job</strong>. Success closes the drawer and the job appears; it can immediately become eligible for a worker. <strong>Cancel</strong> or × dismisses before submission. On failure, the drawer retains the error; check connection/policy before trying again to avoid duplicate work.</li>
+</ol>
+<p>CLI doorway: <a href="mco-cli-reference.html#cli-mco-send">send and workflow commands</a>. See <a href="job-board-and-tasks.html#3-creating-a-new-job">task guide</a>.</p>
+<h3 id="inspect-and-act-on-one-job">Inspect and act on one job</h3>
+<p>The drawer shows status, approval-gate badge, description, assignee/requester, created time, workflow, decision actor when present, and History/Audit trail. Advanced adds full ID, retry budget and input/output JSON. <strong>Connected steps / Dependencies</strong> opens an available predecessor or dependent in the same drawer. Only dependencies in the fetched collection can appear; absence here is not proof of no dependencies.</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Steps and expected outcome</th>
+<th>Recovery / limits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Approve &amp; run</td>
+<td>For needs_approval, review details then choose Approve &amp; run. Requires an authorized approver token.</td>
+<td>Approval makes work eligible; it does not prove a helper has started or completed it. Inspect History and current state.</td>
+</tr>
+<tr>
+<td>Reject…</td>
+<td>Open rejection, enter a recorded reason, choose Reject. Cancel dismisses the rejection editor.</td>
+<td>This is a decision, not an undo of an approval already made.</td>
+</tr>
+<tr>
+<td>Try again</td>
+<td>Available for failed/rejected/halted jobs. Review the failure, then choose Try again.</td>
+<td>Can execute work again. Correct the cause first and check policy/gates afterward.</td>
+</tr>
+<tr>
+<td>Call it off…</td>
+<td>For active/nonterminal work, open the editor, enter a reason, then Call it off. Back dismisses.</td>
+<td>Cancellation is a mutation that may stop work; already completed external effects are not undone.</td>
+</tr>
+<tr>
+<td>Reassign…</td>
+<td>Backend accepts unsuccessful terminal attempts (failed/rejected/cancelled/halted), producing replacement work for a chosen role.</td>
+<td>Clean main has an inconsistent visible action/request body; do not infer success from its editor closing. The shared pending repair limits this to terminal attempts and corrects the individual payload. Use verified CLI/API if this installation rejects it.</td>
+</tr>
+</tbody>
+</table>
+<p>Always inspect the refreshed state and audit event. The UI may close an action editor before receiving a response; that closure is not evidence of success.</p>
+<h3 id="batch-controls">Batch controls</h3>
+<p>Use row checkboxes or <strong>Select all jobs</strong> to select visible jobs. A toolbar offers applicable <strong>Approve</strong>, <strong>Reject</strong>, <strong>Retry</strong>, <strong>Cancel</strong>, <strong>Archive</strong>, <strong>Reassign to role… / Apply</strong>, and <strong>Clear selection</strong>. Counts describe eligible selected jobs, while several requests send every selected ID; mixed selections may partly fail. Changing filters can leave hidden selected jobs selected. Clear selection and rebuild it when changing scope.</p>
+<p>Reject/Cancel prompt for a reason; cancelling those console prompts cancels the batch. Other actions submit immediately. Read success/failure counts and inspect each failed job before retrying. Archive hides eligible terminal work; there is no matching unarchive button in this console. Use the <a href="mco-cli-reference.html#cli-mco-unarchive">archive/unarchive CLI reference</a> for restoration. Reassign batch remains subject to server state checks and payload compatibility; see the version warning above.</p>
+<h2 id="approvals-and-governance">Approvals and Governance</h2>
+<h3 id="approvals">Approvals</h3>
+<ol>
+<li>Choose <strong>Approvals</strong>. Select a queued item to read instructions, target role and requester.</li>
+<li><strong>Full details →</strong> opens the same job drawer. Review before authorizing.</li>
+<li><strong>Approve &amp; run</strong> authorizes that job. To reject, fill <strong>Reason for saying no / Rejection reason</strong> then choose <strong>Reject</strong>.</li>
+<li>For several jobs, use individual checkboxes or <strong>Select all</strong>, then <strong>Approve (N)</strong> or <strong>Reject (N)</strong>. Batch rejection prompts for a reason. Review the batch result; it is not necessarily atomic.</li>
+<li><strong>Recent decisions</strong> opens job details. Its non-rejected decision badge is rendered as completed; it does <strong>not</strong> prove the actual job completed. Check the drawer's actual status.</li>
+</ol>
+<p>If blocked, the console offers <strong>Got it</strong> to dismiss the message. Its suggestion to run <code>bitcadence fix</code> is a repair workflow, not authorization to grant yourself approver rights. Use the role approved by your operator. See <a href="Approvals.html#when-you-cant-approve-yet">approval troubleshooting</a> and <a href="approvals-and-governance.html">governance guide</a>.</p>
+<h3 id="governance">Governance</h3>
+<p><strong>Refresh</strong> reloads recent oversight events. <strong>Review</strong> opens a pending job. Decision history is drawn from a bounded feed (150 events loaded, twelve decisions and eighteen oversight events displayed), not a complete compliance history. Click an oversight event to open its job when that job exists in the loaded collection.</p>
+<p>For <strong>Evidence export</strong>, optionally fill <strong>Start</strong> and <strong>End</strong> dates, then <strong>Export compliance evidence pack</strong>. The browser downloads <code>bitcadence-evidence-pack.json</code> containing the response and file payloads, and shows event/approval/decision counts. Although the UI says “PDF cover page plus JSON,” this button downloads a JSON envelope; inspect its file entries instead of expecting separate files to appear. Export is a read/export action, not an approval and not a certification of legal compliance. A date or permission error appears beside the export. Preserve the downloaded result before refreshing.</p>
+<h2 id="ask-for-something">Ask for something</h2>
+<p>Prerequisite: Live connection and authority to create/approve the proposed work. See <a href="Ask.html#in-the-console">Ask instructions</a>.</p>
+<ol>
+<li>Enter the request, or choose an example button to fill it. Examples do not start work.</li>
+<li>Choose <strong>Draft a plan</strong>. Review every step, condition and “you decide” checkpoint. Drafting previews a plan; it does not create jobs.</li>
+<li><strong>Remove a step</strong> reveals step <strong>Remove</strong> buttons; at least one step remains. <strong>Always ask me at the end / Asking you at the end: on</strong> adds/removes the final checkpoint. <strong>Make it repeat / Repeats: …</strong> opens choices; select a repeat or <strong>Don't repeat</strong>. Review the revised drawing after each change.</li>
+<li><strong>Change my request</strong> returns to text. Edit it and draft again to make larger changes.</li>
+<li><strong>Approve and start</strong> creates work and authorizes the start. A repeat also persists a workflow and schedule. Only subsequent plan checkpoints ask again. This is a consequential write, not another preview.</li>
+<li>The result offers <strong>Watch it on Home</strong> and <strong>Ask for something else</strong>. Watch current work and approval gates; a start receipt is not completion.</li>
+</ol>
+<p>The planner uses predictable clause parsing, not unrestricted semantic understanding. Rewrite and redraft a mistaken plan. The old drag/drop console workflow builders are absent; technical YAML submission remains under <code>/dashboard</code> → Workflows and <code>mco workflow</code>.</p>
+<h2 id="helpers-and-fleet-credentials">Helpers and fleet credentials</h2>
+<h3 id="everyday-helpers">Everyday Helpers</h3>
+<p>Choose <strong>Helpers</strong> in plain tone. Each card combines a shape, word and light with what the helper is doing and last contact. The list refreshes every fifteen seconds. Ready/Working presence is useful evidence but does not prove a worker can complete a particular task.</p>
+<p><strong>+ Add a helper</strong> opens AI and Name fields. Choose an offered AI, enter a name, then <strong>Add helper</strong>. Registration/sign-in is saved on the gateway computer; it is not a completed work test. Cancel closes the form. See <a href="Helpers.html#add-a-helper">add a helper</a>.</p>
+<p><strong>Fix it</strong> first requests a diagnosis. Review every proposed change in <strong>Here's what I found</strong>. <strong>Not now</strong> dismisses it without applying. <strong>Yes, fix it</strong> applies the proposed repair and returns results. This is a repair of the helper set, not necessarily only the card you clicked; inspect the full plan. Review permissions and active work before confirming. See <a href="Helpers.html#fix-it">repair workflow</a>.</p>
+<h3 id="agent-fleet-tokens">Agent Fleet / tokens</h3>
+<p>Use <code>/dashboard</code> → Agents &amp; Tokens for a reliable administrative doorway on clean main. The shared pending console change exposes <strong>Manage fleet tokens</strong> and Advanced Agent Fleet. In that view:</p>
+<ol>
+<li><strong>Add agent / Register agent</strong> opens Instance ID, Role, and (with Advanced) Org. Enter the intended identity and an already configured tenant, then <strong>Add agent / Register</strong>.</li>
+<li>Copy the resulting once-shown token using <strong>Copy</strong>, securely configure the intended worker, then <strong>Done / Close</strong>. Registration itself does not start a listener.</li>
+<li><strong>New token / Reset token</strong> asks for confirmation. It immediately invalidates the old token. Copy and install the replacement; there is no undo that restores the old secret.</li>
+<li><strong>Remove</strong> confirms immediate token invalidation and deletes the registration if server policy allows it. It is not the correct way to stop an actively leased worker. Inspect current leases and obey server refusal.</li>
+<li><strong>Move…</strong> appears for a host operator with multiple tenants. Choose a target, <strong>Confirm</strong>, then accept the boundary warning. Cancel dismisses. Agent visibility/management changes with its tenant; do not mistake an agent disappearing from this view for deletion.</li>
+</ol>
+<p>Per-role online counts, current job and Advanced completed counts reflect the fetched collection. See <a href="agent-fleet-and-presence.html">fleet guide</a> for CLI equivalents and lost-token recovery. Copy feedback or a displayed token is not evidence the executor now uses it.</p>
+<h2 id="connect-an-ai">Connect an AI</h2>
+<p>This page edits client app configuration on the <strong>gateway computer</strong>. A remote browser does not make its own laptop's app configuration available to the gateway.</p>
+<ol>
+<li>Choose <strong>Connect an AI</strong> after connecting the console itself. These are different connections.</li>
+<li>For an installed app card choose <strong>Connect</strong>. Read the result and restart the target app if instructed. Existing configuration is backed up; unrelated settings are preserved by the connector's implementation.</li>
+<li><strong>Send a test</strong> checks the configured entry and executable availability. It is not proof that the target app completed a live MCP call/job.</li>
+<li><strong>Disconnect</strong> removes BitCadence's entry; it does not shut down the gateway. Verify the target app after restarting it.</li>
+<li>For <strong>Another app</strong>, choose <strong>Show me a code</strong>, then <strong>Copy</strong>. Paste the snippet into the intended supported client's connection configuration. Treat any embedded credential as a secret. The button returns configuration rather than installing an arbitrary client.</li>
+</ol>
+<p>Not found: install the app on the gateway host, then revisit/reload the page. For malformed configuration the connector should return an error rather than silently replace it; inspect the backup before recovery. See <a href="Connect-an-AI.html#apps">supported apps and tests</a>.</p>
+<h2 id="schedules">Schedules</h2>
+<p>Reading needs <code>jobs:read</code>; adding/toggling needs <code>agents:manage</code>. A running scheduler is required for saved schedules to execute.</p>
+<ol>
+<li>Choose <strong>Schedules</strong>. Existing cards show name, schedule sentence, next run and <strong>On / Off</strong>.</li>
+<li>To create one, select <strong>What should run?</strong> from configured launchers. If none appear, create eligible work first; this page does not offer arbitrary app/page launches.</li>
+<li>Choose <strong>Every day</strong>, <strong>Every weekday</strong>, <strong>Certain days</strong>, or <strong>Every hour</strong> as offered by the server. For Certain days toggle each day; at least one is required. For non-hourly frequencies set <strong>At what time?</strong>.</li>
+<li>Read the sentence preview. Choose <strong>Save</strong> to persist; verify its card and next-run text.</li>
+<li>Click an existing card's <strong>On/Off</strong> to change whether it runs. This saves immediately and can be reversed with the same control. It does not delete the schedule or cancel work already launched.</li>
+</ol>
+<p><strong>Time-zone limitation:</strong> the UI claims it detects “your computer” but does not send a browser zone. The backend detects the gateway host's zone. On remote gateways, verify the actual server zone/next-run time before enabling; see <a href="scheduling-and-loops.html#2-configure-launchers-and-loops">scheduling configuration</a>. There is no GUI timezone selector, delete button or full schedule editor here. <a href="Schedules.html#add-one">Plain schedule commands</a> and the advanced scheduler configuration handle the remaining operations.</p>
+<h2 id="drumline-context-and-agent-exchange">Drumline: Context and Agent Exchange</h2>
+<p>Use <strong>Drumline</strong>, then <strong>Context</strong> or <strong>Agent Exchange</strong>. Arrow keys switch these two tabs. The last subview is stored locally. Both use the live gateway; tenant isolation still applies.</p>
+<h3 id="context">Context</h3>
+<ol>
+<li>Enter <strong>Search memory / Recall query</strong> and optional comma-separated tags, then <strong>Search / Recall</strong>. Tags constrain results; the server ranks recall. At most 25 entries are requested.</li>
+<li><strong>Show more / Collapse</strong> expands entry text; <strong>Drill down →</strong> opens provenance/full text. The detail drawer includes provenance and <strong>Copy text</strong>; <strong>Open Source Job</strong> opens the linked job when available in the loaded collection. Advanced adds weight metadata.</li>
+<li><strong>+ Add memory / + Remember</strong> opens Title, Kind, Tags and Content. Fill title and content, choose the kind, then <strong>Save memory / Remember</strong>. This creates shared context that eligible agents can recall. The composer <strong>Cancel</strong> dismisses before saving; no edit/delete/undo button is exposed here.</li>
+</ol>
+<p>Empty search: clear tags and reword the query before assuming the knowledge is absent. Distillation and injection settings affect whether memory is created/recalled; a saved memory is not a guarantee it appears in every future prompt. See <a href="drumline-memory.html#step-by-step-instructions">memory instructions</a>.</p>
+<h3 id="agent-exchange">Agent Exchange</h3>
+<p>Discussion is reference, not instructions or approval. Posting a “decision” does not authorize a job. Discussion enters recalled Context only through explicit promotion.</p>
+<ol>
+<li>Choose <strong>Job</strong>, optionally filter <strong>Show / kind</strong>, then select a thread. Read author, replies and Resolved/Replaced/Promoted badges.</li>
+<li>To start a thread, choose Type (question, proposal, blocker, decision, handoff), enter <strong>Message</strong> (8,000-character UI maximum), and <strong>Post</strong>.</li>
+<li><strong>Reply</strong>, <strong>Resolve</strong>, and <strong>Replace</strong> prepare a typed response to a message. Enter the explanation and Post; opening the composer alone changes nothing. <strong>Cancel reply/resolution/supersession</strong> returns to a new root message.</li>
+<li>A decision or handoff offers <strong>Promote to context</strong>. Review the warning and preview, select Decision/Lesson/Handoff, optionally give a title, then <strong>Promote to …</strong>. This copies sanitized text into shared Context with a receipt. <strong>Cancel</strong> dismisses the promotion form. Resolution/replacement/promotion are recorded actions, not deletion of the original discussion.</li>
+</ol>
+<p>If author identity is missing or a job is not in the picker, verify connection, tenant and loaded job window. Do not recreate discussion blindly. See <a href="drumline-agent-exchange.html#step-by-step-instructions">exchange guide</a>.</p>
+<h2 id="activity">Activity</h2>
+<p>Choose <strong>Activity</strong> for a cross-job audit view. In Live mode, enter search text (event/job/actor), choose event type, then <strong>Refresh</strong> to reload the current window. <strong>Load more</strong> increases the requested event limit; it does not broaden the ordinary job collection. Click a row only when its linked job is loaded. Advanced adds detail JSON, abbreviated in this table; use job History for fuller context.</p>
+<p>The statistics summarize fetched events/jobs: Events in last day, failure rate, typical approval wait, and distinct active actors. They are not independently queried system-wide metrics. Refresh/load more before drawing conclusions about missing events; search filters only the fetched window. Demo shows a connection-required explanation. See <a href="overview-dashboard.html#4-look-at-the-rest-of-the-menu">Home guide's Activity doorway</a>.</p>
+<h2 id="settings">Settings</h2>
+<h3 id="everyday-settings">Everyday settings</h3>
+<p>Plain Settings shows <strong>Pause everything / Pause / Resume</strong>, phone notification status, and a Memory pointer. The phone card is status-only; configuration is under Show advanced, and the text also points to <code>bitcadence settings</code>.</p>
+<p><strong>Critical wording correction:</strong> Pause writes <code>MCO_KILL_SWITCH</code>; despite the plain card saying “Jobs in progress finish,” the backend halts active attempts and pauses intake/leasing. Resume clears the pause; halted jobs require an explicit retry and do not automatically continue. Inspect current jobs, choose Pause only when that is intended, and verify History. This differs from <code>/dashboard</code>'s <strong>Pause Conductor</strong>, which controls the conductor sweep. Neither is a browser Disconnect.</p>
+<h3 id="show-advanced">Show advanced</h3>
+<p>Expand <strong>Show advanced</strong> to reveal Connection, Experience, Gateway controls, Connectors and optional Tenancy. Connection was covered above. Experience's <strong>Advanced mode</strong> is the same local preference as the topbar switch, not a permission grant.</p>
+<p><strong>Gateway controls</strong> displays governance, notifications, presence and memory fields from server metadata. Edit the intended fields, then <strong>Save gateway settings</strong>; this console sends changed fields and reloads their values. A success message means settings saved and audited, not that queued jobs finished. Raw choice settings currently render as text fields in this component; use exactly the allowed values or use <code>/dashboard</code>, which renders choices as dropdowns.</p>
+<p><strong>Connectors:</strong> enter ServiceNow or Dynatrace fields, then <strong>Save connectors</strong> before <strong>Test connection</strong>. Secret fields start blank; blank keeps the existing secret. Test uses saved gateway configuration, not unsaved form text. A successful Test reveals <strong>Sync now</strong>, which can import/create/update work; it is a write, not another health probe. Inspect the resulting created/updated/skipped summary. A locked encrypted secret store must be unlocked through the supported setup workflow; do not put secrets into plaintext as a workaround.</p>
+<p><strong>Tenancy</strong> (Advanced and host-operator authority) lists configured orgs and in-use markers. Enter a new org name (1–64 letters/digits or <code>. _ : -</code>) and <strong>Add org</strong>. This persists the allowed-org list; it does not move existing jobs or agents. There is no remove/rename org button here. Use Fleet's Move or the technical admin surface only within authorized tenant boundaries.</p>
+<p>For the full server-driven settings catalogue and groups omitted by this console, use <a href="#technical-control-plane-settings">technical control-plane settings</a>. See also <a href="settings-and-configuration.html">settings guide</a>.</p>
+<h2 id="technical-control-plane-dashboard">Technical control plane (<code>/dashboard</code>)</h2>
+<h3 id="unlock-and-lock">Unlock and Lock</h3>
+<p>Open the gateway's <code>/dashboard</code>, paste an existing bearer token and choose <strong>Unlock</strong> (Enter also works). Authentication probes job access, then opens Operations. Scoped tokens can still receive permission errors on other pages; Unlock does not make them admins. <strong>Lock</strong> clears this page's stored token and hides its shell; it does not revoke the token, stop workers, or clear the separate console's saved connection. There is no Demo mode.</p>
+<h3 id="operations-and-conductor">Operations and conductor</h3>
+<p>Operations refreshes approximately every five seconds. Click Job/Title/Status/Priority/Target/Leased By/Created headings to toggle sorting. Use <strong>Audit</strong> to show a job's event text. <strong>Approve / Reject</strong> act on a queued gate; rejection prompts for a reason. <strong>Retry</strong> appears beside failed/rejected work.</p>
+<p>Row and header checkboxes fill a shared selection across Approval Queue and Job Board. <strong>Approve</strong>, <strong>Reject</strong>, <strong>Retry</strong>, <strong>Cancel</strong>, <strong>Archive</strong>, <strong>Reassign</strong>, and <strong>Clear</strong> appear in the bulk bar. Reassign prompts for a role. Read result counts; partial errors are possible. <strong>Known limitation:</strong> cancelling the dashboard's Cancel-reason prompt still proceeds with an empty reason; do not use that prompt's Cancel as an abort mechanism. Use Clear before selecting a batch action. Individual Reject similarly turns prompt cancellation into an empty rejection request.</p>
+<p><strong>Autonomy Engine</strong> shows conductor state, sweep interval, shadow/live-write status and active-run count. <strong>Pause / Resume</strong> changes conductor sweeps; <strong>Tick Now</strong> triggers a real manual sweep that may advance jobs. These are writes and do not grant new authority or change shadow/live policy.</p>
+<p><strong>Live Look</strong> reads autonomy state and opens a modal with active/failing runs, database location and repository-write status. Its <strong>Trigger Sweep Now</strong>, <strong>Pause Conductor / Resume Conductor</strong> and each <strong>Abort Run</strong> mutate live state. <strong>Close</strong> or the backdrop dismisses the modal. <strong>Known limitation:</strong> Abort Run's reason prompt treats Cancel as “Aborted by operator” and still submits the abort. Do not click Abort Run merely to inspect it. This technical Live Look is different from Home's read-only Score drawing.</p>
+<p>CLI doorway: <a href="scores-and-autonomy.html">Scores and autonomy</a>. A ready server, active conductor or visible run is not end-to-end evidence of work delivery.</p>
+<h3 id="agents-tokens">Agents &amp; Tokens</h3>
+<ol>
+<li>Choose <strong>Agents &amp; Tokens</strong>, then <strong>+ Register agent</strong>.</li>
+<li>Fill Name, Role and offered Org. Select explicit Scopes only when needed; none checked requests role-derived defaults. <strong>Register &amp; generate token</strong> submits; <strong>Cancel</strong> dismisses.</li>
+<li>The token modal has <strong>Copy token</strong>, <strong>Done</strong>, plus worker/MCP configuration <strong>Copy</strong> controls. Save the once-shown token and configure the intended executor. Copy is not a listener start/test.</li>
+<li>Existing <strong>Edit</strong> changes Role, Status (online/offline/disabled) and Scopes; <strong>Save</strong> submits, Cancel dismisses. This is access administration, not a harmless display preference. A manually set online status is not proof of heartbeat/execution.</li>
+<li><strong>Reset token</strong> asks confirmation, invalidates the old token and shows the replacement once. <strong>Delete</strong> confirms registration/token removal. Respect active-lease refusals. See <a href="agent-fleet-and-presence.html#if-it-goes-wrong">fleet troubleshooting</a>.</li>
+</ol>
+<h3 id="model-connections">Model Connections</h3>
+<p>These stored provider connections are for custom workers/executors. Adding one does not select or change a model for every agent.</p>
+<ol>
+<li>Choose <strong>Model Connections → + Add connection</strong>.</li>
+<li>Enter Name, choose an offered Provider, fill Base URL when the provider allows it, optional Model, and API key. <strong>Add &amp; save</strong> persists; Cancel dismisses.</li>
+<li><strong>Test</strong> makes a real provider call and returns success/failure, detail and latency. It can consume provider quota; run it intentionally.</li>
+<li><strong>Edit</strong> can change Name, editable Base URL, Model and New API key. Blank key preserves the existing secret. <strong>Save</strong> submits; Cancel dismisses.</li>
+<li><strong>Delete</strong> confirms removal of the connection and stored key. It has no undelete control. Preserve needed configuration through your authorized secret/configuration process before deletion.</li>
+</ol>
+<p>Recover from validation/auth/network errors by checking saved provider/endpoint/model/key, then retest once corrected. A successful credential test does not prove a fleet worker uses that connection.</p>
+<h3 id="workflows">Workflows</h3>
+<p>Choose <strong>Workflows</strong>, paste valid workflow YAML, review roles, dependencies, conditions and approval flags, then <strong>Submit workflow</strong>. This creates governed jobs and shows run/job JSON; it is not a preview or dry-run. Use the CLI/offline validation path in <a href="workflows-and-flow-control.html#the-cli-equivalent">workflow guide</a> before submission when needed. On parse/cycle/policy failure, correct the input; on ambiguous network failure inspect existing runs/jobs before resubmitting.</p>
+<h3 id="technical-control-plane-settings">Technical control-plane settings</h3>
+<p>Choose <strong>Settings → Reload</strong> to load current metadata, edition/features and integrations. Only authorized settings access can read or save these groups. Controls are driven by the server whitelist, so the following catalogue is a snapshot; absent fields can reflect version or permission differences.</p>
+<p>For each group, edit the intended controls then choose its <strong>Save [group]</strong> button. It submits the entire displayed group (except blank secrets), not just changed fields. <strong>Reload</strong> discards unsaved edits. A choice dropdown restricts values; a boolean toggles on/off; a text field accepts server-validated text. Password fields report configured/unset without showing saved secrets. Blank preserves a secret; <strong>Clear</strong> confirms deletion of that secret. There is no universal settings undo: record the prior non-secret value and restore it explicitly if appropriate. <code>MCO_LOG_JSON</code> is labelled restart-to-apply even though the generic settings header claims immediate application.</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Setting / control</th>
+<th>Type and use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>governance</td>
+<td><code>MCO_KILL_SWITCH</code></td>
+<td>bool: Stop work (halt active jobs and pause intake)</td>
+</tr>
+<tr>
+<td>governance</td>
+<td><code>MCO_APPROVER_ROLES</code></td>
+<td>text: Approver roles (comma-separated)</td>
+</tr>
+<tr>
+<td>governance</td>
+<td><code>MCO_POLICY_GATED_ROLES</code></td>
+<td>text: Always-gated roles (jobs to these pause for a human)</td>
+</tr>
+<tr>
+<td>governance</td>
+<td><code>MCO_ESCALATION_CONNECTOR</code></td>
+<td>text: Escalation connector (mirror terminal failures to ITSM)</td>
+</tr>
+<tr>
+<td>governance</td>
+<td><code>MCO_DEFAULT_JOB_SORT</code></td>
+<td>choice: Default Job Board sort order Allowed: <code>created_desc</code>, <code>created_asc</code>, <code>priority_desc</code>, <code>status</code>.</td>
+</tr>
+<tr>
+<td>memory</td>
+<td><code>MCO_DRUMLINE_DISTILL</code></td>
+<td>bool: Distill completed jobs into shared memory</td>
+</tr>
+<tr>
+<td>memory</td>
+<td><code>MCO_DRUMLINE_INJECT</code></td>
+<td>bool: Inject shared memory into worker prompts</td>
+</tr>
+<tr>
+<td>presence</td>
+<td><code>MCO_AGENT_OFFLINE_AFTER</code></td>
+<td>text: Mark an agent offline after no contact for (seconds)</td>
+</tr>
+<tr>
+<td>delivery</td>
+<td><code>MCO_DELIVERY_STALL_SECONDS</code></td>
+<td>text: Re-wake a pending job nobody took after (seconds; 0 = off)</td>
+</tr>
+<tr>
+<td>delivery</td>
+<td><code>MCO_ROUTE_FALLBACKS</code></td>
+<td>text: Reroute stalled work to (role:fallback|fallback, comma-separated)</td>
+</tr>
+<tr>
+<td>delivery</td>
+<td><code>MCO_DELIVERY_MAX_REROUTES</code></td>
+<td>text: Maximum reroutes per job before escalating to a human</td>
+</tr>
+<tr>
+<td>score</td>
+<td><code>MCO_SCORE_SWEEP_SECONDS</code></td>
+<td>text: Advance score runs from the gateway every (seconds; 0 = off, runs only move when someone types <code>mco score tick</code>)</td>
+</tr>
+<tr>
+<td>jev</td>
+<td><code>MCO_JEV_MODE</code></td>
+<td>choice: Jev mode Allowed: <code>disabled</code>, <code>shadow</code>, <code>assist</code>, <code>active</code>.</td>
+</tr>
+<tr>
+<td>jev</td>
+<td><code>MCO_JEV_MODEL</code></td>
+<td>text: Jev model</td>
+</tr>
+<tr>
+<td>jev</td>
+<td><code>MCO_JEV_TIMEOUT_SECONDS</code></td>
+<td>text: Jev timeout (seconds)</td>
+</tr>
+<tr>
+<td>jev</td>
+<td><code>MCO_JEV_MAX_RETRIES</code></td>
+<td>choice: Jev retry count Allowed: <code>0</code>, <code>1</code>, <code>2</code>.</td>
+</tr>
+<tr>
+<td>observability</td>
+<td><code>MCO_METRICS_TOKEN</code></td>
+<td>secret: Protect /metrics with a bearer token (blank = open, like /healthz)</td>
+</tr>
+<tr>
+<td>observability</td>
+<td><code>MCO_LOG_JSON</code></td>
+<td>bool: Structured JSON logs (restart to apply)</td>
+</tr>
+<tr>
+<td>tenancy</td>
+<td><code>MCO_ORGS</code></td>
+<td>text: Allowed orgs (comma-separated; 'default' always exists). Orgs are isolation boundaries - agents only see jobs and memory inside their own org.</td>
+</tr>
+<tr>
+<td>edition</td>
+<td><code>MCO_EDITION</code></td>
+<td>choice: Edition (blank = infer from configuration) Allowed: blank (infer), <code>community</code>, <code>team</code>, <code>enterprise</code>.</td>
+</tr>
+<tr>
+<td>security</td>
+<td><code>MCO_TRUSTED_HEADER_AUTH</code></td>
+<td>bool: Trusted-header SSO (only behind an auth proxy!)</td>
+</tr>
+<tr>
+<td>security</td>
+<td><code>MCO_TRUSTED_HEADER_USER</code></td>
+<td>text: Identity header</td>
+</tr>
+<tr>
+<td>security</td>
+<td><code>MCO_TRUSTED_HEADER_ROLE</code></td>
+<td>text: Role header</td>
+</tr>
+<tr>
+<td>security</td>
+<td><code>MCO_TRUSTED_HEADER_DEFAULT_ROLE</code></td>
+<td>text: Default role for SSO users</td>
+</tr>
+<tr>
+<td>security</td>
+<td><code>MCO_TRUSTED_HEADER_SECRET</code></td>
+<td>secret: Proxy shared secret (X-MCO-Proxy-Secret)</td>
+</tr>
+<tr>
+<td>security</td>
+<td><code>MCO_WEBHOOK_SECRET</code></td>
+<td>secret: Inbound webhook secret (enables /webhook ingestion)</td>
+</tr>
+<tr>
+<td>notifications</td>
+<td><code>NTFY_SERVER</code></td>
+<td>text: ntfy server</td>
+</tr>
+<tr>
+<td>notifications</td>
+<td><code>NTFY_TOPIC</code></td>
+<td>secret: ntfy topic (blank = notifications off)</td>
+</tr>
+<tr>
+<td>connectors</td>
+<td><code>SERVICENOW_INSTANCE_URL</code></td>
+<td>text: ServiceNow instance URL</td>
+</tr>
+<tr>
+<td>connectors</td>
+<td><code>SERVICENOW_USERNAME</code></td>
+<td>text: ServiceNow username</td>
+</tr>
+<tr>
+<td>connectors</td>
+<td><code>SERVICENOW_PASSWORD</code></td>
+<td>secret: ServiceNow password</td>
+</tr>
+<tr>
+<td>connectors</td>
+<td><code>DYNATRACE_BASE_URL</code></td>
+<td>text: Dynatrace URL</td>
+</tr>
+<tr>
+<td>connectors</td>
+<td><code>DYNATRACE_API_TOKEN</code></td>
+<td>secret: Dynatrace API token (problems.read + problems.write)</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>Edition</strong> table is read-only feature availability evidence, not an activation of disabled paid capabilities. Changing the Edition setting does not substitute for required licensing/configuration. <strong>Connectors</strong> lists health and supported actions; <strong>Sync now</strong> imports connector work and reports counts. Unlike the everyday console, this page offers Sync without requiring a preceding successful Test. Correct credentials and inspect health before invoking it.</p>
+<h2 id="windows-local-control-and-tray">Windows Local Control and tray</h2>
+<p>See <a href="desktop-app-and-tray.html#1-installation-one-click-installer-desktop-shortcut">installation/shortcut setup</a>. The following controls are verified in <code>src/mco/desktop/app.py</code> and <code>controller.py</code>; no live start/stop was performed for this guide.</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Steps and actual scope</th>
+<th>Expected feedback / recovery</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start all</td>
+<td>Starts gateway, waits for readiness, then scheduler and configured enabled workers. Already-running external matches are recognized.</td>
+<td>Inspect each row, not only global Gateway ready. Worker failures can be reported while other components start.</td>
+</tr>
+<tr>
+<td>Stop all</td>
+<td>Stops configured components, including exact matching external processes belonging to the same user, and disables/ends their scheduled tasks.</td>
+<td>Can interrupt active executors. Inspect component rows and logs; it is broader than Exit.</td>
+</tr>
+<tr>
+<td>Restart all</td>
+<td>Stop all then Start all.</td>
+<td>May interrupt active work and leave scheduled tasks disabled. Verify the complete stack afterward.</td>
+</tr>
+<tr>
+<td>Component row</td>
+<td>Select a row to filter the bottom log viewer to its last 100 lines. State/Process/Last error show component evidence.</td>
+<td>External workers retain their original logs; an empty app log is not evidence they are silent.</td>
+</tr>
+<tr>
+<td>Start selected</td>
+<td>Select the intended component then Start selected.</td>
+<td>Gateway must be ready before scheduler/workers. No selection is a silent no-op. Only the first selected row is used.</td>
+</tr>
+<tr>
+<td>Stop selected</td>
+<td>Select the intended component then Stop selected.</td>
+<td>Stops its process tree/exact external match and disables its matching scheduled task.</td>
+</tr>
+<tr>
+<td>Restart selected</td>
+<td>Select the component then Restart selected.</td>
+<td>Stop then start; inspect the row and work ownership before/after.</td>
+</tr>
+<tr>
+<td>Open console</td>
+<td>Opens the configured local <code>/console</code> in the default browser.</td>
+<td>It does not start the server or authenticate that browser automatically.</td>
+</tr>
+<tr>
+<td>Fleet settings</td>
+<td>Opens the fleet TOML in Notepad, creating a starter file if absent. Save intentionally.</td>
+<td>This button can write/create a file even before Reload. See <a href="sidecars-and-fleet-daemons.html#supported-fields">fleet schema</a>.</td>
+</tr>
+<tr>
+<td>Reload settings</td>
+<td>Reloads fleet definitions. Removed or changed workers can be stopped as part of reconciliation.</td>
+<td>This is not a read-only refresh. Inspect changed worker rows, then explicitly start what should run.</td>
+</tr>
+<tr>
+<td>Move workers into app</td>
+<td>Disables matching recurring tasks, Stop all, then Start all under app supervision.</td>
+<td>This is a consequential handoff that interrupts process trees. Do between jobs with appropriate authorization, not as a cosmetic warning dismissal.</td>
+</tr>
+<tr>
+<td>Window X</td>
+<td>Hides the window if tray support exists; otherwise exits.</td>
+<td>Tray fallback explicitly warns that close exits.</td>
+</tr>
+</tbody>
+</table>
+<p>Right-click the tray icon: <strong>Open BitCadence</strong> restores the control window; <strong>Start all</strong>, <strong>Stop all</strong> and <strong>Open console</strong> have the same scope as above; <strong>Exit</strong> shuts down only supervisor-owned child processes and exits. Exact external workers remain unless Stop was used. A second shortcut launch brings forward the existing app; <code>--start-all</code> can also request a start in that instance.</p>
+<p>“Scheduled workers are still enabled” means duplicate-start protection refused a new app-owned worker. Existing scheduled workers may still run. Either keep their current management or intentionally use Move workers into app between jobs. Do not kill arbitrary Python processes or erase <code>~/.mco</code> as a first recovery step. Read the specific component Last error and original log. Readiness alone does not establish a usable fleet.</p>
+<p>Autostart is configured through the <a href="desktop-app-and-tray.html#5-configuring-autostart-on-sign-in">autostart script</a>, not a checkbox in this window. There is no GUI port editor or updater; launcher options/configuration and the documented installation update process provide those capabilities.</p>
+<h2 id="coverage-and-limits">Coverage and limits</h2>
+<p>The machine-readable <a href="_review/gui-feature-coverage.json">GUI feature coverage</a> maps control/workflow groups to source and this guide. It includes twelve console pages, the read-only Score view and drawers, five technical control-plane pages/lock/modal flows, Windows window/tray actions and every current server-driven setting. It also marks unreachable legacy console components and pending checkout changes.</p>
+<p>This is static source verification. Authentication, browser keyboard/assistive-technology behavior, remote host differences, external provider tests, downloads, live job transitions and Windows task handoffs require separate controlled runtime checks. No production jobs, schedules, tokens, services, approvals or GPU work were changed while writing it. Proposed improvements and known mismatches are in <a href="UX-REVIEW.html">UX review</a>.</p>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#choose-the-right-window">Choose the right window</a><a href="#open-and-connect-the-console">Open and connect the console</a><a href="#navigation-and-display-controls">Navigation and display controls</a><a href="#home-and-the-score-live-view">Home and the Score live view</a><a href="#portfolio">Portfolio</a><a href="#job-board-and-job-details">Job Board and job details</a><a href="#approvals-and-governance">Approvals and Governance</a><a href="#ask-for-something">Ask for something</a><a href="#helpers-and-fleet-credentials">Helpers and fleet credentials</a><a href="#connect-an-ai">Connect an AI</a><a href="#schedules">Schedules</a><a href="#drumline-context-and-agent-exchange">Drumline: Context and Agent Exchange</a><a href="#activity">Activity</a><a href="#settings">Settings</a><a href="#technical-control-plane-dashboard">Technical control plane (`/dashboard`)</a><a href="#windows-local-control-and-tray">Windows Local Control and tray</a><a href="#coverage-and-limits">Coverage and limits</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

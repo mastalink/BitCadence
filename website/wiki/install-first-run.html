@@ -1,0 +1,119 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Install &amp; First Run · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/install-first-run.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html" aria-current="page">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="standing-score-grants.html">Standing Score grants (local authority store)</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="install-first-run">Install &amp; First Run</h1>
+<h2 id="goal">Goal</h2>
+<p>Install BitCadence on your machine with zero configuration, create an isolated local Python environment, initialize a secure operator access token, and start the system for the first time.</p>
+<hr />
+<h2 id="step-by-step-instructions-windows-one-click">Step-by-Step Instructions (Windows One-Click)</h2>
+<h3 id="1-download-and-extract-bitcadence">1. Download and Extract BitCadence</h3>
+<p>Download the BitCadence repository archive or clone it into a local folder on your computer (for example, <code>C:\BitCadence</code> or <code>C:\AI\baton\Batoncadence</code>).</p>
+<h3 id="2-run-the-installer">2. Run the Installer</h3>
+<p>Double-click <strong><code>install.bat</code></strong> located in the root folder of the BitCadence project.
+Alternatively, launch PowerShell in that folder and run:</p>
+<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File scripts\install.ps1
+</code></pre>
+<p>The script automatically executes six distinct setup stages:</p>
+<ol>
+<li><strong>Python Check:</strong> Locates an existing Python 3.9+ installation, or automatically prompts to install it via Windows Package Manager (<code>winget</code>).</li>
+<li><strong>Virtual Environment:</strong> Generates an isolated <code>.venv</code> directory to keep all project dependencies self-contained.</li>
+<li><strong>Editable Installation:</strong> Installs BitCadence (<code>mco</code>) and required libraries in development/editable mode.</li>
+<li><strong>Configuration Generation:</strong> Creates a global configuration at <code>~/.mco/.env</code> with the <code>Local-Only</code> profile and mints a high-entropy bearer token (<code>mco_tok_...</code>).</li>
+<li><strong>Path Integration:</strong> Adds <code>mco</code> to your user <code>PATH</code> (under <code>%LOCALAPPDATA%\BitCadence\bin</code>).</li>
+<li><strong>Desktop Shortcut:</strong> Creates a desktop shortcut named <strong>BitCadence</strong> that points to <code>Start BitCadence.bat</code>.</li>
+</ol>
+<p><img src="img/20-install-cli-start.png" alt="BitCadence Installation and Startup Terminal" loading="lazy" decoding="async" /></p>
+<h3 id="3-launching-bitcadence">3. Launching BitCadence</h3>
+<p>When the installer asks:</p>
+<pre><code class="language-text">Would you like to start BitCadence now? [Y/n]
+</code></pre>
+<p>Press <strong>Enter</strong>.</p>
+<p>The server window appears, displays your generated access token, copies it automatically to your Windows clipboard, and opens your default web browser to <code>http://127.0.0.1:18789/console</code>.</p>
+<hr />
+<h2 id="the-cli-equivalent">The CLI Equivalent</h2>
+<p>For power users or headless environments, you can perform the entire installation manually:</p>
+<pre><code class="language-powershell"># 1. Create virtual environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# 2. Install BitCadence dependencies
+pip install -e .
+
+# 3. Create global configuration home
+mkdir -p &quot;$HOME\.mco&quot;
+
+# 4. Generate token and environment file
+$TOKEN = &quot;mco_tok_&quot; + [System.Guid]::NewGuid().ToString(&quot;N&quot;)
+@&quot;
+MCO_PROFILE=Local-Only
+OPERATOR_NAME=$env:USERNAME
+MCO_LOCAL_TOKEN=$TOKEN
+&quot;@ | Out-File -Encoding ascii &quot;$HOME\.mco\.env&quot;
+
+# 5. Start the gateway server
+mco serve
+</code></pre>
+<hr />
+<h2 id="what-youll-see">What You'll See</h2>
+<ul>
+<li>A black command window titled <strong>BitCadence Server</strong> displaying:<pre><code class="language-text">============================================================
+  Starting BitCadence...
+============================================================
+
+  Your access token (already copied to clipboard):
+
+    mco_tok_a1b2c3d4e5f6...
+
+  In 5 seconds your browser will open the console.
+  Paste the token into the &quot;Agent token&quot; box and click Connect.
+
+  Keep this window open while BitCadence is running.
+  Close it to stop BitCadence.
+============================================================
+</code></pre>
+</li>
+<li>Your web browser will open to the BitCadence Web Console at <code>http://127.0.0.1:18789/console</code>.</li>
+<li>In the background, SQLite databases and keys are stored locally in your user profile:
+<ul>
+<li>Configuration: <code>~/.mco/.env</code></li>
+<li>Embedded Document Store: <code>~/.mco/local.db</code></li>
+<li>Secrets Vault: <code>~/.mco/secrets.enc</code></li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="linux-macos-state">Linux &amp; macOS State</h2>
+<p>BitCadence is engineered with platform neutrality in its Python core:</p>
+<ul>
+<li><strong>macOS / Linux Installer:</strong> Run <code>curl -sSf https://bitcadence.ai/install.sh | bash</code> or execute <code>bash scripts/install.sh</code> from the repository root.</li>
+<li><strong>Service Deployment:</strong> On Linux, <code>mco service install</code> provisions standard <code>systemd</code> unit files under <code>~/.config/systemd/user/bitcadence.service</code>.</li>
+<li><strong>Desktop Manager Constraint:</strong> The native desktop GUI supervisor (<code>src/mco/desktop/app.py</code> and <code>mco tray</code>) uses Windows Tkinter and Windows Job Objects. On Linux and macOS, users interact with BitCadence through the <code>mco</code> CLI and the browser-based web console (<code>http://localhost:18789/console</code>).</li>
+<li><strong>Keychain / Secret Store:</strong> On Windows, the secret store automatically leverages Windows Credential Manager. On Linux/macOS, auto-unlock uses the <code>MCO_VAULT_MASTER_KEY</code> environment variable.</li>
+</ul>
+<hr />
+<h2 id="if-it-goes-wrong">If It Goes Wrong</h2>
+<h3 id="1-python-was-not-found-or-setup-window-closes-immediately">1. &quot;Python was not found&quot; or setup window closes immediately</h3>
+<ul>
+<li><strong>Cause:</strong> Execution policy restrictions or missing Python on your system PATH.</li>
+<li><strong>Fix:</strong> Open PowerShell as Administrator and run:<pre><code class="language-powershell">winget install --id Python.Python.3.12 -e
+</code></pre>
+Then restart your terminal and re-run <code>install.bat</code>.</li>
+</ul>
+<h3 id="2-port-18789-is-already-in-use">2. &quot;Port 18789 is already in use&quot;</h3>
+<ul>
+<li><strong>Cause:</strong> Another instance of BitCadence or another local development server is bound to port 18789.</li>
+<li><strong>Fix:</strong> Specify an alternate port when running <code>mco serve</code>:<pre><code class="language-powershell">mco serve --port 18790
+</code></pre>
+Then navigate in your browser to <code>http://127.0.0.1:18790/console</code>.</li>
+</ul>
+<h3 id="3-cannot-connect-to-server-in-browser">3. &quot;Cannot connect to server in browser&quot;</h3>
+<ul>
+<li><strong>Cause:</strong> The server process was closed, or Windows Defender Firewall blocked loopback traffic.</li>
+<li><strong>Fix:</strong> Keep the command window open while working. Test loopback health directly in terminal:<pre><code class="language-powershell">curl http://127.0.0.1:18789/healthz
+</code></pre>
+If it returns <code>{&quot;status&quot;:&quot;ok&quot;}</code>, the server is running normally.</li>
+</ul>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#goal">Goal</a><a href="#step-by-step-instructions-windows-one-click">Step-by-Step Instructions (Windows One-Click)</a><a href="#the-cli-equivalent">The CLI Equivalent</a><a href="#what-youll-see">What You&#x27;ll See</a><a href="#linux-macos-state">Linux &amp; macOS State</a><a href="#if-it-goes-wrong">If It Goes Wrong</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

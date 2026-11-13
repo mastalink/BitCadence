@@ -1,0 +1,59 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ask for something · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/Ask.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html" aria-current="page">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="standing-score-grants.html">Standing Score grants (local authority store)</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="ask-for-something">Ask for something</h1>
+<p>Open <code>/console</code> and choose <strong>Ask for something</strong>, or run <code>bitcadence ask</code> in a
+terminal. Both use the same planner: say what you want in plain words, check the
+drawn plan, and approve once.</p>
+<h2 id="in-the-console">In the console</h2>
+<ol>
+<li>Type what should happen, for example: <em>Research open PRs, run tests, if green
+draft release notes and ask me to publish.</em> Two example buttons fill the box
+for you.</li>
+<li><strong>Draft a plan</strong> draws the steps in order. &quot;If everything passes&quot; appears
+between steps that only run after a check. A dashed step marked &quot;you decide&quot;
+is a point where it stops and asks you.</li>
+<li>Make only light tweaks:
+<ul>
+<li><strong>Remove a step</strong> shows a Remove button on each step. A plan always keeps at
+least one step.</li>
+<li><strong>Always ask me at the end</strong> adds a final &quot;Ask you before finishing&quot; step.</li>
+<li><strong>Make it repeat</strong> offers every day, every weekday or every Friday at 9 AM.
+The plan then also shows up under Schedules.</li>
+</ul>
+</li>
+<li><strong>Approve and start</strong> creates the work. Your Approve click is the OK, so only
+the plan's own &quot;ask you&quot; steps wait for you again. <strong>Change my request</strong> goes
+back to the text box; to change the plan itself, edit the request and draft
+again.</li>
+</ol>
+<p>Nothing is created until you approve. If you are not connected yet (demo mode),
+the page asks you to connect first.</p>
+<h2 id="in-a-terminal">In a terminal</h2>
+<pre><code>bitcadence ask &quot;tidy the install docs&quot;
+bitcadence ask &quot;Research open PRs, run tests, if green draft release notes and ask me to publish.&quot;
+bitcadence ask &quot;tidy the install docs&quot; --remove 2 --ask-me --repeat &quot;every Friday at 9 AM&quot;
+</code></pre>
+<p>The plan prints as a numbered list and asks <code>Start this? [Y/n]</code>. <code>--remove N</code>
+leaves out step N (repeat it for more), <code>--ask-me</code> always asks at the end,
+<code>--repeat</code> makes it repeat, and <code>--yes</code> skips the question. From a terminal the
+first step also waits for <code>bitcadence approve</code>.</p>
+<h2 id="workflow-files">Workflow files</h2>
+<p>The drag-and-drop workflow builders are gone from the console. Workflow YAML
+files still work and run exactly as before:</p>
+<pre><code>bitcadence ask --file plan.yaml
+mco workflow plan.yaml
+</code></pre>
+<p>A repeat saves the plan as <code>~/.mco/workflows/ask-&lt;name&gt;.yaml</code> and adds a
+schedule to <code>~/.mco/schedules.yaml</code> (the old file is kept as
+<code>schedules.yaml.bak</code>). The older <code>mco gui --flow</code> option still works and opens
+the console.</p>
+<h2 id="how-the-plan-is-drawn">How the plan is drawn</h2>
+<p>Commas, &quot;then&quot; and &quot;ask me ...&quot; split the request into steps, one per clause.
+&quot;If green&quot; or &quot;if it passes&quot; becomes a condition on the next step. This is a
+simple, predictable reading of your sentence, not a guess about what you meant:
+if the drawn plan is wrong, reword the request and draft again.</p>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#in-the-console">In the console</a><a href="#in-a-terminal">In a terminal</a><a href="#workflow-files">Workflow files</a><a href="#how-the-plan-is-drawn">How the plan is drawn</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

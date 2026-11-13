@@ -1,0 +1,78 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Autonomous Scores &amp; Conductor · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/scores-and-autonomy.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html" aria-current="page">Autonomous Scores &amp; Conductor</a><a href="standing-score-grants.html">Standing Score grants (local authority store)</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="autonomous-scores-conductor">Autonomous Scores &amp; Conductor</h1>
+<h2 id="goal">Goal</h2>
+<p>Author, validate, and monitor <strong>Scores</strong> — versioned, deterministic JSON contracts that coordinate long-running autonomous development and operations runs with cryptographic evidence, resource locks, and policy gates.</p>
+<hr />
+<h2 id="step-by-step-instructions">Step-by-Step Instructions</h2>
+<h3 id="1-what-is-a-score">1. What is a Score?</h3>
+<p>Unlike simple jobs or legacy workflows, a <strong>Score</strong> is an immutable, digest-bound contract that defines:</p>
+<ul>
+<li>The complete goal hierarchy and dependency graph.</li>
+<li>Required worker capabilities and role boundaries (independent authors and reviewers).</li>
+<li>Resource locks (such as isolated repository worktrees or deployment lanes).</li>
+<li>Mandatory test evidence and verification receipts.</li>
+<li>Explicit human checkpoints and integer-cent budget limits.</li>
+</ul>
+<h3 id="2-watching-score-runs-in-the-console">2. Watching Score Runs in the Console</h3>
+<ol>
+<li>Open <strong>Home</strong>. Each Score run appears under <strong>What's running</strong> as one card per run, with a state word, a sentence from the worker's progress and the step count from the real plan.</li>
+<li>Tap a Score card to watch its read-only live drawing.</li>
+</ol>
+<p>See <a href="Console-home.html">Console Home</a> and <a href="Score-live.html">Live Score</a> for what the cards and the drawing show. The older <strong>Live look</strong> window on the Overview screen no longer exists.</p>
+<h3 id="3-validating-and-compiling-scores-offline">3. Validating and Compiling Scores Offline</h3>
+<p>Before submitting any score, validate and compile it locally using the offline kernel:</p>
+<pre><code class="language-powershell"># 1. Validate score structure against JSON Schema
+python -m mco.orchestrator.scores validate examples\scores\via-cloud.score.json
+
+# 2. Compile score into deterministic, digest-bound work packets
+python -m mco.orchestrator.scores compile examples\scores\via-cloud.score.json
+
+# 3. Preview planned tasks, dependencies, and capability requirements
+python -m mco.orchestrator.scores preview examples\scores\via-cloud.score.json
+</code></pre>
+<hr />
+<h2 id="the-cli-equivalent">The CLI Equivalent</h2>
+<p>Manage and advance Score Conductor runs from PowerShell:</p>
+<pre><code class="language-powershell"># Check status of conductor and active score runs
+mco score status --run-id &lt;run-id&gt;
+
+# List the runs in the conductor database
+mco score list
+
+# Advance the conductor sweep engine
+mco score tick --run-id &lt;run-id&gt;
+
+# Grant local development policy authority
+mco score grant-local examples/scores/via-cloud.score.json --run-id &lt;run-id&gt; --action &lt;action&gt; --resource &lt;resource&gt;
+</code></pre>
+<p>To approve a reusable Score class once for unattended local runs, with immediate revocation, see <a href="standing-score-grants.html">Standing Score grants</a>.</p>
+<hr />
+<h2 id="what-youll-see">What You'll See</h2>
+<ul>
+<li><strong>Independent Review Enforced:</strong> A worker cannot approve its own work. If <code>codex-build-1</code> authors a change, the Conductor requires an independent reviewer (<code>reviewer-beast</code> or <code>gemini-qa-1</code>) before the task is accepted.</li>
+<li><strong>Worker Completion ≠ Task Acceptance:</strong> A worker returning <code>completed</code> does not advance the score. Only verified evidence artifacts and independent review receipts unlock downstream tasks.</li>
+<li><strong>Evidence Binding:</strong> Every event is tied to the score document digest (SHA-256) and run ID, guaranteeing that changing a score contract invalidates previously issued approvals.</li>
+</ul>
+<hr />
+<h2 id="if-it-goes-wrong">If It Goes Wrong</h2>
+<h3 id="1-score-validation-error-cyclic-dependency">1. &quot;Score validation error: Cyclic dependency&quot;</h3>
+<ul>
+<li><strong>Cause:</strong> One goal packet depends on another in a circular loop.</li>
+<li><strong>Fix:</strong> Run <code>scores validate</code> to see the exact cycle path reported by the validator.</li>
+</ul>
+<h3 id="2-score-run-paused-at-human-checkpoint">2. &quot;Score run paused at human checkpoint&quot;</h3>
+<ul>
+<li><strong>Cause:</strong> The score reached a stage with <code>checkpoint: true</code> requiring explicit owner authorization.</li>
+<li><strong>Fix:</strong> Open the Governance or Approvals panel to sign off on the checkpoint decision.</li>
+</ul>
+<h3 id="3-budget-reservation-exceeded">3. &quot;Budget reservation exceeded&quot;</h3>
+<ul>
+<li><strong>Cause:</strong> Planned tasks request more compute or token expenditure than the authorized integer-cent limit (<code>authorized_budget_cents</code>).</li>
+<li><strong>Fix:</strong> Issue an updated grant with higher budget limits using <code>mco score grant-local</code>.</li>
+</ul>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#goal">Goal</a><a href="#step-by-step-instructions">Step-by-Step Instructions</a><a href="#the-cli-equivalent">The CLI Equivalent</a><a href="#what-youll-see">What You&#x27;ll See</a><a href="#if-it-goes-wrong">If It Goes Wrong</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

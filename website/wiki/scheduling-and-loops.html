@@ -1,0 +1,100 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scheduling &amp; Recurring Loops · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/scheduling-and-loops.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="standing-score-grants.html">Standing Score grants (local authority store)</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html" aria-current="page">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="scheduling-recurring-loops">Scheduling &amp; Recurring Loops</h1>
+<h2 id="goal">Goal</h2>
+<p>Automate recurring helper tasks on timers, cron schedules, or bounded iteration loops, ensuring all periodic runs inherit full governance, approval gates, and audit trails.</p>
+<hr />
+<h2 id="step-by-step-instructions">Step-by-Step Instructions</h2>
+<h3 id="the-easy-way-the-schedules-page">The easy way: the Schedules page</h3>
+<p>In the console, click <strong>Schedules</strong>. Each saved schedule is a card with its name, when it runs (for example <em>Every day at 2:00 AM</em>), the next run, and an <strong>On</strong> switch. To add one, use <strong>New schedule</strong>: choose what should run, how often (<strong>Every day</strong>, <strong>Every weekday</strong>, <strong>Certain days</strong> or <strong>Every hour</strong>) and the time. The sentence at the bottom shows exactly what you are saving. See <a href="Schedules.html">Schedules</a>. To make something repeat straight from a request, use <strong>Make it repeat</strong> on <a href="Ask.html">Ask for something</a>.</p>
+<p><img src="img/23-console-schedules.png" alt="Schedules" loading="lazy" decoding="async" /></p>
+<p>The rest of this page covers the file behind it, for launchers, cron and loops.</p>
+<h3 id="1-initialize-scheduling-configuration">1. Initialize Scheduling Configuration</h3>
+<p>Generate the default schedules file in your user home:</p>
+<pre><code class="language-powershell">mco schedule init
+</code></pre>
+<p>This creates <code>~/.mco/schedules.yaml</code>.</p>
+<h3 id="2-configure-launchers-and-loops">2. Configure Launchers and Loops</h3>
+<p>Open <code>~/.mco/schedules.yaml</code> in your text editor:</p>
+<pre><code class="language-yaml"># Reusable launch templates
+launchers:
+  nightly-audit:
+    role: reviewer
+    title: Nightly dependency vulnerability audit
+    instructions: Scan dependency lockfiles for known CVEs.
+    requires_approval: false
+    max_retries: 2
+    escalate_to_role: human
+
+  release-check:
+    workflow: workflows/release-pipeline.yaml
+
+# Timing and trigger loops
+schedules:
+  audit-cron:
+    launcher: nightly-audit
+    cron: &quot;0 2 * * *&quot;            # Runs every night at 02:00 UTC
+    enabled: true
+
+  health-pulse:
+    launcher: nightly-audit
+    interval_seconds: 3600       # Runs every hour
+    max_iterations: 24           # Bounded loop: stops after 24 runs
+    enabled: true
+</code></pre>
+<h3 id="3-inspecting-and-testing-schedules">3. Inspecting and Testing Schedules</h3>
+<ol>
+<li>List all active schedules and their next fire timestamps:<pre><code class="language-powershell">mco schedule list
+</code></pre>
+</li>
+<li>Test-fire a launcher manually to verify the prompt without waiting for cron:<pre><code class="language-powershell">mco launch nightly-audit
+</code></pre>
+</li>
+<li>Run a dry run to simulate the next tick:<pre><code class="language-powershell">mco schedule tick --dry-run
+</code></pre>
+</li>
+</ol>
+<h3 id="4-running-the-scheduler-engine">4. Running the Scheduler Engine</h3>
+<p>Run the scheduler in the foreground:</p>
+<pre><code class="language-powershell">mco schedule run
+</code></pre>
+<p>Or install it as a persistent OS service:</p>
+<pre><code class="language-powershell">mco service install-scheduler
+</code></pre>
+<hr />
+<h2 id="the-cli-equivalent">The CLI Equivalent</h2>
+<p>Manage individual scheduled loops without rewriting YAML:</p>
+<pre><code class="language-powershell"># Disable a schedule temporarily
+mco schedule disable audit-cron
+
+# Re-enable a paused schedule
+mco schedule enable audit-cron
+
+# Reset iteration history for a completed loop
+mco schedule reset health-pulse
+</code></pre>
+<hr />
+<h2 id="what-youll-see">What You'll See</h2>
+<ul>
+<li><strong>Governed Origin Stamps:</strong> When a scheduled job is created on the Job Board, its metadata contains:<pre><code class="language-text">Origin: loop: audit-cron #12
+</code></pre>
+</li>
+<li><strong>Audit Trails:</strong> You can look back months later and see exactly which schedule authorized each job, which helper leased it, and what was produced.</li>
+</ul>
+<hr />
+<h2 id="if-it-goes-wrong">If It Goes Wrong</h2>
+<h3 id="1-invalid-cron-expression">1. &quot;Invalid cron expression&quot;</h3>
+<ul>
+<li><strong>Cause:</strong> Non-standard cron syntax.</li>
+<li><strong>Fix:</strong> Use standard 5-part cron syntax (<code>minute hour day month day-of-week</code>).</li>
+</ul>
+<h3 id="2-schedule-marked-completed-and-stops-running">2. &quot;Schedule marked completed and stops running&quot;</h3>
+<ul>
+<li><strong>Cause:</strong> The schedule reached its configured <code>max_iterations</code> limit.</li>
+<li><strong>Fix:</strong> Run <code>mco schedule reset &lt;name&gt;</code> to clear the iteration counter, or remove <code>max_iterations</code> for infinite execution.</li>
+</ul>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#goal">Goal</a><a href="#step-by-step-instructions">Step-by-Step Instructions</a><a href="#the-cli-equivalent">The CLI Equivalent</a><a href="#what-youll-see">What You&#x27;ll See</a><a href="#if-it-goes-wrong">If It Goes Wrong</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>
