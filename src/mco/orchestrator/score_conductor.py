@@ -69,6 +69,37 @@ class Conductor:
         self._sleep = sleep
         if gate_service is not None:
             self.bridge.gate_service = gate_service
+        if getattr(self.bridge, "fleet", None) is None and callable(getattr(board, "agents", None)):
+            self.bridge.fleet = self._fleet
+
+    # States in which the board itself says an agent is not taking jobs.
+    _UNAVAILABLE_STATES = frozenset({"broken", "offline"})
+    _FLEET_CACHE_SECONDS = 30.0
+
+    def _fleet(self) -> dict:
+        """{instance_id: {role, available, state}} from the board's presence view.
+
+        "broken" is the board's word for an agent that is connected but has left
+        a job addressed to it untaken (out of usage, a runner that keeps
+        crashing); it counts as unavailable the same as offline. Kept for a few
+        seconds so a sweep ticking several runs asks the board once, not per run.
+        """
+        cached = getattr(self, "_fleet_cache", None)
+        if cached is not None and time.monotonic() - cached[0] < self._FLEET_CACHE_SECONDS:
+            return cached[1]
+        view = {}
+        for agent in self.board.agents() or []:
+            if not isinstance(agent, dict) or not agent.get("instance_id"):
+                continue
+            state = agent.get("state")
+            online = (agent.get("effective_status") or agent.get("status")) == "online"
+            view[agent["instance_id"]] = {
+                "role": agent.get("role"),
+                "state": state,
+                "available": online and state not in self._UNAVAILABLE_STATES,
+            }
+        self._fleet_cache = (time.monotonic(), view)
+        return view
 
     # ── state ────────────────────────────────────────────────────────────
 
