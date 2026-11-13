@@ -87,6 +87,11 @@ _FINANCE_SECTOR_PATTERNS = [
     re.compile(r"\b(?:loans?|lending|lender|mortgage|credit\s+(?:card|score|repair|report)|debt\s+collection|underwriting|insurance|insurer)\b", _RE_FLAGS),
     re.compile(r"\b(?:accounting|bookkeeping|bookkeeper|accountant|payroll|tax\s+(?:return|preparation|filing)|quickbooks|xero|invoice\s+factoring)\b", _RE_FLAGS),
     re.compile(r"\b(?:payment\s+(?:processor|processing|gateway)|money\s+transfer|remittance|kyc|aml|anti-money\s+laundering)\b", _RE_FLAGS),
+    # The client IS a payments business ("we are a payments company"), which the
+    # line above missed because it names no processor or gateway (found by the
+    # B04 exclusion probes, 2026-11-13). A shop that merely takes payments
+    # ("add a payment form", "accept payments") stays eligible.
+    re.compile(r"\b(?:payments?\s+(?:compan(?:y|ies)|provider|platform|startup|firm|business|infrastructure|industry|sector|orchestration|service\s+provider)|merchant\s+acquir(?:er|ing)|card\s+issu(?:er|ing))\b", _RE_FLAGS),
 ]
 
 _NOT_ONE_OFF_PATTERNS = [
