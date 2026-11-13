@@ -1,0 +1,563 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BitCadence Friction Inventory &amp; Flow Surfaces Audit · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="../wiki.css"><script src="../wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/_review/FRICTION.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="../index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="../index.html">Help home</a><a href="../quick-start.html">From installed to your first result</a><a href="../install-first-run.html">Install &amp; First Run</a><a href="../everyday-commands.html">Everyday commands (start here)</a><a href="../connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="../desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="../Console-home.html">Console Home</a><a href="../Ask.html">Ask for something</a><a href="../Connect-an-AI.html">Connect an AI</a><a href="../Helpers.html">Helpers</a><a href="../job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="../projects-dashboard.html">Projects Dashboard</a><a href="../Approvals.html">Approvals</a><a href="../Schedules.html">Schedules</a><a href="../Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="../drumline-memory.html">Drumline Memory (Shared Context)</a><a href="../drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="../scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="../jev-routing.html">Jev routing and its limits</a><a href="../workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="../Settings.html">Settings</a><a href="../settings-and-configuration.html">Settings &amp; Configuration</a><a href="../agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="../workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="../scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="../services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="../sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="../approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="../mco-cli-reference.html">All CLI commands</a><a href="../gui-reference.html">Every screen &amp; control</a><a href="../coverage.html">Coverage &amp; verification</a><a href="../UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="../jev-provider-setup.html">Jev decision-provider contract</a><a href="../overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><blockquote>
+<p><strong>Historical audit.</strong> This was written against the console before the v0.6.0 redesign. The <code>img/</code> names below refer to screenshots that were replaced or removed (the workflow builder, Flow Control and agent fleet screens no longer exist). Helpers, Ask and Connect an AI replaced them.</p>
+</blockquote>
+<h1 id="bitcadence-friction-inventory-flow-surfaces-audit">BitCadence Friction Inventory &amp; Flow Surfaces Audit</h1>
+<p>This document presents a comprehensive, hands-on audit of user friction across every user-facing surface of BitCadence, evaluated against two non-technical personas:</p>
+<ul>
+<li><strong>Persona A (Gen-X / Older Adult):</strong> An intelligent professional who was not raised on computers, feels intimidated by terminals, command prompts, environment variables, and cryptic error messages, and expects clear visual guidance.</li>
+<li><strong>Persona B (Smartphone-Native Teen):</strong> A user raised entirely on iOS/Android who expects 1-tap actions, zero configuration, no manual copying of ports or URLs, and instant visual gratification.</li>
+</ul>
+<hr />
+<h2 id="part-1-top-10-friction-points">Part 1: Top 10 Friction Points</h2>
+<p>Ranked in order of severity and onboarding impact:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Rank</th>
+<th>Friction Point</th>
+<th>Primary Cause</th>
+<th>Impacted Personas</th>
+<th style="text-align:center">Severity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><strong>1</strong></td>
+<td><strong>The &quot;Token &amp; Gateway URL Dance&quot;</strong></td>
+<td>After double-clicking install, user must paste <code>mco_tok_...</code> and confirm <code>http://127.0.0.1:18789</code>. If lost, requires hunting in <code>.env</code>.</td>
+<td>Persona A &amp; B</td>
+<td style="text-align:center"><strong>CRITICAL</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>2</strong></td>
+<td><strong>&quot;Keep This Black Window Open&quot;</strong></td>
+<td>Server launches as a raw terminal window. Closing it immediately terminates the backend.</td>
+<td>Persona A &amp; B</td>
+<td style="text-align:center"><strong>CRITICAL</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>3</strong></td>
+<td><strong>Connecting AI Models via MCP Requires Manual JSON Editing</strong></td>
+<td>Users must find hidden paths like <code>%APPDATA%\Claude\claude_desktop_config.json</code> and hand-write JSON blocks with paths and tokens.</td>
+<td>Persona A &amp; B</td>
+<td style="text-align:center"><strong>CRITICAL</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>4</strong></td>
+<td><strong>Jargon-Heavy Roles &amp; Targeting</strong></td>
+<td>Creating a job asks for a &quot;Target Role&quot; (<code>codex</code>, <code>claude</code>, <code>gemini</code>) without explaining what models or capabilities map to them.</td>
+<td>Persona A &amp; B</td>
+<td style="text-align:center"><strong>HIGH</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>5</strong></td>
+<td><strong>Running Background Workers Requires Terminal Daemon</strong></td>
+<td>Making an agent execute tasks requires typing <code>mco listen --role codex --instance ...</code> in a separate open CMD window.</td>
+<td>Persona A &amp; B</td>
+<td style="text-align:center"><strong>HIGH</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>6</strong></td>
+<td><strong>Two Divergent Flow Builders</strong></td>
+<td>The console has a Workflow Builder tab (<code>/console</code>), while <code>/flow</code> has an entirely separate Design Mode with different controls.</td>
+<td>Persona A &amp; B</td>
+<td style="text-align:center"><strong>HIGH</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>7</strong></td>
+<td><strong>Hidden Prerequisites for Approvals</strong></td>
+<td>If a user registers an agent without an approver role, the Approve button fails with an obscure <code>403</code> error naming missing scopes.</td>
+<td>Persona A</td>
+<td style="text-align:center"><strong>MEDIUM</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>8</strong></td>
+<td><strong>Authoring Recurring Loops Requires Hand-Editing YAML &amp; Cron</strong></td>
+<td>Setting up automated tasks requires editing <code>~/.mco/schedules.yaml</code> and memorizing 5-field cron syntax (<code>0 2 * * *</code>).</td>
+<td>Persona A &amp; B</td>
+<td style="text-align:center"><strong>MEDIUM</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>9</strong></td>
+<td><strong>Autonomous Scores Require Raw JSON Schema Authoring</strong></td>
+<td>Using the Score Conductor requires authoring complex multi-level JSON files with explicit digests and capability arrays.</td>
+<td>Persona A &amp; B</td>
+<td style="text-align:center"><strong>MEDIUM</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>10</strong></td>
+<td><strong>Secret Store Keychain Discrepancy Across Platforms</strong></td>
+<td>Seamless auto-unlock works on Windows Credential Manager, but silently halts on Linux/macOS unless an environment variable is exported.</td>
+<td>Persona A</td>
+<td style="text-align:center"><strong>MEDIUM</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="part-2-comprehensive-friction-inventory-table">Part 2: Comprehensive Friction Inventory Table</h2>
+<p>Every user-facing task taking more than 2 steps or requiring technical knowledge:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">#</th>
+<th>Task</th>
+<th style="text-align:center">UI Steps</th>
+<th style="text-align:center">CLI Steps</th>
+<th>Technical Knowledge Required</th>
+<th>Point of Failure / Confusion for Personas</th>
+<th style="text-align:center">Severity</th>
+<th>Screenshot Ref</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><strong>1</strong></td>
+<td><strong>Install &amp; First Run</strong></td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">5</td>
+<td>Shell execution, virtual environments, path variables</td>
+<td><strong>Persona A:</strong> Intimidated by scrolling command lines. Fears black window is a virus.<br><strong>Persona B:</strong> Wonders why there isn't an <code>.exe</code> installer or App Store download.</td>
+<td style="text-align:center"><strong>Medium</strong></td>
+<td><code>img/20-install-cli-start.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>2</strong></td>
+<td><strong>Connecting Web Console</strong></td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">3</td>
+<td>Tokens, localhost, ports, bearer auth</td>
+<td><strong>Persona A:</strong> Doesn't understand clipboard; loses token if clipboard cleared.<br><strong>Persona B:</strong> Expects automatic login or single sign-on. Doesn't know what <code>127.0.0.1</code> means.</td>
+<td style="text-align:center"><strong>Critical</strong></td>
+<td><code>img/02-console-settings.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>3</strong></td>
+<td><strong>Creating a Gated Task</strong></td>
+<td style="text-align:center">5</td>
+<td style="text-align:center">1</td>
+<td>JSON payload, agent roles, retry budgets</td>
+<td><strong>Persona A:</strong> Confused by &quot;Target role&quot; — doesn't know who Codex or Claude are.<br><strong>Persona B:</strong> Expects a chat prompt bar like ChatGPT or iMessage, not a multi-field database form.</td>
+<td style="text-align:center"><strong>High</strong></td>
+<td><code>img/14-job-create-modal.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>4</strong></td>
+<td><strong>Deciding an Approval Gate</strong></td>
+<td style="text-align:center">3</td>
+<td style="text-align:center">1</td>
+<td>Governance states, gate interlocks</td>
+<td><strong>Persona A:</strong> Clicks approve but doesn't realize workers must be running to execute it.<br><strong>Persona B:</strong> Wonder why they have to click approve if the AI is supposed to be autonomous.</td>
+<td style="text-align:center"><strong>Medium</strong></td>
+<td><code>img/05-console-approvals.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>5</strong></td>
+<td><strong>Authoring a Workflow (Console Builder)</strong></td>
+<td style="text-align:center">6</td>
+<td style="text-align:center">2</td>
+<td>DAG structures, step IDs, dependency lists</td>
+<td><strong>Persona A:</strong> Confused by cards and wiring lines. Doesn't know how to write instructions.<br><strong>Persona B:</strong> Expects visual templates like Canva or Shortcuts; finds empty boxes intimidating.</td>
+<td style="text-align:center"><strong>High</strong></td>
+<td><code>img/07-console-workflows.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>6</strong></td>
+<td><strong>Authoring a Workflow (Flow Control Design)</strong></td>
+<td style="text-align:center">8</td>
+<td style="text-align:center">N/A</td>
+<td>Drag-and-drop, port crosshairs, acyclic graphs</td>
+<td><strong>Persona A:</strong> Dragging port crosshairs requires precise mouse control; fails to connect.<br><strong>Persona B:</strong> Wonder why this isn't integrated into the main console interface.</td>
+<td style="text-align:center"><strong>High</strong></td>
+<td><code>img/12-flow-control-design.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>7</strong></td>
+<td><strong>Registering an Agent</strong></td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">1</td>
+<td>Instance IDs, role scopes, SHA-256 tokens</td>
+<td><strong>Persona A:</strong> Closes dialog before copying token; permanently locked out of agent token.<br><strong>Persona B:</strong> Expects QR code or 1-tap device pairing like AirDrop or Apple Watch.</td>
+<td style="text-align:center"><strong>High</strong></td>
+<td><code>img/17-agent-register-panel.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>8</strong></td>
+<td><strong>Connecting External Agent (Claude/Codex via MCP)</strong></td>
+<td style="text-align:center">7</td>
+<td style="text-align:center">4</td>
+<td>JSON editing, config paths, environment variables</td>
+<td><strong>Persona A:</strong> Cannot locate hidden <code>%APPDATA%</code> folders. Breakers JSON syntax with missing commas.<br><strong>Persona B:</strong> Has never edited a JSON file in their life. Refuses to use app.</td>
+<td style="text-align:center"><strong>Critical</strong></td>
+<td><code>img/08-console-agents.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>9</strong></td>
+<td><strong>Running a Background Worker</strong></td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">2</td>
+<td>Terminal processes, environment variables, polling loops</td>
+<td><strong>Persona A:</strong> Closes command window; agent disappears from fleet.<br><strong>Persona B:</strong> Expects background execution to &quot;just work in the cloud&quot;.</td>
+<td style="text-align:center"><strong>Critical</strong></td>
+<td><code>img/19-desktop-control-window.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>10</strong></td>
+<td><strong>Scheduling Recurring Loops</strong></td>
+<td style="text-align:center">6</td>
+<td style="text-align:center">3</td>
+<td>YAML editing, cron 5-field syntax, service install</td>
+<td><strong>Persona A:</strong> Terrified of <code>0 2 * * *</code>. Doesn't understand UTC time.<br><strong>Persona B:</strong> Expects a clock picker like iPhone Alarms (&quot;Repeat every day at 9am&quot;).</td>
+<td style="text-align:center"><strong>High</strong></td>
+<td><code>img/10-console-activity-audit.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>11</strong></td>
+<td><strong>Saving Drumline Memory</strong></td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">1</td>
+<td>Kind categories (<code>fact</code>, <code>decision</code>, <code>lesson</code>), tags</td>
+<td><strong>Persona A:</strong> Doesn't understand difference between a &quot;fact&quot; and a &quot;lesson&quot;.<br><strong>Persona B:</strong> Wonders why memories aren't auto-indexed from chat without manual entry.</td>
+<td style="text-align:center"><strong>Medium</strong></td>
+<td><code>img/09-console-drumline-memory.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>12</strong></td>
+<td><strong>Triggering Emergency Kill Switch</strong></td>
+<td style="text-align:center">3</td>
+<td style="text-align:center">2</td>
+<td>Panic button concept, lease draining</td>
+<td><strong>Persona A:</strong> Relieved by big red switch, but confused why in-flight jobs keep running.<br><strong>Persona B:</strong> Understands the switch, but forgets to turn it back off when finished.</td>
+<td style="text-align:center"><strong>Medium</strong></td>
+<td><code>img/06-console-governance.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>13</strong></td>
+<td><strong>Configuring LLM Provider Keys</strong></td>
+<td style="text-align:center">5</td>
+<td style="text-align:center">2</td>
+<td>API keys, secret vaults, provider URLs</td>
+<td><strong>Persona A:</strong> Doesn't know what an API key is or where to get one from Anthropic/OpenAI.<br><strong>Persona B:</strong> Expects &quot;Sign in with Google / Apple&quot; subscription billing.</td>
+<td style="text-align:center"><strong>High</strong></td>
+<td><code>img/02-console-settings.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>14</strong></td>
+<td><strong>Reassigning a Failed Job</strong></td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">1</td>
+<td>Clone linking, role capabilities, audit lineage</td>
+<td><strong>Persona A:</strong> Doesn't understand why they can't just &quot;fix the bug&quot; in place.<br><strong>Persona B:</strong> Expects an automatic &quot;Try Again&quot; button that uses a smarter model.</td>
+<td style="text-align:center"><strong>Medium</strong></td>
+<td><code>img/15-job-detail-drawer.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>15</strong></td>
+<td><strong>Authoring a Score Contract</strong></td>
+<td style="text-align:center">10</td>
+<td style="text-align:center">4</td>
+<td>JSON Schema, cryptographic digests, locks, budget cents</td>
+<td><strong>Persona A &amp; B:</strong> Both completely blocked. Score authoring is strictly for distributed systems engineers.</td>
+<td style="text-align:center"><strong>High</strong></td>
+<td><code>img/16-autonomy-scores-modal.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>16</strong></td>
+<td><strong>Installing Desktop GUI &amp; Dependencies</strong></td>
+<td style="text-align:center">N/A</td>
+<td style="text-align:center">3</td>
+<td>PowerShell execution policy, Python path resolution, pip target folders</td>
+<td><strong>Persona A:</strong> Blocked by default Windows ExecutionPolicy <code>Restricted</code> error. Fears running scripts.<br><strong>Persona B:</strong> Expects a double-click <code>.exe</code> installer; refuses to run terminal commands to install an app.</td>
+<td style="text-align:center"><strong>High</strong> <em>(Needs Terminal)</em></td>
+<td><code>img/19-desktop-control-window.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>17</strong></td>
+<td><strong>Configuring Autostart on Sign-in</strong></td>
+<td style="text-align:center">N/A</td>
+<td style="text-align:center">3</td>
+<td>Absolute file paths, <code>pythonw.exe</code> vs <code>python.exe</code>, Windows Startup folder</td>
+<td><strong>Persona A:</strong> Cannot locate where <code>pythonw.exe</code> is installed. Does not know how to pass arguments.<br><strong>Persona B:</strong> Expects a simple toggle switch in Settings (&quot;Launch on startup&quot;) like Discord or Spotify.</td>
+<td style="text-align:center"><strong>High</strong> <em>(Needs Terminal)</em></td>
+<td><code>img/19-desktop-control-window.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>18</strong></td>
+<td><strong>Declarative Fleet Orchestration (<code>fleet.toml</code>)</strong></td>
+<td style="text-align:center">3</td>
+<td style="text-align:center">4</td>
+<td>TOML table syntax, file path escaping, worker modes (<code>waker</code>, <code>poll</code>, <code>off</code>)</td>
+<td><strong>Persona A:</strong> Clicking &quot;Fleet settings&quot; opens a terrifying code file in Notepad. Syntax error crashes app.<br><strong>Persona B:</strong> Expects an &quot;Add Agent&quot; button with dropdowns, not hand-editing configuration files.</td>
+<td style="text-align:center"><strong>High</strong> <em>(Needs Terminal &amp; Editor)</em></td>
+<td><code>img/19-desktop-control-window.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>19</strong></td>
+<td><strong>Installing Background Sidecars with S4U Logon</strong></td>
+<td style="text-align:center">N/A</td>
+<td style="text-align:center">3</td>
+<td>Windows UAC, Administrator elevation, Task Scheduler S4U security model</td>
+<td><strong>Persona A:</strong> Blocked by &quot;Access is denied&quot;. Panics at &quot;Run as administrator&quot; blue prompt.<br><strong>Persona B:</strong> Never uses a terminal or admin elevation. Unattended background workers fail silently.</td>
+<td style="text-align:center"><strong>Critical</strong> <em>(REQUIRES ADMIN)</em></td>
+<td><code>img/08-console-agents.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>20</strong></td>
+<td><strong>Elevated System Admin Pack (<code>admin-pack.ps1</code>)</strong></td>
+<td style="text-align:center">N/A</td>
+<td style="text-align:center">4</td>
+<td>Windows Administrator rights, service account creation, ACL manipulation, firewall rules</td>
+<td><strong>Persona A:</strong> Cannot find &quot;Run as Administrator&quot; in Start Menu search. Panics when asked to type <code>YES</code>.<br><strong>Persona B:</strong> Completely alienated by command-line system administration.</td>
+<td style="text-align:center"><strong>Critical</strong> <em>(REQUIRES ADMIN)</em></td>
+<td><code>img/06-console-governance.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>21</strong></td>
+<td><strong>Authoring &amp; Wiring <code>claude-cio</code> Sidecar Policy</strong></td>
+<td style="text-align:center">N/A</td>
+<td style="text-align:center">5</td>
+<td>Policy kernels, spend arithmetic, CLI flags (<code>--spend-cents</code>), token files</td>
+<td><strong>Persona A:</strong> Does not understand how an AI deputy makes decisions. Overwhelmed by spend caps.<br><strong>Persona B:</strong> Wonders why there isn't an iOS-style &quot;Ask to Buy&quot; notification sent to their phone.</td>
+<td style="text-align:center"><strong>High</strong> <em>(Needs Terminal &amp; Tokens)</em></td>
+<td><code>img/05-console-approvals.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>22</strong></td>
+<td><strong>Diagnosing &quot;Online/Standby&quot; Locked Log Lockout</strong></td>
+<td style="text-align:center">N/A</td>
+<td style="text-align:center">6</td>
+<td>File sharing locks, Windows process inspection, PID resolution, process termination</td>
+<td><strong>Persona A:</strong> Completely misled by the green status light. Thinks it works while jobs sit forever.<br><strong>Persona B:</strong> Sees nothing happening, assumes app is broken, abandons it.</td>
+<td style="text-align:center"><strong>Critical</strong> <em>(Needs Terminal &amp; Diagnostics)</em></td>
+<td><code>img/08-console-agents.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>23</strong></td>
+<td><strong>Detecting &amp; Resolving Duplicate Wake Processes</strong></td>
+<td style="text-align:center">N/A</td>
+<td style="text-align:center">5</td>
+<td>Windows WMI/CIM process queries, Task Scheduler syntax, race conditions, worktree locks</td>
+<td><strong>Persona A:</strong> Baffled by duplicate tasks, random errors like <code>409 Conflict</code> or git <code>index.lock</code>.<br><strong>Persona B:</strong> Expects the app to prevent or merge duplicate instances automatically.</td>
+<td style="text-align:center"><strong>Critical</strong> <em>(Needs Terminal &amp; WMI)</em></td>
+<td><code>img/19-desktop-control-window.png</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>24</strong></td>
+<td><strong>Migrating Scheduled Tasks to Desktop App</strong></td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">3</td>
+<td>Task Scheduler vs Desktop Supervisor process ownership</td>
+<td><strong>Persona A:</strong> Doesn't understand what &quot;Move workers into app&quot; means. Fears it might delete work.<br><strong>Persona B:</strong> Confused why there are multiple ways workers run in the first place.</td>
+<td style="text-align:center"><strong>Medium</strong> <em>(Multi-step migration)</em></td>
+<td><code>img/19-desktop-control-window.png</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="critical-friction-analysis-elevation-terminal-barriers">Critical Friction Analysis: Elevation &amp; Terminal Barriers</h3>
+<p>A focused audit of sidecar management and desktop operations reveals a severe divide between the GUI vision and operational reality:</p>
+<h4 id="1-tasks-blocked-by-run-as-administrator-uac-elevation">1. Tasks Blocked by &quot;Run as Administrator&quot; (UAC Elevation)</h4>
+<ul>
+<li><strong>Installing Unattended Sidecars (<code>background = true</code> / S4U Logon):</strong> Windows Task Scheduler refuses to register S4U logon tasks from unattended or standard user shells without Administrator elevation (<code>Access is denied</code>).</li>
+<li><strong>Local Service Accounts &amp; ACL Hardening (<code>admin-pack.ps1</code>):</strong> Creating dedicated service accounts and locking them out of private directories (<code>%USERPROFILE%</code>, personal documents, SSH keys) requires full local Administrator rights.</li>
+<li><strong>Port Narrowing &amp; Firewall Rules:</strong> Narrowing inbound ports to localhost (<code>127.0.0.1</code>) requires elevated PowerShell.</li>
+<li><strong>Impact on Personas:</strong>
+<ul>
+<li><strong>Persona A (Older Adult):</strong> Freezes at Windows UAC prompts. Cannot locate &quot;Run as administrator&quot; in the Start Menu and assumes system warnings indicate dangerous activity.</li>
+<li><strong>Persona B (Teen):</strong> Has never encountered an administrative prompt or terminal on mobile devices. Assumes the software is fundamentally broken when permission errors occur.</li>
+</ul>
+</li>
+</ul>
+<h4 id="2-tasks-forcing-users-into-a-terminal-powershell">2. Tasks Forcing Users into a Terminal / PowerShell</h4>
+<ul>
+<li><strong>Desktop Shortcut &amp; Dependency Setup:</strong> <code>install_desktop.ps1</code> requires running a command line with explicit <code>-Python</code> paths.</li>
+<li><strong>Autostart at Sign-in:</strong> <code>desktop_autostart.ps1</code> requires passing <code>-Pythonw &quot;C:\path\to\pythonw.exe&quot;</code>. Neither persona knows where their virtual environment's <code>pythonw.exe</code> binary resides.</li>
+<li><strong>Fleet Reconciliation (<code>fleet.toml</code>):</strong> Changing worker allocation requires editing TOML syntax in Notepad and running <code>mco fleet apply</code>.</li>
+<li><strong>Silent Failure Diagnostics (Locked Logs &amp; Duplicate Wakers):</strong> When a worker appears &quot;online&quot; but fails silently, diagnosing locked files (<code>~/.mco/logs/&lt;instance&gt;.log</code>) or detecting duplicate wakers requires complex PowerShell commands (<code>Get-Process</code>, <code>Get-CimInstance Win32_Process</code>, <code>schtasks /query</code>).</li>
+</ul>
+<hr />
+<h2 id="part-3-flow-surfaces-audit">Part 3: Flow Surfaces Audit</h2>
+<h3 id="1-inventory-of-flow-surfaces-in-bitcadence">1. Inventory of Flow Surfaces in BitCadence</h3>
+<p>The audit identified <strong>five distinct surfaces</strong> where workflows, execution flows, or Scores are displayed or authored:</p>
+<ol>
+<li>
+<p><strong>Overview Dashboard Stepper (<code>WorkflowStrip</code>):</strong></p>
+<ul>
+<li><strong>Location:</strong> <code>http://127.0.0.1:18789/console</code> (Overview tab).</li>
+<li><strong>User Capabilities:</strong> Read-only inspection. Groups active jobs by <code>workflow</code> name and renders a horizontal linear stepper showing step completion and current running task.</li>
+<li><strong>Interaction:</strong> Clicking any step opens the Job Detail Drawer. Cannot edit, re-order, or add steps.</li>
+</ul>
+</li>
+<li>
+<p><strong>Console Workflow Builder (<code>WorkflowBuilder</code>):</strong></p>
+<ul>
+<li><strong>Location:</strong> <code>http://127.0.0.1:18789/console</code> (Workflows tab).</li>
+<li><strong>User Capabilities:</strong> Authoring and submitting DAGs. Users can add step cards, edit step IDs, select target roles, type prompt instructions, toggle approval gates, and export/import YAML.</li>
+<li><strong>Interaction:</strong> Visual card graph. Step connections can be added. Submits directly via <code>POST /api/workflows</code>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Flow Control Live Board (<code>/flow</code>):</strong></p>
+<ul>
+<li><strong>Location:</strong> <code>http://127.0.0.1:18789/flow</code> (Live board mode).</li>
+<li><strong>User Capabilities:</strong> Real-time operational mimic. Renders every job on the board with true <code>depends_on</code> arrows, animated dashed lines for active data flows, and color-coded status badges.</li>
+<li><strong>Interaction:</strong> Clicking nodes opens a side inspector where operators can directly click <strong>Approve</strong>, <strong>Reject</strong>, <strong>Retry</strong>, or <strong>Cancel</strong>. Strictly read-only for layout; graph structure is driven 100% by live database state.</li>
+</ul>
+</li>
+<li>
+<p><strong>Flow Control Design Mode (<code>/flow</code>):</strong></p>
+<ul>
+<li><strong>Location:</strong> <code>http://127.0.0.1:18789/flow</code> (Design workflow mode).</li>
+<li><strong>User Capabilities:</strong> Visual CAD/drafting canvas. Features a grid canvas, step stencil rail, drag-to-place cards, and interactive circular port connectors (<code>then</code> → <code>needs</code>).</li>
+<li><strong>Interaction:</strong> Authoring only. Features local DAG validation, cycle detection, YAML export, and a separate red <strong>Run workflow</strong> confirmation button.</li>
+</ul>
+</li>
+<li>
+<p><strong>Autonomous Score Conductor (<code>AutonomyLiveLookModal</code> &amp; CLI):</strong></p>
+<ul>
+<li><strong>Location:</strong> <code>http://127.0.0.1:18789/console</code> (Live look modal) and <code>mco score</code>.</li>
+<li><strong>User Capabilities:</strong> Monitoring long-running autonomous Score contracts. Shows active goal stages, target agents, progress percentage, and lease status.</li>
+<li><strong>Interaction:</strong> Offline CLI compiles and validates JSON contracts. Conductor advances runs automatically based on evidence receipts.</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h3 id="2-does-an-editable-flow-builder-make-sense">2. Does an Editable Flow Builder Make Sense?</h3>
+<h4 id="the-verdict-partially-yes-but-the-current-mental-model-is-inverted">The Verdict: <strong>Partially Yes, but the Current Mental Model is Inverted</strong></h4>
+<ul>
+<li>
+<p><strong>Why it makes sense:</strong></p>
+<ul>
+<li><strong>Visual Interlock Verification:</strong> For enterprise operators, compliance auditors, and safety engineers, visually seeing the dependency chain and where the human approval gate sits is irreplaceable. A flowchart is self-documenting in a way raw YAML or JSON never is.</li>
+<li><strong>Live Progress Visualization:</strong> Flow Control (<code>/flow</code>) with its animated flowing edges is an outstanding operational tool. It immediately communicates bottlenecks (e.g., three tasks blocked waiting for a slow build step).</li>
+</ul>
+</li>
+<li>
+<p><strong>Why an editable drag-and-drop canvas has severe friction:</strong></p>
+<ul>
+<li><strong>The &quot;Blank Canvas Problem&quot;:</strong> Asking a user to drag boxes, invent IDs like <code>step-1</code>, memorize model roles, and drag crosshair wires between ports is 1990s CAD software UX. Modern users (especially mobile-native teens and busy managers) do not want to wire boxes.</li>
+<li><strong>Duplication &amp; Confusion:</strong> Having two separate builders (<code>/console#workflows</code> vs <code>/flow#design</code>) creates confusion. They share the same underlying YAML schema but use completely different UIs.</li>
+<li><strong>Recommendation for Redesign:</strong>
+<ol>
+<li><strong>Merge the surfaces:</strong> Keep <code>/flow</code> as the single canonical Flow Control surface.</li>
+<li><strong>Conversational Prompt-to-Flow:</strong> Replace manual box-dragging with a natural-language flow generator powered by Jev:
+<blockquote>
+<p><em>&quot;User types: 'Research open PRs, run tests, and if green, draft release notes and ask me to publish.' -&gt; Jev automatically compiles the 4-step DAG with the approval gate pre-configured.&quot;</em></p>
+</blockquote>
+</li>
+<li>The visual canvas should be used for <strong>reviewing and tweaking</strong>, not building from scratch.</li>
+</ol>
+</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h3 id="3-score-data-available-to-auto-generate-a-live-flowchart">3. Score Data Available to Auto-Generate a Live Flowchart</h3>
+<p>Score state is split between the immutable score document and the run's execution tables. Column names below are from <code>src/mco/migrations/2026-09_score_store.sql</code> (Postgres) and the task shape validated in <code>src/mco/orchestrator/scores.py</code>. The local SQLite conductor (<code>~/.mco/score-runs.db</code>) keeps the same concepts but is a separate store; check its schema before binding a UI to it.</p>
+<table>
+<thead>
+<tr>
+<th>Data Element</th>
+<th>Where it actually lives</th>
+<th>Representation in a Live Flowchart</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Nodes (Tasks / Goals)</strong></td>
+<td><code>score_documents.document</code> (JSONB): <code>tasks[]</code> with <code>id</code>, <code>goal</code>, <code>title</code>, <code>role</code>; run-time rows in <code>score_tasks</code> (<code>run_id</code>, <code>task_id</code>, <code>attempt</code>)</td>
+<td>Node cards labeled with task id and title</td>
+</tr>
+<tr>
+<td><strong>Dependencies</strong></td>
+<td><code>depends_on</code> list on each task inside <code>score_documents.document</code>. It is <strong>not</strong> a <code>score_tasks</code> column.</td>
+<td>Directed arrows from prerequisite to dependent</td>
+</tr>
+<tr>
+<td><strong>Execution States</strong></td>
+<td><code>score_tasks.status</code>. Statuses seen in the conductor code include <code>running</code>, <code>review</code>, <code>accepted</code>; the full set is defined in <code>scores.py</code>, not in the migration.</td>
+<td>Status coloring, mapped from whatever values the conductor emits</td>
+</tr>
+<tr>
+<td><strong>Resource Locks</strong></td>
+<td><code>resources</code> list on each task inside the score document. Tasks that share a resource are serialized by the conductor; there is no lock column.</td>
+<td>Badge on nodes that share a resource lane</td>
+</tr>
+<tr>
+<td><strong>Assigned Workers</strong></td>
+<td><code>score_tasks.author_id</code> and <code>score_tasks.author_provider</code>; reviewers in <code>score_reviews.reviewer_id</code>; catalog in <code>score_providers</code></td>
+<td>Worker chip on the active node</td>
+</tr>
+<tr>
+<td><strong>Budget</strong></td>
+<td><code>score_runs.authorized_budget_cents</code>, <code>score_grants.budget_cents</code>; per-task <code>max_cost_cents</code> in the document</td>
+<td>Run-level cost meter</td>
+</tr>
+<tr>
+<td><strong>Human Checkpoints</strong></td>
+<td><code>checkpoint</code> flag on the task inside the document; approval recorded in <code>score_tasks.checkpoint_approved</code> (boolean)</td>
+<td>Shield icon or pause barrier on the node</td>
+</tr>
+<tr>
+<td><strong>History</strong></td>
+<td><code>score_events</code> (append-only: <code>seq</code>, <code>run_id</code>, <code>kind</code>, <code>task_id</code>, <code>at</code>, <code>actor</code>, <code>payload</code>)</td>
+<td>Timeline or replay</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="4-apis-events-available-for-live-updates">4. APIs &amp; Events Available for Live Updates</h3>
+<p>Verified against the gateway routes in <code>src/mco/cli.py</code>, <code>src/mco/orchestrator/routes.py</code> and <code>score_gate_routes.py</code>:</p>
+<ol>
+<li>
+<p><strong>WebSocket Broadcast Feed (<code>/ws/broadcast</code>):</strong></p>
+<ul>
+<li>The gateway pushes one frame per job event. The envelope is <code>type</code> plus a nested <code>payload</code>, which carries the event name and the full job row:<pre><code class="language-json">{
+  &quot;type&quot;: &quot;event&quot;,
+  &quot;payload&quot;: {
+    &quot;event&quot;: &quot;status:completed&quot;,
+    &quot;job&quot;: { &quot;id&quot;: &quot;88f57ed8-4069-...&quot;, &quot;status&quot;: &quot;completed&quot; }
+  }
+}
+</code></pre>
+</li>
+<li>Frames are filtered per connection: non-admin identities only receive jobs addressed to their own role or instance. No latency figure has been measured, so none is claimed here.</li>
+</ul>
+</li>
+<li>
+<p><strong>Job Event Stream API (<code>GET /api/jobs/{id}/events</code>):</strong></p>
+<ul>
+<li>Returns the tamper-evident event log for one job.</li>
+</ul>
+</li>
+<li>
+<p><strong>Project view (<code>GET /api/jobs/project-view</code>):</strong></p>
+<ul>
+<li>Grouped job data that the Projects dashboard polls.</li>
+</ul>
+</li>
+<li>
+<p><strong>Score gates and grants (<code>/api/score/gates</code>, <code>/api/score/grants</code>):</strong></p>
+<ul>
+<li>These are the only Score HTTP routes in the gateway today. They expose human gates and grants, not run or task state.</li>
+</ul>
+</li>
+<li>
+<p><strong>No Score run or event routes yet:</strong></p>
+<ul>
+<li>There is no <code>GET /api/scores/runs/{run_id}</code> and no <code>GET /api/scores/{digest}/events</code>. A live Score flowchart would need new read-only routes over <code>score_runs</code>, <code>score_tasks</code> and <code>score_events</code>, or it can read run state through <code>mco score status --run-id &lt;run-id&gt;</code> on the conductor host.</li>
+</ul>
+</li>
+<li>
+<p><strong>Polling Fallback:</strong></p>
+<ul>
+<li>If WebSocket is blocked by a corporate proxy, poll <code>GET /api/jobs</code> or <code>GET /api/jobs/project-view</code> on a short interval.</li>
+</ul>
+</li>
+</ol>
+</article><footer><a href="../index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#part-1-top-10-friction-points">Part 1: Top 10 Friction Points</a><a href="#part-2-comprehensive-friction-inventory-table">Part 2: Comprehensive Friction Inventory Table</a><a href="#part-3-flow-surfaces-audit">Part 3: Flow Surfaces Audit</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

@@ -367,7 +367,8 @@ async function bulkAction(action) {
     reason = prompt("Reason for batch rejection?") || "";
     if (!reason) return;
   } else if (action === "cancel") {
-    reason = prompt("Reason for batch cancellation?") || "";
+    reason = prompt("Reason for batch cancellation?");
+    if (reason === null) return;
   } else if (action === "reassign") {
     targetRole = prompt("Target agent role (e.g. claude, codex, antigravity):") || "";
     if (!targetRole) return;
@@ -419,7 +420,9 @@ async function triggerManualTick() {
 }
 
 async function abortActiveRun(runId) {
-  const reason = prompt("Reason for aborting run " + runId + "?") || "Aborted by operator";
+  const answer = prompt("Reason for aborting run " + runId + "?");
+  if (answer === null) return;
+  const reason = answer || "Aborted by operator";
   try {
     await api("/api/score/autonomy/abort", {
       method: "POST",

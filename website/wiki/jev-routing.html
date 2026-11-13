@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jev routing and its limits · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/jev-routing.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="jev-routing.html" aria-current="page">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="jev-routing-and-its-limits">Jev routing and its limits</h1>
+<p>Jev supplies bounded routing advice. It does not approve work, grant permissions, choose a numeric spend quota, or change your running session's model. Deterministic code and existing human gates retain those decisions.</p>
+<h2 id="ask-for-a-claude-code-tier-recommendation">Ask for a Claude Code tier recommendation</h2>
+<pre><code class="language-bash">bitcadence jev route-model --task &quot;Review a documentation change&quot;
+</code></pre>
+<p><strong>Expected:</strong> JSON describing a suggested Claude Code tier and routing outcome. This particular CLI command suggests a tier such as haiku, sonnet or opus; it is not a universal model picker and does not launch a worker.</p>
+<p>Add bounded context and choose the fallback tier when useful:</p>
+<pre><code class="language-bash">bitcadence jev route-model --task &quot;Review a documentation change&quot; --context &quot;Only the public user guides changed&quot; --deterministic-tier sonnet
+</code></pre>
+<p>Read the returned <strong>outcome, tier and reason</strong>. An exit code of zero does not prove a model answered: disabled, unconfigured, network and timeout cases can return a deterministic fallback successfully. The default fallback is sonnet. <a href="mco-cli-reference.html#cli-mco-jev-route-model">All options</a>.</p>
+<h2 id="configure-the-provider">Configure the provider</h2>
+<p>Provider configuration is an administrator task. Follow the <a href="jev-provider-setup.html">Jev provider setup guide</a> for complete PowerShell instructions and credential handling. The server stores the dedicated API key through its encrypted vault; do not put it in browser code, screenshots or support messages.</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET /api/jev</td>
+<td>Read sanitized provider metadata, never the secret</td>
+</tr>
+<tr>
+<td>PUT /api/jev</td>
+<td>Set mode, exact model, timeout, retries and optionally the key using admin authorization</td>
+</tr>
+<tr>
+<td>POST /api/jev/test</td>
+<td>Test provider model discovery; this can make an external request</td>
+</tr>
+</tbody>
+</table>
+<p>There is <strong>no dedicated console task-routing test screen or Jev key form</strong> in this inspected version. Generic settings expose some provider fields, but are not the complete connection procedure. Do not look for the old wiki's “Settings → LLM Connections / Routing” walkthrough; that screen was not implemented in the inspected routes.</p>
+<h2 id="understand-the-modes">Understand the modes</h2>
+<ul>
+<li><strong>Disabled:</strong> no provider request; use deterministic behavior.</li>
+<li><strong>Shadow:</strong> evaluate advice without applying it. The moving <code>jev-latest</code> alias is for shadow evaluation.</li>
+<li><strong>Assist / active:</strong> require a pinned exact model and still obey the deterministic use-case contract. A mode name does not give the provider permission to execute effects.</li>
+</ul>
+<p>Annotation-only paths remain annotation-only even when the global mode is active. A receipt records a judgment, not permission. The <a href="jev-provider-setup.html">provider contract</a> explains supported use cases, receipts and fallback behavior.</p>
+<h2 id="codex-task-routing">Codex task routing</h2>
+<p>The agent-facing MCP tool <code>mco_jev_route</code> is distinct from the CLI tier recommendation. It accepts the current task, short context, current model, verified five-hour/weekly remaining percentages, and context pressure. Its result can recommend an execution shape and prompt improvements. It cannot switch the already-running root model or override policy, budgets, approvals or grants.</p>
+<p>Missing usage is unknown, not zero and not unlimited. A provider failure must not block ordinary work. Preserve the original task and use a clear deterministic fallback.</p>
+<h2 id="if-the-recommendation-is-missing-or-surprising">If the recommendation is missing or surprising</h2>
+<ol>
+<li>Read the returned outcome and reason before treating it as a successful provider answer.</li>
+<li>Check the provider's sanitized configuration and mode with the administrator procedure above.</li>
+<li>If desired and authorized for an external provider request, run the explicit connection test. Passing discovery is not proof of a real judgment or a completed worker task.</li>
+<li>Make the task description concrete: target, relevant context, constraints and what completion means. Avoid sending secrets or unnecessary personal data.</li>
+<li>Inspect the exact model requested and the model reported by the receipt. Do not substitute a different model silently.</li>
+</ol>
+<p>To disable future provider requests, use the documented admin configuration endpoint to set mode to disabled. That does not erase the encrypted key or approve any pending work.</p>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#ask-for-a-claude-code-tier-recommendation">Ask for a Claude Code tier recommendation</a><a href="#configure-the-provider">Configure the provider</a><a href="#understand-the-modes">Understand the modes</a><a href="#codex-task-routing">Codex task routing</a><a href="#if-the-recommendation-is-missing-or-surprising">If the recommendation is missing or surprising</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

@@ -43,10 +43,11 @@ It isn't a dry run; use `mco workflow plan.yaml --dry-run` to preview one.
 ## When something goes wrong
 
 Errors say what happened in one sentence, plus the next command to run, usually `bitcadence fix`.
-Add `--debug` to see full technical details.
+Use `bitcadence --debug status` to see technical error details; global options go before the command.
 
 ## Still on the roadmap
 
-These are designed (see `design/redesign-v1/CLI.md`) but not shipped yet: one-key "Fix it?" repair of
-approver rights, pausing a single helper, a guided schedule wizard, and the desktop
-app redesign (the mockups are in `design/redesign-v1/`).
+The current CLI includes the approver-rights repair prompt and schedule-add wizard. See the
+[complete reference](mco-cli-reference.md) for exact arguments and effects. Pausing one helper
+and the redesigned desktop mockups are separate from the shipped everyday commands; do not
+assume a design document describes an installed feature.

@@ -1,0 +1,149 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jev decision-provider contract · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/jev-provider-setup.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="jev-decision-provider-contract">Jev decision-provider contract</h1>
+<p>BitCadence integrates TypeSafe/Jev as an optional semantic decision primitive,
+not as an agent or general authority system. The provider is disabled by
+default and ordinary BitCadence startup performs no TypeSafe network request.</p>
+<h2 id="why-jev-is-here">Why Jev is here</h2>
+<p>The same expensive generative agent should not have to deliberate over every
+small routing, relevance, or triage question. Jev supplies fast, typed semantic
+judgments for bounded questions; Claude, Codex, and other workers handle the
+longer reasoning and execution. This is a two-speed workflow, not a second
+authority system. Jev can suggest what a task <em>means</em>. Deterministic policy
+still decides which models are eligible, how much work may run, whether a lease
+is valid, and whether an effect needs a human grant or review. Jev does not
+create grants, approve checkpoints, or authorize effects.
+No speed or cost improvement is claimed without a measured BitCadence benchmark.</p>
+<p>The shipped Codex and Claude task/model routes are advisory. Drumline,
+watchdog, and notification use Jev only for annotations. A Jev outage or
+abstention returns a deterministic fallback, not permission to skip a gate.</p>
+<h2 id="configuration">Configuration</h2>
+<p>The admin API is <code>/api/jev</code>:</p>
+<ul>
+<li><code>GET /api/jev</code> reports offline capability state and never returns a secret.</li>
+<li><code>PUT /api/jev</code> accepts <code>mode</code>, <code>model</code>, <code>timeout_seconds</code>, <code>max_retries</code>, and
+an optional <code>api_key</code>. The key is stored through the tenant-scoped
+<code>SecretVault</code> reference <code>typesafe-jev/api_key</code>; it is never written to the
+provider metadata or returned by the API.</li>
+<li><code>POST /api/jev/test</code> is the only configuration operation that deliberately
+performs model discovery against TypeSafe.</li>
+</ul>
+<p>Modes are <code>disabled</code>, <code>shadow</code>, <code>assist</code>, and <code>active</code>. <code>jev-latest</code> is allowed
+only for shadow evaluation. Assist and active modes require an exact model
+name, and a response from any other model becomes a deterministic fallback.</p>
+<h3 id="first-time-setup-on-windows-powershell">First-time setup on Windows PowerShell</h3>
+<p>Use an admin-scoped token from the BitCadence installation, <strong>not</strong> an ordinary
+worker token. The usual local token is <code>MCO_LOCAL_TOKEN</code> in the
+installation's <code>.env</code> or <code>~/.mco/.env</code>; do not paste it into logs or a ticket.
+The dedicated Jev credential is stored in the server-side encrypted vault.
+Run the following in one PowerShell session, with the gateway already running:</p>
+<pre><code class="language-powershell">$adminSecret = Read-Host 'BitCadence operator token' -AsSecureString
+$typesafeSecret = Read-Host 'TypeSafe API key' -AsSecureString
+$adminToken = [System.Net.NetworkCredential]::new('', $adminSecret).Password
+$typesafeKey = [System.Net.NetworkCredential]::new('', $typesafeSecret).Password
+$headers = @{ Authorization = &quot;Bearer $adminToken&quot; }
+$body = @{ mode = 'shadow'; model = 'jev-latest'; api_key = $typesafeKey } | ConvertTo-Json -Compress
+Invoke-RestMethod -Method Put -Uri 'http://127.0.0.1:18789/api/jev' -Headers $headers -ContentType 'application/json' -Body $body
+Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:18789/api/jev/test' -Headers $headers
+Remove-Variable adminSecret, typesafeSecret, adminToken, typesafeKey, headers, body -ErrorAction SilentlyContinue
+</code></pre>
+<p>The test response should report <code>configured: true</code>, <code>available: true</code>,
+<code>ok: true</code>. It tests connectivity/model discovery, not a live Jev judgment;
+<code>live_invocation: false</code> is expected in shadow mode. An <code>Invalid or missing agent token</code> response (401) means the bearer value is absent, wrong, or not
+accepted by this gateway. A 403 means the token is valid but lacks the <code>admin</code>
+scope. An admin-scoped agent token is accepted by this Jev configuration API;
+Score's human-only grant endpoints are a separate, stricter boundary.
+The Admin Console's generic settings expose mode/model fields, but the
+credential and explicit connection test currently use this API; there is no
+dedicated Jev key form yet. This is a product gap, not a reason to put the key
+in client-side code.</p>
+<p>To stop future Jev requests, set <code>mode</code> to <code>disabled</code> through the same admin
+endpoint. Disabling does not erase the encrypted key.</p>
+<h2 id="decisionreceipt">DecisionReceipt</h2>
+<p>Every invocation returns a <code>DecisionReceipt</code>, including fallbacks. The receipt
+contains:</p>
+<ul>
+<li>use-case id;</li>
+<li>question-set version and canonical SHA-256 digest;</li>
+<li>exact response model;</li>
+<li>canonical state digest;</li>
+<li>typed answers, probabilities and confidence values;</li>
+<li>latency, token usage and provider request id when available;</li>
+<li>configured mode, outcome, and sanitized error class.</li>
+</ul>
+<p>Receipts intentionally contain neither the source state nor the API key. A
+receipt is evidence of a judgment, not permission to act.</p>
+<h2 id="bitcadence-effects-boundary">BitCadence effects boundary</h2>
+<p>No current BitCadence Score capability lets Jev create grants, approve
+checkpoints, or execute cloud/repository effects. Any future <code>typesafe:invoke</code>
+Score adapter requires its own digest-bound grant, budget, effect receipt, and
+adversarial review before live use.</p>
+<h2 id="j03-shadow-operations">J03 shadow operations</h2>
+<p>BitCadence paths may ask Jev for an annotation after deterministic code
+has already produced an outcome. Even if the global mode is <code>assist</code> or
+<code>active</code>, these paths treat Jev as annotation-only: <code>applied</code> is always false,
+and no Jev answer mutates durable truth or authorizes an effect.</p>
+<table>
+<thead>
+<tr>
+<th>Use case</th>
+<th>Question set</th>
+<th>What Jev may suggest</th>
+<th>What code still owns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>drumline-ops</code> v1</td>
+<td>kind, inject, contradiction, staleness, sensitivity, relevance</td>
+<td>Classify completed output; flag recall quality</td>
+<td>Stored kind (<code>fact</code> / <code>decision</code> / <code>lesson</code> / <code>handoff</code> / <code>artifact</code>), content, weight, tags, recall order. <code>incident</code> is annotation-only and is not a Drumline kind. <code>inject=skip</code> cannot prevent <code>remember()</code>.</td>
+</tr>
+<tr>
+<td><code>watchdog-symptom</code> v1</td>
+<td>action (<code>retry</code> / <code>reroute</code> / <code>escalate</code> / <code>operator-review</code> / <code>noise</code>)</td>
+<td>Classify an already-computed delivery step</td>
+<td>Stall timers, max reroutes, reroute CAS, crash-loop safeguards, chain-stall detection, kill switch, who is rerouted.</td>
+</tr>
+<tr>
+<td><code>notify-quality</code> v1</td>
+<td>duplicate, urgency, impact</td>
+<td>Quality of a push that <code>_allowed</code> already admitted</td>
+<td>Rate budgets, urgent-bypass, identical-message dedup, the Priority header, and whether the message is sent.</td>
+</tr>
+</tbody>
+</table>
+<p>Question sets are frozen and digest-bound. Changing instructions, criteria, or
+candidate meanings requires a new version string. DecisionReceipts are appended
+as <code>jev_decision</code> audit events when a <code>job_id</code> is provided and the provider is
+not disabled. Persist failure is logged and ignored; receipts are never rewritten.
+<code>jev_decision</code> events are ignored by the delivery stall clock, so an annotation
+cannot postpone rekick, reroute, or escalate. Disabled mode records process-level
+metrics only and performs no network request and no audit write, so durable state
+matches today's deterministic tests.</p>
+<h2 id="codex-task-routing">Codex task routing</h2>
+<p><code>mco_jev_route</code> is the Codex-facing MCP tool. It sends the current task and a
+bounded context summary to the frozen <code>codex-task-route</code> registry. Jev may
+describe task kind, semantic complexity, reasoning need, execution shape, and
+whether the eventual task packet needs current information, workspace evidence,
+acceptance criteria, or a material clarification.</p>
+<p>The MCP server forwards this request to the gateway's <code>POST /api/jev/route</code>
+endpoint using the narrow <code>jev:route</code> capability. This keeps the decision on
+the tenant's configured SecretVault provider; if the gateway is unavailable,
+the MCP tool falls back to the local deterministic route.</p>
+<p>Jev does not select spend. Deterministic policy combines those annotations with
+verified five-hour and weekly Codex capacity plus a caller-supplied context-
+pressure label. The policy recommends Luna, Terra, Sol, or Astra, reasoning
+effort, maximum parallelism, and root/subagent/BitCadence/hybrid execution.
+Astra is ineligible when capacity is unknown, five-hour remaining is below 30%,
+weekly remaining is below 20%, or context pressure is high. Below 15% five-hour
+remaining, the policy conserves usage and suppresses parallel subagents.</p>
+<p>The result remains advisory (<code>applied=false</code>). It cannot switch the already-
+running root model, spawn a subagent, or create a BitCadence job. Codex applies
+the recommendation through explicit spawn parameters or <code>mco_send</code>, preserving
+the user's original scope and all existing authority boundaries.</p>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#why-jev-is-here">Why Jev is here</a><a href="#configuration">Configuration</a><a href="#decisionreceipt">DecisionReceipt</a><a href="#bitcadence-effects-boundary">BitCadence effects boundary</a><a href="#j03-shadow-operations">J03 shadow operations</a><a href="#codex-task-routing">Codex task routing</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

@@ -1,0 +1,64 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settings &amp; Configuration · BitCadence Help</title><meta name="description" content="Step-by-step BitCadence instructions, command reference and troubleshooting.">
+<link rel="stylesheet" href="wiki.css"><script src="wiki.js" defer></script>
+<link rel="canonical" href="https://bitcadence.ai/wiki/settings-and-configuration.html"></head><body>
+<a class="skip" href="#content">Skip to guide</a><header><a class="brand" href="index.html"><span class="mark" aria-hidden="true">╱</span>BitCadence <span class="help">Help</span></a><button id="menu" aria-expanded="false" aria-controls="sidebar">Guides</button><button id="search-open" class="search-open" aria-label="Search guides and commands">Search guides & commands <kbd>⌘ K</kbd></button><a class="product-link" href="https://bitcadence.ai/">Product ↗</a></header>
+<div class="layout"><nav id="sidebar" aria-label="Help topics"><div class="nav-group"><h2>Start here</h2><a href="index.html">Help home</a><a href="quick-start.html">From installed to your first result</a><a href="install-first-run.html">Install &amp; First Run</a><a href="everyday-commands.html">Everyday commands (start here)</a><a href="connecting-console.html">Connecting the Console &amp; Demo Mode</a><a href="desktop-app-and-tray.html">Desktop Manager, Installer &amp; System Tray</a></div><div class="nav-group"><h2>Get work done</h2><a href="Console-home.html">Console Home</a><a href="Ask.html">Ask for something</a><a href="Connect-an-AI.html">Connect an AI</a><a href="Helpers.html">Helpers</a><a href="job-board-and-tasks.html">Job Board &amp; Managing Tasks</a><a href="projects-dashboard.html">Projects Dashboard</a><a href="Approvals.html">Approvals</a><a href="Schedules.html">Schedules</a><a href="Score-live.html">Live Score</a></div><div class="nav-group"><h2>Learn the system</h2><a href="drumline-memory.html">Drumline Memory (Shared Context)</a><a href="drumline-agent-exchange.html">Drumline Agent Exchange</a><a href="scores-and-autonomy.html">Autonomous Scores &amp; Conductor</a><a href="jev-routing.html">Jev routing and its limits</a><a href="workflows-and-flow-control.html">Workflow Files</a></div><div class="nav-group"><h2>Manage your setup</h2><a href="Settings.html">Settings</a><a href="settings-and-configuration.html" aria-current="page">Settings &amp; Configuration</a><a href="agent-fleet-and-presence.html">Helpers &amp; Presence</a><a href="workers-and-daemon-listening.html">Workers &amp; Background Daemon Listening</a><a href="scheduling-and-loops.html">Scheduling &amp; Recurring Loops</a><a href="services-and-fleet.html">OS Services &amp; Fleet Configuration</a><a href="sidecars-and-fleet-daemons.html">Sidecars &amp; Autonomous Fleet Daemons</a><a href="approvals-and-governance.html">Approvals &amp; Governance</a></div><div class="nav-group"><h2>Reference & product review</h2><a href="mco-cli-reference.html">All CLI commands</a><a href="gui-reference.html">Every screen &amp; control</a><a href="coverage.html">Coverage &amp; verification</a><a href="UX-REVIEW.html">Usability review</a></div><details class="nav-group"><summary>More guides</summary><a href="jev-provider-setup.html">Jev decision-provider contract</a><a href="overview-dashboard.html">Home (Overview)</a></details></nav><main id="content"><div class="breadcrumb">BITCADENCE / USER GUIDE</div><article><h1 id="settings-configuration">Settings &amp; Configuration</h1>
+<h2 id="goal">Goal</h2>
+<p>Configure gateway operational parameters, customize user interface preferences, inspect edition capabilities, and connect enterprise tools.</p>
+<hr />
+<h2 id="step-by-step-instructions">Step-by-Step Instructions</h2>
+<h3 id="1-open-settings">1. Open Settings</h3>
+<p>Click <strong>Settings</strong> at the bottom of the left menu. The top of the page has the everyday cards: <strong>Pause everything</strong>, <strong>Tell me on my phone</strong> and <strong>Memory</strong>. Everything else is under <strong>Show advanced</strong> (see <a href="Settings.html">Settings</a>).</p>
+<p><img src="img/02-console-settings.png" alt="Settings Panel" loading="lazy" decoding="async" /></p>
+<h3 id="2-advanced-mode">2. Advanced mode</h3>
+<p>Under <strong>Show advanced → Experience</strong>, <strong>Advanced mode</strong> shows the technical layer: raw IDs, payloads, retry budgets and YAML. Leave it off for the plain wording used on every page of this wiki. The <strong>Advanced</strong> switch in the top bar does the same thing.</p>
+<h3 id="3-gateway-controls">3. Gateway controls</h3>
+<p>Under <strong>Show advanced → Gateway controls</strong>: stop work, approver roles, always-gated roles, the escalation connector, the default job board sort order, ntfy notifications, how long before a helper counts as offline, and the two Drumline memory switches. Click <strong>Save gateway settings</strong> to apply them.</p>
+<h3 id="4-connectors-and-tenancy">4. Connectors and tenancy</h3>
+<ul>
+<li><strong>Connectors</strong> holds the ServiceNow and Dynatrace connection details, each with <strong>Test connection</strong>. Passwords and tokens show as <code>not set</code> or are masked, and are stored encrypted.</li>
+<li><strong>Tenancy</strong> lists the organizations that keep teams' jobs and memory separate. The edition decides which of these you have: Core covers the job board, governance, workflows, Drumline memory, console and MCP server; Team adds shared gateway, multi-tenant orgs and RBAC; Enterprise adds connectors, SSO and audit export. Run <code>mco edition</code> to see yours.</li>
+</ul>
+<hr />
+<h2 id="the-cli-equivalent">The CLI Equivalent</h2>
+<p>Manage configuration and secrets securely from your terminal:</p>
+<pre><code class="language-powershell"># Interactive setup walkthrough or menu
+mco setup
+
+# Inspect current settings
+mco settings
+
+# Update a setting safely
+mco settings MCO_DRUMLINE_DISTILL true
+
+# Show active edition and feature availability
+mco edition
+
+# Run complete install diagnostics
+mco doctor
+</code></pre>
+<hr />
+<h2 id="what-youll-see">What You'll See</h2>
+<ul>
+<li><strong>Automatic Secret Encryption:</strong> Whenever you set a sensitive key (such as <code>ANTHROPIC_API_KEY</code> or <code>SERVICENOW_TOKEN</code>), BitCadence writes <code>encrypted_in_secret_store</code> to <code>.env</code> and encrypts the real secret inside <code>secrets.enc</code>.</li>
+<li><strong>Hot Reloading:</strong> Configuration changes made via the settings API take effect immediately in the running gateway process.</li>
+</ul>
+<hr />
+<h2 id="if-it-goes-wrong">If It Goes Wrong</h2>
+<h3 id="1-secret-store-locked-os-keychain-unavailable">1. &quot;Secret store locked: OS keychain unavailable&quot;</h3>
+<ul>
+<li><strong>Cause:</strong> On Linux headless servers, Windows Credential Manager is not present.</li>
+<li><strong>Fix:</strong> Set the master vault key in your environment:<pre><code class="language-bash">export MCO_VAULT_MASTER_KEY=&quot;your-32-byte-hex-key&quot;
+</code></pre>
+</li>
+</ul>
+<h3 id="2-feature-requires-teamenterprise-edition">2. &quot;Feature requires Team/Enterprise edition&quot;</h3>
+<ul>
+<li><strong>Cause:</strong> Attempting to use a connector or multi-org tenancy while edition is set to <code>community</code>.</li>
+<li><strong>Fix:</strong> Pin the edition in your <code>.env</code> or run:<pre><code class="language-powershell">mco settings MCO_EDITION enterprise
+</code></pre>
+</li>
+</ul>
+</article><footer><a href="index.html">Help home</a><span>Instructions checked against source · November 2026</span><a href="#content">Back to top ↑</a></footer></main><aside aria-label="On this page"><b>On this page</b><a href="#goal">Goal</a><a href="#step-by-step-instructions">Step-by-Step Instructions</a><a href="#the-cli-equivalent">The CLI Equivalent</a><a href="#what-youll-see">What You&#x27;ll See</a><a href="#if-it-goes-wrong">If It Goes Wrong</a></aside></div>
+<dialog id="search-dialog"><div class="search-bar"><input id="search" type="search" placeholder="What would you like to do?" aria-label="Search guides and commands" autocomplete="off"><button id="search-close" aria-label="Close search">Esc</button></div><div id="search-status" role="status">Type a task, command or feature.</div><div id="search-results"></div></dialog><div id="announcement" class="sr-only" role="status"></div></body></html>

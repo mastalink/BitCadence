@@ -54,3 +54,10 @@ demo narrative.
 ## Captions
 
 The final demo (`media/bitcadence-demo.mp4`, 2:48) has captions burned into the picture, so no `.vtt` track is needed (WCAG 1.2.2 met). It is click-to-play with sound, `preload="none"`, no autoplay. The hero clip (`media/brag.mp4`) is muted and decorative.
+
+
+## User wiki
+
+Canonical public help: https://bitcadence.ai/wiki/. Edit docs/wiki Markdown, then run `python scripts/build_wiki.py` before deployment. The build creates section search and checks every local link/fragment. CLI coverage comes from the real parser; GUI coverage records grouped controls, source hashes normalized for platform line endings, and guide anchors. Run both verifiers in docs/wiki/_review. Do not deploy an unrebuilt wiki after changing its source.
+
+The retired batoncadence.com website project was removed November13,2026. Its apex/www hosts now redirect at the edge to bitcadence.ai with paths and query strings preserved. Mail records were preserved; DNS has redirect-only proxied records. Do not restore the obsolete Pages origin.

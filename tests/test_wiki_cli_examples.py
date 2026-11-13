@@ -24,6 +24,8 @@ def test_accepts_real_commands_and_group_options():
     assert verify.check(["bitcadence", "--no-menu"]) is None
     assert verify.check(["bitcadence", "helpers", "--json"]) is None
     assert verify.check(["mco", "schedule", "list"]) is None
+    assert verify.check(["mco", "score", "--help"]) is None
+    assert verify.check(["bitcadence", "helpers", "--json", "--help"]) is None
 
 
 def test_every_wiki_example_parses(capsys):
