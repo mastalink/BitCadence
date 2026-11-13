@@ -7,6 +7,7 @@ before flags were parsed. Same kill on advertised `curl | bash`.
 from __future__ import annotations
 
 import subprocess
+import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +38,7 @@ def _run_prefix(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
     probe = tmp_path / "probe.sh"
     probe.write_text(_prefix_through_tty_guard(), encoding="utf-8")
     return subprocess.run(
-        ["bash", "-c", _prefix_through_tty_guard(), "probe", *args],
+        [shutil.which("bash") or "bash", "-c", _prefix_through_tty_guard(), "probe", *args],
         input=b"",
         capture_output=True,
         timeout=5,

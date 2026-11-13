@@ -201,7 +201,7 @@ def test_console_connect_page_calls_the_api_and_is_in_the_bundle():
 
 def test_console_connect_page_follows_the_design_rules():
     page = _read("2ed3f6b1").split("function ConnectPage")[1].split("// ----- Schedules page")[0]
-    for text in ("One tap each", "Send a test", "Disconnect", "Another app", "Install it first"):
+    for text in ("Changes apply to the gateway computer", "Send a test", "Disconnect", "Another app", "Install it there"):
         assert text in page
     assert "aria-live" in page and 'aria-hidden="true"' in page  # a shape and a word, never colour alone
     assert "token" not in page.lower() and "JSON" not in page

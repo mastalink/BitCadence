@@ -26,15 +26,15 @@ Each card also says when the helper was last heard from. See [Helpers](Helpers.m
 ![Add a helper](img/17-helper-add-panel.png)
 
 2. Pick which AI should power it and give it a name, for example *Penny*.
-3. Click **Add helper**. BitCadence registers it and saves its sign-in on this computer. The page says "Penny is added" and never shows the sign-in. An existing helper's name is refused instead of silently replacing its sign-in.
+3. Click **Add helper**. BitCadence registers it and saves its sign-in on the gateway computer. An existing helper's name is refused instead of silently replacing its sign-in. Registration/presence does not prove it has completed a job.
 
 To link Claude, Codex, Gemini, Antigravity or Cursor in one tap instead, use [Connect an AI](Connect-an-AI.md).
 
 ### 3. Rotate a helper's access token
-If a credential is lost or exposed, run `mco reset-token <name>` (see below). A new token is minted and the old one stops working at once.
+Choose **Manage credentials…** on Helpers or **Administration → Helper credentials**. **New token / Reset token** asks confirmation, immediately invalidates the old token and displays the replacement once. Copy it and configure the intended worker. This preserves existing admin/tenant permissions. CLI: `mco reset-token <name>`.
 
 ### 4. Remove a stale helper
-Run `mco deregister <name>` to remove its registration.
+Use **Remove** in Helper credentials, review token invalidation, and confirm only when appropriate. Respect active-lease refusals; removal is not the normal way to stop an active worker. CLI: `mco deregister <name>`.
 
 ---
 

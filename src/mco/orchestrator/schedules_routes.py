@@ -36,7 +36,15 @@ def list_schedules(caller: dict = Depends(require_scopes("jobs:read"))):
 @schedules_router.post("/preview")
 def preview(payload: dict, caller: dict = Depends(require_scopes("jobs:read"))):
     """The sentence the person will see before they save. Changes nothing."""
-    return {"words": _picked(payload)["words"]}
+    picked = _picked(payload)
+    # Older clients only request the sentence. Explicit-zone clients also get
+    # the occurrence preview; keep the original response contract for others.
+    if "timezone" not in payload:
+        return {"words": picked["words"]}
+    try:
+        return {"words": picked["words"], **sp.preview_schedule(picked["cron"], payload.get("timezone"))}
+    except sp.ScheduleWordsError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @schedules_router.post("")
@@ -45,7 +53,7 @@ def add(payload: dict, caller: dict = Depends(require_scopes("agents:manage"))):
     picked = _picked(payload)
     try:
         saved = sp.add_schedule(str(payload.get("what") or ""), picked["cron"],
-                                timezone_name=str(payload.get("timezone") or "") or None)
+                                timezone_name=payload.get("timezone"))
     except sp.ScheduleWordsError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"success": True, **saved}

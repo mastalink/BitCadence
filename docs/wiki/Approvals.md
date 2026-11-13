@@ -1,6 +1,6 @@
 # Approvals
 
-Open `/console` and choose **Approvals** ("Needs your OK"), or run `bitcadence
+Open `/console` and choose **Approvals**, or run `bitcadence
 approve`. Nothing sensitive happens until you say so.
 
 ## When you can't approve yet
@@ -27,9 +27,7 @@ somewhere else you are told to ask the person who runs BitCadence. There is
 deliberately no web or API button for it, because an account that cannot approve
 must not be able to promote itself over the network.
 
-In the console, a refused Approve/Reject shows a card in words ("You can't approve
-this yet. Your account isn't set up as an approver", with the command to run)
-instead of an HTTP error.
+The current console preserves the actual refusal: missing scope, approver authority, tenant boundary and policy may need different remedies. A network refusal does not authorize granting yourself a role. Use the identity approved by the operator. Approval and rejection await a response and show errors; a recorded Approved decision is separate from execution completion. The local CLI repair above remains a separate, explicit operator workflow.
 
 ## Approved, but nobody is free
 

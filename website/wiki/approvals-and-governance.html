@@ -29,19 +29,15 @@
 <h3 id="4-pause-everything-kill-switch">4. Pause everything (kill switch)</h3>
 <p>When something unexpected is happening:</p>
 <ol>
-<li>Click <strong>Settings</strong>, and in the <strong>Pause everything</strong> card click <strong>Pause</strong>.
-<ul>
-<li>Helpers stop taking new work and no new jobs are started.</li>
-<li>Jobs already in progress finish; you can still look, approve and reject.</li>
-</ul>
-</li>
-<li>Click <strong>Resume</strong> on the same card to start again.</li>
+<li>Choose <strong>Settings → Stop work…</strong> and review the effect.</li>
+<li><strong>Cancel</strong> changes nothing. <strong>Stop work now</strong> halts active attempts and pauses intake/leasing; completed external effects are not undone.</li>
+<li><strong>Resume</strong> permits new work. Halted jobs require explicit Retry; they do not automatically continue.</li>
 </ol>
 <p>See <a href="Settings.html">Settings</a>. The <code>MCO_KILL_SWITCH</code> setting is the same switch.</p>
 <h3 id="5-governance-page-and-evidence-export">5. Governance page and evidence export</h3>
 <p>Click <strong>Governance</strong> for the pending approvals, the decision history and the oversight trail in one place.</p>
 <p><img src="img/06-console-governance.png" alt="Governance" loading="lazy" decoding="async" /></p>
-<p>To export evidence, pick a <strong>Start</strong> and <strong>End</strong> date and click <strong>Export compliance evidence pack</strong>. You get a PDF cover page plus a JSON audit trail for EU AI Act Art. 12 record-keeping and Art. 14 human oversight.</p>
+<p>Optionally pick <strong>Start</strong>/<strong>End</strong>, then <strong>Download evidence JSON</strong>. This downloads the existing response envelope, including returned file entries and audit counts; it does not download separate PDF/files or certify legal compliance. Recent decisions show approval/rejection separately from actual job state.</p>
 <hr />
 <h2 id="the-cli-equivalent">The CLI Equivalent</h2>
 <pre><code class="language-powershell"># Approve a job at the human gate
@@ -80,7 +76,7 @@ mco restart
 <h3 id="2-kill-switch-active-cannot-lease-task">2. &quot;Kill switch active: Cannot lease task&quot;</h3>
 <ul>
 <li><strong>Cause:</strong> The kill switch was left enabled (<code>MCO_KILL_SWITCH=true</code>).</li>
-<li><strong>Fix:</strong> On <strong>Settings</strong>, click <strong>Resume</strong> in the <strong>Pause everything</strong> card, or run:<pre><code class="language-powershell">mco settings MCO_KILL_SWITCH false
+<li><strong>Fix:</strong> If authorized to permit new work, choose <strong>Settings → Stop work → Resume</strong>, then inspect halted jobs before explicitly retrying, or run:<pre><code class="language-powershell">mco settings MCO_KILL_SWITCH false
 </code></pre>
 </li>
 </ul>

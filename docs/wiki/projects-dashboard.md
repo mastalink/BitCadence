@@ -1,6 +1,6 @@
 # Projects Dashboard
 
-> **Note:** The console sidebar now opens **Portfolio** (see [Portfolio](gui-reference.md#portfolio)) in place of the **Projects** page described below. The earlier project grouping view is no longer reachable from the sidebar. The project metadata, assignment and API details on this page still describe how jobs are tagged with a project.
+The sidebar now opens **Portfolio**. This retained URL explains current navigation and the separate project-assignment metadata/API. The previous Projects grouping screen and its Move buttons are not current console controls. See the [Portfolio controls](gui-reference.md#portfolio).
 
 ## Goal
 Group disparate helper tasks into cohesive business projects and initiatives, observe project-level health and completion velocity, and detect blocked or stalled initiatives.
@@ -10,26 +10,18 @@ Group disparate helper tasks into cohesive business projects and initiatives, ob
 ## Step-by-Step Instructions
 
 ### 1. Navigate to Projects
-In the left menu, click **Projects**.
+Choose **Portfolio** in the sidebar. Saved navigation from the older Projects page maps there. No project-assignment mutation occurs by opening the view.
 
 ![Projects Dashboard Overview](img/03-console-projects.png)
 
 ### 2. Inspect Project Groups
-**Projects at a glance** groups jobs by their `input_payload.project` or workflow (for example `gateway-reliability` or `release-2.4`). Work with neither stays visible under **Unassigned work**, so nothing silently disappears.
-- The three cards at the top show **Open projects**, **Need you** (decisions or problems) and **Jobs complete**.
-- Use **Open**, **Needs attention** and **All** to choose which projects to list, or search by project or job name.
-- Each project card shows:
-  - **A state word:** for example **Needs your OK**.
-  - **A progress bar:** how many jobs are done (for example 3/9).
-  - **Next action:** the one thing to do next.
-  - **Its jobs,** each with a status word and a **Move** button to put it in another project.
+Portfolio shows project roadmap/queue/flow information from its aggregate snapshot. Expand a project card, inspect recent job links or pull-request links, and use Refresh/Try again to reload. Priority/pause lines are explicitly read-only placeholders. See the [complete Portfolio steps and limits](gui-reference.md#portfolio); the old Open/Needs attention filters and Move controls are not exposed here.
 
 ### 3. Filter Jobs by Project
-Click **Open Job Board** to see every job in the table.
+Choose **Job Board** from the sidebar to inspect its latest loaded job window. Its filters/search are not complete historical search or an automatic project filter.
 
 ### 4. Assigning a Job to a Project
-When creating a job (via UI or CLI), attach project context inside the job metadata:
-- In the New Job form, specify:
+The console New Job form has no arbitrary JSON/project field. Use an authorized metadata/API path when assigning a project. A job payload may carry project context such as:
   ```json
   {
     "project": {
@@ -61,17 +53,17 @@ curl http://127.0.0.1:18789/api/jobs/project-view `
 
 ## What You'll See
 
-- **High-Level Rollup:** Instead of scrolling through hundreds of granular helper tasks, you see 3–5 top-level project initiatives.
-- **Coverage Summary:** The top header displays total managed project tasks, active count, and whether coverage is truncated (up to 5,000 tasks evaluated server-side).
+- **Portfolio:** its current cards reflect the aggregate snapshot, not the removed grouping screen. Respect its fetched-snapshot limits.
+- **Project-view API:** the separate legacy `/api/jobs/project-view` result has a 5,000-job ceiling and can be partial; do not interpret it as an unbounded history.
 
 ---
 
 ## If It Goes Wrong
 
-### 1. "Jobs appear in 'Uncategorized' project"
+### 1. "Jobs have no project assignment"
 - **Cause:** Jobs were created without a `project` key in their `input_payload`.
-- **Fix:** Add `"project": "my-project-name"` to the job creation payload or workflow YAML definition.
+- **Fix:** If authorized, set explicit project metadata using the API above. A workflow fallback can still group work when explicit assignment is cleared. Portfolio may organize its aggregate differently from the old grouping view.
 
 ### 2. "Project marked as Blocked"
 - **Cause:** A prerequisite job in a workflow failed or was rejected, stopping downstream dependent tasks.
-- **Fix:** Click the project card to view the jobs, open the failed job, and either click **Retry** or **Reassign** to clear the block.
+- **Fix:** Open the actual linked job and inspect its cause. Retry or replacement work may be appropriate for eligible terminal attempts; neither guarantees that downstream work has completed.

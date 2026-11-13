@@ -27,12 +27,13 @@ Prefer a single walkthrough? [From installed to your first result](quick-start.m
 | Share facts between helpers | [Drumline memory](drumline-memory.md) |
 | Follow a longer autonomous run | [Live Score](Score-live.md) and [Score contracts](scores-and-autonomy.md) |
 | Change a setting or fix a connection | [Settings](Settings.md) and [configuration](settings-and-configuration.md) |
+| Manage credentials, model connections or specialist workflows | [Administration](gui-reference.md#administration) |
 | Understand a control's effect | [Every screen and control](gui-reference.md) |
 | Find an exact command, argument or flag | [Complete CLI reference](mco-cli-reference.md) |
 
 ## Three things that make the system easier
 
-- **Choose one everyday interface.** The console is the main browser workspace. The desktop manager runs local services. The smaller `/dashboard` is a separate interface; the [GUI reference](gui-reference.md) explains which controls live where.
+- **Choose the everyday workspace.** The console is the main browser entry. **Administration** groups credential controls and specialist links to the retained `/dashboard`. The desktop manager runs local components; the [GUI reference](gui-reference.md) explains each scope.
 - **Start small and check the outcome.** A drafted plan, a submitted job, an online worker and completed work are different states. Look for a recorded result before calling a task finished.
 - **Keep advanced details close, not in your way.** Open advanced controls when a task needs them. The references keep the detail available without making every first step technical.
 
@@ -40,7 +41,7 @@ Prefer a single walkthrough? [From installed to your first result](quick-start.m
 
 The console labels simulated data **Demo**. Use it to learn the layout; it does not prove a real worker is connected. Do not put real credentials into examples or screenshots. Copying a documentation code block only copies its text.
 
-Approval, pause, retry, token and deletion controls can change real work. Read the relevant guide first. **Pause everything can halt active attempts**; it does not promise that in-progress work will finish.
+Approval, stop, retry, token and deletion controls can change real work. **Stop work…** reviews the halt effect before **Stop work now**. Resume permits new work; halted attempts need Retry. These guides describe the UX source branch and fixture checks, not a claim that your running app was updated.
 
 ## Coverage and product review
 

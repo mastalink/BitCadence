@@ -28,12 +28,12 @@ The left menu also has [Portfolio](gui-reference.md#portfolio), the [Job Board](
 ![Activity](img/10-console-activity-audit.png)
 
 ### 5. The minimal dashboard
-`/dashboard` is a smaller, plainer page for a quick look. It asks for a token first, and still uses the technical labels (Operations, Agents & Tokens).
+**Administration** is the console hub for helper credentials and specialist model/workflow/server controls. Its links open the existing `/dashboard` views on the configured gateway. That retained five-page control plane includes mutating administrative controls; it is not just quick status. Links contain no tokens. Dashboard validates sign-in and may reuse a browser credential only for an exactly matching gateway origin/path.
 
 ![Minimal dashboard](img/13-minimal-dashboard.png)
 
 ### 6. Advanced mode
-The **Advanced** switch in the top bar shows the technical layer (raw IDs, payloads, retry budgets). Leave it off for plain wording.
+The **Technical details** switch shows IDs, payloads and retry fields; it does not grant permissions. Narrow screens use **Menu** for scrolling navigation. **Recent notifications** keeps the latest forty session notices, while job History holds the audit record.
 
 ---
 

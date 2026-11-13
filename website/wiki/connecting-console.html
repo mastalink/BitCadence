@@ -14,7 +14,7 @@
 </code></pre>
 <p>When first opened, the console loads in <strong>Demo mode — simulated data</strong>. The bottom of the left menu says <strong>Demo · simulated data</strong>: every job, helper and event shown is a simulation, so you can explore without running real work.</p>
 <h3 id="2-open-connection-settings">2. Open Connection Settings</h3>
-<p>Click <strong>Settings</strong> in the left menu, then open <strong>Show advanced</strong> at the bottom of the page. The connection form is inside it.</p>
+<p>Choose the disconnected shell's <strong>Connect</strong> button or <strong>Settings</strong>. Connection fields are directly visible while disconnected. When already connected, they appear under <strong>Server administration</strong>.</p>
 <p><img src="img/02-console-settings.png" alt="Console Settings Connection Panel" loading="lazy" decoding="async" /></p>
 <h3 id="3-enter-gateway-url-and-access-token">3. Enter Gateway URL and Access Token</h3>
 <p>In the <strong>Connection</strong> section:</p>
@@ -22,7 +22,7 @@
 <li><strong>Gateway URL:</strong> Ensure it is set to <code>http://127.0.0.1:18789</code> (already populated by default).</li>
 <li><strong>Agent token:</strong> Paste the operator access token generated during installation (<code>Ctrl+V</code>). The token begins with <code>mco_tok_</code>.
 <ul>
-<li><em>Where to find your token:</em> Look at the server terminal window, or open <code>~/.mco/.env</code> in Notepad and copy the value of <code>MCO_LOCAL_TOKEN</code>.</li>
+<li>Use your existing authorized token from setup. Secrets may be encrypted; do not copy an <code>encrypted_in_secret_store</code> marker as a token or expose the secret in a URL.</li>
 </ul>
 </li>
 </ol>
@@ -30,12 +30,12 @@
 <p>Click the <strong>Connect</strong> button.</p>
 <ul>
 <li>The bottom of the left menu changes from <strong>Demo · simulated data</strong> to <strong>Live</strong>, and a toast says your helpers are ready.</li>
-<li>The connection parameters are stored safely in your browser's <code>localStorage</code> (<code>bitcadence_conn</code>), meaning you will not have to re-enter them on subsequent visits.</li>
+<li>Connection parameters are stored in this browser's <code>localStorage</code> (<code>bitcadence_conn</code>) for later visits. Browser storage is a credential location, not a server-side grant of authority.</li>
 </ul>
 <h3 id="5-returning-to-demo-mode-optional">5. Returning to Demo Mode (Optional)</h3>
 <p>If you ever want to return to sandbox exploration with mock data:</p>
 <ol>
-<li>In <strong>Settings → Show advanced → Connection</strong>, click <strong>Disconnect</strong>.</li>
+<li>In <strong>Settings → Server administration → Connection</strong>, click <strong>Disconnect</strong>.</li>
 <li>The UI instantly reverts to simulated state, allowing you to click all controls safely.</li>
 </ol>
 <hr />

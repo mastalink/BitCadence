@@ -12,6 +12,8 @@ In the console, click **Schedules**. Each saved schedule is a card with its name
 
 ![Schedules](img/23-console-schedules.png)
 
+The current form also exposes **Time zone (IANA)**, initially detected from the browser. Review the validated zone and next date/time/offset before Save. Invalid/stale previews disable saving. Existing schedules and legacy CLI/Ask-repeat defaults are not migrated; inspect their stored server-default zone separately.
+
 The rest of this page covers the file behind it, for launchers, cron and loops.
 
 ### 1. Initialize Scheduling Configuration

@@ -28,10 +28,9 @@ The same **Approve** button also appears on **Home** under **What needs you**. S
 
 ### 4. Pause everything (kill switch)
 When something unexpected is happening:
-1. Click **Settings**, and in the **Pause everything** card click **Pause**.
-   - Helpers stop taking new work and no new jobs are started.
-   - Jobs already in progress finish; you can still look, approve and reject.
-2. Click **Resume** on the same card to start again.
+1. Choose **Settings → Stop work…** and review the effect.
+2. **Cancel** changes nothing. **Stop work now** halts active attempts and pauses intake/leasing; completed external effects are not undone.
+3. **Resume** permits new work. Halted jobs require explicit Retry; they do not automatically continue.
 
 See [Settings](Settings.md). The `MCO_KILL_SWITCH` setting is the same switch.
 
@@ -40,7 +39,7 @@ Click **Governance** for the pending approvals, the decision history and the ove
 
 ![Governance](img/06-console-governance.png)
 
-To export evidence, pick a **Start** and **End** date and click **Export compliance evidence pack**. You get a PDF cover page plus a JSON audit trail for EU AI Act Art. 12 record-keeping and Art. 14 human oversight.
+Optionally pick **Start**/**End**, then **Download evidence JSON**. This downloads the existing response envelope, including returned file entries and audit counts; it does not download separate PDF/files or certify legal compliance. Recent decisions show approval/rejection separately from actual job state.
 
 ---
 
@@ -87,7 +86,7 @@ mco restart
 
 ### 2. "Kill switch active: Cannot lease task"
 - **Cause:** The kill switch was left enabled (`MCO_KILL_SWITCH=true`).
-- **Fix:** On **Settings**, click **Resume** in the **Pause everything** card, or run:
+- **Fix:** If authorized to permit new work, choose **Settings → Stop work → Resume**, then inspect halted jobs before explicitly retrying, or run:
   ```powershell
   mco settings MCO_KILL_SWITCH false
   ```

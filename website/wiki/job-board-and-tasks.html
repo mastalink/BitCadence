@@ -9,21 +9,21 @@
 <hr />
 <h2 id="step-by-step-instructions">Step-by-Step Instructions</h2>
 <h3 id="1-open-the-job-board">1. Open the Job Board</h3>
-<p>In the left menu, click <strong>Job Board</strong>. Its heading reads <strong>All work</strong>.</p>
+<p>In the left menu, click <strong>Job Board</strong>. Its heading has the same name in both copy tones. The coverage sentence states the fetched window, at most 200 latest jobs; search and counts apply to that window.</p>
 <p><img src="img/04-console-job-board.png" alt="Job Board Table View" loading="lazy" decoding="async" /></p>
 <h3 id="2-filter-and-search-tasks">2. Filter and Search Tasks</h3>
 <ol>
 <li>Use the tabs at the top to focus on one kind of work. Each shows a count:
 <ul>
 <li><strong>All</strong></li>
-<li><strong>Active:</strong> picked up by a helper and running.</li>
+<li><strong>Active:</strong> pending, leased or in progress.</li>
 <li><strong>Needs approval:</strong> paused at a human gate.</li>
 <li><strong>Waiting:</strong> waiting for an earlier step.</li>
 <li><strong>Done</strong></li>
-<li><strong>Problems:</strong> failed or rejected.</li>
+<li><strong>Problems:</strong> failed, rejected, halted or cancelled.</li>
 </ul>
 </li>
-<li>Type in <strong>Search jobs</strong> to filter, pick a role from <strong>All roles</strong>, or change the sort order (the default is <strong>Priority, then oldest</strong>).</li>
+<li>Type in <strong>Search loaded jobs</strong> to filter the fetched window, pick <strong>All roles</strong>, or change sort (default <strong>Priority, then oldest</strong>). Native job-title/sort buttons and the sort dropdown support keyboard operation.</li>
 </ol>
 <h3 id="3-creating-a-new-job">3. Creating a New Job</h3>
 <p>For most work, <a href="Ask.html">Ask for something</a> is easier. To drop one job on the board yourself:</p>
@@ -42,10 +42,10 @@
 </ol>
 <p><img src="img/14-job-create-modal.png" alt="New Job Creation Composer" loading="lazy" decoding="async" /></p>
 <ol start="3">
-<li>Click <strong>Create job</strong>. The task appears on the Job Board.</li>
+<li>Click <strong>Create job</strong>. Submission is guarded while pending; an error retains the open form's values. Verify the actual created job. Dismissing an unsaved form does not save a persistent draft.</li>
 </ol>
 <h3 id="4-inspecting-job-details-history">4. Inspecting Job Details &amp; History</h3>
-<p>Click any job row. The job panel slides in from the right:</p>
+<p>Choose a job title/open control. The panel can fetch that exact job ID outside the board's latest window:</p>
 <ul>
 <li><strong>Header:</strong> the status word and the job title.</li>
 <li><strong>Change this job:</strong> the actions that make sense for its state (see below).</li>
@@ -58,10 +58,11 @@
 <ul>
 <li><strong>Approve / Reject:</strong> when the job needs your OK. See <a href="Approvals.html">Approvals</a>.</li>
 <li><strong>Retry:</strong> puts a failed or rejected job back in line.</li>
-<li><strong>Reassign…:</strong> copies the job to a different role and archives the original.</li>
+<li><strong>Reassign…:</strong> for failed/rejected/cancelled/halted attempts, creates replacement work for a selected role. Active work must be cancelled first; completed work is ineligible. Inspect the returned replacement identity/link.</li>
 <li><strong>Call it off…:</strong> stops an in-flight or waiting job.</li>
-<li><strong>Archive / Unarchive:</strong> hides finished work without deleting its history.</li>
+<li><strong>Archive:</strong> batch action for eligible finished work. Unarchive is available through the CLI; this console has no matching unarchive button.</li>
 </ul>
+<p>Batch requests include only eligible visible selected jobs. Results show succeeded/failed/skipped with reasons; failures stay selected and results survive navigation in this session. Cancel a reason prompt to submit nothing. Failed individual actions keep their input while the editor remains open. An accepted request is not proof of execution completion. See <a href="gui-reference.html#batch-controls">complete controls</a>.</p>
 <hr />
 <h2 id="the-cli-equivalent">The CLI Equivalent</h2>
 <p>Every Job Board action maps directly to the <code>mco</code> command-line tool:</p>

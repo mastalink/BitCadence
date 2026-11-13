@@ -172,6 +172,7 @@ output/playwright/**/*.mp4
 output/playwright/**/*.png
 output/playwright/**/*.mp3
 output/playwright/**/*.wav
+output/ux-release/
 # Terraform (infra/aws): providers, state, and real tfvars never ship
 infra/aws/.terraform/
 infra/aws/*.tfstate

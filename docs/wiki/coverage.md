@@ -4,7 +4,7 @@ This wiki was checked against the BitCadence source snapshot on **November 13, 2
 
 ## CLI coverage
 
-The [complete CLI reference](mco-cli-reference.md) maps **93 command/group paths** and **301 arguments and options** across the shared `bitcadence` / `mco` tree. It includes nested groups, defaults, required arguments, option aliases, repeatable values, hidden compatibility options and synthesized help/completion options. Each command has a purpose, safe example, expected result and recovery notes.
+The [complete CLI reference](mco-cli-reference.md) maps **95 command/group paths** and **308 arguments and options** across the shared `bitcadence` / `mco` tree. It includes nested groups, defaults, required arguments, option aliases, repeatable values, hidden compatibility options and synthesized help/completion options. Each command has a purpose, safe example, expected result and recovery notes.
 
 The [machine-readable inventory](_review/cli-coverage.json) binds every path and parameter to a documentation anchor and source metadata. The checker compares the actual Typer command tree without invoking operational callbacks. Unknown commands/options, changed defaults and missing anchors are failures. Negative-control checks also verified that the checker rejects missing/stale commands and parameters.
 
@@ -12,11 +12,11 @@ The desktop executable is separate and is covered under [Windows Local Control a
 
 ## GUI coverage
 
-The [GUI reference](gui-reference.md) covers the twelve console navigation pages, Score and detail views, the five-page technical dashboard, model-connection/lock/modal flows, Windows manager/tray actions and all **33 server-driven settings**. Its [279 grouped control/workflow mappings](_review/gui-feature-coverage.json) link instructions to source locations.
+The [GUI reference](gui-reference.md) covers thirteen console destinations, Score/detail views, the five-page dashboard, administration/lock/modal flows, Windows/tray actions and **33 server-driven settings**. Its [319 grouped control/workflow mappings](_review/gui-feature-coverage.json) link instructions to current component/function locations. This describes the UX branch based on parent `d511c6d`, not a running-app update.
 
-This is a manually grouped feature inventory, not a claim that every possible dynamic server record or option value was enumerated. Defined-but-unreachable legacy components and pending local changes are explicitly identified; they are not presented as released controls.
+This is grouped coverage, not an enumeration of every dynamic record/option. Unreachable legacy components are identified separately. Isolated behavior fixtures support the [U01–U24 status ledger](UX-REVIEW.md); deployment, real accessibility and end-to-end delivery are not inferred from them.
 
-Source hashes make interface drift visible. A changed GUI source file requires reviewing/updating the inventory before strict coverage passes again. Hash checks prove the source baseline, not rendered behavior or successful effects.
+The generator resolves component/function anchors afresh. Source fingerprints were frozen after the final application changes, and strict hash verification passed. On the next change, run `python docs/wiki/_review/build_inventory.py --freeze-source-hashes` after the source settles, then the strict hash verifier. Hashes prove only the baseline, not rendered behavior or effects.
 
 ## What was checked safely
 
@@ -24,6 +24,7 @@ Source hashes make interface drift visible. A changed GUI source file requires r
 - Every local documentation link, image and fragment in the generated website.
 - The help site's section search, keyboard access, copy controls and narrow-screen navigation.
 - Regression tests for technical-dashboard prompt cancellation: pressing Cancel submits no abort or batch-cancel request; an intentional blank confirmation still follows the supported behavior.
+- Twenty-nine browser checks against a disposable authenticated gateway: thirteen navigation destinations, Administration deep links and modal, dialog Tab/Escape/focus return, 390px and 320px layouts, and short-screen navigation. No browser script errors. This does not establish screen-reader conformance or native desktop acceptance.
 - Legacy-domain redirects for both old hostnames, HTTP/HTTPS, root and path/query requests; removal of the obsolete site project.
 
 No real jobs were approved, cancelled, retried, reassigned or published to perform these checks. No live helper was stopped and no production token/configuration was changed. Provider calls and destructive product controls require disposable fixtures or separate operational authorization, not a documentation test against someone's live work.

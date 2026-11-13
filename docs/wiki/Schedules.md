@@ -7,8 +7,9 @@ terminal. Both show each schedule as a sentence, such as **Every weekday at
 ## Add one
 
 Pick what should run, how often (Every day, Every weekday, Certain days, Every
-hour) and the time. The sentence you will get is shown before you save. Your time
-zone is detected from your computer.
+hour) and the time. The browser's **Time zone (IANA)** starts with its detected zone and is editable. Review the validated zone and next occurrence including date/offset; Save stays disabled until the current choices have a valid matching preview. Unknown zones change nothing. For example, choose `America/New_York` or `UTC`.
+
+Existing schedules are not migrated by this form. Legacy clients/CLI defaults and Ask repeat retain their existing server-default path; inspect the saved zone and next run on remote gateways. This uses the existing scheduler, including its existing DST behavior.
 
 ```
 bitcadence schedule

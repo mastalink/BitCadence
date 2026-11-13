@@ -535,7 +535,7 @@ function Overview({ jobs, agents, tone, advanced, onNav, onOpen }) {
                       <div style={{ fontWeight: 600, fontSize: 13.5 }}>{j.title}</div>
                       <div style={{ fontSize: 12, color: "var(--text-3)" }}>from {j.source_agent_id} · {timeAgo(j.created_at)}</div>
                     </div>
-                    <Btn kind="ok" small onClick={() => window.BitCadenceStore.approve(j.id, "owner-laptop")}>✓ Approve</Btn>
+                    <ApproveButton jobId={j.id} small>Approve</ApproveButton>
                     <Btn small onClick={() => onOpen(j.id)}>Review</Btn>
                   </div>
                 </Card>
@@ -596,7 +596,7 @@ function Home({jobs, agents, onNav, onOpen, onWatch}) {
     <p>Here is what needs you, then what's running.</p>
     <h2>What needs you <span className="home-count">{attention.length}</span></h2>
     <div className="home-grid">{attention.map(job => <HomeCard key={job.id} job={job} agents={agents} onOpen={onOpen}
-      action={job.status === "needs_approval" ? <button onClick={() => window.BitCadenceStore.approve(job.id)}>Approve</button> : null} />)}</div>
+      action={job.status === "needs_approval" ? <ApproveButton jobId={job.id} /> : null} />)}</div>
     {!attention.length && <p>Nothing needs your attention.</p>}
     <h2>What's running</h2>
     <div className="home-grid">{running.map(group => {
@@ -668,6 +668,24 @@ function ScoreLive({runId, jobs, agents, onBack}) {
 }
 
 // ----- Approvals inbox -----
+function ApproveButton({ jobId, small, children }) {
+  const [busy, setBusy] = useStateH(false);
+  const [error, setError] = useStateH("");
+  const lock = React.useRef(false);
+  async function approve() {
+    if (lock.current) return;
+    lock.current = true; setBusy(true); setError("");
+    try { await window.BitCadenceStore.approve(jobId); }
+    catch (e) { setError(e.message || "Approval could not be saved."); }
+    finally { lock.current = false; setBusy(false); }
+  }
+  return <><Btn kind="ok" small={small} disabled={busy} onClick={approve}>{busy ? "Saving…" : children || "Approve"}</Btn>{error ? <span role="alert" style={{ color: "var(--st-failed-fg)" }}>{error}</span> : null}</>;
+}
+
+function approvalDecision(job) {
+  return { label: job.status === "rejected" ? "Rejected" : "Approved", status: job.status };
+}
+
 function Approvals({ jobs, tone, advanced, onOpen }) {
   const queue = jobs.filter((j) => j.status === "needs_approval");
   const decided = jobs.filter((j) => j.approved_by && j.status !== "needs_approval").slice(0, 6);
@@ -676,12 +694,29 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
   const [selectedIds, setSelectedIds] = useStateH(new Set());
   const [batchBusy, setBatchBusy] = useStateH(false);
   const [blocked, setBlocked] = useStateH(false);
+  const [actionBusy, setActionBusy] = useStateH(false);
+  const [actionError, setActionError] = useStateH("");
+  const [batchResult, setBatchResult] = useStateH(null);
+  const actionLock = React.useRef(false);
+  const queueKey = queue.map((j) => j.id).join("|");
+  useEffectH(() => {
+    setSelectedIds((old) => new Set([...old].filter((id) => queue.some((j) => j.id === id))));
+  }, [queueKey]);
   useEffectH(() => {
     const on = () => setBlocked(true);
     window.addEventListener("bc-approver-blocked", on);
     return () => window.removeEventListener("bc-approver-blocked", on);
   }, []);
   const selected = queue.find((j) => j.id === sel) || queue[0];
+
+  async function decideOne(action, job) {
+    if (actionLock.current) return;
+    actionLock.current = true; setActionBusy(true); setActionError("");
+    try {
+      await window.BitCadenceStore[action](job.id, "operator", ...(action === "reject" ? [reason] : []));
+    } catch (e) { setActionError(e.message || "The decision could not be saved. Your selection is unchanged."); }
+    finally { actionLock.current = false; setActionBusy(false); }
+  }
 
   const allSelected = queue.length > 0 && queue.every((j) => selectedIds.has(j.id));
   const toggleSelectAll = () => {
@@ -698,25 +733,29 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
   };
 
   const handleBatchApprove = async () => {
-    const ids = Array.from(selectedIds);
-    if (!ids.length) return;
+    const ids = Array.from(selectedIds).filter((id) => queue.some((j) => j.id === id));
+    if (!ids.length || actionLock.current) return;
+    actionLock.current = true; setActionError("");
     setBatchBusy(true);
     try {
-      await window.BitCadenceStore.batchAction("approve", ids);
-      setSelectedIds(new Set());
-    } finally { setBatchBusy(false); }
+      const result = await window.BitCadenceStore.batchAction("approve", ids);
+      setBatchResult(result); setSelectedIds(new Set(Object.keys(result && result.failed || {})));
+    } catch (e) { setActionError(e.message || "Approval could not be saved."); }
+    finally { actionLock.current = false; setBatchBusy(false); }
   };
 
   const handleBatchReject = async () => {
-    const ids = Array.from(selectedIds);
-    if (!ids.length) return;
+    const ids = Array.from(selectedIds).filter((id) => queue.some((j) => j.id === id));
+    if (!ids.length || actionLock.current) return;
     const r = window.prompt("Reason for batch rejection:", reason || "");
     if (r === null) return;
+    actionLock.current = true; setActionError("");
     setBatchBusy(true);
     try {
-      await window.BitCadenceStore.batchAction("reject", ids, { reason: r });
-      setSelectedIds(new Set());
-    } finally { setBatchBusy(false); }
+      const result = await window.BitCadenceStore.batchAction("reject", ids, { reason: r });
+      setBatchResult(result); setSelectedIds(new Set(Object.keys(result && result.failed || {})));
+    } catch (e) { setActionError(e.message || "Rejection could not be saved."); }
+    finally { actionLock.current = false; setBatchBusy(false); }
   };
 
   return (
@@ -750,10 +789,15 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
       {blocked ? (
         <div role="alert" style={{ border: "2px solid var(--st-failed-fg)", borderRadius: 12, padding: "14px 16px", marginBottom: 16, background: "var(--surface)" }}>
           <div style={{ fontWeight: 700 }}><span aria-hidden="true">▲ </span>You can't approve this yet.</div>
-          <p style={{ margin: "6px 0 10px", color: "var(--text-2)", fontSize: 13.5 }}>Your account isn't set up as an approver. It's a one-key fix: run <b>bitcadence fix</b> in a terminal and answer Y.</p>
+          <p style={{ margin: "6px 0 10px", color: "var(--text-2)", fontSize: 13.5 }}>This decision requires approver permission. Ask your operator to review the access you need. Connection or policy errors do not grant that permission.</p>
           <Btn small onClick={() => setBlocked(false)}>Got it</Btn>
         </div>
       ) : null}
+      {actionError ? <p role="alert" style={{ color: "var(--st-failed-fg)" }}>{actionError}</p> : null}
+      {batchResult ? <div role="status" style={{ marginBottom: 16 }}>
+        {(batchResult.succeeded || []).length} succeeded; {Object.keys(batchResult.failed || {}).length} failed.
+        {Object.entries(batchResult.failed || {}).map(([id, message]) => <p key={id}><button type="button" onClick={() => onOpen(id)}>Open {shortId(id)}</button> {String(message)}</p>)}
+      </div> : null}
 
       {queue.length === 0 ? (
         <Card><EmptyState icon="✓" title={tone === "plain" ? "Nothing needs your OK" : "Approval queue is empty"} body="New approval requests will appear here and notify you." /></Card>
@@ -764,20 +808,22 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
               const isSel = selected && selected.id === j.id;
               const isChecked = selectedIds.has(j.id);
               return (
-                <button key={j.id} onClick={() => { setSel(j.id); setReason(""); }} style={{
+                <div key={j.id} style={{
                   display: "flex", width: "100%", textAlign: "left", gap: 10, alignItems: "center",
                   padding: "12px 14px", cursor: "pointer",
                   background: isSel ? "var(--accent-soft)" : isChecked ? "var(--surface-2)" : "transparent",
                   border: "none", borderBottom: "1px solid var(--border)",
                   borderLeftStyle: "solid", borderLeftWidth: 3, borderLeftColor: isSel ? "var(--accent)" : "transparent",
                 }}>
-                  <input type="checkbox" checked={isChecked} onChange={(e) => toggleSelect(j.id, e)} onClick={(e) => e.stopPropagation()} style={{ cursor: "pointer", flex: "none" }} />
+                  <input type="checkbox" aria-label={"Select " + j.title} checked={isChecked} onChange={(e) => toggleSelect(j.id, e)} style={{ cursor: "pointer", flex: "none" }} />
+                  <button type="button" onClick={() => { setSel(j.id); setReason(""); }} style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0, border: 0, background: "transparent", color: "var(--text)", textAlign: "left", padding: 0, cursor: "pointer" }}>
                   <RoleChip role={j.target_agent_role} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.title}</div>
                     <div style={{ fontSize: 12, color: "var(--text-3)" }}>from {j.source_agent_id} · {timeAgo(j.created_at)}</div>
                   </div>
-                </button>
+                  </button>
+                </div>
               );
             })}
           </Card>
@@ -795,9 +841,9 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
                 {advanced ? <span>ID: <Mono>{shortId(selected.id)}</Mono></span> : null}
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                <Btn kind="primary" onClick={() => window.BitCadenceStore.approve(selected.id, "owner-laptop")}>✓ Approve &amp; run</Btn>
+                <Btn kind="primary" disabled={actionBusy || batchBusy} onClick={() => decideOne("approve", selected)}>{actionBusy ? "Saving…" : "Approve"}</Btn>
                 <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tone === "plain" ? "Reason for saying no…" : "Rejection reason (audited)…"} style={{ flex: 1, minWidth: 160, border: "1px solid var(--border-strong)", borderRadius: 8, padding: "8px 12px", fontSize: 13 }} />
-                <Btn kind="danger" onClick={() => window.BitCadenceStore.reject(selected.id, "owner-laptop", reason)}>Reject</Btn>
+                <Btn kind="danger" disabled={actionBusy || batchBusy} onClick={() => decideOne("reject", selected)}>Reject</Btn>
                 <Btn kind="ghost" onClick={() => onOpen(selected.id)}>Full details →</Btn>
               </div>
             </Card>
@@ -816,8 +862,8 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
                   <tr key={j.id} onClick={() => onOpen(j.id)} style={{ cursor: "pointer" }}
                     onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-2)"}
                     onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-                    <Td><span style={{ fontWeight: 600 }}>{j.title}</span></Td>
-                    <Td><StatusBadge status={j.status === "rejected" ? "rejected" : "completed"} tone={tone} /></Td>
+                    <Td><button type="button" onClick={(e) => { e.stopPropagation(); onOpen(j.id); }} style={{ border: 0, background: "none", color: "var(--accent-text)", fontWeight: 600, textAlign: "left", cursor: "pointer", padding: 0 }}>{j.title}</button></Td>
+                    <Td><span>{approvalDecision(j).label}</span><div style={{ marginTop: 5 }}><StatusBadge status={approvalDecision(j).status} tone={tone} /></div></Td>
                     <Td><Mono>{j.approved_by}</Mono></Td>
                     <Td><span style={{ color: "var(--text-3)", fontSize: 12.5 }}>{timeAgo(j.updated_at)}</span></Td>
                   </tr>
@@ -886,6 +932,7 @@ function Governance({ jobs, tone, advanced, onOpen }) {
           <SectionTitle action={<Btn small kind="ghost" onClick={loadEvents}>Refresh</Btn>}>
             {tone === "plain" ? "Pending approvals" : "Human oversight queue"}
           </SectionTitle>
+          <p style={{ fontSize: 12, color: "var(--text-3)" }}>Audit feed: latest 150 loaded events. This is a bounded view, not the entire history.</p>
           <Card pad={false} style={{ marginBottom: 18 }}>
             {pending.length ? (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
@@ -933,14 +980,14 @@ function Governance({ jobs, tone, advanced, onOpen }) {
           <SectionTitle>Evidence export</SectionTitle>
           <Card style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 13.5, color: "var(--text-2)", marginBottom: 14 }}>
-              PDF cover page plus JSON audit trail for EU AI Act Art. 12 record-keeping and Art. 14 human oversight.
+              Download the available evidence and audit trail as JSON. This is operational evidence, not a legal certification or a generated PDF.
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
               <label style={{ fontSize: 12, color: "var(--text-3)" }}>Start<br /><input type="date" value={start} onChange={(e) => setStart(e.target.value)} style={Object.assign({}, inputStyle, { width: "100%" })} /></label>
               <label style={{ fontSize: 12, color: "var(--text-3)" }}>End<br /><input type="date" value={end} onChange={(e) => setEnd(e.target.value)} style={Object.assign({}, inputStyle, { width: "100%" })} /></label>
             </div>
             <Btn kind="primary" disabled={exporting} onClick={exportPack}>
-              {exporting ? "Exporting..." : "Export compliance evidence pack"}
+              {exporting ? "Exporting..." : "Download evidence JSON"}
             </Btn>
             {pack ? (
               <div style={{ marginTop: 14, fontSize: 12.5, color: "var(--text-2)" }}>
@@ -997,8 +1044,8 @@ function KindChip({ kind }) {
 }
 
 function MemoryDetailDrawer({ entry, onClose, onOpenJob, tone, advanced }) {
-  if (!entry) return null;
   const [copied, setCopied] = useStateH(false);
+  if (!entry) return null;
 
   const copyContent = () => {
     navigator.clipboard.writeText(entry.content || "").then(() => {
@@ -1008,13 +1055,8 @@ function MemoryDetailDrawer({ entry, onClose, onOpenJob, tone, advanced }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 65 }}>
-      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(23,23,28,0.38)", backdropFilter: "blur(2px)" }}></div>
-      <div style={{
-        position: "absolute", top: 10, right: 10, bottom: 10, width: 620, maxWidth: "calc(100vw - 30px)",
-        background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-l)",
-        boxShadow: "0 18px 48px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 66,
-      }}>
+    <Drawer open={!!entry} title="Memory details" onClose={onClose} width={620}>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
         {/* Header */}
         <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
@@ -1099,7 +1141,7 @@ function MemoryDetailDrawer({ entry, onClose, onOpenJob, tone, advanced }) {
           </div>
         </div>
       </div>
-    </div>
+    </Drawer>
   );
 }
 
@@ -1157,7 +1199,7 @@ function DrumlineContext({ tone, advanced, onOpen }) {
     <div>
       <p style={{ margin: "0 0 16px", color: "var(--text-2)", fontSize: 13.5, maxWidth: 560 }}>
         {tone === "plain"
-          ? "Everything your agents chose to remember — decisions, lessons, handoffs. Anything you add here is recalled by every agent on its next job. Click any memory entry to drill down into the full context."
+          ? "Showing up to 25 ranked memory entries for this search. Decisions, lessons and handoffs are available to helpers through shared recall. Open an entry to inspect its full context."
           : "The Drumline shared context (agent_context): explicit writes via mco_remember plus auto-distilled job handoffs. Entries below are ranked by the server's recall scorer. Click any entry to inspect provenance and full text."}
       </p>
 

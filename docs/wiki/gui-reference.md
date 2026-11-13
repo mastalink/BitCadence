@@ -2,7 +2,7 @@
 
 This guide inventories the controls implemented in the browser console (`/console`), technical control plane (`/dashboard`), and Windows Local Control app. It was checked against source on November 13, 2026, not against an authenticated production session. A visible button is not evidence that its operation is permitted or working. Your token, tenant, edition, policy, and the current job state still govern every action.
 
-**Version boundary:** clean main `0f9f36e` and an existing shared checkout have small differences. The shared checkout adds **Manage fleet tokens**, makes Advanced expose Agent Fleet in plain tone, and repairs individual reassignment. Those changes are pending checkout work, not a verified release. Instructions below identify that difference explicitly.
+**Version boundary:** these instructions describe the UX branch based on parent `d511c6d`. Source and isolated fixture checks support the changes below; deployment or a running-app update is not claimed. Older screenshots may show old labels. The [U01–U24 ledger](UX-REVIEW.md) separates implementation, remaining recommendations and runtime acceptance.
 
 ## Choose the right window
 
@@ -19,7 +19,7 @@ In this guide, **read** means inspect or change the current view; **write** mean
 ## Open and connect the console
 
 1. Open your gateway's `/console` URL. The usual local address is `http://127.0.0.1:18789/console`. Use the actual configured gateway if different.
-2. Choose **Settings**. In plain tone expand **Show advanced**. This disclosure is separate from the topbar **Advanced** switch.
+2. Choose the disconnected screen’s **Connect** button, or **Settings**. Connection fields are visible directly while disconnected. When connected, expand **Server administration** to see Connection and specialist settings.
 3. In **Connection**, enter **Gateway URL** and **Agent token**, then **Connect**. Connection validates against the gateway before the console changes to Live.
 4. Check the footer: **Live**, **Connecting…**, **Offline · connection failed**, or **Demo · simulated data**. Only Live indicates a current connection. Demo job actions change examples, not production jobs. Several features require Live and show an explanatory empty state in Demo.
 5. To change gateway/token, choose **Disconnect** first, edit the fields, then Connect. Disconnecting this browser does not stop the gateway or workers. Saved connection data uses this browser's storage; do not treat it as a server identity change.
@@ -28,13 +28,21 @@ If authentication fails, obtain the correct existing token and check its scopes.
 
 ## Navigation and display controls
 
-The sidebar has twelve entries: **Home**, **Portfolio**, **Job Board**, **Approvals**, **Governance**, **Ask for something**, **Helpers**, **Connect an AI**, **Schedules**, **Drumline**, **Activity**, **Settings**. Selecting one changes the view, not job state. The selected page and Advanced preference are stored locally.
+The sidebar has thirteen entries: **Home**, **Portfolio**, **Job Board**, **Approvals**, **Governance**, **Ask for something**, **Helpers**, **Connect an AI**, **Schedules**, **Drumline**, **Activity**, **Settings**, **Administration**. The selected page and Technical details preference are stored locally. On narrow screens **Menu** opens navigation; select a destination or dismiss its backdrop to close it. Navigation scrolls on short screens. **Skip to content** provides a keyboard doorway to the main view.
 
-The topbar **Advanced** switch reveals technical details such as payloads, full job IDs and retry/escalation fields. It does not grant authority. In clean main, plain-tone Helpers remains the simple Helpers page even with Advanced enabled. In the shared pending change, Advanced switches it to Agent Fleet and **Manage fleet tokens** is another way to enter that view. Turn Advanced off to return.
+The topbar **Technical details** switch reveals payloads, full job IDs and retry/escalation fields. It does not grant authority. Use **Administration** or Helpers’ **Manage credentials…** to manage identities/tokens without a prototype copy-tone setting.
 
-Some headings have two names: Job Board is **All work** in plain tone, Approvals is **Needs your OK**, Helpers is **Your helpers**, Activity is **What happened**. The sidebar keeps the original navigation name. The prototype Tweaks panel exposes accent, density, copy tone and live simulation only when the host activates edit mode; it is not a normal settings workflow. Do not depend on that hidden design tool to administer an installation.
+Job Board, Approvals, Helpers and Activity now retain their destination names across copy tones. Older saved Projects navigation maps to Portfolio. Prototype Tweaks still exposes accent, density, copy tone and simulation only when the host activates edit mode; it is not a normal administration workflow.
 
-Drawer **×**, **Cancel**, **Back**, and backdrop clicks close or dismiss their respective draft controls. They do not reverse a request already submitted. The shared Drawer has no implemented Escape handler/focus trap; use its visible close control. Notifications disappear after about four seconds; inspect History/Activity for durable evidence.
+Shared drawers, including memory details, support Escape, keyboard Tab containment, topmost nested-dialog handling and focus restoration. The technical dashboard modal implements corresponding dialog behavior. **×**, **Cancel**, **Back** and backdrop dismiss controls without reversing submitted work. Real keyboard/screen-reader acceptance remains pending. Failed job actions retain input while open; closing an unsaved composer does not save a persistent draft.
+
+Notifications wrap full messages. Errors/approval notices remain until dismissed or displaced by newer notices; ordinary notices expire after six seconds. **Recent notifications (N)** opens the latest forty session records; **Close**, Escape or backdrop returns. Browser reload clears this session history. Job History remains the audited record.
+
+## Administration
+
+Choose **Administration** for helper credentials and specialist controls on the configured gateway. **Back to Helpers** returns to the everyday view; existing permission checks remain. **Open model connections**, **Open saved workflow files** and **Open server administration** open the retained dashboard specialist view in another tab.
+
+The target host is shown, and links contain no bearer token. Dashboard verifies sign-in; it may reuse this browser’s saved console credential only for an exactly matching gateway origin/path. Otherwise Unlock needs an existing authorized token. **Back to workspace** returns to the gateway console. `/dashboard` remains supported with allowlisted hashes `#ops`, `#agents`, `#models`, `#workflows`, `#settings`.
 
 ## Home and the Score live view
 
@@ -67,21 +75,21 @@ The card's "Priority and pause controls" line is a visible placeholder: those co
 
 Choose **Job Board**, then combine **All**, **Active**, **Needs approval**, **Waiting**, **Done**, or **Problems** with search and **All roles**. Search checks title, role and workflow; it is not full payload or full-history search. Active includes pending/leased/in-progress; Problems includes failed/rejected/halted/cancelled. Clearing a filter changes only the view.
 
-**Sort jobs** offers Priority then oldest, Newest first, Oldest first, Status, Assigned role and Title A–Z. The preference is saved locally. Clicking Job/Status/Assigned to/Updated table headings also sorts (the dropdown provides the keyboard-accessible alternative). Sorting does not edit priority or grant a lease. Click a job row to open its drawer.
+**Sort jobs** offers Priority then oldest, Newest first, Oldest first, Status, Assigned role and Title A–Z. The preference is saved locally. Native Job/Status/Assigned to/Updated header buttons also sort. Sorting does not edit priority or grant a lease. Choose a job title/open button for its drawer.
 
 ### Create a job
 
 1. Choose **+ New job**.
 2. Fill **What needs to happen?**, optional **Details**, and **Who should do it?**. Available roles come from enabled registered agents; no roles means register a worker first.
 3. Select **Ask me before it runs** when this job needs its own approval gate. Server policy may impose a gate independently.
-4. With Advanced enabled, set **Retry budget** (the form allows 0–5) and optional **Escalate to role**.
+4. With Technical details enabled, set **Retry budget** (0–5 in this form) and optional **Escalate to role**.
 5. Choose **Create job**. Success closes the drawer and the job appears; it can immediately become eligible for a worker. **Cancel** or × dismisses before submission. On failure, the drawer retains the error; check connection/policy before trying again to avoid duplicate work.
 
 CLI doorway: [send and workflow commands](mco-cli-reference.md#cli-mco-send). See [task guide](job-board-and-tasks.md#3-creating-a-new-job).
 
 ### Inspect and act on one job
 
-The drawer shows status, approval-gate badge, description, assignee/requester, created time, workflow, decision actor when present, and History/Audit trail. Advanced adds full ID, retry budget and input/output JSON. **Connected steps / Dependencies** opens an available predecessor or dependent in the same drawer. Only dependencies in the fetched collection can appear; absence here is not proof of no dependencies.
+The drawer shows status, gate, description, assignee/requester, creation, workflow, decision actor and History. Technical details adds full ID, retry budget and payloads. **Connected steps / Dependencies** opens linked work. Exact-ID detail can retrieve a linked job outside the board window; absence from a bounded collection does not prove no dependency.
 
 | Action | Steps and expected outcome | Recovery / limits |
 |---|---|---|
@@ -89,15 +97,15 @@ The drawer shows status, approval-gate badge, description, assignee/requester, c
 | Reject… | Open rejection, enter a recorded reason, choose Reject. Cancel dismisses the rejection editor. | This is a decision, not an undo of an approval already made. |
 | Try again | Available for failed/rejected/halted jobs. Review the failure, then choose Try again. | Can execute work again. Correct the cause first and check policy/gates afterward. |
 | Call it off… | For active/nonterminal work, open the editor, enter a reason, then Call it off. Back dismisses. | Cancellation is a mutation that may stop work; already completed external effects are not undone. |
-| Reassign… | Backend accepts unsuccessful terminal attempts (failed/rejected/cancelled/halted), producing replacement work for a chosen role. | Clean main has an inconsistent visible action/request body; do not infer success from its editor closing. The shared pending repair limits this to terminal attempts and corrects the individual payload. Use verified CLI/API if this installation rejects it. |
+| Reassign… | For failed/rejected/cancelled/halted attempts, choose a role and Reassign to create replacement work. | Active work must be cancelled first; completed work is ineligible. Inspect the replacement identity/link and actual state. Original attempts remain history. |
 
-Always inspect the refreshed state and audit event. The UI may close an action editor before receiving a response; that closure is not evidence of success.
+Actions await responses and guard duplicate submissions. Failure stays beside the editor and retains input; correct its cause before retrying. Inspect refreshed state and History: acceptance/approval is not execution completion.
 
 ### Batch controls
 
-Use row checkboxes or **Select all jobs** to select visible jobs. A toolbar offers applicable **Approve**, **Reject**, **Retry**, **Cancel**, **Archive**, **Reassign to role… / Apply**, and **Clear selection**. Counts describe eligible selected jobs, while several requests send every selected ID; mixed selections may partly fail. Changing filters can leave hidden selected jobs selected. Clear selection and rebuild it when changing scope.
+Use row checkboxes or **Select all visible jobs**. Applicable toolbar actions are Approve, Reject, Retry, Cancel, Archive, Reassign role / **Create replacements (N)** and Clear selection. Selection is constrained to visible scope, and only eligible IDs are submitted. Review skipped counts as well as failures. The individual editor's final action is **Create replacement**.
 
-Reject/Cancel prompt for a reason; cancelling those console prompts cancels the batch. Other actions submit immediately. Read success/failure counts and inspect each failed job before retrying. Archive hides eligible terminal work; there is no matching unarchive button in this console. Use the [archive/unarchive CLI reference](mco-cli-reference.md#cli-mco-unarchive) for restoration. Reassign batch remains subject to server state checks and payload compatibility; see the version warning above.
+Reject/Cancel prompts for a reason; prompt cancellation submits nothing. Other actions submit immediately. The result panel shows succeeded/failed/skipped, reasons and replacement links. Successful IDs leave selection; failures remain for review. Results/failed selection survive page navigation in this console session, not browser restart. Archive hides eligible terminal work; the console has no unarchive button. See [archive/unarchive commands](mco-cli-reference.md).
 
 ## Approvals and Governance
 
@@ -107,15 +115,15 @@ Reject/Cancel prompt for a reason; cancelling those console prompts cancels the 
 2. **Full details →** opens the same job drawer. Review before authorizing.
 3. **Approve & run** authorizes that job. To reject, fill **Reason for saying no / Rejection reason** then choose **Reject**.
 4. For several jobs, use individual checkboxes or **Select all**, then **Approve (N)** or **Reject (N)**. Batch rejection prompts for a reason. Review the batch result; it is not necessarily atomic.
-5. **Recent decisions** opens job details. Its non-rejected decision badge is rendered as completed; it does **not** prove the actual job completed. Check the drawer's actual status.
+5. **Recent decisions** opens details and separates Approved/Rejected from actual execution status. Approved work can still be waiting, working or unsuccessful.
 
-If blocked, the console offers **Got it** to dismiss the message. Its suggestion to run `bitcadence fix` is a repair workflow, not authorization to grant yourself approver rights. Use the role approved by your operator. See [approval troubleshooting](Approvals.md#when-you-cant-approve-yet) and [governance guide](approvals-and-governance.md).
+If blocked, read the actual denial: missing scope, approver authority, tenant boundary and policy have different remedies. Use the identity authorized by your operator; a refusal does not authorize promoting a worker. See [approval troubleshooting](Approvals.md#when-you-cant-approve-yet).
 
 ### Governance
 
 **Refresh** reloads recent oversight events. **Review** opens a pending job. Decision history is drawn from a bounded feed (150 events loaded, twelve decisions and eighteen oversight events displayed), not a complete compliance history. Click an oversight event to open its job when that job exists in the loaded collection.
 
-For **Evidence export**, optionally fill **Start** and **End** dates, then **Export compliance evidence pack**. The browser downloads `bitcadence-evidence-pack.json` containing the response and file payloads, and shows event/approval/decision counts. Although the UI says “PDF cover page plus JSON,” this button downloads a JSON envelope; inspect its file entries instead of expecting separate files to appear. Export is a read/export action, not an approval and not a certification of legal compliance. A date or permission error appears beside the export. Preserve the downloaded result before refreshing.
+For **Evidence export**, optionally fill **Start**/**End**, then **Download evidence JSON**. This downloads `bitcadence-evidence-pack.json`, the response envelope containing file payloads, and reports event/approval/decision counts. Inspect file entries rather than expecting separate PDF/files. Export is neither approval nor legal certification. Preserve the result; date/permission errors appear beside the control.
 
 ## Ask for something
 
@@ -142,15 +150,15 @@ Choose **Helpers** in plain tone. Each card combines a shape, word and light wit
 
 ### Agent Fleet / tokens
 
-Use `/dashboard` → Agents & Tokens for a reliable administrative doorway on clean main. The shared pending console change exposes **Manage fleet tokens** and Advanced Agent Fleet. In that view:
+Use **Administration → Helper credentials**, Helpers’ **Manage credentials…**, or the retained `/dashboard` → Agents & Tokens. In the console credential view:
 
-1. **Add agent / Register agent** opens Instance ID, Role, and (with Advanced) Org. Enter the intended identity and an already configured tenant, then **Add agent / Register**.
+1. **Add agent / Register agent** opens Instance ID, Role and Org in Administration. Enter the intended identity and configured tenant, then Add agent / Register.
 2. Copy the resulting once-shown token using **Copy**, securely configure the intended worker, then **Done / Close**. Registration itself does not start a listener.
 3. **New token / Reset token** asks for confirmation. It immediately invalidates the old token. Copy and install the replacement; there is no undo that restores the old secret.
 4. **Remove** confirms immediate token invalidation and deletes the registration if server policy allows it. It is not the correct way to stop an actively leased worker. Inspect current leases and obey server refusal.
 5. **Move…** appears for a host operator with multiple tenants. Choose a target, **Confirm**, then accept the boundary warning. Cancel dismisses. Agent visibility/management changes with its tenant; do not mistake an agent disappearing from this view for deletion.
 
-Per-role online counts, current job and Advanced completed counts reflect the fetched collection. See [fleet guide](agent-fleet-and-presence.md) for CLI equivalents and lost-token recovery. Copy feedback or a displayed token is not evidence the executor now uses it.
+Per-role online counts, current job and technical completed counts reflect the fetched collection. See [fleet guide](agent-fleet-and-presence.md) for CLI equivalents and lost-token recovery. Copy feedback or a displayed token is not evidence the executor now uses it.
 
 ## Connect an AI
 
@@ -174,7 +182,7 @@ Reading needs `jobs:read`; adding/toggling needs `agents:manage`. A running sche
 4. Read the sentence preview. Choose **Save** to persist; verify its card and next-run text.
 5. Click an existing card's **On/Off** to change whether it runs. This saves immediately and can be reversed with the same control. It does not delete the schedule or cancel work already launched.
 
-**Time-zone limitation:** the UI claims it detects “your computer” but does not send a browser zone. The backend detects the gateway host's zone. On remote gateways, verify the actual server zone/next-run time before enabling; see [scheduling configuration](scheduling-and-loops.md#2-configure-launchers-and-loops). There is no GUI timezone selector, delete button or full schedule editor here. [Plain schedule commands](Schedules.md#add-one) and the advanced scheduler configuration handle the remaining operations.
+Review **Time zone (IANA)** before Save. It starts with this browser’s detected zone and accepts, for example, `America/New_York` or `UTC`. The gateway validates it and shows the next date/time/offset. Save waits for a valid preview matching current frequency/time/days/zone. Unknown zones change nothing. Existing schedules are not migrated; legacy callers and Ask repeat retain the server-default path. There is no delete/full editor here; see [configuration](scheduling-and-loops.md#2-configure-launchers-and-loops) and [plain commands](Schedules.md#add-one).
 
 ## Drumline: Context and Agent Exchange
 
@@ -183,7 +191,7 @@ Use **Drumline**, then **Context** or **Agent Exchange**. Arrow keys switch thes
 ### Context
 
 1. Enter **Search memory / Recall query** and optional comma-separated tags, then **Search / Recall**. Tags constrain results; the server ranks recall. At most 25 entries are requested.
-2. **Show more / Collapse** expands entry text; **Drill down →** opens provenance/full text. The detail drawer includes provenance and **Copy text**; **Open Source Job** opens the linked job when available in the loaded collection. Advanced adds weight metadata.
+2. **Show more / Collapse** expands entry text; **Drill down →** opens provenance/full text. The detail drawer includes provenance and **Copy text**; **Open Source Job** opens the linked job when available in the loaded collection. Technical details adds weight metadata.
 3. **+ Add memory / + Remember** opens Title, Kind, Tags and Content. Fill title and content, choose the kind, then **Save memory / Remember**. This creates shared context that eligible agents can recall. The composer **Cancel** dismisses before saving; no edit/delete/undo button is exposed here.
 
 Empty search: clear tags and reword the query before assuming the knowledge is absent. Distillation and injection settings affect whether memory is created/recalled; a saved memory is not a guarantee it appears in every future prompt. See [memory instructions](drumline-memory.md#step-by-step-instructions).
@@ -201,7 +209,7 @@ If author identity is missing or a job is not in the picker, verify connection, 
 
 ## Activity
 
-Choose **Activity** for a cross-job audit view. In Live mode, enter search text (event/job/actor), choose event type, then **Refresh** to reload the current window. **Load more** increases the requested event limit; it does not broaden the ordinary job collection. Click a row only when its linked job is loaded. Advanced adds detail JSON, abbreviated in this table; use job History for fuller context.
+Choose **Activity** for a cross-job audit view. In Live mode, enter search text (event/job/actor), choose event type, then **Refresh** to reload the current window. **Load more** increases the requested event limit; it does not broaden the ordinary job collection. Click a row only when its linked job is loaded. Technical details adds detail JSON, abbreviated in this table; use job History for fuller context.
 
 The statistics summarize fetched events/jobs: Events in last day, failure rate, typical approval wait, and distinct active actors. They are not independently queried system-wide metrics. Refresh/load more before drawing conclusions about missing events; search filters only the fetched window. Demo shows a connection-required explanation. See [Home guide's Activity doorway](overview-dashboard.md#4-look-at-the-rest-of-the-menu).
 
@@ -209,19 +217,21 @@ The statistics summarize fetched events/jobs: Events in last day, failure rate, 
 
 ### Everyday settings
 
-Plain Settings shows **Pause everything / Pause / Resume**, phone notification status, and a Memory pointer. The phone card is status-only; configuration is under Show advanced, and the text also points to `bitcadence settings`.
+Plain Settings shows **Stop work**, phone-notification status and a Memory pointer. The phone card is status-only; configuration is under Server administration or `bitcadence settings`.
 
-**Critical wording correction:** Pause writes `MCO_KILL_SWITCH`; despite the plain card saying “Jobs in progress finish,” the backend halts active attempts and pauses intake/leasing. Resume clears the pause; halted jobs require an explicit retry and do not automatically continue. Inspect current jobs, choose Pause only when that is intended, and verify History. This differs from `/dashboard`'s **Pause Conductor**, which controls the conductor sweep. Neither is a browser Disconnect.
+Choose **Stop work…** to review, **Cancel** to change nothing, or **Stop work now** to write the existing `MCO_KILL_SWITCH`. It halts active attempts and pauses intake/leasing; external effects already performed are not undone. **Resume** allows new work; halted jobs need explicit Retry. This differs from dashboard **Pause Conductor** (sweeps) and browser Disconnect.
 
 ### Show advanced
 
-Expand **Show advanced** to reveal Connection, Experience, Gateway controls, Connectors and optional Tenancy. Connection was covered above. Experience's **Advanced mode** is the same local preference as the topbar switch, not a permission grant.
+This legacy heading is retained for links; the current control is **Server administration**.
 
-**Gateway controls** displays governance, notifications, presence and memory fields from server metadata. Edit the intended fields, then **Save gateway settings**; this console sends changed fields and reloads their values. A success message means settings saved and audited, not that queued jobs finished. Raw choice settings currently render as text fields in this component; use exactly the allowed values or use `/dashboard`, which renders choices as dropdowns.
+When connected, expand **Server administration** for Connection, Experience, Gateway controls, Connectors and optional Tenancy. Disconnected connection fields appear directly. Experience’s **Technical details** is the topbar display preference, not a permission grant.
 
-**Connectors:** enter ServiceNow or Dynatrace fields, then **Save connectors** before **Test connection**. Secret fields start blank; blank keeps the existing secret. Test uses saved gateway configuration, not unsaved form text. A successful Test reveals **Sync now**, which can import/create/update work; it is a write, not another health probe. Inspect the resulting created/updated/skipped summary. A locked encrypted secret store must be unlocked through the supported setup workflow; do not put secrets into plaintext as a workaround.
+**Gateway controls** shows governance, notifications, presence and memory metadata, including dropdowns for allowed choices. Edit intended fields, then **Save gateway settings**; changed fields are submitted and reloaded. A requested stop requires confirmation. Saved/audited configuration does not prove jobs completed.
 
-**Tenancy** (Advanced and host-operator authority) lists configured orgs and in-use markers. Enter a new org name (1–64 letters/digits or `. _ : -`) and **Add org**. This persists the allowed-org list; it does not move existing jobs or agents. There is no remove/rename org button here. Use Fleet's Move or the technical admin surface only within authorized tenant boundaries.
+**Connectors:** edit ServiceNow/Dynatrace, then **Save connectors** before **Test connection**. Blank secrets preserve existing values. Unsaved edits disable tests and invalidate old test/import availability; late old tests after edits/reconnect cannot restore it. A current successful Test reveals **Import now**, which can create/update work. There is no import dry-run/count preview; inspect the result summary. Unlock encrypted storage through supported setup rather than moving secrets to plaintext.
+
+**Tenancy** (Technical details and host-operator authority) lists configured orgs and in-use markers. Enter a new org name (1–64 letters/digits or `. _ : -`) and **Add org**. This persists the allowed-org list; it does not move existing jobs or agents. There is no remove/rename org button here. Use Fleet's Move or the technical admin surface only within authorized tenant boundaries.
 
 For the full server-driven settings catalogue and groups omitted by this console, use [technical control-plane settings](#technical-control-plane-settings). See also [settings guide](settings-and-configuration.md).
 
@@ -235,11 +245,11 @@ Open the gateway's `/dashboard`, paste an existing bearer token and choose **Unl
 
 Operations refreshes approximately every five seconds. Click Job/Title/Status/Priority/Target/Leased By/Created headings to toggle sorting. Use **Audit** to show a job's event text. **Approve / Reject** act on a queued gate; rejection prompts for a reason. **Retry** appears beside failed/rejected work.
 
-Row and header checkboxes fill a shared selection across Approval Queue and Job Board. **Approve**, **Reject**, **Retry**, **Cancel**, **Archive**, **Reassign**, and **Clear** appear in the bulk bar. Reassign prompts for a role. Read result counts; partial errors are possible. **Known limitation:** cancelling the dashboard's Cancel-reason prompt still proceeds with an empty reason; do not use that prompt's Cancel as an abort mechanism. Use Clear before selecting a batch action. Individual Reject similarly turns prompt cancellation into an empty rejection request.
+Row/header checkboxes fill a shared selection across Approval Queue and Job Board. Approve, Reject, Retry, Cancel, Archive, Reassign and Clear appear in the bulk bar. Reassign prompts for a role; partial failures are possible. Cancelling a reason prompt for batch Cancel/Reject or individual Reject submits nothing. Clear removes the current selection.
 
 **Autonomy Engine** shows conductor state, sweep interval, shadow/live-write status and active-run count. **Pause / Resume** changes conductor sweeps; **Tick Now** triggers a real manual sweep that may advance jobs. These are writes and do not grant new authority or change shadow/live policy.
 
-**Live Look** reads autonomy state and opens a modal with active/failing runs, database location and repository-write status. Its **Trigger Sweep Now**, **Pause Conductor / Resume Conductor** and each **Abort Run** mutate live state. **Close** or the backdrop dismisses the modal. **Known limitation:** Abort Run's reason prompt treats Cancel as “Aborted by operator” and still submits the abort. Do not click Abort Run merely to inspect it. This technical Live Look is different from Home's read-only Score drawing.
+**Live Look** reads autonomy state into a modal with active/failing runs, database location and repository-write status. Trigger Sweep Now, Pause/Resume Conductor and Abort Run mutate state. Abort asks for a reason; prompt Cancel submits nothing. Close/backdrop dismisses. This differs from Home’s read-only Score drawing; the specialist modal still needs separate keyboard acceptance.
 
 CLI doorway: [Scores and autonomy](scores-and-autonomy.md). A ready server, active conductor or visible run is not end-to-end evidence of work delivery.
 
@@ -321,13 +331,13 @@ See [installation/shortcut setup](desktop-app-and-tray.md#1-installation-one-cli
 | Stop all | Stops configured components, including exact matching external processes belonging to the same user, and disables/ends their scheduled tasks. | Can interrupt active executors. Inspect component rows and logs; it is broader than Exit. |
 | Restart all | Stop all then Start all. | May interrupt active work and leave scheduled tasks disabled. Verify the complete stack afterward. |
 | Component row | Select a row to filter the bottom log viewer to its last 100 lines. State/Process/Last error show component evidence. | External workers retain their original logs; an empty app log is not evidence they are silent. |
-| Start selected | Select the intended component then Start selected. | Gateway must be ready before scheduler/workers. No selection is a silent no-op. Only the first selected row is used. |
+| Start selected | Select one component then Start selected. The table allows one row; selected actions disable with no selection or while busy. | Gateway must be ready before scheduler/workers. |
 | Stop selected | Select the intended component then Stop selected. | Stops its process tree/exact external match and disables its matching scheduled task. |
 | Restart selected | Select the component then Restart selected. | Stop then start; inspect the row and work ownership before/after. |
 | Open console | Opens the configured local `/console` in the default browser. | It does not start the server or authenticate that browser automatically. |
 | Fleet settings | Opens the fleet TOML in Notepad, creating a starter file if absent. Save intentionally. | This button can write/create a file even before Reload. See [fleet schema](sidecars-and-fleet-daemons.md#supported-fields). |
-| Reload settings | Reloads fleet definitions. Removed or changed workers can be stopped as part of reconciliation. | This is not a read-only refresh. Inspect changed worker rows, then explicitly start what should run. |
-| Move workers into app | Disables matching recurring tasks, Stop all, then Start all under app supervision. | This is a consequential handoff that interrupts process trees. Do between jobs with appropriate authorization, not as a cosmetic warning dismissal. |
+| Apply fleet changes… | Reviews added/changed/removed names. Cancel changes nothing; confirm invokes existing reconciliation. Changed/removed components may stop, including exact external matches. | Added definitions are configured, not started. The file is read again on apply; verify state before/after. |
+| Move workers into app… | Reviews components, observed states/PIDs and enabled tasks. Cancel changes nothing; confirm disables matching tasks, stops configured trees, then starts app supervision. | Do between jobs with authorization. Work/lease status is unknown; process presence does not prove a between-job window. Scope is rechecked on apply. |
 | Window X | Hides the window if tray support exists; otherwise exits. | Tray fallback explicitly warns that close exits. |
 
 Right-click the tray icon: **Open BitCadence** restores the control window; **Start all**, **Stop all** and **Open console** have the same scope as above; **Exit** shuts down only supervisor-owned child processes and exits. Exact external workers remain unless Stop was used. A second shortcut launch brings forward the existing app; `--start-all` can also request a start in that instance.
@@ -338,6 +348,6 @@ Autostart is configured through the [autostart script](desktop-app-and-tray.md#5
 
 ## Coverage and limits
 
-The machine-readable [GUI feature coverage](_review/gui-feature-coverage.json) maps control/workflow groups to source and this guide. It includes twelve console pages, the read-only Score view and drawers, five technical control-plane pages/lock/modal flows, Windows window/tray actions and every current server-driven setting. It also marks unreachable legacy console components and pending checkout changes.
+The machine-readable [GUI feature coverage](_review/gui-feature-coverage.json) maps grouped controls to this guide and current component/function source anchors. It covers thirteen console destinations, Score/detail views, five dashboard pages and lock/modal flows, Windows/tray actions and current server settings. Unreachable legacy components are separate. Source hashes are refreshed at final freeze only.
 
 This is static source verification. Authentication, browser keyboard/assistive-technology behavior, remote host differences, external provider tests, downloads, live job transitions and Windows task handoffs require separate controlled runtime checks. No production jobs, schedules, tokens, services, approvals or GPU work were changed while writing it. Proposed improvements and known mismatches are in [UX review](UX-REVIEW.md).

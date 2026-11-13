@@ -40,6 +40,7 @@
   let eventsCache = {};
   let prevStatus = {};
   let liveActivity = []; // synthesized feed: {id, job_id, event, created_at, actor_id, actor_role}
+  let mutationResults = []; // Retained across page navigation until the connection changes.
 
   const isLive = () => connState === "live";
   const emit = () => listeners.forEach((fn) => fn());
@@ -66,21 +67,44 @@
     if (!res.ok) {
       let detail = "";
       try { detail = (await res.json()).detail || ""; } catch (e) { /* ignore */ }
-      throw new Error("HTTP " + res.status + (detail ? " — " + detail : ""));
+      const description = typeof detail === "string" ? detail : (detail.message || detail.reason || JSON.stringify(detail));
+      const error = new Error("HTTP " + res.status + (description ? " — " + description : ""));
+      error.status = res.status;
+      error.detail = detail;
+      if (res.status === 403) {
+        const reason = ((detail && detail.code) || "") + " " + description;
+        error.denialKind = /tenant|organi[sz]ation|cross.org/i.test(reason) ? "tenant"
+          : /scope/i.test(reason) ? "scope"
+          : /policy|governance/i.test(reason) ? "policy"
+          : /role|approver|authorit/i.test(reason) ? "authority" : "denied";
+      }
+      throw error;
     }
     return res.json();
   }
 
-  // A missing approver right is never shown as "HTTP 403": say it in words, point at the
-  // one-key fix, and tell the Approvals page so it can show its own card.
-  const APPROVER_WORDS = "Your account isn't an approver yet. Run `bitcadence fix` in a terminal and answer Y.";
   function plainFailure(e, fallback) {
     const text = String((e && e.message) || e || "");
-    if (/^HTTP 403/.test(text)) {
-      try { window.dispatchEvent(new CustomEvent("bc-approver-blocked")); } catch (err) { /* old browser */ }
-      return APPROVER_WORDS;
+    if (e && e.status === 403) {
+      return "Access denied (" + e.denialKind + "): " + text.replace(/^HTTP 403\s*[—-]?\s*/, "")
+        + ". Ask your gateway administrator to review this request and your existing access.";
     }
     return fallback ? fallback(text) : text;
+  }
+
+  function rememberMutation(action, jobIds, result) {
+    const succeeded = Array.isArray(result.succeeded) ? result.succeeded.filter(id => jobIds.includes(id)) : [];
+    const failed = result.failed && typeof result.failed === "object" ? { ...result.failed } : {};
+    jobIds.forEach(id => {
+      if (!succeeded.includes(id) && !Object.prototype.hasOwnProperty.call(failed, id)) {
+        failed[id] = "No outcome was reported by the gateway. Inspect History before retrying.";
+      }
+    });
+    const record = { ...result, id: rid(), action, requested: jobIds.slice(), succeeded, failed,
+      created_at: new Date().toISOString() };
+    mutationResults = [record, ...mutationResults].slice(0, 10);
+    emit();
+    return record;
   }
 
   const exchangeFns = new Set();
@@ -231,6 +255,7 @@
         portfolio = null; portfolioError = null; portfolioFetchedAt = 0;
         projectCoverage = { count: 0, truncated: false, ceiling: 5000 };
         agents = []; eventsCache = {}; prevStatus = {}; liveActivity = [];
+        mutationResults = [];
         await poll();
         startPolling();
         startWs();
@@ -248,6 +273,7 @@
       stopWs();
       stopPolling();
       connState = "demo"; lastError = null;
+      mutationResults = [];
       projectJobs = []; projectFetchedAt = 0;
       portfolio = null; portfolioError = null; portfolioFetchedAt = 0;
       projectCoverage = { count: 0, truncated: false, ceiling: 5000 };
@@ -259,6 +285,11 @@
 
     // ---- reads ----
     getJobs: () => connState === "demo" ? demo.getJobs() : jobs.slice(),
+    getMutationResults: () => mutationResults.slice(),
+    async fetchJob(jobId) {
+      if (connState === "demo") return demo.getJobs().find(job => job.id === jobId) || null;
+      return withWorkflow(await api("/api/jobs/" + encodeURIComponent(jobId)));
+    },
     getProjectJobs: () => connState === "demo" ? demo.getJobs() : (projectFetchedAt ? projectJobs.slice() : jobs.slice()),
     getProjectCoverage: () => connState === "demo"
       ? { count: demo.getJobs().length, truncated: false, ceiling: 5000 }
@@ -282,23 +313,23 @@
       }
       return eventsCache[jobId];
     },
-    getAllEvents: (n) => isLive() ? liveActivity.slice(0, n || 12) : demo.getAllEvents(n),
+    getAllEvents: (n) => connState !== "demo" ? liveActivity.slice(0, n || 12) : demo.getAllEvents(n),
 
     // ---- writes ----
     async approve(jobId, actor) {
       if (connState === "demo") return demo.approve(jobId, actor);
-      try { await api("/api/jobs/" + jobId + "/approve", { method: "POST" }); await poll(); }
-      catch (e) { toast("err", "Approve failed", plainFailure(e)); }
+      try { const result = await api("/api/jobs/" + jobId + "/approve", { method: "POST" }); await poll(); return result; }
+      catch (e) { toast("err", "Approve failed", plainFailure(e)); throw e; }
     },
     async reject(jobId, actor, reason) {
       if (connState === "demo") return demo.reject(jobId, actor, reason);
-      try { await api("/api/jobs/" + jobId + "/reject", { method: "POST", body: JSON.stringify({ reason: reason || "" }) }); await poll(); }
-      catch (e) { toast("err", "Reject failed", plainFailure(e)); }
+      try { const result = await api("/api/jobs/" + jobId + "/reject", { method: "POST", body: JSON.stringify({ reason: reason || "" }) }); await poll(); return result; }
+      catch (e) { toast("err", "Reject failed", plainFailure(e)); throw e; }
     },
     async retryNow(jobId) {
       if (connState === "demo") return demo.retryNow(jobId);
       try { await api("/api/jobs/" + jobId + "/retry", { method: "POST" }); await poll(); toast("ok", "Re-queued", "Job sent back to the board."); }
-      catch (e) { toast("err", "Retry failed", plainFailure(e, (t) => t + " (retry needs an approver-role token)")); }
+      catch (e) { toast("err", "Retry failed", plainFailure(e)); throw e; }
     },
     async cancelJob(jobId, reason) {
       if (connState === "demo") return demo.cancelJob ? demo.cancelJob(jobId, reason) : null;
@@ -307,18 +338,21 @@
         await poll();
         toast("ok", "Cancelled", "The job was called off.");
       }
-      catch (e) { toast("err", "Cancel failed", e.message + " (cancel needs an approver-role token)"); }
+      catch (e) { toast("err", "Cancel failed", plainFailure(e)); throw e; }
     },
     async reassignJob(jobId, toRole, toInstance) {
-      if (connState === "demo") return demo.reassignJob ? demo.reassignJob(jobId, toRole, toInstance) : null;
+      if (connState === "demo") throw new Error("Connect to a gateway to create a replacement job. Demo reassignment is unavailable.");
       try {
-        const body = { to_role: toRole };
-        if (toInstance) body.to_instance = toInstance;
-        await api("/api/jobs/" + jobId + "/reassign", { method: "POST", body: JSON.stringify(body) });
+        const body = { target_agent_role: toRole };
+        if (toInstance) body.target_agent_id = toInstance;
+        const result = await api("/api/jobs/" + jobId + "/reassign", { method: "POST", body: JSON.stringify(body) });
         await poll();
-        toast("ok", "Reassigned", "Now waiting on " + (toInstance || toRole) + ".");
+        const replacement = result.job || {};
+        rememberMutation("reassign", [jobId], { succeeded: [jobId], failed: {}, replacements: { [jobId]: replacement.id } });
+        toast("ok", "Replacement created", "Replacement " + (replacement.id || "(see History)") + " targets " + (toInstance || toRole) + ". Original attempt retained in History.");
+        return result;
       }
-      catch (e) { toast("err", "Reassign failed", e.message + " (reassign needs an approver-role token)"); }
+      catch (e) { toast("err", "Reassign failed", plainFailure(e)); throw e; }
     },
     async assignProject(jobId, name) {
       if (connState === "demo") return demo.assignProject(jobId, name);
@@ -330,18 +364,41 @@
     },
     async batchAction(action, jobIds, extra = {}) {
       if (connState === "demo") {
-        const res = demo.batchAction ? demo.batchAction(action, jobIds, extra) : { ok: true, success_count: jobIds.length, failure_count: 0 };
-        toast("ok", "Batch " + action, `Action applied to ${res.success_count} job(s).`);
-        return res;
+        const succeeded = [], failed = {};
+        for (const id of jobIds) {
+          if (action === "reassign") { failed[id] = "Connect to a gateway to create replacement jobs; demo reassignment is unavailable."; continue; }
+          const result = demo.batchAction ? demo.batchAction(action, [id], extra) : null;
+          if (result && result.success_count === 1) succeeded.push(id);
+          else failed[id] = "The demo job was not eligible for this action.";
+        }
+        const result = rememberMutation(action, jobIds, { succeeded, failed });
+        toast(Object.keys(failed).length ? "info" : "ok", "Batch " + action, `Completed: ${succeeded.length} succeeded, ${Object.keys(failed).length} failed.`);
+        return result;
       }
       try {
         const payload = Object.assign({ action, job_ids: jobIds }, extra);
         const res = await api("/api/jobs/batch-action", { method: "POST", body: JSON.stringify(payload) });
         await poll();
-        toast(res.failure_count > 0 ? "info" : "ok", "Batch " + action, `Completed: ${res.success_count} succeeded, ${res.failure_count} failed.`);
-        return res;
+        const replacements = {};
+        if (action === "reassign") {
+          // Originals are auto-archived and may disappear from the shared window.
+          // Read exact IDs, at most four concurrent requests; never repeat writes.
+          const ids = res.succeeded || [];
+          for (let offset = 0; offset < ids.length; offset += 4) {
+            await Promise.all(ids.slice(offset, offset + 4).map(async id => {
+              try {
+                const original = await api("/api/jobs/" + encodeURIComponent(id));
+                if (original.reassigned_to_job_id) replacements[id] = original.reassigned_to_job_id;
+              } catch (error) { /* The mutation succeeded; metadata lookup is separate. */ }
+            }));
+          }
+        }
+        const result = rememberMutation(action, jobIds, { ...res, replacements });
+        toast(Object.keys(result.failed).length ? "info" : "ok", "Batch " + action, `Completed: ${result.succeeded.length} succeeded, ${Object.keys(result.failed).length} failed.`);
+        return result;
       } catch (e) {
         toast("err", "Batch " + action + " failed", plainFailure(e));
+        rememberMutation(action, jobIds, { succeeded: [], failed: Object.fromEntries(jobIds.map(id => [id, plainFailure(e)])) });
         throw e;
       }
     },
@@ -352,7 +409,7 @@
         await poll();
         toast(payload.requires_approval ? "approval" : "ok", "Job created", payload.title);
         return res.job;
-      } catch (e) { toast("err", "Create failed", e.message); }
+      } catch (e) { toast("err", "Create failed", plainFailure(e)); throw e; }
     },
     // "Ask for something": the gateway draws the plan (same planner as `bitcadence ask`).
     async draftAsk(body) {

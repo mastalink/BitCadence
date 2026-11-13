@@ -146,12 +146,33 @@ class DesktopController:
         self.stop_all()
         self.start_all()
 
-    def reload(self):
+    def _fleet_configs(self):
+        """Read/validate definitions without changing any process or task."""
         configs = load_fleet(self.fleet_path) if self.fleet_path.exists() else {}
         if {"gateway", "scheduler"} & configs.keys():
             raise ValueError("Worker names 'gateway' and 'scheduler' are reserved")
-        configs = {name: WorkerConfig(name, name, None, "waker", None, 10, 30)
-                   for name in ("gateway", "scheduler")} | configs
+        return {name: WorkerConfig(name, name, None, "waker", None, 10, 30)
+                for name in ("gateway", "scheduler")} | configs
+
+    def preview_reload(self):
+        configs = self._fleet_configs()
+        current = self.supervisor.workers
+        return {"removed": sorted(set(current) - configs.keys()),
+                "changed": sorted(name for name in current.keys() & configs.keys()
+                                  if current[name].config != configs[name]),
+                "added": sorted(configs.keys() - current.keys())}
+
+    def preview_handoff(self):
+        """Report the existing handoff scope without ticking the supervisor."""
+        components = []
+        for name, runtime in self.supervisor.workers.items():
+            pids = [str(runtime.process.pid)] if runtime.process and runtime.process.poll() is None else []
+            pids.extend(str(process.pid) for process in self.external(name))
+            components.append({"name": name, "state": runtime.state.value, "pids": pids})
+        return {"tasks": self.active_tasks(), "components": components}
+
+    def reload(self):
+        configs = self._fleet_configs()
         for name in set(self.supervisor.workers) - configs.keys():
             self.stop(name)
             del self.supervisor.workers[name]

@@ -8,18 +8,18 @@ Configure gateway operational parameters, customize user interface preferences, 
 ## Step-by-Step Instructions
 
 ### 1. Open Settings
-Click **Settings** at the bottom of the left menu. The top of the page has the everyday cards: **Pause everything**, **Tell me on my phone** and **Memory**. Everything else is under **Show advanced** (see [Settings](Settings.md)).
+Click **Settings**. Disconnected connection fields appear directly; once connected the everyday cards are **Stop work**, **Tell me on my phone** and **Memory**. Expand **Server administration** for specialist fields (see [Settings](Settings.md)). Older screenshots may show previous labels.
 
 ![Settings Panel](img/02-console-settings.png)
 
 ### 2. Advanced mode
-Under **Show advanced → Experience**, **Advanced mode** shows the technical layer: raw IDs, payloads, retry budgets and YAML. Leave it off for the plain wording used on every page of this wiki. The **Advanced** switch in the top bar does the same thing.
+Under **Server administration → Experience**, **Technical details** shows IDs, payloads and retry fields. The same topbar switch changes only display, never permissions. Use **Administration** to discover helper credentials and the retained specialist dashboard screens.
 
 ### 3. Gateway controls
-Under **Show advanced → Gateway controls**: stop work, approver roles, always-gated roles, the escalation connector, the default job board sort order, ntfy notifications, how long before a helper counts as offline, and the two Drumline memory switches. Click **Save gateway settings** to apply them.
+Under **Server administration → Gateway controls**, edit operational fields and metadata choices, then **Save gateway settings**. Only changed fields are submitted. A stop request confirms its effect. **Stop work… → Stop work now** halts active attempts and pauses intake; Resume permits new work but does not retry halted jobs. Cancel changes nothing.
 
 ### 4. Connectors and tenancy
-- **Connectors** holds the ServiceNow and Dynatrace connection details, each with **Test connection**. Passwords and tokens show as `not set` or are masked, and are stored encrypted.
+- **Connectors** holds ServiceNow/Dynatrace fields. Choose **Save connectors**, then **Test connection**. Unsaved edits invalidate prior tests and disable import availability. A successful current test offers **Import now**, which can create/update work. Blank secret fields preserve saved secrets; no import dry-run is provided.
 - **Tenancy** lists the organizations that keep teams' jobs and memory separate. The edition decides which of these you have: Core covers the job board, governance, workflows, Drumline memory, console and MCP server; Team adds shared gateway, multi-tenant orgs and RBAC; Enterprise adds connectors, SSO and audit export. Run `mco edition` to see yours.
 
 ---
@@ -50,7 +50,7 @@ mco doctor
 ## What You'll See
 
 - **Automatic Secret Encryption:** Whenever you set a sensitive key (such as `ANTHROPIC_API_KEY` or `SERVICENOW_TOKEN`), BitCadence writes `encrypted_in_secret_store` to `.env` and encrypts the real secret inside `secrets.enc`.
-- **Hot Reloading:** Configuration changes made via the settings API take effect immediately in the running gateway process.
+- **Apply timing:** The API applies supported settings and records changes. Respect field-specific restart requirements, such as structured logging; a saved setting is not proof of completed work.
 
 ---
 

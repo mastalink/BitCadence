@@ -11,6 +11,7 @@ SOURCE=(Path(__file__).resolve().parents[1]/'src/mco/dashboard.py').read_text(en
 @pytest.mark.parametrize('function,end,call',[
     ('abortActiveRun','openLiveLook',"await abortActiveRun('test-run')"),
     ('bulkAction','toggleAutonomyPause',"await bulkAction('cancel')"),
+    ('decide','retryJob',"await decide('job-1','reject')"),
 ])
 @pytest.mark.parametrize('answer,expected',[(None,0),('',1),('Owner requested',1)])
 def test_prompt_cancel_does_not_call_api(function,end,call,answer,expected):

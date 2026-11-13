@@ -1,6 +1,13 @@
 // BitCadence — Agent Fleet + Settings screens.
 const { useState: useStateO, useEffect: useEffectO } = React;
 
+function gatewayTarget(store = window.BitCadenceStore) {
+  try {
+    const base = (store.config && store.config().url) || window.location.href;
+    return new URL(base, window.location.href).host;
+  } catch (_) { return "your connected gateway"; }
+}
+
 // ----- Register agent panel -----
 function RegisterAgentPanel({ tone, advanced, onDone, onCancel }) {
   const store = window.BitCadenceStore;
@@ -323,7 +330,7 @@ function HelpersPage() {
     setBusy(true); setNote(""); setError("");
     try {
       const res = await store.addHelper({ name: name.trim(), role });
-      setNote(res.helper.name + " is added. Its sign-in is saved on this computer.");
+      setNote(res.helper.name + " is added. Its sign-in is saved on the gateway computer.");
       setName(""); setAdding(false);
       await load();
     } catch (e) { setError(helperMessage(e)); }
@@ -412,6 +419,7 @@ function HelpersPage() {
 function ConnectPage() {
   const store = window.BitCadenceStore;
   const live = (store.mode ? store.mode() : "demo") === "live";
+  const targetHost = gatewayTarget(store);
   const [apps, setApps] = useStateO(null);
   const [error, setError] = useStateO("");
   const [note, setNote] = useStateO("");
@@ -448,7 +456,7 @@ function ConnectPage() {
     <div className="hp-view">
       <style>{HELPERS_STYLE}</style>
       <h1>Connect an AI</h1>
-      <p className="sub">Pick the apps you already use. One tap each. We do the setup for you.</p>
+      <p className="sub">Apps on {targetHost}. Changes apply to the gateway computer, which may be different from this browser's computer.</p>
       {!live ? <div className="hp-card">Connect to your BitCadence in Settings first, then you can connect your AI apps here.</div> : null}
       {error ? <div className="hp-error" role="alert" style={{ marginBottom: 14 }}>{error}</div> : null}
       <div role="status" aria-live="polite">{note ? <div className="hp-card">{note}</div> : null}</div>
@@ -462,7 +470,7 @@ function ConnectPage() {
                 <span aria-hidden="true">{a.connected ? "●" : "○"}</span>{a.connected ? "Connected" : (a.found ? "Not connected" : "Not found")}
               </span>
             </div>
-            {!a.found ? <p className="hp-hint">We couldn't find {a.name} on this computer. Install it first, then come back.</p> : null}
+            {!a.found ? <p className="hp-hint">We couldn't find {a.name} on the gateway computer ({targetHost}). Install it there, then come back.</p> : null}
             <div className="hp-row">
               {a.connected ? (
                 <>
@@ -508,7 +516,12 @@ function SchedulesPage() {
   const [days, setDays] = useStateO([1, 3, 5]);
   const [time, setTime] = useStateO("02:00");
   const [words, setWords] = useStateO("");
+  const [zone, setZone] = useStateO(() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (_) { return "UTC"; }
+  });
+  const [preview, setPreview] = useStateO(null);
   const [busy, setBusy] = useStateO(false);
+  const previewKey = JSON.stringify({ frequency: freq, time, days, timezone: zone });
 
   async function load() {
     try {
@@ -521,17 +534,19 @@ function SchedulesPage() {
   useEffectO(() => {
     if (!live) return undefined;
     let current = true;
-    store.schedulePreview({ frequency: freq, time, days })
-      .then((r) => { if (current) setWords(r.words); })
-      .catch((e) => { if (current) setWords(helperMessage(e)); });
+    setPreview(null);
+    store.schedulePreview({ frequency: freq, time, days, timezone: zone })
+      .then((r) => { if (current) { setWords(r.words); setPreview({ ...r, key: previewKey }); } })
+      .catch((e) => { if (current) { setWords(helperMessage(e)); setPreview(null); } });
     return () => { current = false; };
-  }, [live, freq, time, days]);
+  }, [live, freq, time, days, zone]);
 
   async function save() {
+    if (!preview || preview.key !== previewKey) return;
     setBusy(true); setNote(""); setError("");
     try {
-      const res = await store.addSchedule({ what, frequency: freq, time, days });
-      setNote("Saved. " + res.words + ".");
+      const res = await store.addSchedule({ what, frequency: freq, time, days, timezone: zone });
+      setNote("Saved. " + res.words + " in " + zone + "." + (res.next_words ? " Next run: " + res.next_words : ""));
       await load();
     } catch (e) { setError(helperMessage(e)); }
     setBusy(false);
@@ -590,9 +605,12 @@ function SchedulesPage() {
                   <input id="sc-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
                 </div>
               ) : null}
-              <p className="hp-hint">Your time zone is detected from your computer.</p>
-              <div className="hp-card" style={{ marginTop: 14 }} aria-live="polite"><b>{words}</b></div>
-              <div className="hp-row"><button className="hp-primary" disabled={busy || !what || (freq === "days" && !days.length)} onClick={save}>{busy ? "Saving…" : "Save"}</button></div>
+              <label className="hp-label" htmlFor="sc-zone">Time zone (IANA)</label>
+              <input id="sc-zone" value={zone} onChange={(e) => setZone(e.target.value)} placeholder="America/New_York or UTC" />
+              <p className="hp-hint">Starts with this browser's time zone. The gateway saves the zone shown here and follows its daylight saving rules.</p>
+              <div className="hp-card" style={{ marginTop: 14 }} aria-live="polite"><b>{words}</b>
+                {preview && preview.key === previewKey ? <p>Time zone: {preview.timezone}<br />Next run: {preview.next_words}</p> : <p>Choose a valid time zone to preview the next run.</p>}</div>
+              <div className="hp-row"><button className="hp-primary" disabled={busy || !what || !preview || preview.key !== previewKey || (freq === "days" && !days.length)} onClick={save}>{busy ? "Saving…" : "Save"}</button></div>
             </div>
           )}
         </div>
@@ -641,6 +659,8 @@ function ConnectorsCard({ tone }) {
   const live = (store.mode ? store.mode() : "demo") === "live";
   const [meta, setMeta] = useStateO(null);   // key -> setting metadata (incl. set/unset)
   const [form, setForm] = useStateO({});       // editable field values
+  const [savedForm, setSavedForm] = useStateO({});
+  const revision = React.useRef(0);
   const [saving, setSaving] = useStateO(false);
   const [saveMsg, setSaveMsg] = useStateO(null);
   const [test, setTest] = useStateO({});       // name -> { busy, ok, detail }
@@ -655,10 +675,12 @@ function ConnectorsCard({ tone }) {
     const conn = (data.groups && data.groups.connectors) || [];
     const m = {}, f = {};
     conn.forEach((s) => { m[s.key] = s; f[s.key] = s.type === "secret" ? "" : (s.value || ""); });
-    setMeta(m); setForm(f);
+    setMeta(m); setForm(f); setSavedForm(f);
   };
 
   useEffectO(() => {
+    revision.current += 1;
+    setTest({}); setSync({}); setHealth(null);
     if (!live) { setMeta(null); return; }
     let alive = true;
     setLoadErr(null);
@@ -693,9 +715,16 @@ function ConnectorsCard({ tone }) {
     );
   }
 
-  const set = (k, v) => setForm((f) => Object.assign({}, f, { [k]: v }));
+  const dirty = Object.keys(form).some(k => form[k] !== savedForm[k]);
+  const set = (k, v) => {
+    revision.current += 1;
+    setForm((f) => Object.assign({}, f, { [k]: v }));
+    setTest({}); setSync({}); setHealth(null); setSaveMsg(null);
+  };
 
   async function save() {
+    revision.current += 1;
+    setTest({}); setSync({}); setHealth(null);
     setSaving(true); setSaveMsg(null);
     const payload = {};
     Object.keys(meta || {}).forEach((k) => {
@@ -712,12 +741,14 @@ function ConnectorsCard({ tone }) {
   }
 
   async function runTest(name) {
+    if (dirty || saving) return;
+    const testedRevision = revision.current;
     setTest((t) => Object.assign({}, t, { [name]: { busy: true } }));
     try {
       const r = await store.testConnector(name);
-      setTest((t) => Object.assign({}, t, { [name]: { busy: false, ok: !!r.ok, detail: r.detail || "" } }));
+      if (testedRevision === revision.current) setTest((t) => Object.assign({}, t, { [name]: { busy: false, ok: !!r.ok, detail: r.detail || "", revision: testedRevision } }));
     } catch (e) {
-      setTest((t) => Object.assign({}, t, { [name]: { busy: false, ok: false, detail: e.message } }));
+      if (testedRevision === revision.current) setTest((t) => Object.assign({}, t, { [name]: { busy: false, ok: false, detail: e.message } }));
     }
   }
 
@@ -737,6 +768,7 @@ function ConnectorsCard({ tone }) {
   }
 
   async function runSync(name) {
+    if (dirty || saving || !test[name] || !test[name].ok || test[name].revision !== revision.current) return;
     setSync((s) => Object.assign({}, s, { [name]: { busy: true } }));
     try {
       const r = await store.syncConnector(name);
@@ -765,19 +797,19 @@ function ConnectorsCard({ tone }) {
                 </span>
               ) : null}
             </div>
-            <Btn small disabled={test[c.name] && test[c.name].busy} onClick={() => runTest(c.name)}>
+            <Btn small disabled={dirty || saving || !meta || (test[c.name] && test[c.name].busy)} onClick={() => runTest(c.name)}>
               {test[c.name] && test[c.name].busy ? "Testing…" : "Test connection"}
             </Btn>
-            {live && test[c.name] && test[c.name].ok ? (
+            {live && !dirty && !saving && test[c.name] && test[c.name].ok && test[c.name].revision === revision.current ? (
               <Btn small disabled={sync[c.name] && sync[c.name].busy} onClick={() => runSync(c.name)}>
-                {sync[c.name] && sync[c.name].busy ? "Syncing…" : "Sync now"}
+                {sync[c.name] && sync[c.name].busy ? "Importing…" : "Import now"}
               </Btn>
             ) : null}
           </div>
           {c.fields.map((k) => (meta && meta[k]) ? (
             <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
-              <label style={{ flex: 1, fontSize: 12.5, color: "var(--text-2)" }}>{meta[k].label}</label>
-              <input value={form[k] || ""} onChange={(e) => set(k, e.target.value)}
+              <label htmlFor={"connector-" + k} style={{ flex: 1, fontSize: 12.5, color: "var(--text-2)" }}>{meta[k].label}</label>
+              <input id={"connector-" + k} value={form[k] || ""} onChange={(e) => set(k, e.target.value)} disabled={saving}
                 type={meta[k].type === "secret" ? "password" : "text"}
                 placeholder={meta[k].type === "secret" ? (meta[k].value ? "•••• set — blank keeps it" : "not set") : (meta[k].placeholder || "")}
                 style={inputStyle} />
@@ -800,6 +832,7 @@ function ConnectorsCard({ tone }) {
         {saveMsg ? <span style={{ fontSize: 12.5, color: saveMsg.ok ? "var(--st-done-fg)" : "var(--st-failed-fg)" }}>{saveMsg.text}</span> : null}
         {loadErr ? <span style={{ fontSize: 12.5, color: "var(--st-failed-fg)" }}>{loadErr}</span> : null}
       </div>
+      {dirty ? <p role="status">Save changes before testing. Previous test results no longer apply.</p> : <p>Tests use saved gateway settings. Import now can create or update work.</p>}
     </Card>
   );
 }
@@ -978,7 +1011,7 @@ function Settings({ tone, advanced, setAdvanced }) {
       <Card style={{ marginBottom: 18 }}>
         <SectionTitle>Experience</SectionTitle>
         <SettingRow
-          title="Advanced mode"
+          title="Technical details"
           body={tone === "plain" ? "Show the technical layer: raw IDs, payloads, retry budgets, and YAML." : "Expose payload JSON, full UUIDs, retry/escalation config, and workflow YAML."}
           control={<Toggle on={advanced} onChange={setAdvanced} />} />
       </Card>
@@ -1003,6 +1036,7 @@ function PlainSettings({ children }) {
   const [note, setNote] = useStateO("");
   const [error, setError] = useStateO("");
   const [busy, setBusy] = useStateO(false);
+  const [confirmStop, setConfirmStop] = useStateO(false);
   async function load() {
     try {
       const rows = Object.values((await store.getSettings()).groups || {}).flat();
@@ -1016,7 +1050,8 @@ function PlainSettings({ children }) {
     setBusy(true); setError(""); setNote("");
     try {
       await store.saveSettings({ MCO_KILL_SWITCH: !paused });
-      setNote(paused ? "Resumed. Work will pick up again." : "Paused. Jobs in progress finish.");
+      setNote(paused ? "New work can start again. Halted jobs need Retry." : "Active attempts halted. New work is paused.");
+      setConfirmStop(false);
       await load();
     } catch (e) { setError(helperMessage(e)); }
     setBusy(false);
@@ -1026,15 +1061,19 @@ function PlainSettings({ children }) {
       <style>{HELPERS_STYLE}</style>
       <h1>Settings</h1>
       <p className="sub">The everyday things are on the other pages. This is the rest.</p>
-      {!live ? <div className="hp-card">Connect to your BitCadence first. Open "Show advanced" below to do that.</div> : null}
+      {!live ? <div className="hp-card">Connect to your BitCadence below. Actions require the permissions of your existing token.</div> : null}
       {error ? <div className="hp-error" role="alert" style={{ marginBottom: 14 }}>{error}</div> : null}
       <div role="status" aria-live="polite">{note ? <div className="hp-card">{note}</div> : null}</div>
       {live ? (
         <div className="hp-grid" style={{ marginBottom: 18 }}>
-          <div className="hp-card"><b>Pause everything</b>
-            <p className="hp-hint">Stops helpers from taking new work. Jobs in progress finish.</p>
+          <div className="hp-card"><b>Stop work</b>
+            <p className="hp-hint">Halts active attempts and pauses new work. Resume allows new work; halted jobs need Retry.</p>
             <p className="hp-hint">{paused === null ? "Checking…" : paused ? "Paused right now." : "Running normally."}</p>
-            <button disabled={busy || paused === null} onClick={flipPause}>{paused ? "Resume" : "Pause"}</button></div>
+            {confirmStop && !paused ? <div role="group" aria-label="Confirm stop work">
+              <p>This halts active attempts now and pauses new work. Their external effects are not undone. Nothing has changed yet.</p>
+              <button disabled={busy} onClick={flipPause}>Stop work now</button>
+              <button disabled={busy} onClick={() => setConfirmStop(false)}>Cancel</button>
+            </div> : <button disabled={busy || paused === null} onClick={paused ? flipPause : () => setConfirmStop(true)}>{paused ? "Resume" : "Stop work…"}</button>}</div>
           <div className="hp-card"><b>Tell me on my phone</b>
             <p className="hp-hint">A message when something needs you.</p>
             <p className="hp-hint">{phone === null ? "Checking…" : phone ? "On" : "Off. Turn it on from the terminal: bitcadence settings."}</p></div>
@@ -1042,12 +1081,11 @@ function PlainSettings({ children }) {
             <p className="hp-hint">Things BitCadence remembers for you are under Drumline in the menu.</p></div>
         </div>
       ) : null}
-      <h2>Advanced</h2>
-      <details className="hp-card">
-        <summary style={{ minHeight: 48, cursor: "pointer", fontWeight: 600 }}>Show advanced</summary>
+      {!live ? children : <details className="hp-card">
+        <summary style={{ minHeight: 48, cursor: "pointer", fontWeight: 600 }}>Server administration</summary>
         <p className="hp-hint">For people who like details: where BitCadence listens, the sign-in for this computer, and every raw setting.</p>
         {children}
-      </details>
+      </details>}
     </div>
   );
 }
@@ -1085,10 +1123,14 @@ function LiveControlSettings() {
       {fields.map(field => <SettingRow key={field.key} title={field.label}
         body={field.key === "MCO_KILL_SWITCH" ? "Stops active attempts and pauses new work. Turning it off leaves halted jobs for you to retry." : ""}
         control={field.type === "bool" ? <Toggle label={field.label} on={!!form[field.key]} onChange={v => change(field.key,v)} /> :
+          field.type === "choice" ? <select aria-label={field.label} value={form[field.key] ?? ""} onChange={e => change(field.key,e.target.value)}>
+            {(field.choices || []).map(value => <option key={value} value={value}>{value || "Infer from configuration"}</option>)}
+          </select> :
           <input aria-label={field.label} value={form[field.key] || ""} onChange={e => change(field.key,e.target.value)}
             style={{border:"1px solid var(--border)",padding:8,borderRadius:6,width:280}} />} />)}
     </div>) : null}
     {live ? <Btn kind="primary" disabled={busy || !Object.keys(dirty).length} onClick={async () => {
+      if (dirty.MCO_KILL_SWITCH && form.MCO_KILL_SWITCH && !window.confirm("Stop work now? Active attempts halt and new work pauses. Resume allows new work; halted jobs need Retry.")) return;
       setBusy(true);setMessage("");
       try {
         await store.saveSettings(Object.fromEntries(Object.keys(dirty).map(k => [k,form[k]])));
