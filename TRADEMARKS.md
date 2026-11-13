@@ -1,14 +1,14 @@
 # Trademark & Brand Policy
 
-**BitCadence™** and **Drumline™** are trademarks of Joe Arroyo (the
+**BitCadence™** and **Drumline™** are trademarks of Batoncadence LLC (the
 "Project Owner"). This policy explains how the marks may be used. It is
 separate from, and not limited by, the software license.
 
-> **Why this exists.** The BitCadence *source code* is open source under the
-> [MIT License](LICENSE). The MIT License grants rights to the **code** — it
+> **Why this exists.** The BitCadence *source code* is source-available under the
+> [Prosperity Public License 3.0.0](LICENSE). That license grants rights to the **code** — it
 > does **not** grant any rights to the **name, logo, or brand**. Trademark
 > rights are held separately by the Project Owner. This is the same model used
-> by most commercial open-source projects, and it is what preserves the
+> by most commercial source-available projects, and it is what preserves the
 > Project Owner's ability to offer a commercial edition and to license or
 > transfer the brand.
 
@@ -40,9 +40,9 @@ names refer to this same project.
 ## Commercial / Enterprise edition
 
 Certain components (the enterprise connectors, trusted-header SSO, audit
-export, and any hosted service) are **not** offered under the MIT License. See
-[LICENSE-ENTERPRISE.txt](LICENSE-ENTERPRISE.txt). The MIT core remains free and
-open; the enterprise edition and the brand are commercially reserved.
+export, and any hosted service) are **not** offered under the Core license. See
+[LICENSE-ENTERPRISE.txt](LICENSE-ENTERPRISE.txt). The Core stays free for personal and
+noncommercial use; business use, the enterprise edition and the brand are commercially licensed.
 
 ## Status & contact
 
@@ -54,4 +54,4 @@ open; the enterprise edition and the brand are commercially reserved.
 > for conflicts before filing — a rename is cheap now and expensive after a
 > pilot contract names the mark.
 
-Questions about brand or commercial use: **joeyr.arroyo@gmail.com**.
+Questions about brand or commercial use: an issue titled "Brand" on [github.com/mastalink/BitCadence](https://github.com/mastalink/BitCadence).

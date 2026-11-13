@@ -26,7 +26,7 @@ from mco.orchestrator.routes import (
 
 from tests.test_routes import FakeDB
 
-ADMIN = {"instance_id": "joe", "role": "human", "status": "online", "org_id": "default"}
+ADMIN = {"instance_id": "alex", "role": "human", "status": "online", "org_id": "default"}
 WORKER = {"instance_id": "w1", "role": "codex", "status": "online", "org_id": "default"}
 ORG_ADMIN = {"instance_id": "acme-admin", "role": "admin", "status": "online", "org_id": "acme"}
 
@@ -159,7 +159,7 @@ class TestInstanceIdValidation:
         assert resp.status_code == 400
         assert _ctx().db._agents == []
 
-    @pytest.mark.parametrize("good", ["codex-worker-2", "claude.research_01", "sso:joe", "A1"])
+    @pytest.mark.parametrize("good", ["codex-worker-2", "claude.research_01", "sso:alex", "A1"])
     def test_safe_identifiers_accepted(self, good):
         resp = _ctx().http.post("/api/agents", json={"instance_id": good, "role": "codex"})
         assert resp.status_code == 200

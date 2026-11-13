@@ -22,7 +22,7 @@ Resolution order:
        trusted-header auth or a connector configured -> enterprise;
        a cloud database configured -> team; otherwise community.
 
-Gating is honor-system by design (the code is MIT); `require_feature` exists
+Gating is honor-system by design (the code is source-available); `require_feature` exists
 so a posture is *deterministic* - explicitly pinning `community` reliably
 disables enterprise surfaces, which is also how the test matrix exercises
 each edition.

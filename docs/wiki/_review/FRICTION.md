@@ -1,3 +1,5 @@
+> **Historical audit.** This was written against the console before the v0.6.0 redesign. The `img/` names below refer to screenshots that were replaced or removed (the workflow builder, Flow Control and agent fleet screens no longer exist). Helpers, Ask and Connect an AI replaced them.
+
 # BitCadence Friction Inventory & Flow Surfaces Audit
 
 This document presents a comprehensive, hands-on audit of user friction across every user-facing surface of BitCadence, evaluated against two non-technical personas:

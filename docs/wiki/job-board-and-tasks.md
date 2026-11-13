@@ -1,57 +1,58 @@
 # Job Board & Managing Tasks
 
 ## Goal
-Submit new tasks to agent dropboxes, inspect real-time queue states, examine tamper-evident execution drawers, and manage task lifecycles (retries, cancellations, reassignments, and archiving).
+Submit new tasks to helper dropboxes, inspect real-time queue states, examine tamper-evident execution drawers, and manage task lifecycles (retries, cancellations, reassignments, and archiving).
 
 ---
 
 ## Step-by-Step Instructions
 
 ### 1. Open the Job Board
-In the left navigation bar, click **Job Board** (or *"All work"* in Plain English mode).
+In the left menu, click **Job Board**. Its heading reads **All work**.
 
 ![Job Board Table View](img/04-console-job-board.png)
 
 ### 2. Filter and Search Tasks
-1. Use the status filter pills at the top to focus on specific states:
-   - **Needs approval:** Paused at human gate.
-   - **Pending:** Waiting in dropbox for worker pickup.
-   - **Running:** Leased by an active agent.
-   - **Completed:** Successfully finished.
-   - **Failed / Rejected:** Halted with error or rejected by human.
-2. Type in the search box to filter by title, description, or job ID.
+1. Use the tabs at the top to focus on one kind of work. Each shows a count:
+   - **All**
+   - **Active:** picked up by a helper and running.
+   - **Needs approval:** paused at a human gate.
+   - **Waiting:** waiting for an earlier step.
+   - **Done**
+   - **Problems:** failed or rejected.
+2. Type in **Search jobs** to filter, pick a role from **All roles**, or change the sort order (the default is **Priority, then oldest**).
 
 ### 3. Creating a New Job
-1. Click the **+ New job** button in the upper right.
-2. Fill out the composer modal:
-   - **Title:** Plain-English summary of what the agent should do (e.g., *"Summarize repository changes"*).
-   - **Target Role:** The agent specialization required (`codex`, `claude`, `gemini`, `reviewer`, etc.).
-   - **Instructions:** Full prompt, parameters, or specifications for the agent.
-   - **Requires approval:** Check this box if the task must pause for human review before execution.
-   - **Max retries:** Number of automatic retry attempts if the worker fails.
+For most work, [Ask for something](Ask.md) is easier. To drop one job on the board yourself:
+1. Click **+ New job** in the upper right.
+2. Fill out the panel:
+   - **What needs to happen?** A plain-English summary (for example, *"Summarize repository changes"*).
+   - **Details:** anything the helper should know. It reads this.
+   - **Who should do it?** Pick a role: `claude`, `codex`, `antigravity` and so on.
+   - **Ask me before it runs:** tick this if the job must pause for your approval first.
+   - **Retry budget:** how many automatic retries if the helper fails.
+   - **Escalate to role:** where it goes when retries run out.
 
 ![New Job Creation Composer](img/14-job-create-modal.png)
 
-3. Click **Submit job**. The task appears instantly on the Job Board.
+3. Click **Create job**. The task appears on the Job Board.
 
-### 4. Inspecting Job Details & Audit Trail
-Click any job row in the table. The **Job Detail Drawer** slides open from the right:
-- **Header:** Displays job ID, status badge, created timestamp, and duration.
-- **Assignment:** Shows source agent, target role, and the specific agent instance that leased it.
-- **Instructions:** Full prompt text given to the agent.
-- **Output / Result:** When completed, displays the agent's verbatim response and structured handoff.
-- **Audit Trail:** Append-only timeline showing exact timestamps for `created`, `leased`, `status:completed`, and `context_distilled`.
+### 4. Inspecting Job Details & History
+Click any job row. The job panel slides in from the right:
+- **Header:** the status word and the job title.
+- **Change this job:** the actions that make sense for its state (see below).
+- **Assigned to / Requested by / Created / Job ID.**
+- **History:** an append-only timeline: created, picked up, completed or failed, and so on.
 
-![Job Detail Drawer and Audit Trail](img/15-job-detail-drawer.png)
+![Job Detail Drawer and History](img/15-job-detail-drawer.png)
 
 ### 5. Managing Job Actions
-From the bottom of the Job Detail Drawer (or row menu):
-- **Approve / Reject:** Available when job status is `needs_approval`.
-- **Retry:** Re-queues a failed or rejected job back to `pending`.
-- **Cancel:** Aborts an in-flight or waiting job.
-- **Reassign:** Clones a failed job onto a different target agent role and archives the original.
-- **Archive / Unarchive:** Moves completed or cancelled jobs to cold view without deleting audit history.
-- **Check Duplicates:** Checks whether identical work has already been performed or queued elsewhere.
+Under **Change this job**, depending on the job's state:
+- **Approve / Reject:** when the job needs your OK. See [Approvals](Approvals.md).
+- **Retry:** puts a failed or rejected job back in line.
+- **Reassign…:** copies the job to a different role and archives the original.
+- **Call it off…:** stops an in-flight or waiting job.
+- **Archive / Unarchive:** hides finished work without deleting its history.
 
 ---
 
@@ -60,7 +61,7 @@ From the bottom of the Job Detail Drawer (or row menu):
 Every Job Board action maps directly to the `mco` command-line tool:
 
 ```powershell
-# Drop a new job into an agent's inbox
+# Drop a new job into a helper's inbox
 mco send codex `
   --title "Summarize the repository" `
   --message "Review recent commits on main and summarize changes." `
@@ -105,5 +106,5 @@ mco archive <job-id>
 - **Fix:** Go to the **Approval Queue**, review the instructions, and click **Approve**.
 
 ### 3. "Job immediately fails with 'S3 / Network / Tool error'"
-- **Cause:** The agent crashed or encountered an unhandled exception during execution.
-- **Fix:** Inspect the error message in the drawer. If transient, click **Retry**. If the assigned agent role cannot handle the task, click **Reassign** to route to another role.
+- **Cause:** The helper crashed or encountered an unhandled exception during execution.
+- **Fix:** Inspect the error message in the job panel. If transient, click **Retry**. If the assigned role cannot handle the task, click **Reassign** to route to another role.

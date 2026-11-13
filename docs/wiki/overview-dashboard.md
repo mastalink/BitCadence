@@ -1,38 +1,39 @@
-# Overview Dashboard
+# Home (Overview)
 
 ## Goal
-Monitor the high-level health of your agent ecosystem from a single screen: inspect active jobs, running workflow pipelines, online agent capacity, recent audit events, and toggle between plain-English and engineering terminology.
+See what needs you and what is running from one screen, without reading a job list. Home replaced the old Overview and its metric cards.
 
 ---
 
 ## Step-by-Step Instructions
 
-### 1. Navigate to Overview
-Click **Overview** at the top of the left navigation sidebar.
+### 1. Open Home
+Click **Home** at the top of the left menu. It is the first page the console opens.
 
-![BitCadence Overview Mission Control](img/01-console-overview.png)
+![BitCadence Home](img/01-console-overview.png)
 
-### 2. Read Fleet Metric Cards
-At the top of the screen, four primary metric cards summarize the current status:
-- **Active Jobs:** Number of tasks currently leased or executing (`leased`, `in_progress`).
-- **Needs Approval:** Tasks halted at a human-in-the-loop governance gate. Clicking this card jumps straight to the **Approval Queue**.
-- **Online Agents:** Connected worker instances actively sending heartbeats.
-- **Completed Today:** Successfully finished jobs within the current operating window.
+### 2. Read "What needs you"
+This comes first. Each card is one thing waiting on a person, with a count beside the heading:
+- **Needs you:** a job paused for your approval. Click **Approve** to say yes, or **Look first** to read the details.
+- **Stuck:** work that failed or has gone quiet. Click **Look first**.
 
-### 3. Track In-Flight Workflows
-Beneath the metric cards, the **Running flows** strip groups active tasks by their parent pipeline (for example, `release-pipeline`). Each step is shown as a connected progress indicator showing whether a stage is completed (green), running (pulsing blue), or waiting (grey).
+### 3. Read "What's running"
+Below that, each card is one piece of work in flight, with a state word (**Working**, **Waiting**) and a plain sentence such as *Waiting for a free helper* or *claude is working on this step*. Steps of the same plan are grouped, and a Score run shows as one card. Click a card for more. **See all work** opens the job board.
 
-### 4. Monitor the Activity Stream
-The right side of the Overview screen presents the real-time **Activity Feed**:
-- Shows created, leased, approved, completed, and failed events as they occur.
-- Clicking any event entry opens the full Job Detail Drawer for that task.
+Home refreshes by itself and shows recent work only. See [Console Home](Console-home.md) for the exact rules, including when a job is called **Stuck**.
 
-### 5. Toggle Interface Tone (Plain English vs. Expert Mode)
-BitCadence accommodates both non-technical managers and systems engineers:
-1. In the top-right header, open the **Tone** toggle (or via Settings).
-2. Choose **Plain English** or **Expert**:
-   - **Plain English:** Labels appear as *"All work"*, *"Needs your OK"*, *"Your agents"*, *"Flows"*, *"What happened"*.
-   - **Expert:** Labels appear as *"Job Board"*, *"Approval Queue"*, *"Agent Fleet"*, *"Workflows"*, *"Audit Trail"*.
+### 4. Look at the rest of the menu
+The left menu also has [Projects](projects-dashboard.md), the [Job Board](job-board-and-tasks.md), [Approvals](Approvals.md), Governance, [Ask for something](Ask.md), [Helpers](Helpers.md), [Connect an AI](Connect-an-AI.md), [Schedules](Schedules.md), Drumline, **Activity** and [Settings](Settings.md). **Activity** shows every step every helper took, newest first, with event, failure and helper counts.
+
+![Activity](img/10-console-activity-audit.png)
+
+### 5. The minimal dashboard
+`/dashboard` is a smaller, plainer page for a quick look. It asks for a token first, and still uses the technical labels (Operations, Agents & Tokens).
+
+![Minimal dashboard](img/13-minimal-dashboard.png)
+
+### 6. Advanced mode
+The **Advanced** switch in the top bar shows the technical layer (raw IDs, payloads, retry budgets). Leave it off for plain wording.
 
 ---
 
@@ -44,7 +45,7 @@ To obtain a quick operational snapshot from your terminal:
 # Health check and diagnostic summary
 mco status
 
-# List all agents and their online presence
+# List all helpers and their online presence
 mco agents
 ```
 
@@ -52,25 +53,21 @@ mco agents
 
 ## What You'll See
 
-- **Live Animated Counters:** Counters transition automatically as jobs are picked up by agents.
-- **Interlock Warnings:** If any job fails with no retries remaining, a prominent alert highlights the failure and suggests escalation options.
-- **Autonomy Link:** The Autonomy card displays the background Conductor state:
-  ```text
-  The background sweep engine is actively evaluating jobs, dispatching worker packets, and monitoring autonomous score runs.
-  ```
-  Clicking **Live look** opens the Autonomous Score Run monitor modal.
+- **Live updates:** Cards move between **What needs you** and **What's running** as helpers pick up and finish jobs.
+- **Failure alerts:** A job that fails with no retries left appears under **What needs you** as **Stuck**.
+- **Demo mode:** Before you connect, the bottom of the left menu says **Demo · simulated data** and the cards are examples.
 
 ---
 
 ## If It Goes Wrong
 
-### 1. "Activity stream shows stale timestamps"
-- **Cause:** WebSocket connection was interrupted or disconnected.
-- **Fix:** Check the top-right status dot. If yellow or grey, refresh the browser page (`F5`) to re-establish the `/ws/broadcast` WebSocket channel.
+### 1. "Home looks out of date"
+- **Cause:** The connection to the gateway was interrupted.
+- **Fix:** Check the status at the bottom of the left menu: it should say **Live**. If it does not, refresh the browser page (`F5`).
 
-### 2. "Metric card shows 0 online agents"
-- **Cause:** No background workers or daemon listeners are running.
-- **Fix:** Start workers in the Desktop Manager, or launch a listener from a terminal:
+### 2. "No helpers are working"
+- **Cause:** No background helpers or daemon listeners are running.
+- **Fix:** Start helpers in the Desktop Manager, or launch a listener from a terminal:
   ```powershell
   mco listen --role codex --instance worker-1
   ```

@@ -1,41 +1,26 @@
 # Settings & Configuration
 
 ## Goal
-Configure gateway operational parameters, customize user interface preferences, manage encrypted model API keys, inspect edition capabilities, and connect enterprise tools.
+Configure gateway operational parameters, customize user interface preferences, inspect edition capabilities, and connect enterprise tools.
 
 ---
 
 ## Step-by-Step Instructions
 
 ### 1. Open Settings
-Click **Settings** at the bottom of the left navigation sidebar.
+Click **Settings** at the bottom of the left menu. The top of the page has the everyday cards: **Pause everything**, **Tell me on my phone** and **Memory**. Everything else is under **Show advanced** (see [Settings](Settings.md)).
 
 ![Settings Panel](img/02-console-settings.png)
 
-### 2. Configure Interface Preferences
-- **Tone:**
-  - **Plain English:** Replaces technical jargon with accessible terms (*"All work"*, *"Needs your OK"*, *"Your agents"*).
-  - **Expert Mode:** Displays raw IDs, UUIDs, retry budgets, PostgREST queries, and YAML DAGs.
-- **Display Density:**
-  - **Comfortable:** Generous padding and larger cards.
-  - **Compact:** Higher information density for operations wallboards.
-- **Accent Color:** Select from brand color presets.
+### 2. Advanced mode
+Under **Show advanced → Experience**, **Advanced mode** shows the technical layer: raw IDs, payloads, retry budgets and YAML. Leave it off for the plain wording used on every page of this wiki. The **Advanced** switch in the top bar does the same thing.
 
-### 3. Model Connections (LLM Provider Keys)
-Under **Model Connections**:
-1. Click **+ Add Connection**.
-2. Select Provider: `Anthropic`, `OpenAI`, `Google Gemini`, or `Custom OpenAI-compatible`.
-3. Enter API Key.
-   - *Security Note:* API keys are write-only. They are encrypted immediately into `secrets.enc` using AES-256-GCM and never displayed back in plaintext.
-4. Click **Test Connection** to verify key validity with the remote provider.
+### 3. Gateway controls
+Under **Show advanced → Gateway controls**: stop work, approver roles, always-gated roles, the escalation connector, the default job board sort order, ntfy notifications, how long before a helper counts as offline, and the two Drumline memory switches. Click **Save gateway settings** to apply them.
 
-### 4. Edition & Feature Matrix
-Review the **Edition Matrix** card:
-- Displays current running edition: `community`, `team`, or `enterprise`.
-- Shows available features:
-  - Core: Job Board, Governance, Workflows, Drumline Memory, Console, MCP Server.
-  - Team: Shared Gateway, Multi-tenant Orgs, RBAC Management.
-  - Enterprise: Connectors (ServiceNow, Dynatrace), SSO, Audit Export.
+### 4. Connectors and tenancy
+- **Connectors** holds the ServiceNow and Dynatrace connection details, each with **Test connection**. Passwords and tokens show as `not set` or are masked, and are stored encrypted.
+- **Tenancy** lists the organizations that keep teams' jobs and memory separate. The edition decides which of these you have: Core covers the job board, governance, workflows, Drumline memory, console and MCP server; Team adds shared gateway, multi-tenant orgs and RBAC; Enterprise adds connectors, SSO and audit export. Run `mco edition` to see yours.
 
 ---
 

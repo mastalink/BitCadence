@@ -15,18 +15,11 @@ Unlike simple jobs or legacy workflows, a **Score** is an immutable, digest-boun
 - Mandatory test evidence and verification receipts.
 - Explicit human checkpoints and integer-cent budget limits.
 
-### 2. Inspecting Score Runs in the Console
-1. On the **Overview** screen, locate the **Autonomous Score Conductor** card.
-2. Click **Live look**.
+### 2. Watching Score Runs in the Console
+1. Open **Home**. Each Score run appears under **What's running** as one card per run, with a state word, a sentence from the worker's progress and the step count from the real plan.
+2. Tap a Score card to watch its read-only live drawing.
 
-![Autonomous Score Runs Live Look](img/16-autonomy-scores-modal.png)
-
-3. The modal displays:
-   - **Active Runs:** Currently executing score runs (e.g., `via-cloud-run-001`).
-   - **Current Stage:** Execution phase (`execute_plan`, `qa_verification`, `evidence_review`).
-   - **Target Agent:** Active worker instance assigned by the Conductor.
-   - **Score Progress Bar:** Calculated percent completion of goal dependencies.
-   - **Conductor Status:** Sweep state, lease expiration timers, and next dispatch tick.
+See [Console Home](Console-home.md) and [Live Score](Score-live.md) for what the cards and the drawing show. The older **Live look** window on the Overview screen no longer exists.
 
 ### 3. Validating and Compiling Scores Offline
 Before submitting any score, validate and compile it locally using the offline kernel:

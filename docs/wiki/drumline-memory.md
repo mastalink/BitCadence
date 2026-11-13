@@ -1,14 +1,14 @@
 # Drumline Memory (Shared Context)
 
 ## Goal
-Store, search, and recall durable collective knowledge across heterogeneous agent models (Claude, Codex, Gemini), allowing past solutions, architecture decisions, and gotchas to persist beyond individual job lifecycles.
+Store, search, and recall durable collective knowledge across heterogeneous AI models (Claude, Codex, Gemini), allowing past solutions, architecture decisions, and gotchas to persist beyond individual job lifecycles.
 
 ---
 
 ## Step-by-Step Instructions
 
 ### 1. Open Drumline Memory
-In the left navigation sidebar, click **Drumline** (or **Memory**).
+In the left menu, click **Drumline**. The **Context** tab is the memory.
 
 ![Drumline Memory Search and Browser](img/09-console-drumline-memory.png)
 
@@ -28,7 +28,7 @@ Click on any memory row. The **Memory Detail Drawer** slides open:
 - If distilled from a past job, links directly back to that job's audit history.
 
 ### 4. Recording Explicit Facts or Lessons
-1. Click **+ Remember** (or use the composer at the bottom of the screen).
+1. Click **+ Add memory**.
 2. Enter:
    - **Title:** Brief descriptor (e.g., *"Production database read-only window"*).
    - **Kind:** Select `fact`, `decision`, or `lesson`.

@@ -70,17 +70,52 @@ class GatewayBoard:
 
 
 class ScoreBridge:
-    def __init__(self, database, artifact_root, clock=time.time, gate_service=None, live_executor=None):
+    def __init__(self, database, artifact_root, clock=time.time, gate_service=None, live_executor=None,
+                 authority_service=None):
         self.database = str(database)
         self.clock = clock
         self.root = Path(artifact_root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.gate_service = gate_service
         self.live_executor = live_executor
+        self.authority_service = authority_service
         with self.tx() as db:
             db.execute("CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY, definition TEXT NOT NULL, digest TEXT NOT NULL, principal TEXT NOT NULL, credential_hash TEXT NOT NULL, org TEXT NOT NULL, targets TEXT NOT NULL, artifact_root TEXT NOT NULL, status TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS dispatch(run TEXT NOT NULL, task TEXT NOT NULL, phase TEXT NOT NULL, job_id TEXT UNIQUE NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL, evidence TEXT, deadline INTEGER NOT NULL, PRIMARY KEY(run,task,phase))")
             db.execute("CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, run TEXT NOT NULL, event TEXT NOT NULL, detail TEXT NOT NULL, at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')))")
+            db.execute("CREATE TABLE IF NOT EXISTS standing_authority(run TEXT PRIMARY KEY, grant_id TEXT NOT NULL)")
+
+    def _check_standing_score(self, score, org, run_id, grant_id):
+        from mco.orchestrator.score_authority import GrantService
+        try:
+            service = self.authority_service
+            if service is None:
+                from mco.orchestrator.routes import get_db_client
+                service = GrantService(get_db_client())
+            score_digest = digest(score)
+            grant = service.load(org_id=org, run_id=run_id, digest=score_digest)
+            if grant.get("standing_grant_id") != grant_id:
+                raise AuthorityError("standing_grant_selection_mismatch")
+            actions = sorted({a for t in score["tasks"] for a in t["capabilities"]})
+            resources = sorted({r for t in score["tasks"] for r in t["resources"]})
+            scopes = [(a, resources[0]) for a in actions] + [(actions[0], r) for r in resources[1:]]
+            for action, resource in scopes:
+                service.require(org_id=org, run_id=run_id, digest=score_digest,
+                    action=action, resource=resource, environment=grant["env"],
+                    cost_cents=score["budget_cents"], owner_principal=grant["human_principal"])
+        except AuthorityError as exc:
+            if service is not None:
+                service._standing_audit("denied", org_id=org, run_id=run_id, digest=digest(score),
+                                        grant_id=grant_id, reason=str(exc))
+            raise ScoreAuthorityError(str(exc)) from exc
+
+    def check_standing_authority(self, run_id):
+        with self.tx() as db:
+            binding = db.execute("SELECT grant_id FROM standing_authority WHERE run=?", (run_id,)).fetchone()
+            if binding is None:
+                return
+            run = self.run(db, run_id)
+        self._check_standing_score(json.loads(run["definition"]), run["org"], run_id, binding["grant_id"])
 
     def get_gate_service(self):
         if self.gate_service is not None:
@@ -136,7 +171,10 @@ class ScoreBridge:
         rejections = sum(1 for node in chain if node in rejected_reviews)
         return root_id, chain, rejections
 
-    def initialize(self, run_id, score, *, principal, org, targets, credential_hash):
+    def initialize(self, run_id, score, *, principal, org, targets, credential_hash,
+                   standing_grant_id=None):
+        if standing_grant_id is not None:
+            self._check_standing_score(load_score(score), org, run_id, standing_grant_id)
         score = load_score(score)
         if not all(isinstance(x, str) and x for x in (run_id, principal, org, credential_hash)):
             raise ScoreError("Explicit identity required")
@@ -194,11 +232,17 @@ class ScoreBridge:
             if old:
                 if tuple(old) != values:
                     raise ScoreError("Existing run policy/identity mismatch")
+                binding = db.execute("SELECT grant_id FROM standing_authority WHERE run=?", (run_id,)).fetchone()
+                if (binding[0] if binding else None) != standing_grant_id:
+                    raise ScoreError("Existing run standing authority mismatch")
                 return
             db.execute("INSERT INTO runs VALUES(?,?,?,?,?,?,?,?,'running')", values)
+            if standing_grant_id is not None:
+                db.execute("INSERT INTO standing_authority VALUES(?,?)", (run_id, standing_grant_id))
             self.event(db, run_id, "initialized", {"digest": values[2]})
 
     def plan(self, run_id):
+        self.check_standing_authority(run_id)
         self.check_deadlines(run_id)
         with self.tx() as db:
             run = self.run(db, run_id)
@@ -497,6 +541,7 @@ class ScoreBridge:
                 "Conductor credential changed; explicit reauthorization required")
 
     def dispatch(self, run_id, board):
+        self.check_standing_authority(run_id)
         self.check_deadlines(run_id)
         with self.tx() as db:
             run = self.run(db, run_id)
@@ -511,6 +556,7 @@ class ScoreBridge:
                 db.execute("UPDATE dispatch SET status='sending' WHERE job_id=?", (row["job_id"],))
         sent = []
         for row in rows:
+            self.check_standing_authority(run_id)
             job = board.create(json.loads(row["payload"]))
             self.validate_job(run, row, job)
             with self.tx() as db:
@@ -547,6 +593,7 @@ class ScoreBridge:
                 self.event(db, run_id, "deadline_exceeded", {"jobs": expired, "policy": "stop advancement; do not cancel unrelated work or resubmit"})
 
     def poll(self, run_id, board):
+        self.check_standing_authority(run_id)
         self.check_deadlines(run_id)
         try:
             self._poll(run_id, board)

@@ -138,7 +138,7 @@ mco stop          # graceful shutdown; the formal off switch
 
 ## The closing line
 
-> "Everything you just saw is MIT-licensed and ran on one laptop with no
+> "Everything you just saw is free for personal use and ran on one laptop with no
 > cloud account. The team edition is a Postgres URL. The enterprise edition
 > is a config flag. **We coordinate the agents you already have — we don't
 > replace anything.**"

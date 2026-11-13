@@ -71,6 +71,22 @@ def test_a_single_wake_process_is_fine():
     assert helpers.scan(["fixer"], procs=[wake(10, "fixer")], own_pid=0) == []
 
 
+def test_venv_launcher_and_its_child_are_one_copy():
+    # A Windows venv pythonw.exe re-runs the same command line as its child.
+    launcher, child = wake(10, "fixer", 5), wake(11, "fixer", 5.1)
+    child.ppid = 10
+    assert helpers.scan(["fixer"], procs=[launcher, child], own_pid=0) == []
+
+
+def test_real_duplicate_stops_the_extra_launcher_and_its_child_only():
+    first, first_child = wake(10, "fixer", 5), wake(11, "fixer", 5.1)
+    second, second_child = wake(20, "fixer", 9), wake(21, "fixer", 9.1)
+    first_child.ppid, second_child.ppid = 10, 20
+    (found,) = helpers.scan(["fixer"], procs=[first, first_child, second, second_child], own_pid=0)
+    assert found.kept == 10 and sorted(found.pids) == [20, 21]
+    assert "2 copies" in found.summary
+
+
 def test_locked_log_is_found_for_a_foreign_holder(tmp_path):
     log = tmp_path / "fixer.log"
     log.write_text("x")

@@ -118,6 +118,7 @@ class Proc:
     cmdline: List[str]
     started: float = 0.0
     open_files: List[str] = field(default_factory=list)
+    ppid: int = 0
 
     @property
     def text(self) -> str:
@@ -151,7 +152,7 @@ def list_processes() -> List[Proc]:
     import psutil
 
     procs = []
-    for p in psutil.process_iter(["pid", "cmdline", "create_time"]):
+    for p in psutil.process_iter(["pid", "ppid", "cmdline", "create_time"]):
         try:
             cmdline = p.info.get("cmdline") or []
             if not cmdline:
@@ -164,7 +165,8 @@ def list_processes() -> List[Proc]:
                     files = [f.path for f in p.open_files()]
                 except (psutil.AccessDenied, psutil.NoSuchProcess, OSError):
                     files = []
-            procs.append(Proc(p.info["pid"], list(cmdline), p.info.get("create_time") or 0.0, files))
+            procs.append(Proc(p.info["pid"], list(cmdline), p.info.get("create_time") or 0.0, files,
+                              p.info.get("ppid") or 0))
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
     return procs
@@ -223,17 +225,27 @@ def scan(instances: Iterable[str], *, procs: Optional[List[Proc]] = None,
     findings: List[Finding] = []
     for instance in instances:
         name = friendly_name(instance)
-        wakers = sorted((p for p in procs if _wake_instance(p) == instance), key=lambda p: (p.started, p.pid))
+        all_wakers = [p for p in procs if _wake_instance(p) == instance]
+        # A Windows venv's python.exe/pythonw.exe is a launcher that re-runs the same
+        # command line in the base interpreter as its child. That child is the same
+        # copy, not a second one; counting it made healthy helpers "Stuck", and Fix it
+        # would have stopped the real worker (2026-10-09).
+        waker_pids = {p.pid for p in all_wakers}
+        wakers = sorted((p for p in all_wakers if p.ppid not in waker_pids),
+                        key=lambda p: (p.started, p.pid))
         if len(wakers) > 1:
             extras = wakers[1:]
+            extra_pids = {p.pid for p in extras}
+            # Stop each extra copy's own launcher child too, so no orphan keeps running.
+            stop_pids = [p.pid for p in extras] + [p.pid for p in all_wakers if p.ppid in extra_pids]
             findings.append(Finding(
                 DUPLICATE_WAKER, instance,
                 f"{name} has {len(wakers)} copies running at once.",
                 f"Another copy of {name} is already running",
                 f"Keep the oldest copy and stop the other {len(extras)}.",
                 f"Stop the extra {'copy' if len(extras) == 1 else 'copies'} of {name}?",
-                pids=[p.pid for p in extras], kept=wakers[0].pid))
-        legit = {p.pid for p in wakers}
+                pids=stop_pids, kept=wakers[0].pid))
+        legit = waker_pids
         logs = {_norm(str(p)) for p in log_paths(instance, directory)}
         holders = [p for p in procs if p.pid not in legit and logs & {_norm(f) for f in p.open_files}]
         if holders:

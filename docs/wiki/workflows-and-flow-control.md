@@ -1,64 +1,33 @@
-# Workflows & Flow Control
+# Workflow Files
 
 ## Goal
-Design multi-step agent pipelines (DAGs) visually, monitor real-time execution dependencies on the live animated Flow Control canvas (`/flow`), and run declarative YAML workflow files.
+Run a multi-step pipeline from a saved YAML workflow file, with each step waiting for the one before it. For most work you don't need a file: say what you want on the **Ask for something** page and approve the plan it draws. See [Ask](Ask.md).
+
+> The drag-and-drop workflow builder and the Flow Control page (`/flow`) were removed from the console. **Ask for something** replaced them, and **Home** shows what is running. A workflow file is still the right tool when you want to keep a pipeline in version control and re-run it.
 
 ---
 
 ## Step-by-Step Instructions
 
-### 1. Visual Workflow Builder in Console
-1. In the left navigation sidebar, click **Workflows** (or *"Flows"*).
+### 1. The easy way: Ask
+1. In the left menu, click **Ask for something**.
+2. Type the request the way you'd tell a person, then click **Draft a plan**.
 
-![Visual Workflow Builder](img/07-console-workflows.png)
+![Ask for something](img/21-console-ask.png)
 
-2. The canvas displays steps as connected cards:
-   - **Step Card:** Contains Step ID, Assigned Role (`claude`, `codex`, `gemini`), Instructions, and Gate Checkbox.
-   - **Dependencies:** Lines connect prerequisite steps to dependent steps.
-3. Click **Add step** to append another stage to the pipeline.
-4. Click **Export YAML** to view or download the declarative workflow configuration.
-5. Click **Run workflow** to submit all steps as real, linked jobs on the Job Board.
+3. Check the steps. Use **Remove a step**, **Always ask me at the end** or **Make it repeat** for light tweaks.
+4. Click **Approve and start**. The steps appear on the job board as linked jobs, and **Home** shows them under **What's running**.
 
-### 2. Live Flow Control (`/flow`)
-Open your browser to:
-```text
-http://127.0.0.1:18789/flow
-```
-or run:
-```powershell
-mco gui --flow
-```
+### 2. Watching a pipeline
+Click **Home**. Steps that wait on an earlier step show **Waiting**, a step that needs you shows **Needs you** with an **Approve** button, and a step that failed shows up under **What needs you**.
 
-![Flow Control Live Board](img/11-flow-control-live.png)
-
-The Flow Control board renders your active job board as an interactive engineering mimic:
-- **Real Edges:** Every arrow represents an enforced `depends_on` rule. A downstream job cannot start until upstream jobs complete.
-- **Color Coded Status:**
-  - ⚪ **Grey:** `waiting` (waiting for upstream completion)
-  - 🟡 **Amber:** `needs_approval` (stopped at human gate)
-  - 🔵 **Blue:** `pending` (ready for worker lease)
-  - 🟢 **Green:** `leased` / `in_progress` (running)
-  - 🌲 **Dark Green:** `completed` (finished)
-  - 🔴 **Red:** `failed`
-- **Animated Flowing Pulses:** Edges animate with moving dashes when active work is traversing from one completed step into the next stage.
-- **Interactive Inspection:** Click any node to open the side panel, view instructions, examine audit trails, or click **Approve** directly from the canvas.
-
-### 3. Flow Control Design Mode
-In the top header of `/flow`, click **Design workflow**:
-
-![Flow Control Design Mode](img/12-flow-control-design.png)
-
-1. Drag **New step** from the drafting rail on the left onto the canvas grid.
-2. Click a step card to edit its ID, role, title, and approval gate in the inspector.
-3. Drag a connector from one step's **then** port to another step's **needs** port to establish a dependency.
-4. Click **Validate** to verify that the graph is acyclic and all references are valid.
-5. Click **Export YAML** or **Run workflow**.
+![Home](img/01-console-overview.png)
 
 ---
 
 ## The CLI Equivalent
 
-You can submit declarative YAML pipelines directly from your terminal:
+A saved pipeline is a YAML file:
 
 ```yaml
 # pipeline.yaml
@@ -99,7 +68,7 @@ mco workflow pipeline.yaml
 
 ### 1. "Cyclic dependency detected"
 - **Cause:** Step A depends on Step B, and Step B depends on Step A.
-- **Fix:** In the canvas or YAML file, remove the circular reference. Workflows must be strict Directed Acyclic Graphs (DAGs).
+- **Fix:** Remove the circular reference in the YAML file. Workflows must be strict Directed Acyclic Graphs (DAGs).
 
 ### 2. "Downstream steps fail after upstream failure"
 - **Cause:** By default, dependent steps remain `waiting` if an upstream parent fails.

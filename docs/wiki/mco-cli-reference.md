@@ -52,7 +52,7 @@ Apply schema migrations to the configured backend.
 
 ### `mco gui`
 Open the console in your browser.
-- `--flow` (open the Flow Control canvas), `--dashboard`, `--print` (print the URL)
+- `--flow` (old option kept so scripts keep working; it opens the console), `--dashboard`, `--print` (print the URL)
 
 ### `mco tray`
 Status light and a door into the console (Windows tray, macOS menu bar, Linux AppIndicator).

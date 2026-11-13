@@ -1,6 +1,6 @@
 # BitCadence User Wiki
 
-Welcome to the **BitCadence User Wiki** — the complete, step-by-step documentation for installing, configuring, and operating the BitCadence multi-agent orchestration platform.
+Welcome to the **BitCadence User Wiki** — the complete, step-by-step documentation for installing, configuring, and operating the BitCadence multi-agent orchestration platform. BitCadence Core is **source-available (Prosperity 3.0)**: free for personal use, and businesses license it.
 
 Every guide in this wiki is written from real, hands-on execution. Whether you prefer the Windows native desktop manager, the browser-based Control Panel, or the `mco` command-line interface, you will find exact numbered instructions, real screenshots, CLI equivalents, and troubleshooting steps.
 
@@ -16,16 +16,16 @@ Every guide in this wiki is written from real, hands-on execution. Whether you p
 
 ### Day-to-Day Operations
 3a. [**Console Home (what needs you, what is running)**](Console-home.md), [**Live Score**](Score-live.md) and [**Helpers**](Helpers.md): the first page of the console, the read-only live drawing of a Score run, and each helper's light with the Fix it button. Also [**Schedules**](Schedules.md), [**Approvals**](Approvals.md) and [**Settings**](Settings.md), the rest of the console menu. [**Ask**](Ask.md) covers asking for something in plain words, and [**Connect an AI**](Connect-an-AI.md) links Claude, Codex, Gemini, Antigravity or Cursor in one tap.
-4. [**Overview Dashboard**](overview-dashboard.md) — Mission-control metrics, active pipelines, recent events, and interface tone options.
+4. [**Home (Overview)**](overview-dashboard.md) — What needs you, what is running, and the Activity page.
 5. [**Projects Dashboard**](projects-dashboard.md) — Grouping jobs into initiative streams, health monitoring, and coverage analysis.
 6. [**Job Board & Creating Work**](job-board-and-tasks.md) — Submitting tasks, filtering queues, inspecting job drawers, and managing job lifecycles (retries, cancellations, reassignments).
 7. [**Approvals & Governance**](approvals-and-governance.md) — Human-in-the-loop gates, tamper-evident immutable audit trails, and the emergency kill switch.
 
 ### Flows & Automation
-8. [**Workflows & Flow Control**](workflows-and-flow-control.md) — Visual DAG pipeline designer, real-time animated flow canvas (`/flow`), and declarative YAML DAG authoring.
-9. [**Agent Fleet & Registration**](agent-fleet-and-presence.md) — Registering worker agents, tracking live heartbeats, issuing tokens, and role routing.
+8. [**Workflow Files**](workflows-and-flow-control.md) — Saved YAML pipelines. For everyday requests, use [Ask for something](Ask.md).
+9. [**Helpers & Presence**](agent-fleet-and-presence.md) — Adding helpers, reading their lights, rotating tokens, and role routing.
 10. [**Drumline Memory (Shared Context)**](drumline-memory.md) — Zero-latency collective memory, automatic job distillation, explicit fact recording, and audit-explainable semantic recall.
-11. [**Drumline Agent Exchange**](drumline-agent-exchange.md) — Agent-to-agent threaded discussion, peer collaboration, and memory promotion.
+11. [**Drumline Agent Exchange**](drumline-agent-exchange.md) — Helper-to-helper threaded discussion, peer collaboration, and memory promotion.
 12. [**Autonomous Scores & Conductor**](scores-and-autonomy.md) — Offline contracts, compile-time validation, policy kernels, and monitoring autonomous score runs.
 13. [**Jev Routing & Decision Provider**](jev-routing.md) — Bounded, deterministic model routing and capability analysis.
 
@@ -49,7 +49,7 @@ In addition to operational walkthroughs, this wiki includes in-depth product aud
 
 ## Core Philosophy
 
-- **Mail, Not Function Calls:** AI agents do not directly call each other across arbitrary APIs. They drop auditable mail into bounded dropboxes. Mail can be inspected, gated, retried, and escalated.
+- **Mail, Not Function Calls:** AI helpers do not directly call each other across arbitrary APIs. They drop auditable mail into bounded dropboxes. Mail can be inspected, gated, retried, and escalated.
 - **Local First:** Everything runs locally out of the box with zero cloud account, zero external database, and zero external tracking. Local data is safely persisted in SQLite (`~/.mco/local.db`).
 - **Human in the Loop:** High-stakes operations pause at cryptographic or token-authenticated gates until authorized by a human approver.
-- **Explainable Memory:** Drumline collective context provides zero-hallucination, explainable recall scoring across heterogeneous agent providers without external embeddings or cloud dependencies.
+- **Explainable Memory:** Drumline collective context provides zero-hallucination, explainable recall scoring across heterogeneous AI providers without external embeddings or cloud dependencies.

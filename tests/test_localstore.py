@@ -121,7 +121,7 @@ def test_agent_job_select_uses_rowid_to_break_order_ties(store):
     ordered_selects = [
         statement.lower()
         for statement in statements
-        if statement.lstrip().upper().startswith("SELECT DATA FROM") and "order by" in statement.lower()
+        if statement.lstrip().upper().startswith("SELECT ") and " FROM \"AGENT_JOBS\"" in statement.upper() and "order by" in statement.lower()
     ]
     assert len(ordered_selects) == 2
     assert all(", rowid" in statement for statement in ordered_selects)

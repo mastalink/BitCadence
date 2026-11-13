@@ -4,6 +4,32 @@ All notable changes. Format: [Keep a Changelog](https://keepachangelog.com); ver
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-09
+
+The plain-language redesign (slices 2-7), shared-GPU resource leases, Score
+reliability fixes, and a license change: Core is now under the Prosperity
+Public License 3.0.0 from Batoncadence LLC (source-available; free for
+personal and noncommercial use). Releases up to and including 0.5.0rc1 stay
+MIT. Release notes: docs/RELEASE-NOTES-0.6.0.md.
+
+### Added
+- Exclusive resource lease arbiter for shared GPU nights (#125).
+
+### Fixed
+- Score jobs dispatch at priority 50, above normal board traffic (#139); a
+  late completion event gets a 15-minute grace before a run blocks (#141); a
+  blocked or failed run pushes the owner once (#142); stale alerts no longer
+  replay (#143).
+- The ntfy topic lookup from AWS Secrets Manager is bounded (3 s / 5 s) and
+  cached, so it can't hold up gateway startup (#144).
+- Helpers: a Windows venv launcher and its child count as one copy, so healthy
+  helpers aren't shown as Stuck and Fix it can't stop the real worker (#147).
+
+### License
+- Core moves from MIT to the Prosperity Public License 3.0.0; licensor
+  Batoncadence LLC; COMMERCIAL-LICENSE.md and a draft CLA added (#140).
+
+### Redesign
 - `bitcadence start` now runs quietly: no console window, a tray status light
   (green/amber/red plus a word), a one-time loopback sign-in link instead of a
   pasted token, and a per-user start-at-sign-in entry (no administrator).

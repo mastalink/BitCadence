@@ -1,50 +1,46 @@
 # Approvals & Governance
 
 ## Goal
-Implement human-in-the-loop oversight, authorize or reject high-risk agent operations at safety gates, trigger the emergency kill switch, and export tamper-evident audit evidence packs.
+Implement human-in-the-loop oversight, authorize or reject high-risk helper operations at safety gates, trigger the emergency kill switch, and export tamper-evident audit evidence packs.
 
 ---
 
 ## Step-by-Step Instructions
 
-### 1. Navigate to the Approval Queue
-Click **Approval Queue** (or *"Needs your OK"*) in the left navigation sidebar.
-The badge next to the menu item shows the count of jobs currently halted at an approval gate.
+### 1. Open Approvals
+Click **Approvals** in the left menu. The badge next to it shows how many jobs are paused at an approval gate.
 
-![Approval Queue Panel](img/05-console-approvals.png)
+![Needs your OK](img/05-console-approvals.png)
 
-### 2. Reviewing a Gated Job
-Each card in the approval queue presents:
-- **Job Title & ID:** What the agent intends to do.
-- **Requesting Agent:** Who created or forwarded the request.
-- **Target Worker:** The agent that will execute the operation if approved.
-- **Instructions / Payload:** The exact parameters, scripts, or targets.
+### 2. Review a paused job
+Pick a job from the list on the left. The panel on the right shows:
+- **Title and description:** what the helper wants to do.
+- **Will run on:** which helper role would do the work if you say yes.
+- **Requested by:** who asked for it.
+- **Full details:** opens the job with its history.
 
-### 3. Making an Approval Decision
-- **To Authorize:** Click the green **Approve** button.
-  - The job transitions from `needs_approval` to `pending`.
-  - Eligible workers can now atomically lease and run the task.
-  - The audit log permanently records your identity in `approved_by`.
-- **To Decline:** Click the red **Reject** button.
-  - A prompt asks for a rejection reason (e.g., *"Unauthorized environment"* or *"Too risky"*).
-  - The job transitions to the terminal status `rejected`. Workers will never touch it.
+### 3. Make a decision
+- **To say yes:** click **Approve & run**. The job moves from `needs_approval` to `pending`, a helper can pick it up, and the audit log records who approved it.
+- **To say no:** type a reason in **Reason for saying no** and click **Reject**. The job becomes `rejected` and no helper will touch it.
+- To handle several at once, tick their boxes or use **Select all**.
 
-### 4. Emergency Kill Switch
-When an unexpected agent loop or fleet emergency occurs:
-1. In the navigation sidebar, click **Governance**.
+The same **Approve** button also appears on **Home** under **What needs you**. See [Approvals](Approvals.md) for how the console checks that you are allowed to approve.
 
-![Governance and Kill Switch Panel](img/06-console-governance.png)
+### 4. Pause everything (kill switch)
+When something unexpected is happening:
+1. Click **Settings**, and in the **Pause everything** card click **Pause**.
+   - Helpers stop taking new work and no new jobs are started.
+   - Jobs already in progress finish; you can still look, approve and reject.
+2. Click **Resume** on the same card to start again.
 
-2. Under **Panic button / Kill Switch**, toggle **Kill Switch** to `ON`.
-   - All worker leasing immediately stops.
-   - No new jobs can be claimed or started across the entire fleet.
-   - In-flight work finishes gracefully; operators can still audit, inspect, and approve/reject.
-3. Once the situation is resolved, toggle the switch back to `OFF` to resume normal leasing.
+See [Settings](Settings.md). The `MCO_KILL_SWITCH` setting is the same switch.
 
-### 5. Exporting Audit Evidence Packs
-Under **Tamper-Evident Audit Trail**:
-1. Click **Export Audit Pack**.
-2. A cryptographically verifiable JSON package containing the complete history of events, actors, timestamps, and hashes is generated and downloaded to your computer.
+### 5. Governance page and evidence export
+Click **Governance** for the pending approvals, the decision history and the oversight trail in one place.
+
+![Governance](img/06-console-governance.png)
+
+To export evidence, pick a **Start** and **End** date and click **Export compliance evidence pack**. You get a PDF cover page plus a JSON audit trail for EU AI Act Art. 12 record-keeping and Art. 14 human oversight.
 
 ---
 
@@ -73,7 +69,7 @@ mco restart
 ## What You'll See
 
 - **Immutable History:** In the database (`agent_job_events`), every approval decision is written to an append-only table. Any database `UPDATE` or `DELETE` query on this table is rejected at the storage engine level.
-- **Audit Receipt:** In the Job Detail Drawer, the audit history explicitly stamps:
+- **Audit Receipt:** In the job's details, the history explicitly stamps:
   ```text
   approved · actor: local-operator (role: admin) · 2026-10-03 12:25:00 UTC
   ```
@@ -83,7 +79,7 @@ mco restart
 ## If It Goes Wrong
 
 ### 1. "403 Forbidden: Approver role required"
-- **Cause:** The bearer token used to approve the job belongs to an agent role that is not listed in `MCO_APPROVER_ROLES`.
+- **Cause:** The bearer token used to approve the job belongs to a role that is not listed in `MCO_APPROVER_ROLES`.
 - **Fix:** By default, approver roles are `human,admin,operator`. Re-authenticate with an admin or human token, or configure:
   ```powershell
   mco settings MCO_APPROVER_ROLES "human,admin,operator,reviewer"
@@ -91,7 +87,7 @@ mco restart
 
 ### 2. "Kill switch active: Cannot lease task"
 - **Cause:** The kill switch was left enabled (`MCO_KILL_SWITCH=true`).
-- **Fix:** In the Governance screen, switch the panic toggle to OFF, or run:
+- **Fix:** On **Settings**, click **Resume** in the **Pause everything** card, or run:
   ```powershell
   mco settings MCO_KILL_SWITCH false
   ```

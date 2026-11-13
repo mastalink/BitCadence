@@ -1,6 +1,7 @@
 # Enterprise Guide: Editions, RBAC & SSO
 
-BitCadence is open core in a single MIT-licensed codebase. Every edition
+BitCadence is a single source-available codebase (Prosperity Public License 3.0.0: free for
+noncommercial use, a 30-day trial then a commercial license for business). Every edition
 runs the same code; the edition decides which surfaces are active. Drumline
 (shared context) is first-class in **every** edition — collective memory is
 the product, not an upsell.
@@ -119,7 +120,7 @@ otherwise `community`. Check with:
 mco edition
 ```
 
-Gating is honor-system by design (the code is MIT). Pinning matters because
+Gating is honor-system by design (the code is source-available). Pinning matters because
 it is *deterministic*: `MCO_EDITION=community` reliably disables every
 enterprise surface, which is also how you verify a locked-down posture.
 

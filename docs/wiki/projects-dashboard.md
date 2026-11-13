@@ -1,31 +1,29 @@
 # Projects Dashboard
 
 ## Goal
-Group disparate agent tasks into cohesive business projects and initiatives, observe project-level health and completion velocity, and detect blocked or stalled initiatives.
+Group disparate helper tasks into cohesive business projects and initiatives, observe project-level health and completion velocity, and detect blocked or stalled initiatives.
 
 ---
 
 ## Step-by-Step Instructions
 
 ### 1. Navigate to Projects
-In the left-hand navigation sidebar, click **Projects**.
+In the left menu, click **Projects**.
 
 ![Projects Dashboard Overview](img/03-console-projects.png)
 
 ### 2. Inspect Project Groups
-The dashboard automatically groups jobs based on their `input_payload.project` attribute (e.g., `gateway-reliability`, `agent-operations`, `release-2.4`):
-- Each project card displays:
-  - **Project Name & Slug**
-  - **Health Indicator:**
-    - 🟢 **Healthy:** Active jobs completing without errors.
-    - 🟡 **Warning:** Jobs paused at approval gates or waiting on retries.
-    - 🔴 **Blocked:** One or more jobs permanently failed, rejected, or stalled.
-  - **Progress Bar:** Ratio of completed tasks to total assigned tasks.
-  - **Active Work:** Tasks currently being worked on by specific agents.
+**Projects at a glance** groups jobs by their `input_payload.project` or workflow (for example `gateway-reliability` or `release-2.4`). Work with neither stays visible under **Unassigned work**, so nothing silently disappears.
+- The three cards at the top show **Open projects**, **Need you** (decisions or problems) and **Jobs complete**.
+- Use **Open**, **Needs attention** and **All** to choose which projects to list, or search by project or job name.
+- Each project card shows:
+  - **A state word:** for example **Needs your OK**.
+  - **A progress bar:** how many jobs are done (for example 3/9).
+  - **Next action:** the one thing to do next.
+  - **Its jobs,** each with a status word and a **Move** button to put it in another project.
 
 ### 3. Filter Jobs by Project
-Click on any project card (or the **Show jobs** button):
-- The view automatically transitions to the **Job Board** pre-filtered to show only tasks belonging to that specific project stream.
+Click **Open Job Board** to see every job in the table.
 
 ### 4. Assigning a Job to a Project
 When creating a job (via UI or CLI), attach project context inside the job metadata:
@@ -61,7 +59,7 @@ curl http://127.0.0.1:18789/api/jobs/project-view `
 
 ## What You'll See
 
-- **High-Level Rollup:** Instead of scrolling through hundreds of granular agent tasks, you see 3–5 top-level project initiatives.
+- **High-Level Rollup:** Instead of scrolling through hundreds of granular helper tasks, you see 3–5 top-level project initiatives.
 - **Coverage Summary:** The top header displays total managed project tasks, active count, and whether coverage is truncated (up to 5,000 tasks evaluated server-side).
 
 ---

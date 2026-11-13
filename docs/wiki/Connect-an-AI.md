@@ -4,6 +4,10 @@ Open `/console` and choose **Connect an AI**, or run `bitcadence connect` in a
 terminal. Both do the same thing: find the app on this computer and add
 BitCadence to its connection settings. You never edit a file.
 
+![Connect an AI](img/22-console-connect-ai.png)
+
+The screenshot is from a computer with none of these apps installed, so every card says **Not found**. On your computer, a card for an app that is installed has a **Connect** button you can tap.
+
 ```
 $ bitcadence connect claude
 I'll add BitCadence to Claude's settings (a backup is kept).

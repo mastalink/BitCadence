@@ -20,7 +20,7 @@ VIEW_SOURCE = (
 SHELL_SOURCE = (
     ROOT / "src" / "mco" / "console_src" / "8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js"
 ).read_text(encoding="utf-8")
-OPERATOR = {"instance_id": "joe", "role": "human", "status": "online", "org_id": "default"}
+OPERATOR = {"instance_id": "alex", "role": "human", "status": "online", "org_id": "default"}
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def project_api(monkeypatch, tmp_path):
 def _project(js_jobs: list[dict]) -> list[dict]:
     """Execute the console's real projection helpers in Node, excluding JSX."""
     start = VIEW_SOURCE.index("const jobTime =")
-    end = VIEW_SOURCE.index("function ProjectDashboard(")
+    end = VIEW_SOURCE.index("// ----- Portfolio -----")
     helpers = VIEW_SOURCE[start:end]
     script = (
         helpers
@@ -54,28 +54,27 @@ def _project(js_jobs: list[dict]) -> list[dict]:
     return json.loads(proc.stdout)
 
 
-def test_projects_is_a_distinct_console_route_from_job_board():
-    assert '{ id: "projects", label: "Projects"' in SHELL_SOURCE
-    assert "projects: <ProjectDashboard" in SHELL_SOURCE
+def test_portfolio_is_a_distinct_console_route_from_job_board():
+    assert '{ id: "portfolio", label: "Portfolio"' in SHELL_SOURCE
+    assert "portfolio: <PortfolioPage" in SHELL_SOURCE
     assert "jobs: <JobBoard" in SHELL_SOURCE
 
 
-def test_truncated_project_coverage_is_wired_to_a_visible_warning():
+def test_portfolio_uses_its_aggregate_instead_of_partial_job_coverage():
     adapter = (ROOT / "src" / "mco" / "console_src" / "47e66145-9c4d-41a1-acbb-42b12848f160.js").read_text(encoding="utf-8")
-    assert "truncated: !!(projectView && projectView.truncated)" in adapter
-    assert "getProjectCoverage:" in adapter
-    assert "coverage={projectCoverage}" in SHELL_SOURCE
-    assert "Project counts are partial" in VIEW_SOURCE
+    assert 'api("/api/portfolio")' in adapter
+    assert "getPortfolio:" in adapter
+    assert "coverage={projectCoverage}" not in SHELL_SOURCE
+    assert "snapshot={portfolio}" in SHELL_SOURCE
 
 
-def test_full_project_dataset_is_lazy_and_not_part_of_fleet_poll():
+def test_portfolio_dataset_is_lazy_and_not_part_of_fleet_poll():
     adapter = (ROOT / "src" / "mco" / "console_src" / "47e66145-9c4d-41a1-acbb-42b12848f160.js").read_text(encoding="utf-8")
     assert 'Promise.all([api("/api/jobs?limit=200"), api("/api/agents")])' in adapter
-    assert adapter.count('api("/api/jobs/project-view")') == 1
-    assert "Date.now() - projectFetchedAt < 60000" in adapter
-    assert "await refreshProjectView(true)" in adapter
-    assert "page !== \"projects\"" in SHELL_SOURCE
-    assert "60000" in SHELL_SOURCE
+    assert adapter.count('api("/api/portfolio")') == 1
+    assert "Date.now() - portfolioFetchedAt < 30000" in adapter
+    assert "page !== \"portfolio\"" in SHELL_SOURCE
+    assert "refreshPortfolio(true)" in SHELL_SOURCE
 
 
 def test_projection_prefers_declared_project_then_workflow_and_preserves_unassigned():

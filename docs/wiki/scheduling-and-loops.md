@@ -1,11 +1,18 @@
 # Scheduling & Recurring Loops
 
 ## Goal
-Automate recurring agent tasks on timers, cron schedules, or bounded iteration loops, ensuring all periodic runs inherit full governance, approval gates, and audit trails.
+Automate recurring helper tasks on timers, cron schedules, or bounded iteration loops, ensuring all periodic runs inherit full governance, approval gates, and audit trails.
 
 ---
 
 ## Step-by-Step Instructions
+
+### The easy way: the Schedules page
+In the console, click **Schedules**. Each saved schedule is a card with its name, when it runs (for example *Every day at 2:00 AM*), the next run, and an **On** switch. To add one, use **New schedule**: choose what should run, how often (**Every day**, **Every weekday**, **Certain days** or **Every hour**) and the time. The sentence at the bottom shows exactly what you are saving. See [Schedules](Schedules.md). To make something repeat straight from a request, use **Make it repeat** on [Ask for something](Ask.md).
+
+![Schedules](img/23-console-schedules.png)
+
+The rest of this page covers the file behind it, for launchers, cron and loops.
 
 ### 1. Initialize Scheduling Configuration
 Generate the default schedules file in your user home:
@@ -96,7 +103,7 @@ mco schedule reset health-pulse
   ```text
   Origin: loop: audit-cron #12
   ```
-- **Audit Trails:** You can look back months later and see exactly which schedule authorized each job, which agent leased it, and what was produced.
+- **Audit Trails:** You can look back months later and see exactly which schedule authorized each job, which helper leased it, and what was produced.
 
 ---
 

@@ -37,8 +37,7 @@ First run creates the project and prints the live URL
 (`https://bitcadence.pages.dev`). Subsequent runs deploy in seconds.
 
 **Custom domain:** Cloudflare dashboard → Pages → bitcadence →
-Custom domains → add `bitcadence.ai` (already owned, catch-all email
-configured — `pilots@bitcadence.ai` just works).
+Custom domains → add `bitcadence.ai` (already owned).
 
 **Zero-config alternative:** the Cloudflare dashboard also accepts a
 drag-and-drop of the `website/` folder, or can auto-deploy from this
@@ -51,3 +50,7 @@ Everything lives in `index.html` — design tokens are CSS variables at the
 top (`--paper`, `--ink`, `--indigo`, `--signal`). The hero terminal
 animation script is at the bottom; edit the `SCRIPT` array to change the
 demo narrative.
+
+## Captions
+
+The final demo (`media/bitcadence-demo.mp4`, 2:48) has captions burned into the picture, so no `.vtt` track is needed (WCAG 1.2.2 met). It is click-to-play with sound, `preload="none"`, no autoplay. The hero film (`media/bitcadence-march.mp4`, 45 s) is click-to-play, `preload="none"`, no autoplay, and shown on mobile too. It has no speech: the soundtrack is music only (an organ toccata, a snare cadence, then an orchestral march), and every on-screen line is text in the picture, so captions are not needed; the aria-label describes it.

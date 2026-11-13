@@ -1,72 +1,59 @@
-# Agent Fleet & Presence
+# Helpers & Presence
 
 ## Goal
-Register worker agent instances, inspect live connection heartbeats, rotate access tokens, assign roles, and monitor what each agent is currently working on.
+Add a helper, see at a glance which helpers are working, ready or stuck, and rotate a helper's access token. A helper is one AI worker that takes jobs from the board. (The command line still calls them agents, for example `mco agents`.)
 
 ---
 
 ## Step-by-Step Instructions
 
-### 1. View Registered Agents
-In the left navigation sidebar, click **Agent Fleet** (or *"Your agents"*).
+### 1. See your helpers
+In the left menu, click **Helpers**.
 
-![Agent Fleet Overview](img/08-console-agents.png)
+![Your helpers](img/08-console-helpers.png)
 
-Agents are grouped by their primary capability role:
-- `codex` — Code generation, test implementation, and builds.
-- `claude` — Architecture research, documentation, and analysis.
-- `gemini` — QA verification and regression testing.
-- `human` / `operator` — Approvers and operations oversight.
-- `reviewer` — Independent verification and security reviews.
+Each helper has a card with a friendly name, a light and a word:
+- **Working** (green): it holds a job right now, and the card says which one.
+- **Ready** (green): it is waiting for a job.
+- **Stuck**: it needs a fix. Click **Fix it** on the card. BitCadence shows what it will do and asks before it does anything.
+- **Not connected** (grey): it has not been heard from.
 
-Each agent card shows:
-- **Instance ID:** Unique identifier for that worker machine or container.
-- **Heartbeat Status:** Pulsing green dot for `online` (<90s since last seen), red for `offline`.
-- **Current Task:** The specific job title currently leased by that agent.
-- **Completed Tasks:** Lifetime completion count.
+Each card also says when the helper was last heard from. See [Helpers](Helpers.md) for how the lights are decided.
 
-### 2. Registering a New Agent
-1. In the top right of the Agent Fleet screen, click **Register agent** (or **Add agent**).
+### 2. Add a helper
+1. Click **+ Add a helper**.
 
-![Register Agent Panel](img/17-agent-register-panel.png)
+![Add a helper](img/17-helper-add-panel.png)
 
-2. Fill in the form:
-   - **Instance ID:** Unique name for the worker (e.g., `codex-build-3` or `my-laptop`).
-   - **Role:** The assigned capability role (`codex`, `claude`, `gemini`, `admin`, etc.).
-3. Click **Register**.
-4. The generated access token is displayed:
-   ```text
-   mco_tok_...
-   ```
-   *Important:* Copy the token immediately using the **Copy** button. The secret token is hashed with SHA-256 in the database and is never displayed again.
+2. Pick which AI should power it and give it a name, for example *Penny*.
+3. Click **Add helper**. BitCadence registers it and saves its sign-in on this computer. The page says "Penny is added" and never shows the sign-in. An existing helper's name is refused instead of silently replacing its sign-in.
 
-### 3. Rotating an Agent's Access Token
-If an agent credential is compromised or expired:
-1. Locate the agent in the list.
-2. In the row actions, click **Reset Token**.
-3. Confirm the action. A new token is minted, and the old token is revoked instantly.
+To link Claude, Codex, Gemini, Antigravity or Cursor in one tap instead, use [Connect an AI](Connect-an-AI.md).
 
-### 4. Deregistering Stale Agents
-Click **Delete** next to an agent row to permanently remove its registration from `agent_registry`.
+### 3. Rotate a helper's access token
+If a credential is lost or exposed, run `mco reset-token <name>` (see below). A new token is minted and the old one stops working at once.
+
+### 4. Remove a stale helper
+Run `mco deregister <name>` to remove its registration.
 
 ---
 
 ## The CLI Equivalent
 
 ```powershell
-# List all registered agents and presence
+# List all registered helpers and presence
 mco agents
 
-# Register a new agent
+# Register a new helper
 mco register --name worker-east-1 --role codex
 
-# Register an agent with restricted scopes
+# Register a helper with restricted scopes
 mco register --name monitor-1 --role viewer --scope jobs:read
 
-# Rotate an agent's access token
+# Rotate a helper's access token
 mco reset-token worker-east-1
 
-# Deregister an agent
+# Deregister a helper
 mco deregister worker-east-1
 ```
 
@@ -74,21 +61,21 @@ mco deregister worker-east-1
 
 ## What You'll See
 
-- **Presence Heartbeats:** When an agent runs `mco listen` or queries `mco_inbox`, its `last_seen_at` timestamp updates automatically.
-- **Safe Concurrency:** Two agents with the same role share the role's inbox. When work arrives, whichever agent requests a lease first wins atomically. The other agent receives an empty response and continues waiting.
+- **Presence Heartbeats:** When a helper runs `mco listen` or queries `mco_inbox`, its `last_seen_at` timestamp updates automatically.
+- **Safe Concurrency:** Two helpers with the same role share the role's inbox. When work arrives, whichever helper requests a lease first wins atomically. The other helper receives an empty response and continues waiting.
 
 ---
 
 ## If It Goes Wrong
 
-### 1. "Agent shows offline despite running"
+### 1. "Helper shows Not connected despite running"
 - **Cause:** Network connectivity lost, or worker polling loop was stopped.
-- **Fix:** Agents are considered offline if no heartbeat occurs within 90 seconds. Restart the worker process or verify network reachability to the gateway.
+- **Fix:** A helper is considered offline if no heartbeat occurs within 90 seconds. Restart the worker process or verify network reachability to the gateway.
 
 ### 2. "Token lost after registration"
-- **Cause:** The registration panel was closed before copying the token.
-- **Fix:** Click **Reset Token** on that agent's row to generate a new token.
+- **Cause:** The panel was closed before copying the token.
+- **Fix:** Run `mco reset-token <name>` to generate a new token.
 
-### 3. "Cannot delete agent: jobs currently leased"
-- **Cause:** The agent is actively holding an open lease on an unfinished job.
-- **Fix:** Wait for the job to complete, or use `mco cancel <job-id>` to cancel the leased job before deleting the agent registration.
+### 3. "Cannot delete helper: jobs currently leased"
+- **Cause:** The helper is actively holding an open lease on an unfinished job.
+- **Fix:** Wait for the job to complete, or use `mco cancel <job-id>` to cancel the leased job before deleting the helper.

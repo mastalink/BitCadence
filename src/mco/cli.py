@@ -297,6 +297,10 @@ def create_app() -> FastAPI:
     from mco.orchestrator.schedules_routes import schedules_router
     app_server.include_router(schedules_router)
 
+    # Local-configured project portfolio and flow flags (read-only in v1).
+    from mco.orchestrator.portfolio_routes import portfolio_router
+    app_server.include_router(portfolio_router)
+
     # Admin API: agent management, settings, workflow submission (Control Panel)
     from mco.orchestrator.admin_routes import (
         agents_admin_router,
@@ -1228,6 +1232,8 @@ def score_start(
     org: str = typer.Option("default", "--org"),
     database: Path = typer.Option(DEFAULT_SCORE_DB, "--db"),
     root: Path = typer.Option(DEFAULT_SCORE_ROOT, "--artifact-root"),
+    standing_grant: Optional[str] = typer.Option(None, "--standing-grant",
+        help="Approved local standing grant ID; rechecked on each conductor step."),
     live_repository_write: bool = typer.Option(
         False,
         "--live-repository-write",
@@ -1247,7 +1253,8 @@ def score_start(
         info = start_run(conductor.bridge, run_id=run_id, score_path=score_file,
                          principal=client.instance_id, org=org,
                          targets=_parse_targets(target),
-                         credential_hash=conductor.board.identity)
+                         credential_hash=conductor.board.identity,
+                         **({"standing_grant_id": standing_grant} if standing_grant is not None else {}))
     except Exception as exc:
         console.print(f"[red][X] Could not start the run:[/red] {exc}")
         raise typer.Exit(code=1)
@@ -1349,6 +1356,56 @@ def score_grant_local(
         console.print(f"[red][X] Local grant was not issued:[/red] {exc}")
         raise typer.Exit(code=1)
     console.print(f"[green][OK][/green] Local human grant issued for '{saved['run_id']}' as {principal}.")
+
+
+@score_app.command("grant-standing-local")
+def score_grant_standing_local(
+    score_file: Path = typer.Argument(..., exists=True, readable=True),
+    environment: str = typer.Option("test", "--environment"),
+    expires_hours: int = typer.Option(24, "--expires-hours", min=1, max=LOCAL_GRANT_MAX_HOURS),
+):
+    """Approve an exact Score class once for unattended local runs (max 316h)."""
+    try:
+        principal = _local_human_principal()
+        from mco.orchestrator.scores import digest, load_score
+        from mco.orchestrator.score_authority import GrantService
+        from mco.orchestrator.routes import get_db_client
+        score = load_score(score_file.read_text(encoding="utf-8"))
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(hours=expires_hours)
+        console.print(Panel.fit(
+            f"Standing Score grant: {score['id']}\nDigest: {digest(score)}\n"
+            f"Constraints: {score['constraints']}\nBudget ceiling per run: {score['budget_cents']} cents\n"
+            f"Capabilities: {sorted({a for t in score['tasks'] for a in t['capabilities']})}\n"
+            f"Resources: {sorted({r for t in score['tasks'] for r in t['resources']})}\n"
+            f"Environment: {environment}\nExpires: {expires_at.isoformat()}",
+            border_style="yellow"))
+        phrase = f"ISSUE STANDING GRANT {score['id']}"
+        if typer.prompt(f"Type exactly: {phrase}", default="", show_default=False) != phrase:
+            raise RuntimeError("Confirmation did not match; no grant was issued.")
+        saved = GrantService(get_db_client()).issue_standing(
+            score=score, org_id="default", human_principal=principal, environment=environment,
+            not_before=now.isoformat(), expires_at=expires_at.isoformat())
+    except Exception as exc:
+        console.print(f"[red][X] Standing grant was not issued:[/red] {exc}")
+        raise typer.Exit(code=1)
+    console.print(f"[green][OK][/green] Standing grant ID: {saved['id']}")
+    console.print(f"Revoke: mco score revoke-standing-local {saved['id']}")
+
+
+@score_app.command("revoke-standing-local")
+def score_revoke_standing_local(grant_id: str = typer.Argument(...)):
+    """Revoke a standing class immediately; existing runs are checked again."""
+    try:
+        principal = _local_human_principal()
+        from mco.orchestrator.score_authority import GrantService
+        from mco.orchestrator.routes import get_db_client
+        GrantService(get_db_client()).revoke_standing(
+            grant_id, org_id="default", human_principal=principal)
+    except Exception as exc:
+        console.print(f"[red][X] Standing grant was not revoked:[/red] {exc}")
+        raise typer.Exit(code=1)
+    console.print(f"[green][OK][/green] Standing grant revoked: {grant_id}")
 
 
 @score_app.command("tick")
@@ -3250,6 +3307,7 @@ def wake(
     gateway: Optional[str] = typer.Option(None, "--gateway", help="Gateway HTTP URL."),
     token: Optional[str] = typer.Option(None, "--token", help="Agent bearer token."),
     min_interval: float = typer.Option(10.0, "--min-interval", help="Minimum seconds between spawn starts."),
+    repoll_interval: float = typer.Option(300.0, "--repoll-interval", help="Seconds between timer re-checks of the inbox (0 disables)."),
 ):
     """Wake a local worker command when this agent's inbox has pending jobs."""
     from mco.waker import Waker, WakerAuthError, WakerTokenError, resolve_agent_token
@@ -3273,6 +3331,7 @@ def wake(
         gateway_url=resolved_gateway,
         token=resolved_token,
         min_interval=min_interval,
+        repoll_interval=repoll_interval,
     )
     console.print(f"[green]Waking {resolved_role}/{resolved_instance} from {waker.ws_url}[/green] "
                   "[dim](Ctrl-C to stop)[/dim]")

@@ -167,8 +167,8 @@ def test_callback_provisions_mapped_user_and_revocable_session(ctx, monkeypatch)
         "_oidc_client",
         lambda provider_row, db: FakeOIDCClient({
             "sub": "okta-user-1",
-            "email": "joe@example.com",
-            "name": "Joe",
+            "email": "alex@example.com",
+            "name": "Alex",
             "groups": ["Change-Approvers", "Everyone"],
         }),
     )

@@ -8,7 +8,7 @@ Connect external AI models (Anthropic Claude Desktop, OpenAI Codex, Google Antig
 ## Step-by-Step Instructions
 
 ### 1. The Worker Model
-Agents in BitCadence do not expose exposed HTTP endpoints or wait for inbound RPC calls. Instead, workers **poll their designated dropboxes** for mail:
+Helpers in BitCadence do not expose exposed HTTP endpoints or wait for inbound RPC calls. Instead, workers **poll their designated dropboxes** for mail:
 1. A job arrives for role `codex`.
 2. A running worker requests a lease atomically (`mco_lease` / `POST /api/jobs/lease_next`).
 3. If won, the worker executes the task, streams events, and writes results back.
@@ -17,7 +17,7 @@ Agents in BitCadence do not expose exposed HTTP endpoints or wait for inbound RP
 To start a worker daemon that polls for jobs:
 
 ```powershell
-# 1. Register the worker agent
+# 1. Register the helper
 mco register --name worker-codex-1 --role codex
 
 # 2. Export the minted token
@@ -58,11 +58,11 @@ Add this configuration to your client's MCP configuration (e.g., `claude_desktop
 ```
 
 The AI assistant automatically gains access to:
-- `mco_inbox` — List pending jobs addressed to this agent.
+- `mco_inbox` — List pending jobs addressed to this helper.
 - `mco_lease` — Atomically claim a task.
 - `mco_complete` — Mark finished work with structured handoff.
 - `mco_fail` — Report errors and trigger escalation.
-- `mco_send` — Drop work into another agent's mailbox.
+- `mco_send` — Drop work into another helper's mailbox.
 - `mco_remember` / `mco_recall` — Read and write Drumline shared context.
 
 ---

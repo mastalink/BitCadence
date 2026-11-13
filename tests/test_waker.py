@@ -337,3 +337,39 @@ def test_error_message_construction_never_raises(tmp_path, monkeypatch):
     with pytest.raises(WakerTokenError) as exc:
         resolve_agent_token("../evil", config=_Cfg(MCO_LOCAL_TOKEN="op"))
     assert "../evil" in str(exc.value)
+
+
+@pytest.mark.asyncio
+async def test_repoll_timer_drains_pending_work_without_events(tmp_path):
+    marker = tmp_path / "spawned.txt"
+    client = FakeClient([[{"id": "j1"}], []])
+    ticks = []
+
+    async def fake_clock_sleep(seconds):
+        # Each "sleep" is one timer tick; let the drain from the last tick
+        # finish before advancing, then stop after two ticks.
+        ticks.append(seconds)
+        await waker.wait_for_idle()
+        if len(ticks) > 2:
+            raise asyncio.CancelledError
+
+    waker = Waker(
+        exec_command=_marker_cmd(marker),
+        role="codex",
+        instance_id="codex-1",
+        client=client,
+        min_interval=0,
+        repoll_interval=300,
+        sleep=fake_clock_sleep,
+    )
+    with pytest.raises(asyncio.CancelledError):
+        await waker._repoll_loop()
+    await waker.wait_for_idle()
+    assert ticks[:2] == [300.0, 300.0]
+    assert client.calls == 2
+    assert marker.read_text() == "x"
+
+
+def test_repoll_default_and_disable():
+    assert Waker("x", "codex", "i", client=FakeClient([])).repoll_interval == 300.0
+    assert Waker("x", "codex", "i", client=FakeClient([]), repoll_interval=-5).repoll_interval == 0.0

@@ -19,6 +19,13 @@ logger = logging.getLogger("mco.waker")
 AGENT_TOKEN_DIR = Path.home() / ".mco" / "tokens"
 
 
+# Seconds between timer-driven inbox re-checks. Events alone are not enough: a
+# job_pending event that arrives while the worker run is failing (or while the
+# socket is silently dead) is never replayed, so pending work would sit until
+# the waker was restarted.
+DEFAULT_REPOLL_INTERVAL = 300.0
+
+
 class WakerAuthError(RuntimeError):
     """Raised when the broadcast WebSocket rejects authentication."""
 
@@ -244,6 +251,7 @@ class Waker:
         gateway_url: Optional[str] = None,
         token: str = "",
         min_interval: float = 10.0,
+        repoll_interval: float = DEFAULT_REPOLL_INTERVAL,
         client: Optional[GatewayClient] = None,
         sleep: Callable[[float], Any] = asyncio.sleep,
     ):
@@ -260,6 +268,8 @@ class Waker:
             role=self.role,
             instance_id=self.instance_id,
         )
+        # 0 disables the timer; events and reconnects still wake the worker.
+        self.repoll_interval = max(0.0, float(repoll_interval))
         self._sleep = sleep
         self._drain_task: Optional[asyncio.Task] = None
         self._dirty = False
@@ -267,6 +277,23 @@ class Waker:
 
     async def run_forever(self) -> None:
         """Connect to the broadcast socket and reconnect forever on failures."""
+        repoll = None
+        if self.repoll_interval > 0:
+            repoll = asyncio.create_task(self._repoll_loop())
+        try:
+            await self._connect_forever()
+        finally:
+            if repoll is not None:
+                repoll.cancel()
+
+    async def _repoll_loop(self) -> None:
+        """Re-check the authoritative inbox on a timer, independent of events."""
+        while True:
+            await self._sleep(self.repoll_interval)
+            logger.debug("Waker timer re-check")
+            self.trigger_drain()
+
+    async def _connect_forever(self) -> None:
         import websockets
 
         backoff = 1.0
