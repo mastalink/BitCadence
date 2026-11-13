@@ -1219,8 +1219,26 @@ def _parse_targets(values: Optional[List[str]]) -> dict:
             console.print(f"[red][X] --target must be role=instance, got '{item}'.[/red]")
             raise typer.Exit(code=1)
         role, instance = item.split("=", 1)
-        targets[role.strip()] = instance.strip()
+        role, instance = role.strip(), instance.strip()
+        if role in targets:
+            # Repeating a role lists fallbacks in order of preference: the run
+            # uses the first one the board does not report offline or broken.
+            known = targets[role] if isinstance(targets[role], list) else [targets[role]]
+            targets[role] = known + [instance] if instance not in known else known
+        else:
+            targets[role] = instance
     return targets
+
+
+def _steps_outside_launch(score: dict) -> list:
+    """Main steps a run would never reach: not in launch_requires, not a fix step.
+
+    The automatic sweep stops advancing a run once every launch_requires step is
+    accepted. Fix steps only run after a rejection, so they are not counted.
+    """
+    fixes = {t.get("on_reject") for t in score.get("tasks", []) if t.get("on_reject")}
+    required = set(score.get("launch_requires", []))
+    return [t["id"] for t in score.get("tasks", []) if t["id"] not in required and t["id"] not in fixes]
 
 
 @score_app.command("start")
@@ -1259,6 +1277,16 @@ def score_start(
         console.print(f"[red][X] Could not start the run:[/red] {exc}")
         raise typer.Exit(code=1)
     console.print(f"[green][OK][/green] Run '{info['run_id']}' ready for score '{info['score_id']}'")
+    try:
+        from mco.orchestrator.scores import load_score
+        outside = _steps_outside_launch(load_score(Path(score_file).read_text(encoding="utf-8")))
+    except Exception:  # noqa: BLE001 - the run already started; this is advice only
+        outside = []
+    if outside:
+        console.print(
+            f"[yellow][!][/yellow] {len(outside)} step(s) are not in launch_requires and will NOT be "
+            f"run by the automatic sweep once the listed steps are accepted: {', '.join(outside)}. "
+            "Add them to launch_requires if they must run unattended.")
     console.print(f"[dim]Advance it with: mco score tick --run-id {info['run_id']} --watch[/dim]")
 
 

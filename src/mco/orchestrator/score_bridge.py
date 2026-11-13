@@ -68,6 +68,9 @@ class GatewayBoard:
     def events(self, job_id):
         return self.request("GET", f"/api/jobs/{job_id}/events")
 
+    def agents(self):
+        return self.request("GET", "/api/agents")
+
 
 class ScoreBridge:
     def __init__(self, database, artifact_root, clock=time.time, gate_service=None, live_executor=None,
@@ -79,6 +82,14 @@ class ScoreBridge:
         self.gate_service = gate_service
         self.live_executor = live_executor
         self.authority_service = authority_service
+        # Optional fleet view: a callable returning {instance_id: {"role": str,
+        # "available": bool, "state": str}}. With none, the first listed target
+        # is always used, exactly as before. The conductor supplies one so a
+        # step is not addressed to an agent the board already knows is offline
+        # or not taking jobs (out of usage, crashed runner) while another listed
+        # target is healthy: on 2026-11-13 a review sat for hours on an agent
+        # whose provider balance was exhausted.
+        self.fleet = None
         with self.tx() as db:
             db.execute("CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY, definition TEXT NOT NULL, digest TEXT NOT NULL, principal TEXT NOT NULL, credential_hash TEXT NOT NULL, org TEXT NOT NULL, targets TEXT NOT NULL, artifact_root TEXT NOT NULL, status TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS dispatch(run TEXT NOT NULL, task TEXT NOT NULL, phase TEXT NOT NULL, job_id TEXT UNIQUE NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL, evidence TEXT, deadline INTEGER NOT NULL, PRIMARY KEY(run,task,phase))")
@@ -244,6 +255,7 @@ class ScoreBridge:
     def plan(self, run_id):
         self.check_standing_authority(run_id)
         self.check_deadlines(run_id)
+        view = self._fleet_view()
         with self.tx() as db:
             run = self.run(db, run_id)
             if run["status"] not in ("running", "waiting_on_gate"):
@@ -295,7 +307,7 @@ class ScoreBridge:
                             job_id = score_job_id(run["org"], run_id, run["digest"], key, "work")
                             contract = dict(protocol="score-v1", score_id=score["id"], run_id=run_id, digest=run["digest"], task=key, attempt=1, phase="work", artifact_root=str(self.root), required_evidence=t["evidence"], review_of=None, constraints=score["constraints"])
                             prompt = t["instructions"] + " Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets."
-                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=_score_job_priority())
+                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=self._listed(targets, t["role"])[0], depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=_score_job_priority())
                             db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'waiting_on_gate',NULL,?)", (run_id, key, "work", job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
                             self.event(db, run_id, "waiting_on_gate", {"task": key, "reason": "no gate service configured"})
                             rows[(key, "work")] = {"task": key, "phase": "work", "job_id": job_id, "status": "waiting_on_gate"}
@@ -330,7 +342,7 @@ class ScoreBridge:
                         if work is None:
                             contract = dict(protocol="score-v1", score_id=score["id"], run_id=run_id, digest=run["digest"], task=key, attempt=1, phase="work", artifact_root=str(self.root), required_evidence=t["evidence"], review_of=None, constraints=score["constraints"])
                             prompt = t["instructions"]
-                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=_score_job_priority())
+                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=self._listed(targets, t["role"])[0], depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=_score_job_priority())
                             db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'rejected',NULL,?)", (run_id, key, "work", job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
                         else:
                             db.execute("UPDATE dispatch SET status='rejected' WHERE run=? AND task=? AND phase='work'", (run_id, key))
@@ -345,7 +357,7 @@ class ScoreBridge:
                             job_id = score_job_id(run["org"], run_id, run["digest"], key, "work")
                             contract = dict(protocol="score-v1", score_id=score["id"], run_id=run_id, digest=run["digest"], task=key, attempt=1, phase="work", artifact_root=str(self.root), required_evidence=t["evidence"], review_of=None, constraints=score["constraints"])
                             prompt = t["instructions"] + " Return strict JSON {artifacts: {required_name: {path: relative_path, sha256: lowercase_digest}}}. Save evidence only beneath artifact_root; no secrets."
-                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=targets[t["role"]], depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=_score_job_priority())
+                            payload = dict(id=job_id, title=f"Score {run_id} {key} work", description=prompt, target_agent_role=t["role"], target_agent_id=self._listed(targets, t["role"])[0], depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=_score_job_priority())
                             db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'waiting_on_gate',NULL,?)", (run_id, key, "work", job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
                             self.event(db, run_id, "waiting_on_gate", {"task": key, "gate_id": gate["id"]})
                             rows[(key, "work")] = {"task": key, "phase": "work", "job_id": job_id, "status": "waiting_on_gate"}
@@ -354,7 +366,11 @@ class ScoreBridge:
 
                     if work is not None and work["status"] == "waiting_on_gate":
                         new_deadline = int(self.clock()) + t["timeout_seconds"]
-                        db.execute("UPDATE dispatch SET status='planned', deadline=? WHERE run=? AND task=? AND phase='work' AND status='waiting_on_gate'", (new_deadline, run_id, key))
+                        # The row was written when the gate was asked, possibly
+                        # weeks ago: choose the worker now, not then.
+                        held = json.loads(db.execute("SELECT payload FROM dispatch WHERE run=? AND task=? AND phase='work'", (run_id, key)).fetchone()["payload"])
+                        held["target_agent_role"], held["target_agent_id"] = self._target(db, run_id, key, "work", t["role"], self._listed(targets, t["role"]), view)
+                        db.execute("UPDATE dispatch SET status='planned', payload=?, deadline=? WHERE run=? AND task=? AND phase='work' AND status='waiting_on_gate'", (encoded(held), new_deadline, run_id, key))
                         self.event(db, run_id, "gate_approved", {"task": key, "gate_id": gate["id"]})
                         self.event(db, run_id, "planned", {"job_id": work["job_id"], "task": key, "phase": "work"})
                         created.append(work["job_id"])
@@ -477,7 +493,7 @@ class ScoreBridge:
                             active.add(key)
                         continue
 
-                    target_agent_id = eligible_candidates[0]
+                    role, target_agent_id = self._target(db, run_id, key, phase, role, eligible_candidates, view)
                     if rev_row is not None and rev_row["status"] == "waiting_on_gate":
                         payload = dict(
                             id=job_id,
@@ -501,7 +517,7 @@ class ScoreBridge:
                         rev_row["status"] = "planned"
                         continue
                 else:
-                    target_agent_id = targets[role][0] if isinstance(targets[role], (list, tuple)) else targets[role]
+                    role, target_agent_id = self._target(db, run_id, key, phase, role, self._listed(targets, role), view)
 
                 payload = dict(id=job_id, title=f"Score {run_id} {key} {phase}", description=prompt, target_agent_role=role, target_agent_id=target_agent_id, depends_on=[], input_payload={"prompt": prompt, "score": contract, "no_reroute": True}, max_retries=0, requires_approval=False, priority=_score_job_priority())
                 db.execute("INSERT INTO dispatch VALUES(?,?,?,?,?,'planned',NULL,?)", (run_id, key, phase, job_id, encoded(payload), int(self.clock()) + t["timeout_seconds"]))
@@ -524,6 +540,54 @@ class ScoreBridge:
                     db.execute("UPDATE runs SET status='running' WHERE id=? AND status='waiting_on_gate'", (run_id,))
 
             return created
+
+    def _fleet_view(self):
+        """The current fleet view, or {} when there is none or it cannot be read."""
+        if self.fleet is None:
+            return {}
+        try:
+            view = self.fleet()
+        except Exception as exc:  # noqa: BLE001 - presence is advice, never a reason to stop a run
+            logger.warning("Score fleet view unavailable (%s); using listed target order", type(exc).__name__)
+            return {}
+        return view if isinstance(view, dict) else {}
+
+    @staticmethod
+    def _listed(targets, role):
+        value = targets.get(role)
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, (list, tuple)):
+            return list(value)
+        return []
+
+    @staticmethod
+    def _choose_target(candidates, view):
+        """First candidate the fleet does not report unavailable; else the first.
+
+        An agent the view does not know stays eligible, and when every candidate
+        is unavailable the first one is kept: the job then waits for it, which is
+        the behaviour a single fixed target always had.
+        """
+        for candidate in candidates:
+            info = view.get(candidate)
+            if not isinstance(info, dict) or info.get("available", True):
+                return candidate
+        return candidates[0]
+
+    def _target(self, db, run_id, key, phase, role, candidates, view):
+        """(target_agent_role, target_agent_id) for a job, recording any fallback."""
+        chosen = self._choose_target(candidates, view)
+        if chosen != candidates[0]:
+            skipped = view.get(candidates[0]) or {}
+            self.event(db, run_id, "target_fallback", {
+                "task": key, "phase": phase, "preferred": candidates[0], "chosen": chosen,
+                "preferred_state": skipped.get("state")})
+        info = view.get(chosen)
+        actual_role = info.get("role") if isinstance(info, dict) else None
+        # The board authenticates a completion by the agent's own role, so a
+        # fallback registered under another role must be addressed by that role.
+        return (actual_role or role), chosen
 
     @staticmethod
     def validate_job(run, row, job):
