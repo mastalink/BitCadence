@@ -22,6 +22,13 @@ In the left menu, click **Job Board**. Its heading has the same name in both cop
    - **Problems:** failed, rejected, halted or cancelled.
 2. Type in **Search loaded jobs** to filter the fetched window, pick **All roles**, or change sort (default **Priority, then oldest**). Native job-title/sort buttons and the sort dropdown support keyboard operation.
 
+### On a phone
+At widths up to 760px, each job becomes a stacked row rather than seven squeezed columns. The title has its own wide area; **Status**, **Assigned to**, **From**, **Workflow** (or **Retries** with Technical details on), and **Updated** appear below it with labels. Long identifiers wrap within their field. Filter buttons wrap between buttons rather than splitting their words.
+
+Use **Sort jobs** to change order; the desktop-only sortable column headings are hidden on phones. **Select all visible jobs** stays above the rows. Tap a row's checkbox area to select it without opening details, or tap its title to open the drawer. Selection, eligible batch actions and partial-result behavior are the same as on desktop. Escape closes a drawer when using a keyboard.
+
+![Phone Job Board with labeled rows, using disposable example jobs](img/04b-job-board-phone.png)
+
 ### 3. Creating a New Job
 For most work, [Ask for something](Ask.md) is easier. To drop one job on the board yourself:
 1. Click **+ New job** in the upper right.

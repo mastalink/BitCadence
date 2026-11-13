@@ -79,8 +79,8 @@
 </tr>
 <tr>
 <td>U13</td>
-<td><strong>Implemented layout changes:</strong> shared shell scrolling sidebar, narrow-screen Menu/backdrop, wrapping and single-column rules replace page-specific navigation geometry.</td>
-<td>Browser checks passed at 320px and 390px on Home, Job Board, Approvals, Settings and Administration; short-screen navigation reaches the final destination. 200%-zoom, touch and assistive-technology acceptance remains pending.</td>
+<td><strong>Implemented layout changes:</strong> shared shell scrolling sidebar and narrow-screen Menu/backdrop; Job Board uses stacked labeled rows up to760px with wide headlines, whole filter buttons and44px touch targets. Desktop keeps its table and header sorting; phones use Sort jobs.</td>
+<td>Earlier no-overflow checks missed fragmented words. Follow-up <code>check_job_board_phone.py</code> checks320/390/430px in both detail modes: word rectangles, headline width/type size, long helper/source/workflow bounds, expanded selection clicks, select-all, reassignment controls, empty/search/sort and keyboard open/Escape. Disposable jobs remain unchanged. Visual screenshots reviewed; screen-reader and200%-zoom conformance are not claimed.</td>
 </tr>
 <tr>
 <td>U14</td>

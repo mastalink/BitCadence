@@ -507,9 +507,9 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 2, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: 3 }}>
+    <div className="bc-job-board">
+      <div className="bc-job-controls" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+        <div className="bc-job-filters" style={{ display: "flex", gap: 2, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: 3 }}>
           {JOB_FILTERS.map((f) => (
             <button key={f.id} onClick={() => setFilter(f.id)} style={{
               border: "none", cursor: "pointer", borderRadius: 6, padding: "5px 11px",
@@ -531,7 +531,7 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
           <option value="all">All roles</option>
           {roles.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <div className="bc-job-sort" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <select aria-label="Sort jobs" value={sort} onChange={(e) => setSort(e.target.value)} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
             background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }}>
             {JOB_SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
@@ -589,11 +589,11 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
       ) : null}
 
       <Card pad={false}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+        <table className="bc-job-table" aria-label="Jobs" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
           <thead>
             <tr>
               <th style={{ width: 38, padding: "8px 10px 8px 14px", borderBottom: "1px solid var(--border)", background: "var(--surface-2)", textAlign: "center" }}>
-                <input type="checkbox" aria-label="Select all visible jobs" disabled={batchBusy} checked={allVisibleSelected} onChange={toggleSelectAll} style={{ cursor: "pointer" }} />
+                <label className="bc-job-select-label"><input type="checkbox" aria-label="Select all visible jobs" disabled={batchBusy} checked={allVisibleSelected} onChange={toggleSelectAll} style={{ cursor: "pointer" }} /><span className="bc-job-mobile-only">Select all visible jobs</span></label>
               </th>
               <th aria-sort={sort === "title" ? "ascending" : "none"} style={{
                 textAlign: "left", padding: "8px 14px", fontSize: 11.5, fontWeight: 600,
@@ -637,18 +637,18 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
           </thead>
           <tbody>
             {visible.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: "36px 20px" }}><EmptyState icon="○" title="No matches in the loaded window" body="Only the latest loaded jobs are searched. Clear filters or use a job's History to inspect older work." /></td></tr>
+              <tr><td className="bc-job-empty" colSpan={7} style={{ padding: "36px 20px" }}><EmptyState icon="○" title="No matches in the loaded window" body="Only the latest loaded jobs are searched. Clear filters or use a job's History to inspect older work." /></td></tr>
             ) : visible.map((j) => {
               const isSelected = selected.has(j.id);
               return (
-                <tr key={j.id} onClick={() => onOpen(j.id)} style={{ cursor: "pointer", background: isSelected ? "var(--accent-soft)" : "transparent" }}
+                <tr className="bc-job-row" key={j.id} onClick={() => onOpen(j.id)} style={{ cursor: "pointer", background: isSelected ? "var(--accent-soft)" : "transparent" }}
                   onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--surface-2)"; }}
                   onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}>
-                  <td style={{ width: 38, padding: "var(--row-pad) 10px var(--row-pad) 14px", borderBottom: "1px solid var(--border)", textAlign: "center" }}
+                  <td className="bc-job-select" style={{ width: 38, padding: "var(--row-pad) 10px var(--row-pad) 14px", borderBottom: "1px solid var(--border)", textAlign: "center" }}
                     onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" aria-label={`Select job ${j.title}`} disabled={batchBusy} checked={isSelected} onChange={() => toggleSelect(j.id)} style={{ cursor: "pointer" }} />
+                    <label className="bc-job-select-label"><input type="checkbox" aria-label={`Select job ${j.title}`} disabled={batchBusy} checked={isSelected} onChange={() => toggleSelect(j.id)} style={{ cursor: "pointer" }} /></label>
                   </td>
-                  <Td>
+                  <Td className="bc-job-title">
                     <button aria-label={`Open job ${j.title}`} onClick={e => { e.stopPropagation(); onOpen(j.id); }} style={{ fontWeight: 600, border: 0, background: "transparent", color: "var(--text)", font: "inherit", textAlign: "left", cursor: "pointer", padding: 0 }}>{j.title}</button>
                     <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 1 }}>
                       <Mono style={{ fontSize: 11 }}>{shortId(j.id)}</Mono>
@@ -662,20 +662,22 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
                       ) : null}
                     </div>
                   </Td>
-                  <Td><StatusBadge status={j.status} tone={tone} /></Td>
-                  <Td>
+                  <Td className="bc-job-meta"><span className="bc-job-mobile-only">Status</span><StatusBadge status={j.status} tone={tone} /></Td>
+                  <Td className="bc-job-meta">
+                    <span className="bc-job-mobile-only">Assigned to</span>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                       <RoleChip role={j.target_agent_role} size={20} />
-                      <span>{j.leased_by_instance_id || j.target_agent_role}</span>
+                      <span className="bc-job-assignee-value">{j.leased_by_instance_id || j.target_agent_role}</span>
                     </span>
                   </Td>
-                  <Td><span style={{ color: "var(--text-2)" }}>{j.source_agent_id}</span></Td>
-                  <Td>
+                  <Td className="bc-job-meta"><span className="bc-job-mobile-only">From</span><span style={{ color: "var(--text-2)" }}>{j.source_agent_id}</span></Td>
+                  <Td className="bc-job-meta">
+                    <span className="bc-job-mobile-only">{advanced ? "Retries" : "Workflow"}</span>
                     {advanced
                       ? <span style={{ color: "var(--text-2)" }}>{j.max_retries ? `${j.retry_count || 0}/${j.max_retries}` : "—"}{j.escalate_to_role ? ` → ${j.escalate_to_role}` : ""}</span>
                       : <span style={{ color: "var(--text-2)" }}>{j.workflow || "—"}</span>}
                   </Td>
-                  <Td><span style={{ color: "var(--text-3)", fontSize: 12.5, whiteSpace: "nowrap" }}>{timeAgo(j.updated_at || j.completed_at || j.started_at || j.created_at)}</span></Td>
+                  <Td className="bc-job-meta"><span className="bc-job-mobile-only">Updated</span><span style={{ color: "var(--text-3)", fontSize: 12.5, whiteSpace: "nowrap" }}>{timeAgo(j.updated_at || j.completed_at || j.started_at || j.created_at)}</span></Td>
                 </tr>
               );
             })}

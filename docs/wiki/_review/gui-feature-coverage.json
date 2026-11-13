@@ -2,10 +2,10 @@
   "schema_version": 2,
   "date": "2026-11-13",
   "basis": "Current UX source branch and isolated fixtures; authenticated runtime and deployment not claimed",
-  "baseline_commit": "d511c6d",
+  "baseline_commit": "a263037",
   "source_hash_status": "frozen",
   "counts": {
-    "grouped_control_or_workflow_entries": 319,
+    "grouped_control_or_workflow_entries": 322,
     "console_sidebar_pages": 13,
     "dashboard_pages": 5,
     "server_settings": 33
@@ -19,7 +19,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -31,7 +31,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -43,7 +43,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -55,7 +55,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -67,7 +67,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -79,7 +79,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -91,7 +91,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -103,7 +103,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -115,7 +115,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -127,7 +127,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -139,7 +139,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -151,7 +151,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -163,7 +163,7 @@
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -175,7 +175,7 @@
       "effect": "local_view",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -187,7 +187,7 @@
       "effect": "local_view",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -199,7 +199,7 @@
       "effect": "local_view",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -211,7 +211,7 @@
       "effect": "local_view",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -223,7 +223,7 @@
       "effect": "local_view",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -403,7 +403,7 @@
       "effect": "local_view",
       "verification": "host_edit_mode_only",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -415,7 +415,7 @@
       "effect": "local_view",
       "verification": "host_edit_mode_only",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -427,7 +427,7 @@
       "effect": "local_view",
       "verification": "host_edit_mode_only",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -439,7 +439,7 @@
       "effect": "local_view",
       "verification": "host_edit_mode_only",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#navigation-and-display-controls"
     },
@@ -747,7 +747,7 @@
       "id": "gui-062",
       "surface": "console",
       "screen": "Job Board",
-      "control": "Job/Status/Assigned to/Updated header sort",
+      "control": "Desktop header sort",
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
@@ -759,7 +759,7 @@
       "id": "gui-063",
       "surface": "console",
       "screen": "Job Board",
-      "control": "Job row",
+      "control": "Phone stacked labeled rows",
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
@@ -770,48 +770,48 @@
     {
       "id": "gui-064",
       "surface": "console",
-      "screen": "New job",
-      "control": "+ New job",
-      "effect": "draft",
+      "screen": "Job Board",
+      "control": "Whole filter buttons",
+      "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 882,
-      "source_anchor": "function NewJobForm(",
-      "documentation": "gui-reference.md#create-a-job"
+      "line": 383,
+      "source_anchor": "function JobBoard(",
+      "documentation": "gui-reference.md#find-and-order-work"
     },
     {
       "id": "gui-065",
       "surface": "console",
-      "screen": "New job",
-      "control": "Title",
-      "effect": "draft",
+      "screen": "Job Board",
+      "control": "Sort jobs on phone",
+      "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 882,
-      "source_anchor": "function NewJobForm(",
-      "documentation": "gui-reference.md#create-a-job"
+      "line": 383,
+      "source_anchor": "function JobBoard(",
+      "documentation": "gui-reference.md#find-and-order-work"
     },
     {
       "id": "gui-066",
       "surface": "console",
-      "screen": "New job",
-      "control": "Details",
-      "effect": "draft",
+      "screen": "Job Board",
+      "control": "Job row",
+      "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 882,
-      "source_anchor": "function NewJobForm(",
-      "documentation": "gui-reference.md#create-a-job"
+      "line": 383,
+      "source_anchor": "function JobBoard(",
+      "documentation": "gui-reference.md#find-and-order-work"
     },
     {
       "id": "gui-067",
       "surface": "console",
       "screen": "New job",
-      "control": "Role picker",
+      "control": "+ New job",
       "effect": "draft",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 882,
+      "line": 884,
       "source_anchor": "function NewJobForm(",
       "documentation": "gui-reference.md#create-a-job"
     },
@@ -819,11 +819,11 @@
       "id": "gui-068",
       "surface": "console",
       "screen": "New job",
-      "control": "Ask me before it runs",
+      "control": "Title",
       "effect": "draft",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 882,
+      "line": 884,
       "source_anchor": "function NewJobForm(",
       "documentation": "gui-reference.md#create-a-job"
     },
@@ -831,11 +831,11 @@
       "id": "gui-069",
       "surface": "console",
       "screen": "New job",
-      "control": "Retry budget",
+      "control": "Details",
       "effect": "draft",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 882,
+      "line": 884,
       "source_anchor": "function NewJobForm(",
       "documentation": "gui-reference.md#create-a-job"
     },
@@ -843,11 +843,11 @@
       "id": "gui-070",
       "surface": "console",
       "screen": "New job",
-      "control": "Escalate to role",
+      "control": "Role picker",
       "effect": "draft",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 882,
+      "line": 884,
       "source_anchor": "function NewJobForm(",
       "documentation": "gui-reference.md#create-a-job"
     },
@@ -855,11 +855,11 @@
       "id": "gui-071",
       "surface": "console",
       "screen": "New job",
-      "control": "Cancel / \u00c3\u2014",
+      "control": "Ask me before it runs",
       "effect": "draft",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 882,
+      "line": 884,
       "source_anchor": "function NewJobForm(",
       "documentation": "gui-reference.md#create-a-job"
     },
@@ -867,59 +867,59 @@
       "id": "gui-072",
       "surface": "console",
       "screen": "New job",
-      "control": "Create job",
-      "effect": "work_write",
+      "control": "Retry budget",
+      "effect": "draft",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 882,
+      "line": 884,
       "source_anchor": "function NewJobForm(",
       "documentation": "gui-reference.md#create-a-job"
     },
     {
       "id": "gui-073",
       "surface": "console",
-      "screen": "Job details",
-      "control": "History / Audit trail",
-      "effect": "read",
+      "screen": "New job",
+      "control": "Escalate to role",
+      "effect": "draft",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
-      "source_anchor": "function JobDetail(",
-      "documentation": "gui-reference.md#inspect-and-act-on-one-job"
+      "line": 884,
+      "source_anchor": "function NewJobForm(",
+      "documentation": "gui-reference.md#create-a-job"
     },
     {
       "id": "gui-074",
       "surface": "console",
-      "screen": "Job details",
-      "control": "Connected steps",
-      "effect": "read",
+      "screen": "New job",
+      "control": "Cancel / \u00c3\u2014",
+      "effect": "draft",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
-      "source_anchor": "function JobDetail(",
-      "documentation": "gui-reference.md#inspect-and-act-on-one-job"
+      "line": 884,
+      "source_anchor": "function NewJobForm(",
+      "documentation": "gui-reference.md#create-a-job"
     },
     {
       "id": "gui-075",
       "surface": "console",
-      "screen": "Job details",
-      "control": "Advanced payloads and ID",
-      "effect": "read",
+      "screen": "New job",
+      "control": "Create job",
+      "effect": "work_write",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
-      "source_anchor": "function JobDetail(",
-      "documentation": "gui-reference.md#inspect-and-act-on-one-job"
+      "line": 884,
+      "source_anchor": "function NewJobForm(",
+      "documentation": "gui-reference.md#create-a-job"
     },
     {
       "id": "gui-076",
       "surface": "console",
       "screen": "Job details",
-      "control": "Close \u00c3\u2014",
+      "control": "History / Audit trail",
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
+      "line": 701,
       "source_anchor": "function JobDetail(",
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
@@ -927,11 +927,11 @@
       "id": "gui-077",
       "surface": "console",
       "screen": "Job details",
-      "control": "Approve & run",
-      "effect": "approval",
+      "control": "Connected steps",
+      "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
+      "line": 701,
       "source_anchor": "function JobDetail(",
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
@@ -939,11 +939,11 @@
       "id": "gui-078",
       "surface": "console",
       "screen": "Job details",
-      "control": "Reject / reason / Cancel",
-      "effect": "approval",
+      "control": "Advanced payloads and ID",
+      "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
+      "line": 701,
       "source_anchor": "function JobDetail(",
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
@@ -951,11 +951,11 @@
       "id": "gui-079",
       "surface": "console",
       "screen": "Job details",
-      "control": "Try again",
-      "effect": "work_write",
+      "control": "Close \u00c3\u2014",
+      "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
+      "line": 701,
       "source_anchor": "function JobDetail(",
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
@@ -963,11 +963,11 @@
       "id": "gui-080",
       "surface": "console",
       "screen": "Job details",
-      "control": "Call it off / reason / Back",
-      "effect": "work_write",
+      "control": "Approve & run",
+      "effect": "approval",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
+      "line": 701,
       "source_anchor": "function JobDetail(",
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
@@ -975,11 +975,11 @@
       "id": "gui-081",
       "surface": "console",
       "screen": "Job details",
-      "control": "Reassign / role / Back",
-      "effect": "work_write",
+      "control": "Reject / reason / Cancel",
+      "effect": "approval",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
+      "line": 701,
       "source_anchor": "function JobDetail(",
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
@@ -987,11 +987,11 @@
       "id": "gui-082",
       "surface": "console",
       "screen": "Job details",
-      "control": "Create replacement",
+      "control": "Try again",
       "effect": "work_write",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
+      "line": 701,
       "source_anchor": "function JobDetail(",
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
@@ -999,11 +999,11 @@
       "id": "gui-083",
       "surface": "console",
       "screen": "Job details",
-      "control": "Replacement identity / open exact job",
+      "control": "Call it off / reason / Back",
       "effect": "work_write",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
+      "line": 701,
       "source_anchor": "function JobDetail(",
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
@@ -1011,31 +1011,55 @@
       "id": "gui-084",
       "surface": "console",
       "screen": "Job details",
-      "control": "Pending action / retained failure input",
+      "control": "Reassign / role / Back",
       "effect": "work_write",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 699,
+      "line": 701,
       "source_anchor": "function JobDetail(",
       "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
       "id": "gui-085",
       "surface": "console",
-      "screen": "Job Board batch",
-      "control": "Row checkbox",
-      "effect": "local_view",
+      "screen": "Job details",
+      "control": "Create replacement",
+      "effect": "work_write",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 383,
-      "source_anchor": "function JobBoard(",
-      "documentation": "gui-reference.md#batch-controls"
+      "line": 701,
+      "source_anchor": "function JobDetail(",
+      "documentation": "gui-reference.md#inspect-and-act-on-one-job"
     },
     {
       "id": "gui-086",
       "surface": "console",
+      "screen": "Job details",
+      "control": "Replacement identity / open exact job",
+      "effect": "work_write",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
+      "line": 701,
+      "source_anchor": "function JobDetail(",
+      "documentation": "gui-reference.md#inspect-and-act-on-one-job"
+    },
+    {
+      "id": "gui-087",
+      "surface": "console",
+      "screen": "Job details",
+      "control": "Pending action / retained failure input",
+      "effect": "work_write",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
+      "line": 701,
+      "source_anchor": "function JobDetail(",
+      "documentation": "gui-reference.md#inspect-and-act-on-one-job"
+    },
+    {
+      "id": "gui-088",
+      "surface": "console",
       "screen": "Job Board batch",
-      "control": "Select all jobs",
+      "control": "Row checkbox /44px phone target",
       "effect": "local_view",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
@@ -1044,7 +1068,19 @@
       "documentation": "gui-reference.md#batch-controls"
     },
     {
-      "id": "gui-087",
+      "id": "gui-089",
+      "surface": "console",
+      "screen": "Job Board batch",
+      "control": "Select all visible jobs",
+      "effect": "local_view",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
+      "line": 383,
+      "source_anchor": "function JobBoard(",
+      "documentation": "gui-reference.md#batch-controls"
+    },
+    {
+      "id": "gui-090",
       "surface": "console",
       "screen": "Job Board batch",
       "control": "Clear selection",
@@ -1056,7 +1092,7 @@
       "documentation": "gui-reference.md#batch-controls"
     },
     {
-      "id": "gui-088",
+      "id": "gui-091",
       "surface": "console",
       "screen": "Job Board batch",
       "control": "Approve",
@@ -1068,7 +1104,7 @@
       "documentation": "gui-reference.md#batch-controls"
     },
     {
-      "id": "gui-089",
+      "id": "gui-092",
       "surface": "console",
       "screen": "Job Board batch",
       "control": "Reject / reason",
@@ -1080,46 +1116,10 @@
       "documentation": "gui-reference.md#batch-controls"
     },
     {
-      "id": "gui-090",
-      "surface": "console",
-      "screen": "Job Board batch",
-      "control": "Retry",
-      "effect": "work_write",
-      "verification": "source_implemented",
-      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 383,
-      "source_anchor": "function JobBoard(",
-      "documentation": "gui-reference.md#batch-controls"
-    },
-    {
-      "id": "gui-091",
-      "surface": "console",
-      "screen": "Job Board batch",
-      "control": "Cancel / reason",
-      "effect": "work_write",
-      "verification": "source_implemented",
-      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 383,
-      "source_anchor": "function JobBoard(",
-      "documentation": "gui-reference.md#batch-controls"
-    },
-    {
-      "id": "gui-092",
-      "surface": "console",
-      "screen": "Job Board batch",
-      "control": "Archive",
-      "effect": "work_write",
-      "verification": "source_implemented",
-      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 383,
-      "source_anchor": "function JobBoard(",
-      "documentation": "gui-reference.md#batch-controls"
-    },
-    {
       "id": "gui-093",
       "surface": "console",
       "screen": "Job Board batch",
-      "control": "Reassign role / Create replacements",
+      "control": "Retry",
       "effect": "work_write",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
@@ -1131,7 +1131,7 @@
       "id": "gui-094",
       "surface": "console",
       "screen": "Job Board batch",
-      "control": "Succeeded / failed / skipped results",
+      "control": "Cancel / reason",
       "effect": "work_write",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
@@ -1143,7 +1143,7 @@
       "id": "gui-095",
       "surface": "console",
       "screen": "Job Board batch",
-      "control": "Per-item failure reason",
+      "control": "Archive",
       "effect": "work_write",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
@@ -1155,7 +1155,7 @@
       "id": "gui-096",
       "surface": "console",
       "screen": "Job Board batch",
-      "control": "Replacement / original History link",
+      "control": "Reassign role / Create replacements",
       "effect": "work_write",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
@@ -1165,6 +1165,42 @@
     },
     {
       "id": "gui-097",
+      "surface": "console",
+      "screen": "Job Board batch",
+      "control": "Succeeded / failed / skipped results",
+      "effect": "work_write",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
+      "line": 383,
+      "source_anchor": "function JobBoard(",
+      "documentation": "gui-reference.md#batch-controls"
+    },
+    {
+      "id": "gui-098",
+      "surface": "console",
+      "screen": "Job Board batch",
+      "control": "Per-item failure reason",
+      "effect": "work_write",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
+      "line": 383,
+      "source_anchor": "function JobBoard(",
+      "documentation": "gui-reference.md#batch-controls"
+    },
+    {
+      "id": "gui-099",
+      "surface": "console",
+      "screen": "Job Board batch",
+      "control": "Replacement / original History link",
+      "effect": "work_write",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
+      "line": 383,
+      "source_anchor": "function JobBoard(",
+      "documentation": "gui-reference.md#batch-controls"
+    },
+    {
+      "id": "gui-100",
       "surface": "console",
       "screen": "Approvals",
       "control": "Queue item",
@@ -1176,7 +1212,7 @@
       "documentation": "gui-reference.md#approvals"
     },
     {
-      "id": "gui-098",
+      "id": "gui-101",
       "surface": "console",
       "screen": "Approvals",
       "control": "Full details",
@@ -1188,7 +1224,7 @@
       "documentation": "gui-reference.md#approvals"
     },
     {
-      "id": "gui-099",
+      "id": "gui-102",
       "surface": "console",
       "screen": "Approvals",
       "control": "Select all",
@@ -1200,7 +1236,7 @@
       "documentation": "gui-reference.md#approvals"
     },
     {
-      "id": "gui-100",
+      "id": "gui-103",
       "surface": "console",
       "screen": "Approvals",
       "control": "Individual checkboxes",
@@ -1212,7 +1248,7 @@
       "documentation": "gui-reference.md#approvals"
     },
     {
-      "id": "gui-101",
+      "id": "gui-104",
       "surface": "console",
       "screen": "Approvals",
       "control": "Recent decision row",
@@ -1224,7 +1260,7 @@
       "documentation": "gui-reference.md#approvals"
     },
     {
-      "id": "gui-102",
+      "id": "gui-105",
       "surface": "console",
       "screen": "Approvals",
       "control": "Got it",
@@ -1236,7 +1272,7 @@
       "documentation": "gui-reference.md#approvals"
     },
     {
-      "id": "gui-103",
+      "id": "gui-106",
       "surface": "console",
       "screen": "Approvals",
       "control": "Approve & run",
@@ -1248,7 +1284,7 @@
       "documentation": "gui-reference.md#approvals"
     },
     {
-      "id": "gui-104",
+      "id": "gui-107",
       "surface": "console",
       "screen": "Approvals",
       "control": "Reject / reason",
@@ -1260,7 +1296,7 @@
       "documentation": "gui-reference.md#approvals"
     },
     {
-      "id": "gui-105",
+      "id": "gui-108",
       "surface": "console",
       "screen": "Approvals",
       "control": "Batch approve",
@@ -1272,7 +1308,7 @@
       "documentation": "gui-reference.md#approvals"
     },
     {
-      "id": "gui-106",
+      "id": "gui-109",
       "surface": "console",
       "screen": "Approvals",
       "control": "Batch reject / reason",
@@ -1284,46 +1320,10 @@
       "documentation": "gui-reference.md#approvals"
     },
     {
-      "id": "gui-107",
-      "surface": "console",
-      "screen": "Governance",
-      "control": "Refresh",
-      "effect": "read",
-      "verification": "source_implemented",
-      "source": "src/mco/console_src/43b328d0-9d0e-4fce-a105-be0a939d7e48.js",
-      "line": 880,
-      "source_anchor": "function Governance(",
-      "documentation": "gui-reference.md#governance"
-    },
-    {
-      "id": "gui-108",
-      "surface": "console",
-      "screen": "Governance",
-      "control": "Review",
-      "effect": "read",
-      "verification": "source_implemented",
-      "source": "src/mco/console_src/43b328d0-9d0e-4fce-a105-be0a939d7e48.js",
-      "line": 880,
-      "source_anchor": "function Governance(",
-      "documentation": "gui-reference.md#governance"
-    },
-    {
-      "id": "gui-109",
-      "surface": "console",
-      "screen": "Governance",
-      "control": "Decision history",
-      "effect": "read",
-      "verification": "source_implemented",
-      "source": "src/mco/console_src/43b328d0-9d0e-4fce-a105-be0a939d7e48.js",
-      "line": 880,
-      "source_anchor": "function Governance(",
-      "documentation": "gui-reference.md#governance"
-    },
-    {
       "id": "gui-110",
       "surface": "console",
       "screen": "Governance",
-      "control": "Oversight event",
+      "control": "Refresh",
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/43b328d0-9d0e-4fce-a105-be0a939d7e48.js",
@@ -1335,6 +1335,42 @@
       "id": "gui-111",
       "surface": "console",
       "screen": "Governance",
+      "control": "Review",
+      "effect": "read",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/43b328d0-9d0e-4fce-a105-be0a939d7e48.js",
+      "line": 880,
+      "source_anchor": "function Governance(",
+      "documentation": "gui-reference.md#governance"
+    },
+    {
+      "id": "gui-112",
+      "surface": "console",
+      "screen": "Governance",
+      "control": "Decision history",
+      "effect": "read",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/43b328d0-9d0e-4fce-a105-be0a939d7e48.js",
+      "line": 880,
+      "source_anchor": "function Governance(",
+      "documentation": "gui-reference.md#governance"
+    },
+    {
+      "id": "gui-113",
+      "surface": "console",
+      "screen": "Governance",
+      "control": "Oversight event",
+      "effect": "read",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/43b328d0-9d0e-4fce-a105-be0a939d7e48.js",
+      "line": 880,
+      "source_anchor": "function Governance(",
+      "documentation": "gui-reference.md#governance"
+    },
+    {
+      "id": "gui-114",
+      "surface": "console",
+      "screen": "Governance",
       "control": "Start date",
       "effect": "export",
       "verification": "source_implemented",
@@ -1344,7 +1380,7 @@
       "documentation": "gui-reference.md#governance"
     },
     {
-      "id": "gui-112",
+      "id": "gui-115",
       "surface": "console",
       "screen": "Governance",
       "control": "End date",
@@ -1356,7 +1392,7 @@
       "documentation": "gui-reference.md#governance"
     },
     {
-      "id": "gui-113",
+      "id": "gui-116",
       "surface": "console",
       "screen": "Governance",
       "control": "Download evidence JSON",
@@ -1368,7 +1404,7 @@
       "documentation": "gui-reference.md#governance"
     },
     {
-      "id": "gui-114",
+      "id": "gui-117",
       "surface": "console",
       "screen": "Ask",
       "control": "Request",
@@ -1380,7 +1416,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-115",
+      "id": "gui-118",
       "surface": "console",
       "screen": "Ask",
       "control": "Example buttons",
@@ -1392,7 +1428,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-116",
+      "id": "gui-119",
       "surface": "console",
       "screen": "Ask",
       "control": "Draft a plan",
@@ -1404,7 +1440,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-117",
+      "id": "gui-120",
       "surface": "console",
       "screen": "Ask",
       "control": "Remove a step / Remove",
@@ -1416,7 +1452,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-118",
+      "id": "gui-121",
       "surface": "console",
       "screen": "Ask",
       "control": "Always ask me at end",
@@ -1428,7 +1464,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-119",
+      "id": "gui-122",
       "surface": "console",
       "screen": "Ask",
       "control": "Make it repeat / repeat choices",
@@ -1440,7 +1476,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-120",
+      "id": "gui-123",
       "surface": "console",
       "screen": "Ask",
       "control": "Do not repeat",
@@ -1452,7 +1488,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-121",
+      "id": "gui-124",
       "surface": "console",
       "screen": "Ask",
       "control": "Change my request",
@@ -1464,7 +1500,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-122",
+      "id": "gui-125",
       "surface": "console",
       "screen": "Ask",
       "control": "Approve and start",
@@ -1476,7 +1512,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-123",
+      "id": "gui-126",
       "surface": "console",
       "screen": "Ask",
       "control": "Watch it on Home",
@@ -1488,7 +1524,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-124",
+      "id": "gui-127",
       "surface": "console",
       "screen": "Ask",
       "control": "Ask for something else",
@@ -1500,7 +1536,7 @@
       "documentation": "gui-reference.md#ask-for-something"
     },
     {
-      "id": "gui-125",
+      "id": "gui-128",
       "surface": "console",
       "screen": "Helpers",
       "control": "Cards / health / last heard",
@@ -1512,7 +1548,7 @@
       "documentation": "gui-reference.md#everyday-helpers"
     },
     {
-      "id": "gui-126",
+      "id": "gui-129",
       "surface": "console",
       "screen": "Helpers",
       "control": "Add helper AI and name / Cancel",
@@ -1524,7 +1560,7 @@
       "documentation": "gui-reference.md#everyday-helpers"
     },
     {
-      "id": "gui-127",
+      "id": "gui-130",
       "surface": "console",
       "screen": "Helpers",
       "control": "Add helper",
@@ -1536,7 +1572,7 @@
       "documentation": "gui-reference.md#everyday-helpers"
     },
     {
-      "id": "gui-128",
+      "id": "gui-131",
       "surface": "console",
       "screen": "Helpers",
       "control": "Fix it / diagnosis",
@@ -1548,7 +1584,7 @@
       "documentation": "gui-reference.md#everyday-helpers"
     },
     {
-      "id": "gui-129",
+      "id": "gui-132",
       "surface": "console",
       "screen": "Helpers",
       "control": "Not now",
@@ -1560,7 +1596,7 @@
       "documentation": "gui-reference.md#everyday-helpers"
     },
     {
-      "id": "gui-130",
+      "id": "gui-133",
       "surface": "console",
       "screen": "Helpers",
       "control": "Yes fix it",
@@ -1572,19 +1608,19 @@
       "documentation": "gui-reference.md#everyday-helpers"
     },
     {
-      "id": "gui-131",
+      "id": "gui-134",
       "surface": "console",
       "screen": "Helpers",
       "control": "Manage credentials",
       "effect": "local_view",
       "verification": "source_implemented",
       "source": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "line": 134,
+      "line": 162,
       "source_anchor": "function App(",
       "documentation": "gui-reference.md#agent-fleet--tokens"
     },
     {
-      "id": "gui-132",
+      "id": "gui-135",
       "surface": "console",
       "screen": "Agent Fleet",
       "control": "Per-role cards / heartbeat / current job",
@@ -1596,7 +1632,7 @@
       "documentation": "gui-reference.md#agent-fleet--tokens"
     },
     {
-      "id": "gui-133",
+      "id": "gui-136",
       "surface": "console",
       "screen": "Agent Fleet",
       "control": "Register panel / Instance ID / Role / Org",
@@ -1608,7 +1644,7 @@
       "documentation": "gui-reference.md#agent-fleet--tokens"
     },
     {
-      "id": "gui-134",
+      "id": "gui-137",
       "surface": "console",
       "screen": "Agent Fleet",
       "control": "Copy once-shown token",
@@ -1620,7 +1656,7 @@
       "documentation": "gui-reference.md#agent-fleet--tokens"
     },
     {
-      "id": "gui-135",
+      "id": "gui-138",
       "surface": "console",
       "screen": "Agent Fleet",
       "control": "Done / Close",
@@ -1632,7 +1668,7 @@
       "documentation": "gui-reference.md#agent-fleet--tokens"
     },
     {
-      "id": "gui-136",
+      "id": "gui-139",
       "surface": "console",
       "screen": "Agent Fleet",
       "control": "Register / Add agent",
@@ -1644,7 +1680,7 @@
       "documentation": "gui-reference.md#agent-fleet--tokens"
     },
     {
-      "id": "gui-137",
+      "id": "gui-140",
       "surface": "console",
       "screen": "Agent Fleet",
       "control": "Reset token / confirm",
@@ -1656,7 +1692,7 @@
       "documentation": "gui-reference.md#agent-fleet--tokens"
     },
     {
-      "id": "gui-138",
+      "id": "gui-141",
       "surface": "console",
       "screen": "Agent Fleet",
       "control": "Remove / confirm",
@@ -1668,7 +1704,7 @@
       "documentation": "gui-reference.md#agent-fleet--tokens"
     },
     {
-      "id": "gui-139",
+      "id": "gui-142",
       "surface": "console",
       "screen": "Agent Fleet",
       "control": "Move / target / Confirm / Cancel",
@@ -1680,7 +1716,7 @@
       "documentation": "gui-reference.md#agent-fleet--tokens"
     },
     {
-      "id": "gui-140",
+      "id": "gui-143",
       "surface": "console",
       "screen": "Connect an AI",
       "control": "App cards / Found status",
@@ -1692,7 +1728,7 @@
       "documentation": "gui-reference.md#connect-an-ai"
     },
     {
-      "id": "gui-141",
+      "id": "gui-144",
       "surface": "console",
       "screen": "Connect an AI",
       "control": "Connect",
@@ -1704,7 +1740,7 @@
       "documentation": "gui-reference.md#connect-an-ai"
     },
     {
-      "id": "gui-142",
+      "id": "gui-145",
       "surface": "console",
       "screen": "Connect an AI",
       "control": "Disconnect",
@@ -1716,7 +1752,7 @@
       "documentation": "gui-reference.md#connect-an-ai"
     },
     {
-      "id": "gui-143",
+      "id": "gui-146",
       "surface": "console",
       "screen": "Connect an AI",
       "control": "Send a test",
@@ -1728,7 +1764,7 @@
       "documentation": "gui-reference.md#connect-an-ai"
     },
     {
-      "id": "gui-144",
+      "id": "gui-147",
       "surface": "console",
       "screen": "Connect an AI",
       "control": "Show me a code",
@@ -1740,7 +1776,7 @@
       "documentation": "gui-reference.md#connect-an-ai"
     },
     {
-      "id": "gui-145",
+      "id": "gui-148",
       "surface": "console",
       "screen": "Connect an AI",
       "control": "Copy",
@@ -1752,7 +1788,7 @@
       "documentation": "gui-reference.md#connect-an-ai"
     },
     {
-      "id": "gui-146",
+      "id": "gui-149",
       "surface": "console",
       "screen": "Schedules",
       "control": "Cards / next run",
@@ -1764,7 +1800,7 @@
       "documentation": "gui-reference.md#schedules"
     },
     {
-      "id": "gui-147",
+      "id": "gui-150",
       "surface": "console",
       "screen": "Schedules",
       "control": "What should run",
@@ -1776,7 +1812,7 @@
       "documentation": "gui-reference.md#schedules"
     },
     {
-      "id": "gui-148",
+      "id": "gui-151",
       "surface": "console",
       "screen": "Schedules",
       "control": "Frequency choices",
@@ -1788,7 +1824,7 @@
       "documentation": "gui-reference.md#schedules"
     },
     {
-      "id": "gui-149",
+      "id": "gui-152",
       "surface": "console",
       "screen": "Schedules",
       "control": "Day toggles",
@@ -1800,7 +1836,7 @@
       "documentation": "gui-reference.md#schedules"
     },
     {
-      "id": "gui-150",
+      "id": "gui-153",
       "surface": "console",
       "screen": "Schedules",
       "control": "Time",
@@ -1812,7 +1848,7 @@
       "documentation": "gui-reference.md#schedules"
     },
     {
-      "id": "gui-151",
+      "id": "gui-154",
       "surface": "console",
       "screen": "Schedules",
       "control": "Sentence preview",
@@ -1824,7 +1860,7 @@
       "documentation": "gui-reference.md#schedules"
     },
     {
-      "id": "gui-152",
+      "id": "gui-155",
       "surface": "console",
       "screen": "Schedules",
       "control": "Time zone IANA",
@@ -1836,7 +1872,7 @@
       "documentation": "gui-reference.md#schedules"
     },
     {
-      "id": "gui-153",
+      "id": "gui-156",
       "surface": "console",
       "screen": "Schedules",
       "control": "Validated next date / offset",
@@ -1848,7 +1884,7 @@
       "documentation": "gui-reference.md#schedules"
     },
     {
-      "id": "gui-154",
+      "id": "gui-157",
       "surface": "console",
       "screen": "Schedules",
       "control": "On / Off",
@@ -1860,7 +1896,7 @@
       "documentation": "gui-reference.md#schedules"
     },
     {
-      "id": "gui-155",
+      "id": "gui-158",
       "surface": "console",
       "screen": "Schedules",
       "control": "Save",
@@ -1872,7 +1908,7 @@
       "documentation": "gui-reference.md#schedules"
     },
     {
-      "id": "gui-156",
+      "id": "gui-159",
       "surface": "console",
       "screen": "Drumline",
       "control": "Context tab",
@@ -1884,7 +1920,7 @@
       "documentation": "gui-reference.md#drumline-context-and-agent-exchange"
     },
     {
-      "id": "gui-157",
+      "id": "gui-160",
       "surface": "console",
       "screen": "Drumline",
       "control": "Agent Exchange tab / arrow keys",
@@ -1896,7 +1932,7 @@
       "documentation": "gui-reference.md#drumline-context-and-agent-exchange"
     },
     {
-      "id": "gui-158",
+      "id": "gui-161",
       "surface": "console",
       "screen": "Context",
       "control": "Query",
@@ -1908,7 +1944,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-159",
+      "id": "gui-162",
       "surface": "console",
       "screen": "Context",
       "control": "Tags",
@@ -1920,7 +1956,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-160",
+      "id": "gui-163",
       "surface": "console",
       "screen": "Context",
       "control": "Search / Recall",
@@ -1932,7 +1968,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-161",
+      "id": "gui-164",
       "surface": "console",
       "screen": "Context",
       "control": "Show more / Collapse",
@@ -1944,7 +1980,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-162",
+      "id": "gui-165",
       "surface": "console",
       "screen": "Context",
       "control": "Drill down / details / source job",
@@ -1956,7 +1992,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-163",
+      "id": "gui-166",
       "surface": "console",
       "screen": "Context",
       "control": "Copy text / Copied",
@@ -1968,7 +2004,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-164",
+      "id": "gui-167",
       "surface": "console",
       "screen": "Context",
       "control": "Add memory / Title / Kind / Tags / Content / Cancel",
@@ -1980,7 +2016,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-165",
+      "id": "gui-168",
       "surface": "console",
       "screen": "Context",
       "control": "Save memory / Remember",
@@ -1992,7 +2028,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-166",
+      "id": "gui-169",
       "surface": "console",
       "screen": "Memory details",
       "control": "Copy text",
@@ -2004,7 +2040,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-167",
+      "id": "gui-170",
       "surface": "console",
       "screen": "Memory details",
       "control": "Open Source Job",
@@ -2016,7 +2052,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-168",
+      "id": "gui-171",
       "surface": "console",
       "screen": "Memory details",
       "control": "Close / Escape with shared dialog focus",
@@ -2028,7 +2064,7 @@
       "documentation": "gui-reference.md#context"
     },
     {
-      "id": "gui-169",
+      "id": "gui-172",
       "surface": "console",
       "screen": "Exchange",
       "control": "Job picker",
@@ -2040,7 +2076,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-170",
+      "id": "gui-173",
       "surface": "console",
       "screen": "Exchange",
       "control": "Kind filter",
@@ -2052,7 +2088,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-171",
+      "id": "gui-174",
       "surface": "console",
       "screen": "Exchange",
       "control": "Thread",
@@ -2064,7 +2100,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-172",
+      "id": "gui-175",
       "surface": "console",
       "screen": "Exchange",
       "control": "Provenance / receipts",
@@ -2076,7 +2112,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-173",
+      "id": "gui-176",
       "surface": "console",
       "screen": "Exchange",
       "control": "Root type",
@@ -2088,7 +2124,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-174",
+      "id": "gui-177",
       "surface": "console",
       "screen": "Exchange",
       "control": "Message",
@@ -2100,7 +2136,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-175",
+      "id": "gui-178",
       "surface": "console",
       "screen": "Exchange",
       "control": "Reply",
@@ -2112,7 +2148,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-176",
+      "id": "gui-179",
       "surface": "console",
       "screen": "Exchange",
       "control": "Resolve",
@@ -2124,7 +2160,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-177",
+      "id": "gui-180",
       "surface": "console",
       "screen": "Exchange",
       "control": "Replace",
@@ -2136,7 +2172,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-178",
+      "id": "gui-181",
       "surface": "console",
       "screen": "Exchange",
       "control": "Cancel composition action",
@@ -2148,7 +2184,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-179",
+      "id": "gui-182",
       "surface": "console",
       "screen": "Exchange",
       "control": "Post",
@@ -2160,7 +2196,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-180",
+      "id": "gui-183",
       "surface": "console",
       "screen": "Exchange",
       "control": "Promote to context / preview / target kind / title / Cancel",
@@ -2172,7 +2208,7 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-181",
+      "id": "gui-184",
       "surface": "console",
       "screen": "Exchange",
       "control": "Promote to decision / lesson / handoff",
@@ -2184,50 +2220,14 @@
       "documentation": "gui-reference.md#agent-exchange"
     },
     {
-      "id": "gui-182",
+      "id": "gui-185",
       "surface": "console",
       "screen": "Activity",
       "control": "Search",
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 1011,
-      "source_anchor": "function ActivityFeedScreen(",
-      "documentation": "gui-reference.md#activity"
-    },
-    {
-      "id": "gui-183",
-      "surface": "console",
-      "screen": "Activity",
-      "control": "Event type",
-      "effect": "read",
-      "verification": "source_implemented",
-      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 1011,
-      "source_anchor": "function ActivityFeedScreen(",
-      "documentation": "gui-reference.md#activity"
-    },
-    {
-      "id": "gui-184",
-      "surface": "console",
-      "screen": "Activity",
-      "control": "Refresh",
-      "effect": "read",
-      "verification": "source_implemented",
-      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 1011,
-      "source_anchor": "function ActivityFeedScreen(",
-      "documentation": "gui-reference.md#activity"
-    },
-    {
-      "id": "gui-185",
-      "surface": "console",
-      "screen": "Activity",
-      "control": "Load more / fetch cap",
-      "effect": "read",
-      "verification": "source_implemented",
-      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 1011,
+      "line": 1013,
       "source_anchor": "function ActivityFeedScreen(",
       "documentation": "gui-reference.md#activity"
     },
@@ -2235,11 +2235,11 @@
       "id": "gui-186",
       "surface": "console",
       "screen": "Activity",
-      "control": "Statistics",
+      "control": "Event type",
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 1011,
+      "line": 1013,
       "source_anchor": "function ActivityFeedScreen(",
       "documentation": "gui-reference.md#activity"
     },
@@ -2247,11 +2247,11 @@
       "id": "gui-187",
       "surface": "console",
       "screen": "Activity",
-      "control": "Job event row",
+      "control": "Refresh",
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 1011,
+      "line": 1013,
       "source_anchor": "function ActivityFeedScreen(",
       "documentation": "gui-reference.md#activity"
     },
@@ -2259,16 +2259,52 @@
       "id": "gui-188",
       "surface": "console",
       "screen": "Activity",
-      "control": "Advanced detail",
+      "control": "Load more / fetch cap",
       "effect": "read",
       "verification": "source_implemented",
       "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "line": 1011,
+      "line": 1013,
       "source_anchor": "function ActivityFeedScreen(",
       "documentation": "gui-reference.md#activity"
     },
     {
       "id": "gui-189",
+      "surface": "console",
+      "screen": "Activity",
+      "control": "Statistics",
+      "effect": "read",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
+      "line": 1013,
+      "source_anchor": "function ActivityFeedScreen(",
+      "documentation": "gui-reference.md#activity"
+    },
+    {
+      "id": "gui-190",
+      "surface": "console",
+      "screen": "Activity",
+      "control": "Job event row",
+      "effect": "read",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
+      "line": 1013,
+      "source_anchor": "function ActivityFeedScreen(",
+      "documentation": "gui-reference.md#activity"
+    },
+    {
+      "id": "gui-191",
+      "surface": "console",
+      "screen": "Activity",
+      "control": "Advanced detail",
+      "effect": "read",
+      "verification": "source_implemented",
+      "source": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
+      "line": 1013,
+      "source_anchor": "function ActivityFeedScreen(",
+      "documentation": "gui-reference.md#activity"
+    },
+    {
+      "id": "gui-192",
       "surface": "console",
       "screen": "Settings",
       "control": "Server administration",
@@ -2280,7 +2316,7 @@
       "documentation": "gui-reference.md#open-and-connect-the-console"
     },
     {
-      "id": "gui-190",
+      "id": "gui-193",
       "surface": "console",
       "screen": "Settings",
       "control": "Connection URL / token",
@@ -2292,7 +2328,7 @@
       "documentation": "gui-reference.md#open-and-connect-the-console"
     },
     {
-      "id": "gui-191",
+      "id": "gui-194",
       "surface": "console",
       "screen": "Settings",
       "control": "Connect",
@@ -2304,7 +2340,7 @@
       "documentation": "gui-reference.md#open-and-connect-the-console"
     },
     {
-      "id": "gui-192",
+      "id": "gui-195",
       "surface": "console",
       "screen": "Settings",
       "control": "Disconnect",
@@ -2316,7 +2352,7 @@
       "documentation": "gui-reference.md#open-and-connect-the-console"
     },
     {
-      "id": "gui-193",
+      "id": "gui-196",
       "surface": "console",
       "screen": "Settings",
       "control": "Experience Technical details",
@@ -2328,7 +2364,7 @@
       "documentation": "gui-reference.md#open-and-connect-the-console"
     },
     {
-      "id": "gui-194",
+      "id": "gui-197",
       "surface": "console",
       "screen": "Settings",
       "control": "Stop work review",
@@ -2340,7 +2376,7 @@
       "documentation": "gui-reference.md#everyday-settings"
     },
     {
-      "id": "gui-195",
+      "id": "gui-198",
       "surface": "console",
       "screen": "Settings",
       "control": "Stop work now",
@@ -2352,7 +2388,7 @@
       "documentation": "gui-reference.md#everyday-settings"
     },
     {
-      "id": "gui-196",
+      "id": "gui-199",
       "surface": "console",
       "screen": "Settings",
       "control": "Cancel stop",
@@ -2364,7 +2400,7 @@
       "documentation": "gui-reference.md#everyday-settings"
     },
     {
-      "id": "gui-197",
+      "id": "gui-200",
       "surface": "console",
       "screen": "Settings",
       "control": "Resume",
@@ -2376,7 +2412,7 @@
       "documentation": "gui-reference.md#everyday-settings"
     },
     {
-      "id": "gui-198",
+      "id": "gui-201",
       "surface": "console",
       "screen": "Settings",
       "control": "Phone status",
@@ -2388,7 +2424,7 @@
       "documentation": "gui-reference.md#everyday-settings"
     },
     {
-      "id": "gui-199",
+      "id": "gui-202",
       "surface": "console",
       "screen": "Settings",
       "control": "Memory pointer",
@@ -2400,7 +2436,7 @@
       "documentation": "gui-reference.md#everyday-settings"
     },
     {
-      "id": "gui-200",
+      "id": "gui-203",
       "surface": "console",
       "screen": "Gateway controls",
       "control": "Governance / notifications / presence / memory fields",
@@ -2412,7 +2448,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-201",
+      "id": "gui-204",
       "surface": "console",
       "screen": "Gateway controls",
       "control": "Metadata choice dropdowns",
@@ -2424,7 +2460,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-202",
+      "id": "gui-205",
       "surface": "console",
       "screen": "Gateway controls",
       "control": "Save gateway settings",
@@ -2436,7 +2472,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-203",
+      "id": "gui-206",
       "surface": "console",
       "screen": "Gateway controls",
       "control": "Confirm stop on save",
@@ -2448,7 +2484,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-204",
+      "id": "gui-207",
       "surface": "console",
       "screen": "Connectors",
       "control": "ServiceNow / Dynatrace fields",
@@ -2460,7 +2496,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-205",
+      "id": "gui-208",
       "surface": "console",
       "screen": "Connectors",
       "control": "Save connectors",
@@ -2472,7 +2508,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-206",
+      "id": "gui-209",
       "surface": "console",
       "screen": "Connectors",
       "control": "Test connection",
@@ -2484,7 +2520,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-207",
+      "id": "gui-210",
       "surface": "console",
       "screen": "Connectors",
       "control": "Import now",
@@ -2496,7 +2532,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-208",
+      "id": "gui-211",
       "surface": "console",
       "screen": "Connectors",
       "control": "Unsaved changes / invalidated test notice",
@@ -2508,7 +2544,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-209",
+      "id": "gui-212",
       "surface": "console",
       "screen": "Tenancy",
       "control": "Org list / in use",
@@ -2520,7 +2556,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-210",
+      "id": "gui-213",
       "surface": "console",
       "screen": "Tenancy",
       "control": "New org / Add org",
@@ -2532,7 +2568,7 @@
       "documentation": "gui-reference.md#show-advanced"
     },
     {
-      "id": "gui-211",
+      "id": "gui-214",
       "surface": "dashboard",
       "screen": "Lock",
       "control": "Token / Unlock / Enter",
@@ -2544,7 +2580,7 @@
       "documentation": "gui-reference.md#unlock-and-lock"
     },
     {
-      "id": "gui-212",
+      "id": "gui-215",
       "surface": "dashboard",
       "screen": "Lock",
       "control": "Lock",
@@ -2556,7 +2592,7 @@
       "documentation": "gui-reference.md#unlock-and-lock"
     },
     {
-      "id": "gui-213",
+      "id": "gui-216",
       "surface": "dashboard",
       "screen": "Lock",
       "control": "Matching gateway browser credential reuse",
@@ -2568,7 +2604,7 @@
       "documentation": "gui-reference.md#unlock-and-lock"
     },
     {
-      "id": "gui-214",
+      "id": "gui-217",
       "surface": "dashboard",
       "screen": "Navigation",
       "control": "Operations",
@@ -2580,7 +2616,7 @@
       "documentation": "gui-reference.md#technical-control-plane-dashboard"
     },
     {
-      "id": "gui-215",
+      "id": "gui-218",
       "surface": "dashboard",
       "screen": "Navigation",
       "control": "Agents & Tokens",
@@ -2592,7 +2628,7 @@
       "documentation": "gui-reference.md#technical-control-plane-dashboard"
     },
     {
-      "id": "gui-216",
+      "id": "gui-219",
       "surface": "dashboard",
       "screen": "Navigation",
       "control": "Model Connections",
@@ -2604,7 +2640,7 @@
       "documentation": "gui-reference.md#technical-control-plane-dashboard"
     },
     {
-      "id": "gui-217",
+      "id": "gui-220",
       "surface": "dashboard",
       "screen": "Navigation",
       "control": "Workflows",
@@ -2616,7 +2652,7 @@
       "documentation": "gui-reference.md#technical-control-plane-dashboard"
     },
     {
-      "id": "gui-218",
+      "id": "gui-221",
       "surface": "dashboard",
       "screen": "Navigation",
       "control": "Settings",
@@ -2628,7 +2664,7 @@
       "documentation": "gui-reference.md#technical-control-plane-dashboard"
     },
     {
-      "id": "gui-219",
+      "id": "gui-222",
       "surface": "dashboard",
       "screen": "Navigation",
       "control": "Allowlisted view hashes",
@@ -2640,7 +2676,7 @@
       "documentation": "gui-reference.md#technical-control-plane-dashboard"
     },
     {
-      "id": "gui-220",
+      "id": "gui-223",
       "surface": "dashboard",
       "screen": "Navigation",
       "control": "Back to workspace",
@@ -2652,7 +2688,7 @@
       "documentation": "gui-reference.md#technical-control-plane-dashboard"
     },
     {
-      "id": "gui-221",
+      "id": "gui-224",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Seven sortable headers",
@@ -2664,7 +2700,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-222",
+      "id": "gui-225",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Audit",
@@ -2676,7 +2712,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-223",
+      "id": "gui-226",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Row/header selection",
@@ -2688,7 +2724,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-224",
+      "id": "gui-227",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Clear",
@@ -2700,7 +2736,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-225",
+      "id": "gui-228",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Approve",
@@ -2712,7 +2748,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-226",
+      "id": "gui-229",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Reject / reason",
@@ -2724,7 +2760,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-227",
+      "id": "gui-230",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Batch approve",
@@ -2736,7 +2772,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-228",
+      "id": "gui-231",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Batch reject",
@@ -2748,7 +2784,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-229",
+      "id": "gui-232",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Retry",
@@ -2760,7 +2796,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-230",
+      "id": "gui-233",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Batch retry",
@@ -2772,7 +2808,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-231",
+      "id": "gui-234",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Batch cancel",
@@ -2784,7 +2820,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-232",
+      "id": "gui-235",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Batch archive",
@@ -2796,7 +2832,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-233",
+      "id": "gui-236",
       "surface": "dashboard",
       "screen": "Operations",
       "control": "Batch reassign / target role",
@@ -2808,7 +2844,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-234",
+      "id": "gui-237",
       "surface": "dashboard",
       "screen": "Autonomy",
       "control": "State / interval / write status",
@@ -2820,7 +2856,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-235",
+      "id": "gui-238",
       "surface": "dashboard",
       "screen": "Autonomy",
       "control": "Live Look",
@@ -2832,7 +2868,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-236",
+      "id": "gui-239",
       "surface": "dashboard",
       "screen": "Autonomy",
       "control": "Close / backdrop",
@@ -2844,7 +2880,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-237",
+      "id": "gui-240",
       "surface": "dashboard",
       "screen": "Autonomy",
       "control": "Pause / Resume",
@@ -2856,7 +2892,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-238",
+      "id": "gui-241",
       "surface": "dashboard",
       "screen": "Autonomy",
       "control": "Tick Now",
@@ -2868,7 +2904,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-239",
+      "id": "gui-242",
       "surface": "dashboard",
       "screen": "Autonomy",
       "control": "Trigger Sweep Now",
@@ -2880,7 +2916,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-240",
+      "id": "gui-243",
       "surface": "dashboard",
       "screen": "Autonomy",
       "control": "Pause / Resume Conductor",
@@ -2892,7 +2928,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-241",
+      "id": "gui-244",
       "surface": "dashboard",
       "screen": "Autonomy",
       "control": "Abort Run / reason",
@@ -2904,7 +2940,7 @@
       "documentation": "gui-reference.md#operations-and-conductor"
     },
     {
-      "id": "gui-242",
+      "id": "gui-245",
       "surface": "dashboard",
       "screen": "Agents & Tokens",
       "control": "Register dialog / Name / Role / Org / Scopes",
@@ -2916,7 +2952,7 @@
       "documentation": "gui-reference.md#agents--tokens"
     },
     {
-      "id": "gui-243",
+      "id": "gui-246",
       "surface": "dashboard",
       "screen": "Agents & Tokens",
       "control": "Token copy / Done",
@@ -2928,7 +2964,7 @@
       "documentation": "gui-reference.md#agents--tokens"
     },
     {
-      "id": "gui-244",
+      "id": "gui-247",
       "surface": "dashboard",
       "screen": "Agents & Tokens",
       "control": "Worker/MCP help Copy",
@@ -2940,7 +2976,7 @@
       "documentation": "gui-reference.md#agents--tokens"
     },
     {
-      "id": "gui-245",
+      "id": "gui-248",
       "surface": "dashboard",
       "screen": "Agents & Tokens",
       "control": "Register & generate token",
@@ -2952,7 +2988,7 @@
       "documentation": "gui-reference.md#agents--tokens"
     },
     {
-      "id": "gui-246",
+      "id": "gui-249",
       "surface": "dashboard",
       "screen": "Agents & Tokens",
       "control": "Edit / Role / Status / Scopes / Save",
@@ -2964,7 +3000,7 @@
       "documentation": "gui-reference.md#agents--tokens"
     },
     {
-      "id": "gui-247",
+      "id": "gui-250",
       "surface": "dashboard",
       "screen": "Agents & Tokens",
       "control": "Reset token / confirm",
@@ -2976,7 +3012,7 @@
       "documentation": "gui-reference.md#agents--tokens"
     },
     {
-      "id": "gui-248",
+      "id": "gui-251",
       "surface": "dashboard",
       "screen": "Agents & Tokens",
       "control": "Delete / confirm",
@@ -2988,7 +3024,7 @@
       "documentation": "gui-reference.md#agents--tokens"
     },
     {
-      "id": "gui-249",
+      "id": "gui-252",
       "surface": "dashboard",
       "screen": "Agents & Tokens",
       "control": "Cancel",
@@ -3000,7 +3036,7 @@
       "documentation": "gui-reference.md#agents--tokens"
     },
     {
-      "id": "gui-250",
+      "id": "gui-253",
       "surface": "dashboard",
       "screen": "Model Connections",
       "control": "Add dialog / Name / Provider / Base URL / Model / API key",
@@ -3012,7 +3048,7 @@
       "documentation": "gui-reference.md#model-connections"
     },
     {
-      "id": "gui-251",
+      "id": "gui-254",
       "surface": "dashboard",
       "screen": "Model Connections",
       "control": "Edit dialog / new key",
@@ -3024,7 +3060,7 @@
       "documentation": "gui-reference.md#model-connections"
     },
     {
-      "id": "gui-252",
+      "id": "gui-255",
       "surface": "dashboard",
       "screen": "Model Connections",
       "control": "Cancel",
@@ -3036,7 +3072,7 @@
       "documentation": "gui-reference.md#model-connections"
     },
     {
-      "id": "gui-253",
+      "id": "gui-256",
       "surface": "dashboard",
       "screen": "Model Connections",
       "control": "Add & save",
@@ -3048,7 +3084,7 @@
       "documentation": "gui-reference.md#model-connections"
     },
     {
-      "id": "gui-254",
+      "id": "gui-257",
       "surface": "dashboard",
       "screen": "Model Connections",
       "control": "Save",
@@ -3060,7 +3096,7 @@
       "documentation": "gui-reference.md#model-connections"
     },
     {
-      "id": "gui-255",
+      "id": "gui-258",
       "surface": "dashboard",
       "screen": "Model Connections",
       "control": "Delete / confirm",
@@ -3072,7 +3108,7 @@
       "documentation": "gui-reference.md#model-connections"
     },
     {
-      "id": "gui-256",
+      "id": "gui-259",
       "surface": "dashboard",
       "screen": "Model Connections",
       "control": "Test",
@@ -3084,7 +3120,7 @@
       "documentation": "gui-reference.md#model-connections"
     },
     {
-      "id": "gui-257",
+      "id": "gui-260",
       "surface": "dashboard",
       "screen": "Workflows",
       "control": "Workflow YAML",
@@ -3096,7 +3132,7 @@
       "documentation": "gui-reference.md#workflows"
     },
     {
-      "id": "gui-258",
+      "id": "gui-261",
       "surface": "dashboard",
       "screen": "Workflows",
       "control": "Submit workflow",
@@ -3108,7 +3144,7 @@
       "documentation": "gui-reference.md#workflows"
     },
     {
-      "id": "gui-259",
+      "id": "gui-262",
       "surface": "dashboard",
       "screen": "Settings",
       "control": "Reload",
@@ -3120,7 +3156,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-260",
+      "id": "gui-263",
       "surface": "dashboard",
       "screen": "Settings",
       "control": "Edition feature matrix",
@@ -3132,7 +3168,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-261",
+      "id": "gui-264",
       "surface": "dashboard",
       "screen": "Settings",
       "control": "Connector health",
@@ -3144,7 +3180,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-262",
+      "id": "gui-265",
       "surface": "dashboard",
       "screen": "Settings",
       "control": "Per-group Save",
@@ -3156,7 +3192,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-263",
+      "id": "gui-266",
       "surface": "dashboard",
       "screen": "Settings",
       "control": "Secret Clear / confirm",
@@ -3168,7 +3204,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-264",
+      "id": "gui-267",
       "surface": "dashboard",
       "screen": "Settings",
       "control": "Connector Sync now",
@@ -3180,46 +3216,10 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-265",
-      "surface": "windows",
-      "screen": "Local Control",
-      "control": "Start all",
-      "effect": "process_write",
-      "verification": "source_implemented",
-      "source": "src/mco/desktop/app.py",
-      "line": 26,
-      "source_anchor": "class DesktopApp:",
-      "documentation": "gui-reference.md#windows-local-control-and-tray"
-    },
-    {
-      "id": "gui-266",
-      "surface": "windows",
-      "screen": "Local Control",
-      "control": "Stop all",
-      "effect": "process_write",
-      "verification": "source_implemented",
-      "source": "src/mco/desktop/app.py",
-      "line": 26,
-      "source_anchor": "class DesktopApp:",
-      "documentation": "gui-reference.md#windows-local-control-and-tray"
-    },
-    {
-      "id": "gui-267",
-      "surface": "windows",
-      "screen": "Local Control",
-      "control": "Restart all",
-      "effect": "process_write",
-      "verification": "source_implemented",
-      "source": "src/mco/desktop/app.py",
-      "line": 26,
-      "source_anchor": "class DesktopApp:",
-      "documentation": "gui-reference.md#windows-local-control-and-tray"
-    },
-    {
       "id": "gui-268",
       "surface": "windows",
       "screen": "Local Control",
-      "control": "Start selected",
+      "control": "Start all",
       "effect": "process_write",
       "verification": "source_implemented",
       "source": "src/mco/desktop/app.py",
@@ -3231,7 +3231,7 @@
       "id": "gui-269",
       "surface": "windows",
       "screen": "Local Control",
-      "control": "Stop selected",
+      "control": "Stop all",
       "effect": "process_write",
       "verification": "source_implemented",
       "source": "src/mco/desktop/app.py",
@@ -3243,7 +3243,7 @@
       "id": "gui-270",
       "surface": "windows",
       "screen": "Local Control",
-      "control": "Restart selected",
+      "control": "Restart all",
       "effect": "process_write",
       "verification": "source_implemented",
       "source": "src/mco/desktop/app.py",
@@ -3255,6 +3255,42 @@
       "id": "gui-271",
       "surface": "windows",
       "screen": "Local Control",
+      "control": "Start selected",
+      "effect": "process_write",
+      "verification": "source_implemented",
+      "source": "src/mco/desktop/app.py",
+      "line": 26,
+      "source_anchor": "class DesktopApp:",
+      "documentation": "gui-reference.md#windows-local-control-and-tray"
+    },
+    {
+      "id": "gui-272",
+      "surface": "windows",
+      "screen": "Local Control",
+      "control": "Stop selected",
+      "effect": "process_write",
+      "verification": "source_implemented",
+      "source": "src/mco/desktop/app.py",
+      "line": 26,
+      "source_anchor": "class DesktopApp:",
+      "documentation": "gui-reference.md#windows-local-control-and-tray"
+    },
+    {
+      "id": "gui-273",
+      "surface": "windows",
+      "screen": "Local Control",
+      "control": "Restart selected",
+      "effect": "process_write",
+      "verification": "source_implemented",
+      "source": "src/mco/desktop/app.py",
+      "line": 26,
+      "source_anchor": "class DesktopApp:",
+      "documentation": "gui-reference.md#windows-local-control-and-tray"
+    },
+    {
+      "id": "gui-274",
+      "surface": "windows",
+      "screen": "Local Control",
       "control": "Component selection / states / process / last error",
       "effect": "read",
       "verification": "source_implemented",
@@ -3264,7 +3300,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-272",
+      "id": "gui-275",
       "surface": "windows",
       "screen": "Local Control",
       "control": "Log viewer",
@@ -3276,7 +3312,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-273",
+      "id": "gui-276",
       "surface": "windows",
       "screen": "Local Control",
       "control": "Open console",
@@ -3288,7 +3324,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-274",
+      "id": "gui-277",
       "surface": "windows",
       "screen": "Local Control",
       "control": "Fleet settings",
@@ -3300,7 +3336,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-275",
+      "id": "gui-278",
       "surface": "windows",
       "screen": "Local Control",
       "control": "Apply fleet changes review",
@@ -3312,7 +3348,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-276",
+      "id": "gui-279",
       "surface": "windows",
       "screen": "Local Control",
       "control": "Apply / Cancel fleet change",
@@ -3324,7 +3360,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-277",
+      "id": "gui-280",
       "surface": "windows",
       "screen": "Local Control",
       "control": "Move workers into app review",
@@ -3336,7 +3372,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-278",
+      "id": "gui-281",
       "surface": "windows",
       "screen": "Local Control",
       "control": "Confirm / Cancel handoff",
@@ -3348,7 +3384,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-279",
+      "id": "gui-282",
       "surface": "windows",
       "screen": "Local Control",
       "control": "Component and scheduled-task scope preview",
@@ -3360,7 +3396,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-280",
+      "id": "gui-283",
       "surface": "windows",
       "screen": "Local Control",
       "control": "Stop all / Exit scope explanation",
@@ -3372,7 +3408,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-281",
+      "id": "gui-284",
       "surface": "windows",
       "screen": "Local Control",
       "control": "Window X",
@@ -3384,7 +3420,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-282",
+      "id": "gui-285",
       "surface": "windows",
       "screen": "Tray",
       "control": "Open BitCadence",
@@ -3396,7 +3432,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-283",
+      "id": "gui-286",
       "surface": "windows",
       "screen": "Tray",
       "control": "Open console",
@@ -3408,7 +3444,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-284",
+      "id": "gui-287",
       "surface": "windows",
       "screen": "Tray",
       "control": "Start all",
@@ -3420,7 +3456,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-285",
+      "id": "gui-288",
       "surface": "windows",
       "screen": "Tray",
       "control": "Stop all",
@@ -3432,7 +3468,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-286",
+      "id": "gui-289",
       "surface": "windows",
       "screen": "Tray",
       "control": "Exit",
@@ -3444,7 +3480,7 @@
       "documentation": "gui-reference.md#windows-local-control-and-tray"
     },
     {
-      "id": "gui-287",
+      "id": "gui-290",
       "surface": "dashboard",
       "screen": "Settings / governance",
       "control": "MCO_KILL_SWITCH",
@@ -3456,7 +3492,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-288",
+      "id": "gui-291",
       "surface": "dashboard",
       "screen": "Settings / governance",
       "control": "MCO_APPROVER_ROLES",
@@ -3468,7 +3504,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-289",
+      "id": "gui-292",
       "surface": "dashboard",
       "screen": "Settings / governance",
       "control": "MCO_POLICY_GATED_ROLES",
@@ -3480,7 +3516,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-290",
+      "id": "gui-293",
       "surface": "dashboard",
       "screen": "Settings / governance",
       "control": "MCO_ESCALATION_CONNECTOR",
@@ -3492,7 +3528,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-291",
+      "id": "gui-294",
       "surface": "dashboard",
       "screen": "Settings / governance",
       "control": "MCO_DEFAULT_JOB_SORT",
@@ -3504,7 +3540,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-292",
+      "id": "gui-295",
       "surface": "dashboard",
       "screen": "Settings / memory",
       "control": "MCO_DRUMLINE_DISTILL",
@@ -3516,7 +3552,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-293",
+      "id": "gui-296",
       "surface": "dashboard",
       "screen": "Settings / memory",
       "control": "MCO_DRUMLINE_INJECT",
@@ -3528,7 +3564,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-294",
+      "id": "gui-297",
       "surface": "dashboard",
       "screen": "Settings / presence",
       "control": "MCO_AGENT_OFFLINE_AFTER",
@@ -3540,7 +3576,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-295",
+      "id": "gui-298",
       "surface": "dashboard",
       "screen": "Settings / delivery",
       "control": "MCO_DELIVERY_STALL_SECONDS",
@@ -3552,7 +3588,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-296",
+      "id": "gui-299",
       "surface": "dashboard",
       "screen": "Settings / delivery",
       "control": "MCO_ROUTE_FALLBACKS",
@@ -3564,7 +3600,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-297",
+      "id": "gui-300",
       "surface": "dashboard",
       "screen": "Settings / delivery",
       "control": "MCO_DELIVERY_MAX_REROUTES",
@@ -3576,7 +3612,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-298",
+      "id": "gui-301",
       "surface": "dashboard",
       "screen": "Settings / score",
       "control": "MCO_SCORE_SWEEP_SECONDS",
@@ -3588,7 +3624,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-299",
+      "id": "gui-302",
       "surface": "dashboard",
       "screen": "Settings / jev",
       "control": "MCO_JEV_MODE",
@@ -3600,7 +3636,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-300",
+      "id": "gui-303",
       "surface": "dashboard",
       "screen": "Settings / jev",
       "control": "MCO_JEV_MODEL",
@@ -3612,7 +3648,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-301",
+      "id": "gui-304",
       "surface": "dashboard",
       "screen": "Settings / jev",
       "control": "MCO_JEV_TIMEOUT_SECONDS",
@@ -3624,7 +3660,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-302",
+      "id": "gui-305",
       "surface": "dashboard",
       "screen": "Settings / jev",
       "control": "MCO_JEV_MAX_RETRIES",
@@ -3636,7 +3672,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-303",
+      "id": "gui-306",
       "surface": "dashboard",
       "screen": "Settings / observability",
       "control": "MCO_METRICS_TOKEN",
@@ -3648,7 +3684,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-304",
+      "id": "gui-307",
       "surface": "dashboard",
       "screen": "Settings / observability",
       "control": "MCO_LOG_JSON",
@@ -3660,7 +3696,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-305",
+      "id": "gui-308",
       "surface": "dashboard",
       "screen": "Settings / tenancy",
       "control": "MCO_ORGS",
@@ -3672,7 +3708,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-306",
+      "id": "gui-309",
       "surface": "dashboard",
       "screen": "Settings / edition",
       "control": "MCO_EDITION",
@@ -3684,7 +3720,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-307",
+      "id": "gui-310",
       "surface": "dashboard",
       "screen": "Settings / security",
       "control": "MCO_TRUSTED_HEADER_AUTH",
@@ -3696,7 +3732,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-308",
+      "id": "gui-311",
       "surface": "dashboard",
       "screen": "Settings / security",
       "control": "MCO_TRUSTED_HEADER_USER",
@@ -3708,7 +3744,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-309",
+      "id": "gui-312",
       "surface": "dashboard",
       "screen": "Settings / security",
       "control": "MCO_TRUSTED_HEADER_ROLE",
@@ -3720,7 +3756,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-310",
+      "id": "gui-313",
       "surface": "dashboard",
       "screen": "Settings / security",
       "control": "MCO_TRUSTED_HEADER_DEFAULT_ROLE",
@@ -3732,7 +3768,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-311",
+      "id": "gui-314",
       "surface": "dashboard",
       "screen": "Settings / security",
       "control": "MCO_TRUSTED_HEADER_SECRET",
@@ -3744,7 +3780,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-312",
+      "id": "gui-315",
       "surface": "dashboard",
       "screen": "Settings / security",
       "control": "MCO_WEBHOOK_SECRET",
@@ -3756,7 +3792,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-313",
+      "id": "gui-316",
       "surface": "dashboard",
       "screen": "Settings / notifications",
       "control": "NTFY_SERVER",
@@ -3768,7 +3804,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-314",
+      "id": "gui-317",
       "surface": "dashboard",
       "screen": "Settings / notifications",
       "control": "NTFY_TOPIC",
@@ -3780,7 +3816,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-315",
+      "id": "gui-318",
       "surface": "dashboard",
       "screen": "Settings / connectors",
       "control": "SERVICENOW_INSTANCE_URL",
@@ -3792,7 +3828,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-316",
+      "id": "gui-319",
       "surface": "dashboard",
       "screen": "Settings / connectors",
       "control": "SERVICENOW_USERNAME",
@@ -3804,7 +3840,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-317",
+      "id": "gui-320",
       "surface": "dashboard",
       "screen": "Settings / connectors",
       "control": "SERVICENOW_PASSWORD",
@@ -3816,7 +3852,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-318",
+      "id": "gui-321",
       "surface": "dashboard",
       "screen": "Settings / connectors",
       "control": "DYNATRACE_BASE_URL",
@@ -3828,7 +3864,7 @@
       "documentation": "gui-reference.md#technical-control-plane-settings"
     },
     {
-      "id": "gui-319",
+      "id": "gui-322",
       "surface": "dashboard",
       "screen": "Settings / connectors",
       "control": "DYNATRACE_API_TOKEN",
@@ -3851,7 +3887,7 @@
     },
     {
       "path": "src/mco/console_src/32c20ad6-cc53-43b3-a432-3a75e249b495.js",
-      "sha256": "1e220313c8003cb8dcd41351fa79da3cf2dc63c9485e250233895c56587c99cf"
+      "sha256": "9e1b680bcc3a4c59f50f725643c36fb76b48658df39e8127354122efa46dfe2c"
     },
     {
       "path": "src/mco/console_src/43b328d0-9d0e-4fce-a105-be0a939d7e48.js",
@@ -3863,11 +3899,11 @@
     },
     {
       "path": "src/mco/console_src/5adac14f-6645-4e02-866b-22c4e571989b.js",
-      "sha256": "66d3929fecb4e4c54637473f157fa3b2aeb11757d061b17eab32efe06cd3f492"
+      "sha256": "3f98fe1cbe1fb125856991fd6b16b190a01a5f47dc56b6afcc75af0ca48a5efc"
     },
     {
       "path": "src/mco/console_src/8ec84a72-7b37-434d-a68b-2ac1188e3e6d.js",
-      "sha256": "4844037f31f07ad7bd7c30ef176f2c1dcf91968b6434e75a22adb934725c67ef"
+      "sha256": "f3b7399920a0535e456674275a25c9f5e2164c37f6c7742e30b5fd673c8122fe"
     },
     {
       "path": "src/mco/console_src/bb158701-74ed-4f8d-8363-e8eb7edb6768.js",

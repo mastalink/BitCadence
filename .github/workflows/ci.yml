@@ -40,6 +40,27 @@ jobs:
       - name: Console sources round-trip
         run: python scripts/build_console.py verify
 
+  phone-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install browser verification dependencies
+        run: |
+          pip install -e .[dev] playwright
+          python -m playwright install --with-deps chromium
+      - name: Verify phone Job Board readability and interactions
+        run: python scripts/check_job_board_phone.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: job-board-phone-readability
+          path: output/playwright/job-board-phone/
+          retention-days: 14
+
   docker:
     runs-on: ubuntu-latest
     steps:

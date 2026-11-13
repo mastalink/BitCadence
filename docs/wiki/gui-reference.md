@@ -2,7 +2,7 @@
 
 This guide inventories the controls implemented in the browser console (`/console`), technical control plane (`/dashboard`), and Windows Local Control app. It was checked against source on November 13, 2026, not against an authenticated production session. A visible button is not evidence that its operation is permitted or working. Your token, tenant, edition, policy, and the current job state still govern every action.
 
-**Version boundary:** these instructions describe the UX branch based on parent `d511c6d`. Source and isolated fixture checks support the changes below; deployment or a running-app update is not claimed. Older screenshots may show old labels. The [U01–U24 ledger](UX-REVIEW.md) separates implementation, remaining recommendations and runtime acceptance.
+**Version boundary:** these instructions describe the UX branch based on parent `a263037`. Source and isolated fixture checks support the changes below; deployment or a running-app update is not claimed. Older screenshots may show old labels. The [U01–U24 ledger](UX-REVIEW.md) separates implementation, remaining recommendations and runtime acceptance.
 
 ## Choose the right window
 
@@ -75,7 +75,9 @@ The card's "Priority and pause controls" line is a visible placeholder: those co
 
 Choose **Job Board**, then combine **All**, **Active**, **Needs approval**, **Waiting**, **Done**, or **Problems** with search and **All roles**. Search checks title, role and workflow; it is not full payload or full-history search. Active includes pending/leased/in-progress; Problems includes failed/rejected/halted/cancelled. Clearing a filter changes only the view.
 
-**Sort jobs** offers Priority then oldest, Newest first, Oldest first, Status, Assigned role and Title A–Z. The preference is saved locally. Native Job/Status/Assigned to/Updated header buttons also sort. Sorting does not edit priority or grant a lease. Choose a job title/open button for its drawer.
+**Sort jobs** offers Priority then oldest, Newest first, Oldest first, Status, Assigned role and Title A–Z. The preference is saved locally. Native Job/Status/Assigned to/Updated header buttons also sort on desktop. Sorting does not edit priority or grant a lease. Choose a job title/open button for its drawer.
+
+At 760px and below, rows stack into a wide title and labeled status/assignment/source/workflow-or-retries/update fields. Filter buttons wrap as whole controls, long machine identifiers stay inside their field, and selection/title/control targets are at least 44px tall. The desktop header sort buttons are hidden; use **Sort jobs** instead. **Select all visible jobs**, individual selection, Clear selection and eligible batch controls remain available. Opening a job and selecting it are separate interactions. See the [phone walkthrough](job-board-and-tasks.md#on-a-phone).
 
 ### Create a job
 

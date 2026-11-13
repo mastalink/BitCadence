@@ -12,7 +12,7 @@ The desktop executable is separate and is covered under [Windows Local Control a
 
 ## GUI coverage
 
-The [GUI reference](gui-reference.md) covers thirteen console destinations, Score/detail views, the five-page dashboard, administration/lock/modal flows, Windows/tray actions and **33 server-driven settings**. Its [319 grouped control/workflow mappings](_review/gui-feature-coverage.json) link instructions to current component/function locations. This describes the UX branch based on parent `d511c6d`, not a running-app update.
+The [GUI reference](gui-reference.md) covers thirteen console destinations, Score/detail views, the five-page dashboard, administration/lock/modal flows, Windows/tray actions and **33 server-driven settings**. Its [322 grouped control/workflow mappings](_review/gui-feature-coverage.json) link instructions to current component/function locations. This describes the UX branch based on parent `a263037`, not a running-app update.
 
 This is grouped coverage, not an enumeration of every dynamic record/option. Unreachable legacy components are identified separately. Isolated behavior fixtures support the [U01–U24 status ledger](UX-REVIEW.md); deployment, real accessibility and end-to-end delivery are not inferred from them.
 
@@ -25,6 +25,7 @@ The generator resolves component/function anchors afresh. Source fingerprints we
 - The help site's section search, keyboard access, copy controls and narrow-screen navigation.
 - Regression tests for technical-dashboard prompt cancellation: pressing Cancel submits no abort or batch-cancel request; an intentional blank confirmation still follows the supported behavior.
 - Twenty-nine browser checks against a disposable authenticated gateway: thirteen navigation destinations, Administration deep links and modal, dialog Tab/Escape/focus return, 390px and 320px layouts, and short-screen navigation. No browser script errors. This does not establish screen-reader conformance or native desktop acceptance.
+- Phone Job Board follow-up: a real browser checks 320px, 390px and 430px with Technical details off/on. It measures headline width and font size, checks ordinary words do not split across lines, verifies long helper/source/workflow values remain within cells, and exercises 44px selection hit areas, filtering/sorting, empty results, select-all, reassignment controls and keyboard open/Escape. Desktop retains its table. All browser mutation requests are blocked and disposable job states must remain unchanged. The earlier no-overflow checks alone missed the unreadable table; they are not treated as readability proof.
 - Legacy-domain redirects for both old hostnames, HTTP/HTTPS, root and path/query requests; removal of the obsolete site project.
 
 No real jobs were approved, cancelled, retried, reassigned or published to perform these checks. No live helper was stopped and no production token/configuration was changed. Provider calls and destructive product controls require disposable fixtures or separate operational authorization, not a documentation test against someone's live work.
@@ -46,4 +47,6 @@ python docs/wiki/_review/verify_cli_examples.py docs/wiki
 python scripts/build_wiki.py
 ```
 
-CI runs the coverage checkers and site build alongside the tests. When a feature changes, update its steps, expected result, failure/recovery guidance and inventory entry, then rebuild. Keep credentials and household/machine-specific data out of public documentation.
+CI runs the coverage checkers and site build alongside the tests. Its **phone-layout** job installs Playwright/Chromium and runs `python scripts/check_job_board_phone.py`; screenshots and measured results are retained as artifacts. To run that check locally, install Playwright and its Chromium browser in the project environment first. The script creates and removes its own disposable gateway process; it does not use the live board.
+
+When a feature changes, update its steps, expected result, failure/recovery guidance and inventory entry, then rebuild. Keep credentials and household/machine-specific data out of public documentation.
