@@ -126,8 +126,8 @@ function THead({ cols }) {
     </thead>
   );
 }
-function Td({ children, style, onClick }) {
-  return <td onClick={onClick} style={Object.assign({ padding: "var(--row-pad) 14px", borderBottom: "1px solid var(--border)", verticalAlign: "middle" }, style)}>{children}</td>;
+function Td({ children, style, onClick, ...rest }) {
+  return <td {...rest} onClick={onClick} style={Object.assign({ padding: "var(--row-pad) 14px", borderBottom: "1px solid var(--border)", verticalAlign: "middle" }, style)}>{children}</td>;
 }
 
 function EmptyState({ icon, title, body }) {

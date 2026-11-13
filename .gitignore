@@ -170,6 +170,8 @@ docs/SMOKE_TEST.md
 output/playwright/**/*.webm
 output/playwright/**/*.mp4
 output/playwright/**/*.png
+output/playwright/**/*.jpg
+output/playwright/job-board-phone/
 output/playwright/**/*.mp3
 output/playwright/**/*.wav
 output/ux-release/

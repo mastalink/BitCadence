@@ -108,6 +108,8 @@ function Administration({ agents, jobs, tone, onNav }) {
 const SHELL_STYLE = `
 .bc-sidebar{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .bc-menu-toggle,.bc-nav-backdrop{display:none}
+.bc-job-mobile-only{display:none}
+.bc-job-select-label{display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
 .bc-main-content{overflow-wrap:anywhere}
 .bc-main-content input,.bc-main-content select,.bc-main-content textarea{max-width:100%;box-sizing:border-box}
 .bc-skip{position:fixed;left:12px;top:-100px;z-index:100;background:var(--surface);padding:12px}
@@ -123,6 +125,32 @@ nav.bc-sidebar[data-open=true]{display:flex!important}
 .bc-main-content{padding:18px 14px 35px!important}
 .bc-main-content [style*="grid-template-columns"]{grid-template-columns:minmax(0,1fr)!important}
 .bc-main-content table{font-size:12px!important}.bc-main-content th,.bc-main-content td{padding:8px!important;overflow-wrap:anywhere}
+.bc-job-board{overflow-wrap:normal;word-break:normal}
+.bc-job-filters{flex-basis:100%;flex-wrap:wrap;min-width:0}
+.bc-job-filters button{flex:1 0 auto;white-space:nowrap}
+.bc-job-board button,.bc-job-board input:not([type=checkbox]),.bc-job-board select{min-height:44px}
+.bc-job-controls>input,.bc-job-controls>select,.bc-job-sort{width:100%!important;min-width:0}
+.bc-job-controls input,.bc-job-controls select{font-size:16px!important}
+.bc-job-sort{flex-wrap:wrap}.bc-job-sort select{flex:1;min-width:0}
+.bc-job-table,.bc-job-table thead,.bc-job-table tbody,.bc-job-table thead tr{display:block;width:100%}
+.bc-job-board .bc-job-table th:first-child{display:block;width:auto!important;text-align:left!important;padding:8px!important}
+.bc-job-table thead th:not(:first-child){display:none}
+.bc-job-mobile-only{display:inline}
+.bc-job-select-label{min-width:44px;min-height:44px;justify-content:flex-start}
+.bc-job-select-label input{width:18px;height:18px;margin:0;flex:none}
+.bc-job-table .bc-job-row{display:grid;grid-template-columns:44px minmax(0,1fr);padding:12px 8px;border-bottom:1px solid var(--border)}
+.bc-job-table .bc-job-row:last-child{border-bottom:0}
+.bc-job-board .bc-job-table .bc-job-row>td{display:block;min-width:0;width:auto!important;border-bottom:0!important;padding:4px!important;overflow-wrap:normal}
+.bc-job-table .bc-job-select{grid-column:1;grid-row:1}
+.bc-job-board .bc-job-table .bc-job-row>.bc-job-select{padding:0!important}
+.bc-job-table .bc-job-title{grid-column:2;grid-row:1}
+.bc-job-title>button{width:100%;font-size:15px!important;line-height:1.45;word-break:normal;overflow-wrap:break-word}
+.bc-job-title>div{overflow-wrap:anywhere}
+.bc-job-board .bc-job-table .bc-job-row>.bc-job-meta{grid-column:1/-1;display:grid;grid-template-columns:88px minmax(0,1fr);gap:8px;align-items:start;line-height:1.5;font-size:14px!important}
+.bc-job-meta>.bc-job-mobile-only{color:var(--text-3);font-weight:500}
+.bc-job-meta>:last-child{min-width:0;max-width:100%;justify-self:start;font-size:14px!important;overflow-wrap:anywhere}
+.bc-job-assignee-value{min-width:0;overflow-wrap:anywhere}
+.bc-job-table .bc-job-empty{display:block}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 `;
