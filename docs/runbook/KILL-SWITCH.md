@@ -27,12 +27,12 @@ this was verified by mocking only, not against a real ACL-denied directory on Wi
 - Phone: not available until the transport is wired (see above).
 
 ## Clear (owner only)
-Nothing automates this; the helper refuses RESUME. Joseph deletes `~/.mco/STOP` by hand after
+Nothing automates this; the helper refuses RESUME. The owner deletes `~/.mco/STOP` by hand after
 checking why it was set (the file holds source and time).
 
 ## Drill
 1. Confirm no STOP file. 2. Set it (use `MCO_STOP_FILE` pointing at a temp path for a rehearsal).
 3. Run `pytest tests/test_killswitch.py tests/test_agentd_supervisor.py tests/test_score_sweep.py`.
 4. Confirm a sweep returns `skipped {"_all": "kill_switch"}` and the supervisor spawns nothing.
-5. Joseph deletes the file; confirm work resumes. Log each step with a timestamp.
+5. The owner deletes the file; confirm work resumes. Log each step with a timestamp.
 Not drilled live: scheduler, shepherd, uploader, wrappers, phone.
