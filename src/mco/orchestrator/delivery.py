@@ -197,6 +197,19 @@ def _busy_instances(db: Any) -> set:
     return {str(r["leased_by_instance_id"]).lower() for r in rows if r.get("leased_by_instance_id")}
 
 
+def _identity_bound(job: dict) -> bool:
+    """A job only its pinned worker may do: it records a verdict under that identity.
+
+    Shepherd review gates tell the worker to sign `--by <reviewer>`; handing one to
+    another agent would forge the two-model-family / no-self-review checks.
+    """
+    payload = job.get("input_payload") or {}
+    if isinstance(payload, dict) and payload.get("no_reroute"):
+        return True
+    title = str(job.get("title") or "").strip()
+    return title.startswith("[shepherd]") and title.endswith("(gate)")
+
+
 def sweep(
     db: Any,
     *,
@@ -275,8 +288,8 @@ def sweep(
         target_id = None
         reason = None
         same_host_only = bool(pinned) and not cross_host
-        if isinstance(payload, dict) and payload.get("no_reroute"):
-            reason = "job is marked no_reroute"
+        if _identity_bound(job):
+            reason = "job is identity-bound (no_reroute or shepherd gate)"
         elif reroutes >= max_reroutes:
             reason = f"reroute limit reached ({max_reroutes})"
         elif role not in fallbacks:

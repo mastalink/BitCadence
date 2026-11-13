@@ -285,6 +285,12 @@ def set_sweep_paused(paused: bool, paused_by: Optional[str] = None) -> bool:
 def sweep(conductor, *, force: bool = False) -> SweepResult:
     """Advance every run this conductor owns and is allowed to move, by one tick."""
     result = SweepResult()
+    from mco.killswitch import stop_active
+
+    if stop_active():
+        # Global kill switch beats force: nothing new moves while it is set.
+        result.skipped["_all"] = "kill_switch"
+        return result
     if is_sweep_paused() and not force:
         result.skipped["_all"] = "sweep_paused"
         return result

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" data-theme="light"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Operations - BitCadence v2 mockup</title>
+<link rel="stylesheet" href="../redesign-v1/assets/style.css"><link rel="stylesheet" href="assets/v2.css"><script src="../redesign-v1/assets/app.js"></script></head><body>
+<div class="topbar"><span class="logo">BitCadence</span><nav class="nav" aria-label="Main"><a href="00-home.html">Home</a><a href="01-projects.html">Projects</a><a href="05-library.html">Library</a><a href="06-operations.html" class=on>Operations</a><a href="07-settings.html">Settings</a></nav><span class="sp"></span><a class="btn small" href="index.html">All screens</a><button class="btn small" onclick="bcTheme()" aria-label="Switch light or dark">🌓</button></div>
+<main class="wrap">
+<div class="mock-note">Low-fidelity proposal (Platform v2). Nothing here is connected to a backend or approved.</div>
+<h1>Operations</h1><p class="sub">The machinery: computers, helpers, the queue, shared resources, spend and repairs.</p>
+<div class="tabs"><a class="chip on" href="#hosts">Computers</a><a class="chip" href="#queue">Queue</a><a class="chip" href="#res">Resources</a><a class="chip" href="#spend">Spend</a><a class="chip" href="#repair">Repairs</a><a class="chip" href="../redesign-v1/07-schedules.html">Schedules</a></div>
+
+<h2 id="hosts">Computers</h2>
+<div class="grid">
+ <div class="card"><div class="row"><span class="dot ok"></span><b style="flex:1">Beast</b><span class="badge ok">Active</span></div>
+  <p class="hint">GPU: 1 × 24 GB · ComfyUI 0.3 · 38 models · Storage K: shared</p>
+  <p class="hint"><b>Runs work here:</b> Codex (local), Claude (local)<br><b>Can be driven from:</b> Mac workers over SSH (end-to-end proof pending: check C-5)<br><b>Can be read by:</b> Mac workers over SMB</p></div>
+ <div class="card"><div class="row"><span class="dot warn"></span><b style="flex:1">Mac Studio</b><span class="badge warn">Testing</span></div>
+  <p class="hint">No AI models or rendering run here until you release it. Helpers here can still <b>drive</b> Beast.</p>
+  <button class="btn small" data-toast="Release needs your sign-in.">Release for work</button></div>
+ <div class="card"><div class="row"><span class="dot run"></span><b style="flex:1">Add a computer</b></div><p class="hint">We find what it can do and test it before it gets work.</p><button class="btn small primary" data-toast="Install link copied.">Add</button></div>
+</div>
+
+<h2>Helpers</h2>
+<div class="card"><table class="plain stack"><thead><tr><th>Helper</th><th>Model</th><th>Runs on</th><th>Now</th></tr></thead><tbody>
+ <tr><td>Builder</td><td>Claude</td><td>Beast</td><td><span class="pill run">Working · narration</span></td></tr>
+ <tr><td>Backup builder</td><td>Codex</td><td>Beast</td><td><span class="pill ok">Ready</span></td></tr>
+ <tr><td>Short tasks</td><td>Grok</td><td>Cloud</td><td><span class="pill ok">Ready</span></td></tr>
+ <tr><td>OpenCode</td><td>n/a</td><td>Mac Studio</td><td><span class="pill idle">Turned off</span></td></tr>
+</tbody></table>
+<p class="hint">"Working" means it holds a job right now. A heartbeat alone is shown as "Ready", never "Working".</p></div>
+
+<h2 id="queue">Queue</h2>
+<div class="card"><table class="plain"><thead><tr><th>Step</th><th>Why it's waiting</th></tr></thead><tbody>
+ <tr><td>Ep 32 · Artwork</td><td>GPU on Beast held by overnight training until 2:00 AM</td></tr>
+ <tr><td>MyMeals · Release</td><td>Needs your OK on the PR first</td></tr>
+ <tr><td>Launch video · Script</td><td>Waiting for release-notes.md v3</td></tr>
+ <tr><td>Weekly report</td><td>Claude quota resets at 11:40 PM. Codex is busy.</td></tr>
+</tbody></table></div>
+
+<h2 id="res">Shared resources</h2>
+<div class="card"><div class="row"><b style="flex:1">GPU on Beast</b><span class="pill warn">In use · training</span></div>
+ <p class="hint">One owner at a time. Next: Ep 32 artwork. Daily hard stop 6:00 AM (everything lets go).</p>
+ <div class="meter warn"><i style="width:70%"></i></div></div>
+
+<h2 id="spend">Spend this month</h2>
+<div class="grid">
+ <div class="card kpi"><b>$41.20</b><span>spent of $150 overall cap</span><div class="meter"><i style="width:27%"></i></div></div>
+ <div class="card kpi"><b>$4.10</b><span>held by running steps</span></div>
+ <div class="card kpi"><b>Unknown</b><span>Grok remaining quota (not reported by the provider)</span></div>
+</div>
+
+<div class="card" style="margin-top:14px"><b>Each project's own cap</b><table class="plain stack"><thead><tr><th>Project</th><th>Spent</th><th>Cap</th></tr></thead><tbody>
+ <tr><td>Via</td><td>$22.10</td><td>$150</td></tr>
+ <tr><td>MyMeals</td><td>$3.40</td><td>$15</td></tr>
+ <tr><td>Embracing the Sofa</td><td>$15.70</td><td><span class="pill warn">Not set: paid steps wait</span></td></tr>
+</tbody></table><p class="hint">A paid step has to fit both its project's cap and the overall cap. A project with no cap set doesn't get unlimited spend: its paid steps wait.</p></div>
+
+<h2 id="repair">Repairs</h2>
+<div class="card"><table class="plain"><tbody>
+ <tr><td>Ep 32 · Character portraits</td><td>Missing model on Beast</td><td><a class="btn small" href="03-run.html#recover">Open</a></td></tr>
+ <tr><td>Takeover: Codex on run MyMeals-r7</td><td>Granted by the Chief (claude-cio) · ends in 3 h 10 min</td><td><button class="btn small" data-toast="Takeover revoked. Recorded in the audit trail.">Revoke</button></td></tr>
+ <tr><td>Old job from Claude (Oct 16)</td><td>Still pending after Codex took over. Fenced: no one can pick it up.</td><td><button class="btn small" data-toast="Cancelled. Recorded in the audit trail.">Cancel it</button></td></tr>
+</tbody></table></div>
+<p class="hint" style="margin-top:14px">Reliability (target, not yet measured): runs that finish without repair. <a href="../../docs/PLATFORM-V2-DESIGN.md">How it's counted</a>.</p>
+</main><nav class="tabbar" aria-label="Main"><a href="00-home.html"><b>🏠</b>Home</a><a href="01-projects.html"><b>📁</b>Projects</a><a href="05-library.html"><b>📚</b>Library</a><a href="06-operations.html" class=on><b>🛠️</b>Operations</a><a href="07-settings.html"><b>⚙️</b>Settings</a></nav></body></html>

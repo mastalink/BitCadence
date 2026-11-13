@@ -140,6 +140,9 @@ secrets.enc
 *.swp
 *.swo
 configs/_filled/
+/configs/portfolio.yaml
+/portfolio.yaml
+/.bitcadence/
 
 # wrangler deploy artifacts
 .wrangler/

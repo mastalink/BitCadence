@@ -364,19 +364,17 @@ def record_event(db_client, job_id, *args, **kwargs):
 
 def drain_outbox(db_client, job_id=None):
     """Idempotently materialize committed state evidence into the audit chain."""
-    query = db_client.table("mco_audit_outbox").select("*").order("created_at")
+    # Ids first: decoding every outbox document each pass (hundreds of MB once
+    # the outbox has grown) held the gateway's GIL and starved lease calls.
+    query = db_client.table("mco_audit_outbox").select("id").order("created_at")
     if job_id is not None:
         query = query.eq("job_id", str(job_id))
-    rows = query.execute().data or []
-    # Read materialized ids in bounded groups. Looking up the full events table
-    # once per outbox row made maintenance O(outbox * events); fetching the
-    # relevant ids in groups keeps it linear without depending on a PostgREST
-    # server's maximum response size.
-    outbox_ids = [str(row["id"]) for row in rows]
+    outbox_ids = [str(row["id"]) for row in (query.execute().data or [])]
+    # One narrow scan of the materialized ids (outbox_id only; no document is
+    # fully decoded) instead of one scan per group of outbox rows.
     materialized = set()
-    for start in range(0, len(outbox_ids), 200):
-        group = outbox_ids[start:start + 200]
-        event_query = db_client.table(EVENTS_TABLE).select("outbox_id").in_("outbox_id", group)
+    if outbox_ids:
+        event_query = db_client.table(EVENTS_TABLE).select("outbox_id").gt("outbox_id", "")
         if job_id is not None:
             event_query = event_query.eq("job_id", str(job_id))
         materialized.update(
@@ -384,6 +382,12 @@ def drain_outbox(db_client, job_id=None):
             for row in (event_query.execute().data or [])
             if row.get("outbox_id") is not None
         )
+    pending = [oid for oid in outbox_ids if oid not in materialized]
+    full = {}
+    for start in range(0, len(pending), 200):
+        for row in db_client.table("mco_audit_outbox").select("*").in_("id", pending[start:start + 200]).execute().data or []:
+            full[str(row["id"])] = row
+    rows = [full[oid] for oid in pending if oid in full]
     count = 0
     for row in rows:
         oid = str(row["id"])

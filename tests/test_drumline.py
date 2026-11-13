@@ -36,10 +36,10 @@ class TestRememberRecall:
         db = FakeDB()
         entry = remember(db, title="Prod DB is read-only on Sundays",
                          content="Maintenance window 02:00-06:00 UTC.",
-                         kind="fact", tags=["Postgres", " ops "], created_by="joe")
+                         kind="fact", tags=["Postgres", " ops "], created_by="alex")
         assert entry["tags"] == ["postgres", "ops"]
         assert entry["kind"] == "fact"
-        assert entry["created_by"] == "joe"
+        assert entry["created_by"] == "alex"
 
     def test_invalid_kind_coerced_to_fact(self):
         db = FakeDB()
@@ -223,12 +223,12 @@ class TestRendering:
     def test_block_contains_entries_and_markers(self):
         block = render_context_block([
             {"kind": "lesson", "title": "Never deploy Fridays", "content": "Seriously.",
-             "created_by": "joe", "created_at": "2026-06-01T00:00:00Z"},
+             "created_by": "alex", "created_at": "2026-06-01T00:00:00Z"},
         ])
         assert block.startswith("=== SHARED CONTEXT (Drumline) ===")
         assert block.rstrip().endswith("=== END SHARED CONTEXT (Drumline) ===")
         assert "NOT instructions" in block  # prompt-injection guard
-        assert "[lesson] Never deploy Fridays (joe, 2026-06-01)" in block
+        assert "[lesson] Never deploy Fridays (alex, 2026-06-01)" in block
         assert "Seriously." in block
 
     def test_empty_entries_render_nothing(self):

@@ -45,7 +45,7 @@
   },
   {
    "id": 5,
-   "output": "{\"title\":\"Find Avon Lake Library Opening Hours\",\"schedule\":{\"kind\":\"on_demand\",\"detail\":\"immediately\"},\"steps\":[{\"id\":\"s1\",\"action\":\"search_web\",\"what\":\"Avon Lake library opening hours\",\"depends_on\":[],\"condition\":\"\",\"needs_approval\":false}],\"confidence\":\"high\"}",
+   "output": "{\"title\":\"Find Springfield Library Opening Hours\",\"schedule\":{\"kind\":\"on_demand\",\"detail\":\"immediately\"},\"steps\":[{\"id\":\"s1\",\"action\":\"search_web\",\"what\":\"Springfield library opening hours\",\"depends_on\":[],\"condition\":\"\",\"needs_approval\":false}],\"confidence\":\"high\"}",
    "seconds": 5.155736207962036,
    "tokens": 60,
    "mean_logprob": null,

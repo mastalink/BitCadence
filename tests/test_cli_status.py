@@ -12,15 +12,15 @@ class _FakeConfig:
     def get_masked_config(self):
         return {
             "MCO_LOCAL_TOKEN": "s3****",
-            "OPERATOR_NAME": "joe",
+            "OPERATOR_NAME": "alex",
             "SUPABASE_URL": "ht****************",
             "PATH": "C:\\Windows\\System32",
-            "APPDATA": "C:\\Users\\joe\\AppData\\Roaming",
+            "APPDATA": "C:\\Users\\alex\\AppData\\Roaming",
         }
 
 
 class _FakeStore:
-    _path = "C:\\Users\\joe\\.mco\\secrets.enc"
+    _path = "C:\\Users\\alex\\.mco\\secrets.enc"
     is_unlocked = False
 
     def is_initialized(self):

@@ -1296,6 +1296,23 @@ def assign_job_project(job_id: str, payload: dict = None,
     return {"success": True, "assignment": assignment}
 
 
+@router.post("/{job_id}/cancel-stale")
+async def cancel_stale_job(job_id: str, agent: dict = Depends(require_scopes("jobs:cancel-stale"))):
+    """Explicit Deputy grant, stale pending jobs only, disabled until gated."""
+    from mco.orchestrator import stale_reaper
+    try:
+        policy = stale_reaper.load_server_policy()
+        if kill_switch_active():
+            raise PermissionError("Global kill switch active")
+        db = await run_in_threadpool(get_db_client)
+        receipt = await run_in_threadpool(stale_reaper.cancel_stale, db, job_id, policy, agent)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"success": True, "receipt": receipt}
+
+
 @router.post("/{job_id}/cancel")
 async def cancel_job(job_id: str, payload: dict = None, agent: dict = Depends(require_scopes("jobs:approve"))):
     """Call off a job that hasn't finished yet (waiting/needs_approval/pending/

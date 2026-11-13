@@ -26,6 +26,7 @@ import threading
 import time
 import uuid
 from collections import deque
+from datetime import datetime, timezone
 from hashlib import sha256
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -446,10 +447,12 @@ def list_exchanges(
     workflow_step: Optional[str] = None,
     thread_id: Optional[str] = None,
     kind: Optional[str] = None,
+    since: Optional[str] = None,
+    from_agent: Optional[str] = None,
     limit: int = DEFAULT_PAGE,
     cursor: Optional[str] = None,
 ) -> dict:
-    """Newest-first keyset page of exchanges under a required linkage filter."""
+    """Newest-first org-scoped keyset page, with optional linkage filters."""
     if db is None:
         raise ExchangeError(503, "Agent Exchange storage is unavailable")
     org = agent.get("org_id") or "default"
@@ -460,10 +463,17 @@ def list_exchanges(
           _clean_label(workflow_step, "workflow_step"))
     if any(wf) and not all(wf):
         raise ExchangeError(400, "workflow_name, workflow_run and workflow_step must be given together")
-    if not (job_id or thread_id or all(wf)):
-        raise ExchangeError(400, "A job_id, thread_id or complete workflow filter is required")
     if kind and kind not in KINDS:
         raise ExchangeError(400, f"kind must be one of: {', '.join(KINDS)}")
+    from_agent = _clean_label(from_agent, "from_agent")
+    if since:
+        try:
+            timestamp = datetime.fromisoformat(since.replace("Z", "+00:00"))
+            if timestamp.tzinfo is None:
+                raise ValueError("timezone required")
+            since = timestamp.astimezone(timezone.utc).isoformat(timespec="microseconds")
+        except (ValueError, TypeError):
+            raise ExchangeError(400, "since must be an ISO timestamp with a timezone")
     limit = max(1, min(int(limit or DEFAULT_PAGE), MAX_PAGE))
     after = decode_cursor(org, cursor) if cursor else None
 
@@ -476,6 +486,10 @@ def list_exchanges(
         query = query.eq("workflow_name", wf[0]).eq("workflow_run", wf[1]).eq("workflow_step", wf[2])
     if kind:
         query = query.eq("kind", kind)
+    if from_agent:
+        query = query.eq("author_instance_id", from_agent)
+    if since:
+        query = query.gt("created_at", since)
     rows = [r for r in (query.order("created_at", desc=True).limit(FETCH_WINDOW).execute().data or [])
             if _org_of(r) == org]
     rows.sort(key=_sort_key, reverse=True)

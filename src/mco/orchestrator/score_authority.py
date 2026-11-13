@@ -24,6 +24,8 @@ def _canonical_grant(grant: dict) -> bytes:
     if not isinstance(grant, dict) or any(field not in grant for field in _SIGNED_FIELDS):
         raise AuthorityError("malformed_grant")
     body = {field: grant[field] for field in _SIGNED_FIELDS}
+    if "standing_grant_id" in grant:
+        body["standing_grant_id"] = grant["standing_grant_id"]
     return json.dumps(body, sort_keys=True, separators=(",", ":")).encode()
 
 
@@ -73,7 +75,7 @@ def grant_identity(grant: dict) -> str:
     # Old S03 receipts remain readable, while every S04-issued grant includes
     # all strict fields above. Including every present scope prevents widening
     # a grant without changing its stable identity.
-    fields = ("org_id", "run_id", "digest", "actions", "resources", "env", "not_before", "expires_at", "budget_cents", "human_principal", "signature")
+    fields = ("org_id", "run_id", "digest", "actions", "resources", "env", "not_before", "expires_at", "budget_cents", "human_principal", "signature", "standing_grant_id")
     if not isinstance(grant, dict) or any(field not in grant for field in ("org_id", "digest", "actions", "resources", "env", "expires_at", "human_principal", "signature")):
         raise AuthorityError("malformed_grant")
     body = {field: grant[field] for field in fields if field in grant}
@@ -166,6 +168,8 @@ class GrantService:
     def issue(self, grant: dict) -> dict:
         if not isinstance(grant, dict):
             raise AuthorityError("malformed_grant")
+        if "standing_grant_id" in grant:
+            raise AuthorityError("standing_grants_cannot_be_materialized")
         for field in ("org_id", "run_id", "digest", "env", "human_principal"):
             if not isinstance(grant.get(field), str) or not grant[field].strip():
                 raise AuthorityError(f"malformed_grant_{field}")
@@ -207,6 +211,10 @@ class GrantService:
             .eq("org_id", org_id).eq("run_id", run_id).eq("digest", digest)
             .execute().data or []
         )
+        if not rows:
+            from mco.localstore import LocalStore
+            if isinstance(self.db, LocalStore):
+                return self._standing().load(org_id=org_id, run_id=run_id, digest=digest)
         if len(rows) != 1:
             raise AuthorityError("issued_grant_not_found")
         verify_grant_signature(rows[0], self.key)
@@ -215,10 +223,37 @@ class GrantService:
     def require(self, *, org_id: str, run_id: str, digest: str, action: str,
                 resource: str, environment: str, cost_cents: int,
                 owner_principal: str, now: datetime | None = None) -> tuple[dict, str]:
-        grant = self.load(org_id=org_id, run_id=run_id, digest=digest)
-        identity = require_grant(
-            grant, org_id=org_id, run_id=run_id, digest=digest, action=action,
-            resource=resource, environment=environment, cost_cents=cost_cents,
-            owner_principal=owner_principal, verification_key=self.key, now=now,
-        )
+        grant = None
+        request = dict(action=action, resource=resource, environment=environment, cost_cents=cost_cents)
+        try:
+            grant = self.load(org_id=org_id, run_id=run_id, digest=digest)
+            identity = require_grant(
+                grant, org_id=org_id, run_id=run_id, digest=digest, action=action,
+                resource=resource, environment=environment, cost_cents=cost_cents,
+                owner_principal=owner_principal, verification_key=self.key, now=now,
+            )
+            if grant.get("standing_grant_id"):
+                self._standing().pin(grant)
+        except AuthorityError as exc:
+            self._standing_audit("denied", org_id=org_id, run_id=run_id, digest=digest,
+                                 principal=owner_principal, reason=str(exc), request=request)
+            raise
+        if grant.get("standing_grant_id"):
+            self._standing_audit("authorized", org_id=org_id, run_id=run_id, digest=digest,
+                                 grant_id=grant["standing_grant_id"], principal=owner_principal, request=request)
         return grant, identity
+
+    def _standing(self):
+        from mco.orchestrator.score_standing_grants import StandingGrants
+        return StandingGrants(self.db, self.key)
+
+    def _standing_audit(self, kind, **fields):
+        from mco.localstore import LocalStore
+        if isinstance(self.db, LocalStore):
+            self._standing().event(kind, **fields)
+
+    def issue_standing(self, **fields):
+        return self._standing().issue(**fields)
+
+    def revoke_standing(self, grant_id, **fields):
+        return self._standing().revoke(grant_id, **fields)

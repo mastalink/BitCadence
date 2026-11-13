@@ -44,6 +44,7 @@ KNOWN_SCOPES = {
     "jobs:read",
     "jobs:write",
     "jobs:approve",
+    "jobs:cancel-stale",
     "context:read",
     "context:write",
     "context:promote",

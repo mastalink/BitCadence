@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" data-theme="light"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Library - BitCadence v2 mockup</title>
+<link rel="stylesheet" href="../redesign-v1/assets/style.css"><link rel="stylesheet" href="assets/v2.css"><script src="../redesign-v1/assets/app.js"></script></head><body>
+<div class="topbar"><span class="logo">BitCadence</span><nav class="nav" aria-label="Main"><a href="00-home.html">Home</a><a href="01-projects.html">Projects</a><a href="05-library.html" class=on>Library</a><a href="06-operations.html">Operations</a><a href="07-settings.html">Settings</a></nav><span class="sp"></span><a class="btn small" href="index.html">All screens</a><button class="btn small" onclick="bcTheme()" aria-label="Switch light or dark">🌓</button></div>
+<main class="wrap">
+<div class="mock-note">Low-fidelity proposal (Platform v2). Nothing here is connected to a backend or approved.</div>
+<h1>Library</h1><p class="sub">Things you reuse: templates, characters and voices, brand kits, repositories and connections.</p>
+<div class="tabs" role="tablist"><button class="chip on" data-group="lib">Characters &amp; Voices</button><button class="chip" data-group="lib">Templates</button><button class="chip" data-group="lib">Repositories</button><button class="chip" data-group="lib">Connections</button><button class="chip" data-group="lib">Memory</button></div>
+
+<h2>Embracing the Sofa</h2>
+<div class="grid">
+ <div class="card"><div class="thumb" style="width:100%;height:120px">Carlo · sheet v5</div><b>Carlo</b><p class="hint">Say it: "CAR-lo" · Voice: Warm Narrator (ElevenLabs) · Used in 31 episodes</p><span class="badge ok">Approved v5</span></div>
+ <div class="card"><div class="thumb" style="width:100%;height:120px">Sofa · sheet v3</div><b>The Sofa</b><p class="hint">Style lock: soft gouache · Seed range set</p><span class="badge ok">Approved v3</span></div>
+ <div class="card"><div class="thumb" style="width:100%;height:120px">Brand kit v2</div><b>Series brand kit</b><p class="hint">Title card, colours, end card, music bed "Couch Waltz"</p><span class="badge ok">Approved v2</span></div>
+</div>
+
+<h2>Connections</h2>
+<div class="card">
+<table class="plain stack"><thead><tr><th>Connection</th><th>Can do</th><th>Health</th><th></th></tr></thead><tbody>
+ <tr><td><b>GitHub</b> · mastalink</td><td>Read code, push to work branches, open draft PRs. Can't merge.</td><td><span class="pill ok">Good · 41 days</span></td><td><button class="btn small" data-toast="Permissions shown.">See access</button></td></tr>
+ <tr><td><b>ComfyUI</b> on Beast</td><td>Make images from tested workflows</td><td><span class="pill warn">Missing 1 model</span></td><td><button class="btn small" data-toast="Checking Beast again.">Check again</button></td></tr>
+ <tr><td><b>ElevenLabs</b></td><td>Make narration with approved voices</td><td><span class="pill ok">Good</span></td><td><button class="btn small" data-toast="Permissions shown.">See access</button></td></tr>
+ <tr><td><b>Gemini</b> (web)</td><td>Ear review. <b>You start it</b>: it can't be called automatically.</td><td><span class="pill idle">Manual</span></td><td></td></tr>
+ <tr><td><b>YouTube</b></td><td>Publish, only through the Publish template and only after your OK</td><td><span class="pill idle">Not connected</span></td><td><button class="btn small primary" data-toast="Sign-in window opened.">Connect</button></td></tr>
+</tbody></table>
+<p class="hint">Keys and passwords are never shown here. Connections can't give a flow more power than its template allows.</p>
+<details class="adv"><summary>Details</summary><pre>connector comfyui v0.1 · manifest: capabilities [image:generate] · cost: gpu-minutes · idempotency: extra_data key (probe C-3 pending) · reconcile: /history + /queue lookup</pre></details>
+</div>
+</main><nav class="tabbar" aria-label="Main"><a href="00-home.html"><b>🏠</b>Home</a><a href="01-projects.html"><b>📁</b>Projects</a><a href="05-library.html" class=on><b>📚</b>Library</a><a href="06-operations.html"><b>🛠️</b>Operations</a><a href="07-settings.html"><b>⚙️</b>Settings</a></nav></body></html>
