@@ -177,7 +177,7 @@ def test_legacy_blank_zone_save_keeps_gateway_default(tmp_path, monkeypatch):
     from mco import schedules_plain as sp
     from mco.orchestrator import schedules_routes as routes
     path = tmp_path/'schedules.yaml'
-    path.write_text('launchers:\n  audit:\n    role: reviewer\n    title: Audit\nschedules: {}\n', encoding='utf-8')
+    path.write_text('launchers:\n  audit:\n    role: reviewer\n    title: Audit\nschedules:\n', encoding='utf-8')
     monkeypatch.setattr(sp, '_path', lambda: path)
     monkeypatch.setattr(sp, 'detect_timezone', lambda: 'UTC')
     result = routes.add({'what':'audit','frequency':'day','time':'09:00','timezone':''}, caller={})
