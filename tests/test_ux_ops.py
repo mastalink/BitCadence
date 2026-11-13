@@ -173,6 +173,22 @@ def test_invalid_zone_does_not_modify_schedule_file(tmp_path, monkeypatch):
     assert path.read_text(encoding='utf-8') == original
 
 
+def test_legacy_blank_zone_save_keeps_gateway_default(tmp_path, monkeypatch):
+    from mco import schedules_plain as sp
+    from mco.orchestrator import schedules_routes as routes
+    path = tmp_path/'schedules.yaml'
+    path.write_text('launchers:\n  audit:\n    role: reviewer\n    title: Audit\nschedules: {}\n', encoding='utf-8')
+    monkeypatch.setattr(sp, '_path', lambda: path)
+    monkeypatch.setattr(sp, 'detect_timezone', lambda: 'UTC')
+    result = routes.add({'what':'audit','frequency':'day','time':'09:00','timezone':''}, caller={})
+    assert result['timezone'] == 'UTC'
+    assert 'UTC' in path.read_text(encoding='utf-8')
+    # The new explicit-zone preview must still require a valid visible choice.
+    with pytest.raises(HTTPException) as error:
+        routes.preview({'frequency':'day','time':'09:00','timezone':''}, caller={})
+    assert error.value.status_code == 400
+
+
 def test_schedule_form_sends_selected_zone_to_preview_and_save(tmp_path):
     jsx(tmp_path, """
 store.schedulesList=async()=>({schedules:[],can_schedule:[{id:'audit',label:'Audit'}],frequencies:[{id:'day',label:'Every day'}],days:[]});

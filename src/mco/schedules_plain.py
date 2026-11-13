@@ -292,7 +292,9 @@ def add_schedule(launcher: str, cron: str, *, timezone_name: Optional[str] = Non
         known = ", ".join(sorted(n for n, l in launchers.items() if not l.is_local)) or "nothing yet"
         raise ScheduleWordsError(f"I don't know {launcher!r}. I can schedule: {known}.")
     scheduler.parse_cron(cron)  # last guard before anything touches the file
-    preview = preview_schedule(cron, timezone_name)
+    # Legacy save clients use a blank zone for the gateway default. The new
+    # explicit-zone preview remains strict so its visible choice is truthful.
+    preview = preview_schedule(cron, timezone_name or None)
     zone = preview["timezone"]
     base = _slug(launcher)
     name, n = base, 2
