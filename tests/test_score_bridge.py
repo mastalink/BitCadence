@@ -801,3 +801,111 @@ def test_missing_completion_event_blocks_after_grace(tmp_path):
     with pytest.raises(ScoreError):
         bridge.poll("run", board)
     assert bridge.status("run")["status"] == "blocked"
+
+
+# --- pr_url evidence (incident #36: "open ONE PR" was skipped and still accepted) ---
+
+import mco.orchestrator.score_adapters_live as _live
+
+
+def _fake_gh(monkeypatch, state="OPEN", head=None, rc=0):
+    def run(args, cwd):
+        assert args[:2] == ["pr", "view"] and "--json" in args
+        out = json.dumps({"state": state, "headRefName": head, "url": args[2]})
+        return subprocess.CompletedProcess(["gh", *args], rc, out if rc == 0 else "", "" if rc == 0 else "no pr")
+    monkeypatch.setattr(_live, "_run_gh", run)
+
+
+def _origin(wt_dir, url="https://github.com/mastalink/BitCadence.git"):
+    subprocess.run(["git", "remote", "add", "origin", url], cwd=wt_dir, check=True, capture_output=True)
+
+
+PR = "https://github.com/mastalink/BitCadence/pull/7"
+
+
+@pytest.mark.parametrize("state", ["OPEN", "MERGED"])
+def test_verify_pr_url_accepts_open_or_merged_on_target_branch(tmp_path, monkeypatch, state):
+    wt, branch, _ = _make_test_git_worktree(tmp_path)
+    _origin(wt)
+    _fake_gh(monkeypatch, state=state, head=branch)
+    assert _live.verify_pr_url(PR, wt, branch) == PR
+
+
+@pytest.mark.parametrize("kwargs,url", [
+    (dict(state="CLOSED"), PR),
+    (dict(head="some/other-branch"), PR),
+    (dict(rc=1), PR),
+    ({}, "https://github.com/someone-else/BitCadence/pull/7"),
+    ({}, "https://evil.example/mastalink/BitCadence/pull/7"),
+    ({}, "not a url"),
+])
+def test_verify_pr_url_rejects_bad_claims(tmp_path, monkeypatch, kwargs, url):
+    wt, branch, _ = _make_test_git_worktree(tmp_path)
+    _origin(wt)
+    kwargs.setdefault("head", branch)
+    _fake_gh(monkeypatch, **kwargs)
+    with pytest.raises(_live.LiveAdapterError):
+        _live.verify_pr_url(url, wt, branch)
+
+
+def _pr_url_run(tmp_path, monkeypatch, output_extra, gh_head="match"):
+    wt_dir, target_branch, initial_sha = _make_test_git_worktree(tmp_path)
+    _origin(wt_dir)
+    _fake_gh(monkeypatch, head=target_branch if gh_head == "match" else "wrong")
+    key = b"s05-test-key-material-is-long-enough-0001"
+    now_dt = datetime.now(timezone.utc)
+    db_store = LocalStore(tmp_path / "live_score.db")
+    grant_svc = GrantService(db_store, verification_key=key)
+    executor = LiveScoreAdapterExecutor(db=db_store, grant_service=grant_svc, now=lambda: now_dt)
+    s = score()
+    s["id"] = "pr-run"
+    s["tasks"][0]["id"] = "write_code"
+    s["tasks"][0]["capabilities"] = ["repository:write"]
+    s["tasks"][0]["resources"] = [str(wt_dir)]
+    s["tasks"][0]["commit"] = {
+        "worktree_path": str(wt_dir), "target_branch": target_branch,
+        "allowed_paths": ["src/*"], "commit_message": "feat: x", "expected_before_sha": initial_sha,
+    }
+    s["tasks"][0]["evidence"] = ["commit_sha", "pr_url"]
+    s["launch_requires"] = ["write_code"]
+    grant_svc.issue({
+        "org_id": "default", "run_id": "pr-run", "digest": digest(s),
+        "actions": ["repository:write"], "resources": [str(wt_dir)], "env": "test",
+        "not_before": (now_dt - timedelta(days=1)).isoformat(),
+        "expires_at": (now_dt + timedelta(days=1)).isoformat(),
+        "budget_cents": 0, "human_principal": "conductor",
+    })
+    b = ScoreBridge(tmp_path / "bridge.db", tmp_path / "artifacts", live_executor=executor)
+    board = Board()
+    b.initialize("pr-run", s, principal="conductor", org="default", targets={"auditor": "worker", "reviewer": "independent"}, credential_hash=board.identity)
+    work_id = b.plan("pr-run")[0]
+    b.dispatch("pr-run", board)
+    (wt_dir / "src").mkdir(parents=True, exist_ok=True)
+    (wt_dir / "src" / "app.py").write_text("x = 1\n", encoding="utf-8")
+    board.complete(work_id, {"ready": True, **output_extra})
+    return b, board
+
+
+def test_task_requiring_pr_url_cannot_be_accepted_without_it(tmp_path, monkeypatch):
+    b, board = _pr_url_run(tmp_path, monkeypatch, {})
+    with pytest.raises(ScoreError, match="pr_url"):
+        b.poll("pr-run", board)
+    assert not any(d["status"] == "validated" for d in b.status("pr-run")["dispatches"])
+
+
+def test_unverifiable_pr_url_is_not_evidence(tmp_path, monkeypatch):
+    b, board = _pr_url_run(tmp_path, monkeypatch, {"pr_url": PR}, gh_head="wrong")
+    with pytest.raises(ScoreError, match="Unverified pr_url"):
+        b.poll("pr-run", board)
+
+
+def test_verified_pr_url_is_recorded_in_evidence_and_review_prompt_checks_done_means(tmp_path, monkeypatch):
+    b, board = _pr_url_run(tmp_path, monkeypatch, {"pr_url": PR})
+    b.poll("pr-run", board)
+    work = [d for d in b.status("pr-run")["dispatches"] if d["phase"] == "work"][0]
+    assert work["status"] == "validated"
+    assert json.loads(work["evidence"])["pr_url"] == PR
+    rev_id = b.plan("pr-run")[0]
+    b.dispatch("pr-run", board)
+    prompt = board.get(rev_id)["input_payload"]["prompt"]
+    assert "Done means" in prompt and "reject" in prompt
