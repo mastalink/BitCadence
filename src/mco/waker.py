@@ -15,6 +15,31 @@ from mco.orchestrator.client import DEFAULT_GATEWAY, GatewayClient
 
 logger = logging.getLogger("mco.waker")
 
+_IS_WINDOWS = os.name == "nt"
+_CREATE_NO_WINDOW = 0x08000000
+
+
+def _has_console() -> bool:
+    """True when this process owns a console window (Windows only)."""
+    try:
+        import ctypes
+        return bool(ctypes.windll.kernel32.GetConsoleWindow())
+    except Exception:
+        return True
+
+
+def _spawn_kwargs() -> dict:
+    """Keep a background waker from flashing a console window on every wake.
+
+    A waker started without a console (pythonw, a scheduled task) makes Windows
+    open a new, visible one for each shell command it runs - one pop-up per
+    wake, for every agent. Started from a terminal, the command keeps sharing
+    that terminal so its output stays visible.
+    """
+    if not _IS_WINDOWS or _has_console():
+        return {}
+    return {"creationflags": _CREATE_NO_WINDOW}
+
 # Per-instance agent tokens live here, one file per instance id.
 AGENT_TOKEN_DIR = Path.home() / ".mco" / "tokens"
 
@@ -380,7 +405,7 @@ class Waker:
         self._last_spawn_start = time.monotonic()
 
     async def _run_exec(self) -> int:
-        proc = await asyncio.create_subprocess_shell(self.exec_command)
+        proc = await asyncio.create_subprocess_shell(self.exec_command, **_spawn_kwargs())
         return await proc.wait()
 
     def _is_matching_pending_event(self, msg: dict) -> bool:
