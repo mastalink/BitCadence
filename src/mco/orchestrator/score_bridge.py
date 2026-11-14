@@ -873,6 +873,12 @@ class ScoreBridge:
                     evidence = self.artifacts(output.get("artifacts"), contract["required_evidence"])
                     status = "validated"
             else:
+                # A passing review with nothing to report often leaves the
+                # findings list out. That is an empty list, not a broken
+                # review: the verdict and the exact evidence binding are still
+                # checked below. A fail must still say why.
+                if isinstance(output, dict) and output.get("verdict") == "pass" and output.get("findings") is None:
+                    output = {**output, "findings": []}
                 if is_repo_write:
                     evidence = contract["review_of"]
                     if not isinstance(evidence, dict) or set(evidence) != set(contract["required_evidence"]):
