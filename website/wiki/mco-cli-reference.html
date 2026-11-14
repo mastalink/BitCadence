@@ -2861,6 +2861,12 @@
 <td>Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start — a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.</td>
 </tr>
 <tr>
+<td><a id="cli-mco-score-tick-param-retry-blocked"></a><code>--retry-blocked</code></td>
+<td>BOOLEAN; flag; optional</td>
+<td><code>false</code></td>
+<td>If the run is blocked, clear the block and check it again. Nothing is skipped: a result that is still wrong blocks the run again.</td>
+</tr>
+<tr>
 <td><a id="cli-mco-score-tick-param-help"></a><code>--help</code></td>
 <td>BOOLEAN; flag; optional</td>
 <td>not set</td>

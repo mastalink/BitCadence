@@ -1478,6 +1478,7 @@ Implementation: [src/mco/cli.py:1411](../../src/mco/cli.py#L1411). Global/group 
 | <a id="cli-mco-score-tick-param-database"></a>`--db` | PATH; optional | `~/.mco/score-runs.db` | Conductor SQLite database containing the run. Existing path is checked for readability. |
 | <a id="cli-mco-score-tick-param-root"></a>`--artifact-root` | PATH; optional | `~/.mco/score-artifacts` | Artifact directory for the run. Existing path is checked for readability. |
 | <a id="cli-mco-score-tick-param-live-repository-write"></a>`--live-repository-write` | BOOLEAN; flag; optional | `false` | Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start — a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes. |
+| <a id="cli-mco-score-tick-param-retry-blocked"></a>`--retry-blocked` | BOOLEAN; flag; optional | `false` | If the run is blocked, clear the block and check it again. Nothing is skipped: a result that is still wrong blocks the run again. |
 | <a id="cli-mco-score-tick-param-help"></a>`--help` | BOOLEAN; flag; optional | not set | Show this message and exit. |
 
 <a id="cli-mco-send"></a>

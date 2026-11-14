@@ -1454,9 +1454,22 @@ def score_tick(
             "digest/run_id before any commit actually executes."
         ),
     ),
+    retry_blocked: bool = typer.Option(
+        False,
+        "--retry-blocked",
+        help=(
+            "If the run is blocked, clear the block and check it again. Nothing is skipped: "
+            "a result that is still wrong blocks the run again."
+        ),
+    ),
 ):
     """Advance the run: plan what can start, dispatch it, accept finished work."""
     conductor, _ = _conductor(database, root, live_repository_write=live_repository_write)
+    if retry_blocked:
+        if conductor.bridge.resume(run_id, conductor.board):
+            console.print(f"[yellow]Run {run_id} was blocked; checking it again.[/yellow]")
+        else:
+            console.print(f"[dim]Run {run_id} is not blocked; ticking as usual.[/dim]")
     if not watch:
         result = conductor.tick(run_id)
         console.print(result.describe())
