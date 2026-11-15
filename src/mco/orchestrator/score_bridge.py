@@ -670,8 +670,31 @@ class ScoreBridge:
             self.identity(run, board)
             if run["status"] != "blocked":
                 return False
+            overdue = [(r[0], r[1]) for r in db.execute(
+                "SELECT job_id,deadline FROM dispatch WHERE run=? AND status='submitted' AND deadline<=?",
+                (run_id, int(self.clock())))]
+        # A result that reached the board before its deadline is not late just
+        # because the run sat blocked past that deadline. Give those, and only
+        # those, a short window to be validated; work that never arrived or
+        # arrived late still fails the deadline check on the next tick.
+        on_time = []
+        for job_id, deadline in overdue:
+            try:
+                job = board.get(job_id)
+            except Exception:
+                continue
+            if isinstance(job, dict) and job.get("status") == "completed" and _completed_by(job, deadline):
+                on_time.append(job_id)
+        with self.tx() as db:
+            if self.run(db, run_id)["status"] != "blocked":
+                return False
+            window = int(self.clock()) + RESUME_VALIDATION_SECONDS
+            for job_id in on_time:
+                db.execute("UPDATE dispatch SET deadline=? WHERE run=? AND job_id=? AND status='submitted'",
+                           (window, run_id, job_id))
             db.execute("UPDATE runs SET status='running' WHERE id=?", (run_id,))
-            self.event(db, run_id, "resumed", {"from": "blocked", "policy": "revalidate; nothing is accepted unchecked"})
+            self.event(db, run_id, "resumed", {"from": "blocked", "on_time_results": on_time,
+                                               "policy": "revalidate; nothing is accepted unchecked"})
         return True
 
     def poll(self, run_id, board):
@@ -969,6 +992,26 @@ class ScoreBridge:
 # row's completed_at: 134 s on 2026-10-08 blocked redesign run -05 at 120 s.
 # Waiting longer only delays a real block; a wrong-actor event still blocks at once.
 COMPLETION_EVENT_GRACE_SECONDS = 900
+
+
+# How long a retried run gets to validate results that arrived before their
+# deadline while the run was blocked.
+RESUME_VALIDATION_SECONDS = 900
+
+
+def _completed_by(job, deadline) -> bool:
+    """True when the board recorded the job as completed at or before `deadline` (epoch seconds)."""
+    from datetime import datetime, timezone
+    raw = job.get("completed_at")
+    if not raw:
+        return False
+    try:
+        at = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if at.tzinfo is None:
+        at = at.replace(tzinfo=timezone.utc)
+    return at.timestamp() <= deadline
 
 
 def _recently_completed(job) -> bool:
