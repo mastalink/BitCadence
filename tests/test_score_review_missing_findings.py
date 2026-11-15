@@ -82,3 +82,45 @@ def test_resume_leaves_a_run_that_is_not_blocked_alone(setup):  # noqa: F811
     b, g, e = setup
     assert b.resume("run", g) is False
     assert b.status("run")["status"] == "running"
+
+
+def _blocked_past_deadline(tmp_path, completed_at):
+    """A review whose result was unreadable, then a run left blocked past the review's deadline."""
+    import hashlib
+    from datetime import datetime, timezone
+
+    from mco.orchestrator.score_bridge import ScoreBridge
+    from tests.test_score_bridge import Board, score
+
+    now = [1_000_000.0]
+    b = ScoreBridge(tmp_path / "state.db", tmp_path / "artifacts", clock=lambda: now[0])
+    g = Board()
+    b.initialize("run", score(), principal="conductor", org="default",
+                 targets={"auditor": "worker", "reviewer": "independent"}, credential_hash=g.identity)
+    path = b.root / "report.json"
+    path.write_text('{"audit":"test"}', encoding="utf-8")
+    e = {"report": {"path": "report.json", "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}}
+    review = _to_review(b, g, e)
+    g.complete(review, {"verdict": "pass", "review_of": e, "findings": "looks fine"})
+    with pytest.raises(ScoreError):
+        b.poll("run", g)
+    g.complete(review, {"verdict": "pass", "review_of": e, "findings": []})
+    g.jobs[review]["completed_at"] = datetime.fromtimestamp(now[0] + completed_at, timezone.utc).isoformat()
+    now[0] += 10_000_000  # far past every deadline
+    return b, g
+
+
+def test_a_result_that_arrived_on_time_is_not_late_after_a_long_block(tmp_path):
+    b, g = _blocked_past_deadline(tmp_path, completed_at=5)
+    assert b.resume("run", g) is True
+    assert b.plan("run") == []
+    b.poll("run", g)
+    assert b.status("run")["status"] == "accepted"
+
+
+def test_a_result_that_arrived_after_its_deadline_is_still_late(tmp_path):
+    b, g = _blocked_past_deadline(tmp_path, completed_at=9_000_000)
+    assert b.resume("run", g) is True
+    b.plan("run")
+    assert b.status("run")["status"] == "blocked"
+    assert "deadline_exceeded" in [ev["event"] for ev in b.status("run")["events"]]
