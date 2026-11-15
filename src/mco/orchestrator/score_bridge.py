@@ -656,6 +656,24 @@ class ScoreBridge:
                 db.execute("UPDATE runs SET status='blocked' WHERE id=?", (run_id,))
                 self.event(db, run_id, "deadline_exceeded", {"jobs": expired, "policy": "stop advancement; do not cancel unrelated work or resubmit"})
 
+    def resume(self, run_id, board):
+        """Let a blocked run be checked again. Returns False if it was not blocked.
+
+        Nothing is waved through: the next poll validates the same stored
+        results under the same rules, and a result that is still wrong blocks
+        the run again. This exists because a block used to be final even when
+        its cause was fixed (an engine fix, a file restored), leaving no way
+        forward but a new run.
+        """
+        with self.tx() as db:
+            run = self.run(db, run_id)
+            self.identity(run, board)
+            if run["status"] != "blocked":
+                return False
+            db.execute("UPDATE runs SET status='running' WHERE id=?", (run_id,))
+            self.event(db, run_id, "resumed", {"from": "blocked", "policy": "revalidate; nothing is accepted unchecked"})
+        return True
+
     def poll(self, run_id, board):
         self.check_standing_authority(run_id)
         self.check_deadlines(run_id)
@@ -873,6 +891,12 @@ class ScoreBridge:
                     evidence = self.artifacts(output.get("artifacts"), contract["required_evidence"])
                     status = "validated"
             else:
+                # A passing review with nothing to report often leaves the
+                # findings list out. That is an empty list, not a broken
+                # review: the verdict and the exact evidence binding are still
+                # checked below. A fail must still say why.
+                if isinstance(output, dict) and output.get("verdict") == "pass" and output.get("findings") is None:
+                    output = {**output, "findings": []}
                 if is_repo_write:
                     evidence = contract["review_of"]
                     if not isinstance(evidence, dict) or set(evidence) != set(contract["required_evidence"]):

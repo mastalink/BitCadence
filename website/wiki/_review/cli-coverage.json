@@ -6522,7 +6522,7 @@
           "nargs": 1,
           "is_flag": true,
           "hidden": false,
-          "help": "Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start \u2014 a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.",
+          "help": "Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start — a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.",
           "prompt": null,
           "envvar": null,
           "choices": null,
@@ -6850,7 +6850,7 @@
           "nargs": 1,
           "is_flag": true,
           "hidden": false,
-          "help": "Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start \u2014 a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.",
+          "help": "Enable live repository:write adapter execution. Required on every tick of a run with repository:write tasks, not just start — a human-issued grant (see POST /api/score/grants) must also authorize the run's digest/run_id before any commit actually executes.",
           "prompt": null,
           "envvar": null,
           "choices": null,
@@ -6860,6 +6860,30 @@
           "path_readable": null,
           "path_writable": null,
           "anchor": "cli-mco-score-tick-param-live-repository-write"
+        },
+        {
+          "name": "retry_blocked",
+          "kind": "option",
+          "tokens": [
+            "--retry-blocked"
+          ],
+          "type": "BOOLEAN",
+          "required": false,
+          "default": false,
+          "multiple": false,
+          "nargs": 1,
+          "is_flag": true,
+          "hidden": false,
+          "help": "If the run is blocked, clear the block and check it again. Nothing is skipped: a result that is still wrong blocks the run again.",
+          "prompt": null,
+          "envvar": null,
+          "choices": null,
+          "min": null,
+          "max": null,
+          "path_exists": null,
+          "path_readable": null,
+          "path_writable": null,
+          "anchor": "cli-mco-score-tick-param-retry-blocked"
         },
         {
           "name": "help",
