@@ -29,7 +29,7 @@ The phone layout refresh covers the browser console and its specialist dashboard
 
 Counts use different units and overlap; they are **not added into one test total**. The older November 13 full-suite result is historical evidence and is not presented as the current phone refresh's full-suite run. Logs/screenshots are local or CI run artifacts; filenames here identify evidence rather than promise a public artifact URL.
 
-The shell/dashboard scripts use a disposable authenticated gateway and temporary storage. Setup uses deliberate helper/configuration/health/planner mocks; content checks mount synthetic component states inside the actual bundle. Browser mutation and off-origin guards prevent live-board/provider calls; the shell explicitly allows only the schedule-preview read-only POST in addition to reads. Fixture seeding writes only disposable data. Passing these cases does not authorize real approval, token rotation, import, scheduling or worker interruption.
+The shell/dashboard scripts use a disposable authenticated gateway and temporary storage. The dashboard fixture initializes an encrypted vault with a random process-local key inside its new temporary home, so fake credential records do not depend on an OS credential manager. Setup uses deliberate helper/configuration/health/planner mocks; content checks mount synthetic component states inside the actual bundle. Browser mutation and off-origin guards prevent live-board/provider calls; the shell explicitly allows only the schedule-preview read-only POST in addition to reads. Fixture seeding writes only disposable data. Passing these cases does not authorize real approval, token rotation, import, scheduling or worker interruption.
 
 ## Synthetic examples at 320px
 

@@ -23,7 +23,14 @@ def main():
     home = Path(tempfile.mkdtemp(prefix="dashboard-phone-"))
     port = free_port()
     # This dense read-only audit exceeds the normal operator request budget.
-    capture_wiki.BOOT = "import os; os.environ['MCO_RATE_LIMIT']='0'; " + capture_wiki.BOOT
+    # Unlock only this new disposable home, without an OS credential manager.
+    # The random key stays in the child process; no provider is ever contacted.
+    capture_wiki.BOOT = (
+        "import os; from pathlib import Path; from mco.security import get_secret_store; "
+        "assert Path.home().name.startswith('dashboard-phone-'); "
+        "get_secret_store(Path.home()/'.mco/secrets.enc').initialize(os.urandom(32)); "
+        "os.environ['MCO_RATE_LIMIT']='0'; " + capture_wiki.BOOT
+    )
     proc = start_gateway(home, port)
     base = f"http://127.0.0.1:{port}"
     results, failures, mutations, errors = [], [], [], []
