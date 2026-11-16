@@ -184,7 +184,7 @@ function Drawer({ open, onClose, children, width = 480, title = "Details" }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 60 }}>
       <div aria-hidden="true" onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(23,23,28,0.28)" }}></div>
-      <div ref={panel} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} style={{
+      <div className="bc-drawer" ref={panel} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} style={{
         position: "absolute", top: 10, right: 10, bottom: 10, width, maxWidth: "calc(100vw - 40px)",
         background: "var(--surface)", borderRadius: "var(--radius-l)", border: "1px solid var(--border)",
         boxShadow: "var(--shadow-l)", display: "flex", flexDirection: "column", overflow: "hidden",
@@ -215,7 +215,7 @@ function ToastHost() {
     approval: { dot: "var(--st-approval-dot)" }, info: { dot: "var(--st-active-dot)" },
   };
   return (
-    <><div style={{ position: "fixed", bottom: 18, right: 18, zIndex: 80, display: "flex", flexDirection: "column", gap: 8, width: "min(340px, calc(100vw - 36px))" }}>
+    <><div style={{ position: "fixed", bottom: 18, right: 18, zIndex: 45, display: "flex", flexDirection: "column", gap: 8, width: "min(340px, calc(100vw - 36px))" }}>
       {toasts.map((t) => (
         <div key={t.id} role={t.kind === "err" ? "alert" : "status"} style={{
           background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-m)",

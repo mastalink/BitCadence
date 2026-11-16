@@ -1,10 +1,10 @@
 # Coverage and verification
 
-This wiki was checked against the BitCadence source snapshot on **November 13, 2026**. It separates everyday walkthroughs from exact references, and shipped routes from proposed designs.
+The browser phone follow-up was checked on **November 16, 2026**, on source base `ee45a86`. Earlier reference/UX evidence is retained with its own limits. The [phone acceptance matrix](phone-layout-audit.md) records measured 320/390/430px layouts, current run results and deliberate mock/disposable boundaries; it makes no physical-device claim.
 
 ## CLI coverage
 
-The [complete CLI reference](mco-cli-reference.md) maps **95 command/group paths** and **308 arguments and options** across the shared `bitcadence` / `mco` tree. It includes nested groups, defaults, required arguments, option aliases, repeatable values, hidden compatibility options and synthesized help/completion options. Each command has a purpose, safe example, expected result and recovery notes.
+The [complete CLI reference](mco-cli-reference.md) maps **95 command/group paths** and **309 arguments and options** across the shared `bitcadence` / `mco` tree. It includes nested groups, defaults, required arguments, option aliases, repeatable values, hidden compatibility options and synthesized help/completion options. Each command has a purpose, safe example, expected result and recovery notes.
 
 The [machine-readable inventory](_review/cli-coverage.json) binds every path and parameter to a documentation anchor and source metadata. The checker compares the actual Typer command tree without invoking operational callbacks. Unknown commands/options, changed defaults and missing anchors are failures. Negative-control checks also verified that the checker rejects missing/stale commands and parameters.
 
@@ -12,9 +12,9 @@ The desktop executable is separate and is covered under [Windows Local Control a
 
 ## GUI coverage
 
-The [GUI reference](gui-reference.md) covers thirteen console destinations, Score/detail views, the five-page dashboard, administration/lock/modal flows, Windows/tray actions and **33 server-driven settings**. Its [322 grouped control/workflow mappings](_review/gui-feature-coverage.json) link instructions to current component/function locations. This describes the UX branch based on parent `a263037`, not a running-app update.
+The [GUI reference](gui-reference.md) covers thirteen console destinations, Score/detail views, the five-page dashboard, administration/lock/modal flows, Windows/tray actions and **33 server-driven settings**. Its [336 grouped control/workflow mappings](_review/gui-feature-coverage.json) link instructions to current component/function locations. The phone follow-up is based on `ee45a86`, not a claim that an already running app was updated.
 
-This is grouped coverage, not an enumeration of every dynamic record/option. Unreachable legacy components are identified separately. Isolated behavior fixtures support the [U01–U24 status ledger](UX-REVIEW.md); deployment, real accessibility and end-to-end delivery are not inferred from them.
+This is grouped coverage, not every dynamic record/option. Unreachable legacy components are separate. Isolated behavior fixtures and measured disposable/fixture browser checks support the [U01–U24 ledger](UX-REVIEW.md); production deployment, physical-device behavior, screen-reader conformance and end-to-end work are not inferred.
 
 The generator resolves component/function anchors afresh. Source fingerprints were frozen after the final application changes, and strict hash verification passed. On the next change, run `python docs/wiki/_review/build_inventory.py --freeze-source-hashes` after the source settles, then the strict hash verifier. Hashes prove only the baseline, not rendered behavior or effects.
 
@@ -32,6 +32,8 @@ No real jobs were approved, cancelled, retried, reassigned or published to perfo
 
 ## Current limits and known issues
 
+The current November 16 focused regression run reports **110 passed** (one dependency deprecation warning). Current phone results are **104 shell checks**, **39 setup checks**, **27 content cases** and **228 dashboard checks**, each without reported failures. They overlap and use different units. The November 13 full-suite result is historical, not a full-suite run for this phone follow-up. See the [run records and matrix](phone-layout-audit.md#recorded-results).
+
 The [usability review](UX-REVIEW.md) contains source-confirmed issues and concrete acceptance checks. Product GUI behavior is source-reviewed; this refresh does not claim that every backend integration was exercised on every operating system. Existing screenshots illustrate the workflow and may precede small label changes.
 
 The Cancel-prompt fix is included in this source branch. An already-running gateway does not acquire a code patch just because the public help site was published. The live product needs its normal reviewed release/update before that fix can be assumed installed.
@@ -47,6 +49,6 @@ python docs/wiki/_review/verify_cli_examples.py docs/wiki
 python scripts/build_wiki.py
 ```
 
-CI runs the coverage checkers and site build alongside the tests. Its **phone-layout** job installs Playwright/Chromium and runs `python scripts/check_job_board_phone.py`; screenshots and measured results are retained as artifacts. To run that check locally, install Playwright and its Chromium browser in the project environment first. The script creates and removes its own disposable gateway process; it does not use the live board.
+CI runs coverage checkers/site build alongside tests. Its **phone-layout** job installs Playwright/Chromium and runs the Job Board, shell, setup, content and dashboard scripts listed in the [phone audit](phone-layout-audit.md#repeat-the-checks). Screenshots and measured results are retained as artifacts. The scripts own disposable gateways and synthetic fixtures, not the live board.
 
 When a feature changes, update its steps, expected result, failure/recovery guidance and inventory entry, then rebuild. Keep credentials and household/machine-specific data out of public documentation.

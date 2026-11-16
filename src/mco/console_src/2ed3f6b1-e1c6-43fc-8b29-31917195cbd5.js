@@ -232,7 +232,7 @@ function AgentFleet({ agents, jobs, tone, advanced }) {
           onCancel={() => setShowRegister(false)} />
       ) : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 310px), 1fr))", gap: 16 }}>
         {Object.entries(byRole).map(([role, list]) => (
           <Card key={role} pad={false}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}>
@@ -282,10 +282,10 @@ function AgentFleet({ agents, jobs, tone, advanced }) {
 const HELPERS_STYLE = `
  .hp-view{max-width:980px;margin:0 auto;line-height:1.6;min-width:0}.hp-view h1{margin:0 0 6px}.hp-view .sub{color:var(--text-2);margin:0 0 18px}
  .hp-view button,.hp-view select,.hp-view input{min-height:48px;min-width:48px;padding:10px 18px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
- .hp-view input{cursor:text;width:100%;max-width:420px}.hp-view button[disabled]{opacity:.55;cursor:default}
+ .hp-view input{cursor:text;width:100%;max-width:420px}.hp-view input,.hp-view select{box-sizing:border-box;max-width:100%;min-width:0}.hp-view button{max-width:100%;white-space:normal}.hp-view button[disabled]{opacity:.55;cursor:default}
  .hp-primary{background:var(--accent)!important;border-color:var(--accent-strong)!important;color:#fff!important;font-weight:600}
  .hp-card{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px;overflow-wrap:anywhere}
- .hp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}.hp-grid .hp-card{margin:0}
+ .hp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:14px}.hp-grid .hp-card{margin:0;min-width:0}
  .hp-top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.hp-top .hp-who{flex:1;min-width:140px}
  .hp-avatar{width:40px;height:40px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-weight:700;background:var(--surface-2);border:1px solid var(--border-strong)}
  .hp-pill{display:inline-flex;gap:6px;align-items:center;border:2px solid var(--border-strong);border-radius:99px;padding:4px 12px;font-weight:600;min-height:32px}
@@ -620,28 +620,41 @@ function SchedulesPage() {
 }
 
 // ----- Settings -----
+const SETTINGS_STYLE = `
+ .bc-setting-row>div{min-width:0}.bc-setting-control{max-width:100%}
+ .bc-setting-control input,.bc-setting-control select{box-sizing:border-box;max-width:100%}
+ .bc-connector-heading{flex-wrap:wrap}.bc-connector-heading>div{min-width:0;flex-wrap:wrap}
+ @media(max-width:700px){
+  .bc-setting-row,.bc-connector-field{flex-direction:column;align-items:stretch!important}
+  .bc-setting-control{width:100%}.bc-setting-control input,.bc-setting-control select,.bc-connector-field input{width:100%!important;min-width:0}
+  .bc-connector-field label{flex:none!important}
+ }
+`;
+
 function SettingRow({ title, body, control }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 0", borderBottom: "1px solid var(--border)" }}>
+    <div className="bc-setting-row" style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 0", borderBottom: "1px solid var(--border)" }}>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 600, fontSize: 13.5 }}>{title}</div>
         <div style={{ fontSize: 12.5, color: "var(--text-2)", marginTop: 2, maxWidth: 480 }}>{body}</div>
       </div>
-      <div style={{ flex: "none" }}>{control}</div>
+      <div className="bc-setting-control" style={{ flex: "none" }}>{control}</div>
     </div>
   );
 }
 
 function Toggle({ on, onChange, label }) {
   return (
-    <button onClick={() => onChange(!on)} aria-label={label} aria-pressed={on} style={{
-      width: 38, height: 22, borderRadius: 99, border: "none", cursor: "pointer", position: "relative",
-      background: on ? "var(--accent)" : "var(--border-strong)", transition: "background .15s",
+    <button className="bc-toggle" onClick={() => onChange(!on)} aria-label={label} aria-pressed={on} style={{
+      width: 48, minWidth: 48, height: 48, padding: 0, border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      background: "transparent",
     }}>
+      <span aria-hidden="true" style={{ width: 38, height: 22, borderRadius: 99, position: "relative", background: on ? "var(--accent)" : "var(--border-strong)", transition: "background .15s" }}>
       <span style={{
         position: "absolute", top: 2, left: on ? 18 : 2, width: 18, height: 18, borderRadius: 99,
         background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.25)", transition: "left .15s",
       }}></span>
+      </span>
     </button>
   );
 }
@@ -784,8 +797,8 @@ function ConnectorsCard({ tone }) {
       {!meta && !loadErr ? <p style={{ fontSize: 12.5, color: "var(--text-3)", margin: "10px 0 0" }}>Loading…</p> : null}
       {CONNECTORS.map((c) => (
         <div key={c.name} style={{ padding: "14px 0", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, flex: 1 }}>
+          <div className="bc-connector-heading" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, flex: "1 1 200px" }}>
               <div style={{ fontWeight: 650, fontSize: 13.5 }}>{c.label}</div>
               {health && health[c.name] ? (
                 <span title={health[c.name].detail || ""} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
@@ -807,7 +820,7 @@ function ConnectorsCard({ tone }) {
             ) : null}
           </div>
           {c.fields.map((k) => (meta && meta[k]) ? (
-            <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+            <div className="bc-connector-field" key={k} style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
               <label htmlFor={"connector-" + k} style={{ flex: 1, fontSize: 12.5, color: "var(--text-2)" }}>{meta[k].label}</label>
               <input id={"connector-" + k} value={form[k] || ""} onChange={(e) => set(k, e.target.value)} disabled={saving}
                 type={meta[k].type === "secret" ? "password" : "text"}
@@ -935,7 +948,7 @@ function TenancyCard({ tone, advanced }) {
           ) : null}
         </div>
       ))}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 14 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, paddingTop: 14 }}>
         <input value={newOrg} onChange={(e) => setNewOrg(e.target.value)}
           placeholder={tone === "plain" ? "new org name" : "org name"} style={inputStyle} />
         <Btn kind="primary" small disabled={adding || !newOrg.trim()} onClick={addOrg}>
@@ -967,15 +980,16 @@ function Settings({ tone, advanced, setAdvanced }) {
 
   const body = (
     <div style={{ maxWidth: 720 }}>
+      <style>{SETTINGS_STYLE}</style>
       <Card style={{ marginBottom: 18 }}>
         <SectionTitle>Connection</SectionTitle>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
           <span style={{
             width: 9, height: 9, borderRadius: 99, flex: "none",
             background: mode === "live" ? "var(--st-done-dot)" : mode === "connecting" ? "var(--st-waiting-dot)" : "var(--st-approval-dot)",
             animation: mode !== "demo" ? "cadence-pulse 1.6s infinite" : "none",
           }}></span>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: "1 1 180px", minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 13.5 }}>
               {mode === "live" ? "Live — connected to your orchestrator" : mode === "connecting" ? "Connecting…" : mode === "offline" ? "Offline — connection unavailable" : "Demo mode — simulated data"}
             </div>
@@ -1013,7 +1027,7 @@ function Settings({ tone, advanced, setAdvanced }) {
         <SettingRow
           title="Technical details"
           body={tone === "plain" ? "Show the technical layer: raw IDs, payloads, retry budgets, and YAML." : "Expose payload JSON, full UUIDs, retry/escalation config, and workflow YAML."}
-          control={<Toggle on={advanced} onChange={setAdvanced} />} />
+          control={<Toggle label="Technical details" on={advanced} onChange={setAdvanced} />} />
       </Card>
       <LiveControlSettings />
 

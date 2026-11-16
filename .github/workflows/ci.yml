@@ -54,11 +54,17 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Verify phone Job Board readability and interactions
         run: python scripts/check_job_board_phone.py
+      - name: Verify remaining phone screens and dialogs
+        run: |
+          python scripts/check_shell_phone.py
+          python scripts/check_setup_phone.py
+          python scripts/check_content_phone.py
+          python scripts/check_dashboard_phone.py
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: job-board-phone-readability
-          path: output/playwright/job-board-phone/
+          name: phone-readability-and-usability
+          path: output/playwright/
           retention-days: 14
 
   docker:
