@@ -45,6 +45,7 @@ Approval, stop, retry, token and deletion controls can change real work. **Stop 
 
 ## Coverage and product review
 
+- [Phone layout acceptance](phone-layout-audit.md) records the November 16 console/dashboard changes, measured 320/390/430px cases and mock/disposable test limits.
 - [Coverage and verification](coverage.md) records the checked command/control inventories and runtime limitations.
 - [Usability review](UX-REVIEW.md) gives concrete ways to make the product clearer, safer and easier to enjoy.
 

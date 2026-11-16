@@ -1,5 +1,5 @@
 // BitCadence — app shell: sidebar nav, topbar, routing, tweaks.
-const { useState: useStateA, useEffect: useEffectA } = React;
+const { useState: useStateA, useEffect: useEffectA, useRef: useRefA } = React;
 
 const NAV = [
   { id: "overview", label: "Home", icon: "M3 3h7v7H3zM14 3h7v4h-7zM14 11h7v10h-7zM3 14h7v7H3z" },
@@ -92,10 +92,10 @@ function Administration({ agents, jobs, tone, onNav }) {
   return <div>
     <h2>One place for administration</h2>
     <p>Manage helper credentials here. Specialist controls open on <strong>{host}</strong>. Existing permissions still apply; opening a page grants no access.</p>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12, marginBottom: 22 }}>
+    <div className="bc-admin-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12, marginBottom: 22 }}>
       {[["models", "Model connections", "Configure and explicitly test providers."], ["workflows", "Saved workflow files", "Validate and run a versioned YAML plan."], ["settings", "Server administration", "Review server settings, connectors and edition availability."]].map(([id, title, body]) => {
         const href = administrationHref(gateway, id);
-        return <Card key={id}><h3 style={{ marginTop: 0 }}>{title}</h3><p style={{ fontSize: 13 }}>{body}</p>{href ? <a href={href} target="_blank" rel="noopener noreferrer">Open {title.toLowerCase()} ↗</a> : <p role="alert">Set a valid HTTP or HTTPS server address in Settings.</p>}</Card>;
+        return <Card key={id}><h3 style={{ marginTop: 0 }}>{title}</h3><p style={{ fontSize: 13 }}>{body}</p>{href ? <a className="bc-action-link" href={href} target="_blank" rel="noopener noreferrer">Open {title.toLowerCase()} ↗</a> : <p role="alert">Set a valid HTTP or HTTPS server address in Settings.</p>}</Card>;
       })}
     </div>
     <p style={{ fontSize: 13, color: "var(--text-3)" }}>Administration keeps its sign-in check. Tokens are never put in links. The existing /dashboard address remains supported.</p>
@@ -108,9 +108,10 @@ function Administration({ agents, jobs, tone, onNav }) {
 const SHELL_STYLE = `
 .bc-sidebar{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .bc-menu-toggle,.bc-nav-backdrop{display:none}
+.bc-nav-close,.bc-phone-label{display:none}
 .bc-job-mobile-only{display:none}
 .bc-job-select-label{display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
-.bc-main-content{overflow-wrap:anywhere}
+.bc-main-content{overflow-wrap:break-word}
 .bc-main-content input,.bc-main-content select,.bc-main-content textarea{max-width:100%;box-sizing:border-box}
 .bc-skip{position:fixed;left:12px;top:-100px;z-index:100;background:var(--surface);padding:12px}
 .bc-skip:focus{top:8px}
@@ -121,9 +122,33 @@ nav.bc-sidebar[data-open=true]{display:flex!important}
 .bc-menu-toggle{display:inline-flex;min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);align-items:center;padding:6px 10px}
 .bc-nav-backdrop[data-open=true]{display:block;position:fixed;inset:0;z-index:50;background:#10182866}
 .bc-topbar{padding:10px 14px!important;gap:8px!important;flex-wrap:wrap}
+.bc-topbar{display:grid!important;grid-template-columns:auto minmax(0,1fr);align-items:center}
+.bc-topbar>label{grid-column:1/-1;justify-self:end}
+.bc-topbar h1{min-width:0;overflow-wrap:normal}
+.bc-nav-close{display:block;min-height:44px;margin:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)}
+.bc-main-content button,.bc-topbar button,.bc-drawer button{min-height:44px;min-width:44px;max-width:100%;flex-shrink:0;overflow-wrap:break-word}
+.bc-main-content input:not([type=checkbox]):not([type=radio]),.bc-main-content select,.bc-main-content textarea,.bc-drawer input:not([type=checkbox]):not([type=radio]),.bc-drawer select,.bc-drawer textarea{min-height:44px;font-size:16px!important;max-width:100%;min-width:0!important;box-sizing:border-box}
+.bc-main-content pre,.bc-drawer pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}
+.bc-action-link{display:inline-flex;min-height:44px;align-items:center;max-width:100%}
+.bc-admin-grid{grid-template-columns:minmax(0,1fr)!important}
+.bc-activity-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.bc-drawer{top:8px!important;right:8px!important;bottom:8px!important;width:calc(100vw - 16px)!important;max-width:calc(100vw - 16px)!important;overflow-wrap:break-word}
+.bc-drawer button{font-size:14px!important}.bc-drawer-actions{flex-wrap:wrap}
+.bc-new-job-roles{flex-wrap:wrap}.bc-new-job-roles button{flex:1 1 130px!important}
+.bc-portfolio-header{flex-wrap:wrap}.bc-portfolio-header>div{min-width:0}
+.bc-portfolio-project-head{flex-wrap:wrap}.bc-portfolio-project-head>div{flex:1 1 100%!important}
+.bc-portfolio-milestone{grid-template-columns:22px minmax(0,1fr)!important}.bc-portfolio-milestone>:last-child{grid-column:2}
+.bc-portfolio-flag,.bc-portfolio-progress,.bc-portfolio-next,.bc-portfolio-detail-grid,.bc-portfolio-recent-job{grid-template-columns:minmax(0,1fr)!important}
+.bc-phone-label{display:inline;font-weight:500;color:var(--text-3)}
+.bc-activity-controls{align-items:stretch!important}.bc-activity-controls input,.bc-activity-controls select{width:100%!important;min-width:0!important;flex-basis:100%!important}
+.bc-activity-table,.bc-activity-table tbody{display:block;width:100%}.bc-activity-table thead{display:none}
+.bc-activity-row{display:block;padding:12px 8px;border-bottom:1px solid var(--border)}
+.bc-main-content .bc-activity-row>td{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;border:0!important;padding:6px!important;min-width:0;overflow-wrap:break-word}
+.bc-activity-row>td>:last-child{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.bc-main-content .bc-activity-row>.bc-activity-job{display:block}
+.bc-activity-job>button{display:block;width:100%;font-size:15px;line-height:1.45;overflow-wrap:break-word}
 .bc-topbar h1{font-size:16px!important}.bc-operator{display:none!important}
 .bc-main-content{padding:18px 14px 35px!important}
-.bc-main-content [style*="grid-template-columns"]{grid-template-columns:minmax(0,1fr)!important}
 .bc-main-content table{font-size:12px!important}.bc-main-content th,.bc-main-content td{padding:8px!important;overflow-wrap:anywhere}
 .bc-job-board{overflow-wrap:normal;word-break:normal}
 .bc-job-filters{flex-basis:100%;flex-wrap:wrap;min-width:0}
@@ -167,6 +192,7 @@ function App() {
   const [watchRun, setWatchRun] = useStateA(null);
   const [composing, setComposing] = useStateA(false);
   const [menuOpen, setMenuOpen] = useStateA(false);
+  const navRef = useRefA(null);
   const [, force] = useStateA(0);
 
   useEffectA(() => window.BitCadenceStore.subscribe(() => force((x) => x + 1)), []);
@@ -210,8 +236,26 @@ function App() {
 
   useEffectA(() => { setMenuOpen(false); }, [page]);
   useEffectA(() => {
-    const key = (e) => { if(e.key === "Escape" && menuOpen) {setMenuOpen(false);document.querySelector("[data-bc-menu]")?.focus();} };
-    document.addEventListener("keydown",key);return () => document.removeEventListener("keydown",key);
+    if (!menuOpen) return;
+    const nav = navRef.current;
+    const before = document.activeElement;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const items = () => Array.from(nav.querySelectorAll('button:not([disabled]),a[href]')).filter(el => el.getClientRects().length);
+    items()[0]?.focus();
+    const key = e => {
+      if (e.key === "Escape") {e.preventDefault();setMenuOpen(false);}
+      if (e.key === "Tab") {
+        const focusable = items(), first = focusable[0], last = focusable[focusable.length-1];
+        if (e.shiftKey && (document.activeElement === first || !nav.contains(document.activeElement))) {e.preventDefault();last?.focus();}
+        else if (!e.shiftKey && (document.activeElement === last || !nav.contains(document.activeElement))) {e.preventDefault();first?.focus();}
+      }
+    };
+    const media = window.matchMedia("(max-width:760px)");
+    const resized = () => {if (!media.matches) setMenuOpen(false);};
+    media.addEventListener("change",resized);
+    document.addEventListener("keydown",key,true);
+    return () => {document.removeEventListener("keydown",key,true);media.removeEventListener("change",resized);document.body.style.overflow=oldOverflow;if (before?.isConnected && before.getClientRects().length) before.focus();};
   }, [menuOpen]);
 
   const screen = {
@@ -236,10 +280,11 @@ function App() {
       <style>{SHELL_STYLE}</style><a className="bc-skip" href="#bc-main">Skip to work</a>
       <div className="bc-nav-backdrop" data-open={menuOpen} aria-hidden="true" onClick={() => setMenuOpen(false)}></div>
       {/* Sidebar */}
-      <nav className="bc-sidebar" id="bc-navigation" aria-label="Main navigation" data-open={menuOpen} data-screen-label="Sidebar" style={{
+      <nav ref={navRef} className="bc-sidebar" id="bc-navigation" aria-label="Main navigation" data-open={menuOpen} data-screen-label="Sidebar" style={{
         width: 216, flex: "none", background: "var(--surface)", borderRight: "1px solid var(--border)",
         display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh",
       }}>
+        <button type="button" className="bc-nav-close" onClick={() => setMenuOpen(false)}>Close menu</button>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 16px 14px" }}>
           <BrandMark brand="BitCadence" />
           <div>

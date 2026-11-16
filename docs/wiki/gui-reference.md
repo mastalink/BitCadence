@@ -1,8 +1,8 @@
 # GUI reference: console, control plane, and Windows app
 
-This guide inventories the controls implemented in the browser console (`/console`), technical control plane (`/dashboard`), and Windows Local Control app. It was checked against source on November 13, 2026, not against an authenticated production session. A visible button is not evidence that its operation is permitted or working. Your token, tenant, edition, policy, and the current job state still govern every action.
+This guide inventories the browser console (`/console`), specialist control plane (`/dashboard`) and Windows Local Control app, with the phone layout follow-up checked November 16, 2026. A visible button is not evidence of permission or successful work. Your token, tenant, edition, policy and job state still govern every action. The [phone acceptance matrix](phone-layout-audit.md) separates measured browser cases, deliberate mocks and production/physical-device limits.
 
-**Version boundary:** these instructions describe the UX branch based on parent `a263037`. Source and isolated fixture checks support the changes below; deployment or a running-app update is not claimed. Older screenshots may show old labels. The [U01–U24 ledger](UX-REVIEW.md) separates implementation, remaining recommendations and runtime acceptance.
+**Version boundary:** the current phone follow-up is based on `ee45a86`. Source, isolated regressions and disposable/fixture browser checks support the described changes; this page does not claim a running-app update. Older screenshots may show earlier labels. The [U01–U24 ledger](UX-REVIEW.md) separates implementation, remaining recommendations and acceptance limits.
 
 ## Choose the right window
 
@@ -28,7 +28,7 @@ If authentication fails, obtain the correct existing token and check its scopes.
 
 ## Navigation and display controls
 
-The sidebar has thirteen entries: **Home**, **Portfolio**, **Job Board**, **Approvals**, **Governance**, **Ask for something**, **Helpers**, **Connect an AI**, **Schedules**, **Drumline**, **Activity**, **Settings**, **Administration**. The selected page and Technical details preference are stored locally. On narrow screens **Menu** opens navigation; select a destination or dismiss its backdrop to close it. Navigation scrolls on short screens. **Skip to content** provides a keyboard doorway to the main view.
+The sidebar has thirteen entries: **Home**, **Portfolio**, **Job Board**, **Approvals**, **Governance**, **Ask for something**, **Helpers**, **Connect an AI**, **Schedules**, **Drumline**, **Activity**, **Settings**, **Administration**. The selected page and Technical details preference are stored locally. On narrow screens **Menu** opens navigation and moves keyboard focus into it. **Close menu**, a destination, backdrop or Escape closes it; Tab stays inside while open. Navigation scrolls on short screens. **Skip to content** reaches the main view.
 
 The topbar **Technical details** switch reveals payloads, full job IDs and retry/escalation fields. It does not grant authority. Use **Administration** or Helpers’ **Manage credentials…** to manage identities/tokens without a prototype copy-tone setting.
 
@@ -53,6 +53,8 @@ The target host is shown, and links contain no bearer token. Dashboard verifies 
 Home marks an active job Stuck after ten minutes without a usable recent work/heartbeat timestamp. That label is a view flag, not a cancellation or a restart. Waiting and approval jobs do not become Stuck merely for being old. Score cards group by run and obtain actual plan step counts when available; missing plan data can omit counts. Home uses at most 200 recent jobs and displays a coverage notice at that limit; at most twenty visible plans refresh every thirty seconds. See [Home rules](Console-home.md) and [Score live](Score-live.md).
 
 ## Portfolio
+
+On phones, cards and their metrics stack so titles retain usable width. Activity uses labelled stacked records; the dashboard instead puts wide tables in labelled scroll regions. These are different layouts for different information, not evidence that all data fits without scrolling. See the [phone audit](phone-layout-audit.md).
 
 Choose **Portfolio** for one read-only run sheet of the projects you have listed in a local portfolio file. It replaces the earlier **Projects** sidebar entry (a saved "Projects" page choice now opens Portfolio). Roadmaps and milestone states come only from your local configuration; shared queues, workers, board jobs and flow warnings are live. Nothing on this page starts, pauses, moves or changes work.
 
@@ -80,6 +82,8 @@ Choose **Job Board**, then combine **All**, **Active**, **Needs approval**, **Wa
 At 760px and below, rows stack into a wide title and labeled status/assignment/source/workflow-or-retries/update fields. Filter buttons wrap as whole controls, long machine identifiers stay inside their field, and selection/title/control targets are at least 44px tall. The desktop header sort buttons are hidden; use **Sort jobs** instead. **Select all visible jobs**, individual selection, Clear selection and eligible batch controls remain available. Opening a job and selecting it are separate interactions. See the [phone walkthrough](job-board-and-tasks.md#on-a-phone).
 
 ### Create a job
+
+On phones the role buttons stay within the drawer, and the short-screen footer can be reached by scrolling. Inputs remain readable and notifications must not cover Create job. These states were checked at 320/390/430px, including a 400px-high composer; physical keyboard/touch behavior is not claimed.
 
 1. Choose **+ New job**.
 2. Fill **What needs to happen?**, optional **Details**, and **Who should do it?**. Available roles come from enabled registered agents; no roles means register a worker first.
@@ -280,6 +284,8 @@ Recover from validation/auth/network errors by checking saved provider/endpoint/
 Choose **Workflows**, paste valid workflow YAML, review roles, dependencies, conditions and approval flags, then **Submit workflow**. This creates governed jobs and shows run/job JSON; it is not a preview or dry-run. Use the CLI/offline validation path in [workflow guide](workflows-and-flow-control.md#the-cli-equivalent) before submission when needed. On parse/cycle/policy failure, correct the input; on ambiguous network failure inspect existing runs/jobs before resubmitting.
 
 ### Technical control-plane settings
+
+On phones, Settings fields stack. In the specialist dashboard, wide tables sit in labelled keyboard-focusable scroll regions: swipe/scroll horizontally, or focus the region and use Arrow keys to reach all columns/actions. Form/modal controls keep readable dimensions rather than squeezing their columns. Cancel remains reachable on the tested short screens. See [measured scope](phone-layout-audit.md).
 
 Choose **Settings → Reload** to load current metadata, edition/features and integrations. Only authorized settings access can read or save these groups. Controls are driven by the server whitelist, so the following catalogue is a snapshot; absent fields can reflect version or permission differences.
 

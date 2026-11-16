@@ -1,3 +1,36 @@
+// These screens retain their desktop layouts while giving phone content room to read.
+const CONTENT_PHONE_STYLE = `
+@media(max-width:700px){
+ .approval-view,.governance-view,.drumline-context,.agent-exchange,.memory-detail{min-width:0;overflow-wrap:break-word}
+ .approval-view button,.governance-view button,.drumline-context button,.agent-exchange button,.memory-detail button,.drumline-tabs button{min-height:44px;min-width:44px;white-space:normal}
+ .approval-view input:not([type=checkbox]),.governance-view input,.drumline-context input,.drumline-context select,.drumline-context textarea,.agent-exchange select,.agent-exchange input,.agent-exchange textarea{min-width:0!important;max-width:100%;box-sizing:border-box;min-height:44px;font-size:16px!important}
+ .approval-view input[type=checkbox]{width:24px;height:24px;flex:none}
+ .approval-select-all{min-height:44px}
+ .approval-checkbox{display:flex;align-items:center;justify-content:center;width:44px;min-height:44px;flex:none;cursor:pointer}
+ .approval-batch,.approval-batch-actions,.approval-metadata,.approval-status,.memory-content-heading{flex-wrap:wrap}
+ .approval-reason{flex-basis:100%!important;width:100%}
+ .content-columns{grid-template-columns:minmax(0,1fr)!important}
+ .approval-list-title{white-space:normal!important;overflow:visible!important}
+ .phone-records thead{display:none}
+ .phone-records tbody{display:block}
+ .phone-records tr{display:block;padding:12px;border-bottom:1px solid var(--border)}
+ .phone-records td{display:block;padding:6px 0!important;border:0!important;overflow-wrap:break-word}
+ .phone-records td[data-label]::before{content:attr(data-label) ': ';font-weight:600;color:var(--text-3)}
+ .phone-records td>*{max-width:100%}
+ .evidence-dates{grid-template-columns:minmax(0,1fr)!important}
+ .drumline-search input{flex-basis:100%!important;width:100%!important}
+ .drumline-editor-fields>*{flex-basis:100%!important;width:100%!important}
+ .memory-entry-heading{flex-wrap:wrap}
+ .memory-entry-title{flex-basis:100%!important;order:-1;white-space:normal!important;overflow:visible!important;font-size:15px!important}
+ .memory-metadata{grid-template-columns:minmax(0,1fr)!important;gap:5px!important}
+ .memory-metadata> :nth-child(2n){margin-bottom:10px}
+ .exchange-job-label{width:100%;min-width:0;flex-direction:column;align-items:stretch!important}
+ .exchange-job-label select{width:100%;min-width:0!important}
+ .agent-exchange article header,.agent-exchange form>div>div{flex-wrap:wrap}
+ .agent-exchange article{min-width:0}
+ .drumline-tabs{flex-wrap:wrap}
+}
+`;
 // BitCadence — Overview (mission control) + Approvals inbox.
 const { useState: useStateH, useMemo: useMemoH, useEffect: useEffectH } = React;
 
@@ -628,7 +661,7 @@ const HOME_STYLE = `
  .home-view :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
  .score-stages{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x proximity;padding:6px 3px 20px}
  .score-stage{flex:1 0 240px;scroll-snap-align:start}.score-stage>.home-card{margin-top:12px}
- @media(max-width:700px){nav[data-screen-label="Sidebar"]{width:68px!important}nav[data-screen-label="Sidebar"] button span,nav[data-screen-label="Sidebar"]>div:first-child>div{display:none}main>div[data-screen-label]{padding:18px 14px!important}.score-stage{flex-basis:85vw}}
+ @media(max-width:700px){.score-stage{flex-basis:85vw}}
  @media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#161a21;--surface:#20242c;--surface-2:#2b303c;--text:#f0f2f6;--text-2:#ced3df;--text-3:#b8c0d0;--border:#596171}body{background:var(--bg);color:var(--text)}}
  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 `;
@@ -759,7 +792,8 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
   };
 
   return (
-    <div>
+    <div className="approval-view">
+      <style>{CONTENT_PHONE_STYLE}</style>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
         <p style={{ margin: 0, color: "var(--text-2)", fontSize: 13.5, maxWidth: 560 }}>
           {tone === "plain"
@@ -767,13 +801,13 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
             : "Jobs flagged requires_approval pause at needs_approval until an approver role decides. Decisions are recorded in the immutable audit trail."}
         </p>
         {queue.length > 0 ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, cursor: "pointer", fontWeight: 500 }}>
+          <div className="approval-batch" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <label className="approval-select-all" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, cursor: "pointer", fontWeight: 500 }}>
               <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} style={{ cursor: "pointer" }} />
               Select all ({queue.length})
             </label>
             {selectedIds.size > 0 ? (
-              <div style={{ display: "flex", gap: 6 }}>
+              <div className="approval-batch-actions" style={{ display: "flex", gap: 6 }}>
                 <Btn small kind="ok" disabled={batchBusy} onClick={handleBatchApprove}>
                   ✓ Approve ({selectedIds.size})
                 </Btn>
@@ -802,7 +836,7 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
       {queue.length === 0 ? (
         <Card><EmptyState icon="✓" title={tone === "plain" ? "Nothing needs your OK" : "Approval queue is empty"} body="New approval requests will appear here and notify you." /></Card>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.4fr)", gap: 18, alignItems: "start" }}>
+        <div className="content-columns" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.4fr)", gap: 18, alignItems: "start" }}>
           <Card pad={false}>
             {queue.map((j) => {
               const isSel = selected && selected.id === j.id;
@@ -815,11 +849,11 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
                   border: "none", borderBottom: "1px solid var(--border)",
                   borderLeftStyle: "solid", borderLeftWidth: 3, borderLeftColor: isSel ? "var(--accent)" : "transparent",
                 }}>
-                  <input type="checkbox" aria-label={"Select " + j.title} checked={isChecked} onChange={(e) => toggleSelect(j.id, e)} style={{ cursor: "pointer", flex: "none" }} />
+                  <label className="approval-checkbox"><input type="checkbox" aria-label={"Select " + j.title} checked={isChecked} onChange={(e) => toggleSelect(j.id, e)} style={{ cursor: "pointer", flex: "none" }} /></label>
                   <button type="button" onClick={() => { setSel(j.id); setReason(""); }} style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0, border: 0, background: "transparent", color: "var(--text)", textAlign: "left", padding: 0, cursor: "pointer" }}>
                   <RoleChip role={j.target_agent_role} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.title}</div>
+                    <div className="approval-list-title" style={{ fontWeight: 600, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.title}</div>
                     <div style={{ fontSize: 12, color: "var(--text-3)" }}>from {j.source_agent_id} · {timeAgo(j.created_at)}</div>
                   </div>
                   </button>
@@ -829,20 +863,20 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
           </Card>
           {selected ? (
             <Card>
-              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <div className="approval-status" style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                 <StatusBadge status="needs_approval" tone={tone} />
                 {selected.workflow ? <span style={{ fontSize: 12, color: "var(--text-3)", alignSelf: "center" }}>part of {selected.workflow}</span> : null}
               </div>
               <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 650, letterSpacing: "-0.01em" }}>{selected.title}</h2>
               <p style={{ margin: "0 0 14px", color: "var(--text-2)", fontSize: 13.5 }}>{selected.description || "No further instructions were attached."}</p>
-              <div style={{ display: "flex", gap: 20, fontSize: 13, color: "var(--text-2)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", padding: "10px 0", marginBottom: 16 }}>
+              <div className="approval-metadata" style={{ display: "flex", gap: 20, fontSize: 13, color: "var(--text-2)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", padding: "10px 0", marginBottom: 16 }}>
                 <span>Will run on: <b style={{ color: "var(--text)" }}>{selected.target_agent_role}</b></span>
                 <span>Requested by: <Mono>{selected.source_agent_id}</Mono></span>
                 {advanced ? <span>ID: <Mono>{shortId(selected.id)}</Mono></span> : null}
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <Btn kind="primary" disabled={actionBusy || batchBusy} onClick={() => decideOne("approve", selected)}>{actionBusy ? "Saving…" : "Approve"}</Btn>
-                <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tone === "plain" ? "Reason for saying no…" : "Rejection reason (audited)…"} style={{ flex: 1, minWidth: 160, border: "1px solid var(--border-strong)", borderRadius: 8, padding: "8px 12px", fontSize: 13 }} />
+                <input className="approval-reason" aria-label="Rejection reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={tone === "plain" ? "Reason for saying no…" : "Rejection reason (audited)…"} style={{ flex: 1, minWidth: 160, border: "1px solid var(--border-strong)", borderRadius: 8, padding: "8px 12px", fontSize: 13 }} />
                 <Btn kind="danger" disabled={actionBusy || batchBusy} onClick={() => decideOne("reject", selected)}>Reject</Btn>
                 <Btn kind="ghost" onClick={() => onOpen(selected.id)}>Full details →</Btn>
               </div>
@@ -855,7 +889,7 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
         <div style={{ marginTop: 24 }}>
           <SectionTitle>Recent decisions</SectionTitle>
           <Card pad={false}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+            <table className="phone-records" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
               <THead cols={["Job", "Decision", "Decided by", "When"]} />
               <tbody>
                 {decided.map((j) => (
@@ -864,8 +898,8 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
                     onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
                     <Td><button type="button" onClick={(e) => { e.stopPropagation(); onOpen(j.id); }} style={{ border: 0, background: "none", color: "var(--accent-text)", fontWeight: 600, textAlign: "left", cursor: "pointer", padding: 0 }}>{j.title}</button></Td>
                     <Td><span>{approvalDecision(j).label}</span><div style={{ marginTop: 5 }}><StatusBadge status={approvalDecision(j).status} tone={tone} /></div></Td>
-                    <Td><Mono>{j.approved_by}</Mono></Td>
-                    <Td><span style={{ color: "var(--text-3)", fontSize: 12.5 }}>{timeAgo(j.updated_at)}</span></Td>
+                    <Td data-label="Decided by"><Mono>{j.approved_by}</Mono></Td>
+                    <Td data-label="When"><span style={{ color: "var(--text-3)", fontSize: 12.5 }}>{timeAgo(j.updated_at)}</span></Td>
                   </tr>
                 ))}
               </tbody>
@@ -926,8 +960,9 @@ function Governance({ jobs, tone, advanced, onOpen }) {
     .slice(0, 18);
 
   return (
-    <div>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.25fr) minmax(320px, .75fr)", gap: 18, alignItems: "start" }}>
+    <div className="governance-view">
+      <style>{CONTENT_PHONE_STYLE}</style>
+      <div className="content-columns" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.25fr) minmax(320px, .75fr)", gap: 18, alignItems: "start" }}>
         <div>
           <SectionTitle action={<Btn small kind="ghost" onClick={loadEvents}>Refresh</Btn>}>
             {tone === "plain" ? "Pending approvals" : "Human oversight queue"}
@@ -935,14 +970,14 @@ function Governance({ jobs, tone, advanced, onOpen }) {
           <p style={{ fontSize: 12, color: "var(--text-3)" }}>Audit feed: latest 150 loaded events. This is a bounded view, not the entire history.</p>
           <Card pad={false} style={{ marginBottom: 18 }}>
             {pending.length ? (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+              <table className="phone-records" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
                 <THead cols={["Job", "Target", "Requested", ""]} />
                 <tbody>
                   {pending.map((j) => (
                     <tr key={j.id}>
-                      <Td><span style={{ fontWeight: 600 }}>{j.title}</span><br /><span style={{ color: "var(--text-3)", fontSize: 12 }}>{shortId(j.id)}</span></Td>
-                      <Td><RoleChip role={j.target_agent_role} /></Td>
-                      <Td><span style={{ color: "var(--text-3)", fontSize: 12.5 }}>{timeAgo(j.created_at)}</span></Td>
+                      <Td data-label="Job"><span style={{ fontWeight: 600 }}>{j.title}</span><br /><span style={{ color: "var(--text-3)", fontSize: 12 }}>{shortId(j.id)}</span></Td>
+                      <Td data-label="Target"><RoleChip role={j.target_agent_role} /></Td>
+                      <Td data-label="Requested"><span style={{ color: "var(--text-3)", fontSize: 12.5 }}>{timeAgo(j.created_at)}</span></Td>
                       <Td><Btn small onClick={() => onOpen(j.id)}>Review</Btn></Td>
                     </tr>
                   ))}
@@ -956,15 +991,15 @@ function Governance({ jobs, tone, advanced, onOpen }) {
           <SectionTitle>{tone === "plain" ? "Decision history" : "Approval decision history"}</SectionTitle>
           <Card pad={false}>
             {decisions.length ? (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+              <table className="phone-records" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
                 <THead cols={advanced ? ["Decision", "Job", "Actor", "When", "Detail"] : ["Decision", "Job", "Actor", "When"]} />
                 <tbody>
                   {decisions.map((e) => (
                     <tr key={e.id || e.job_id + e.created_at}>
                       <Td><span style={{ fontWeight: 700, color: e.event === "approved" ? "var(--st-done-fg)" : "var(--st-failed-fg)" }}>{eventLabel(e.event, tone)}</span></Td>
-                      <Td>{e.job_title || shortId(e.job_id)}</Td>
-                      <Td><Mono>{e.actor_id || "-"}</Mono></Td>
-                      <Td><span style={{ color: "var(--text-3)", fontSize: 12.5 }}>{timeAgo(e.created_at)}</span></Td>
+                      <Td data-label="Job">{e.job_title || shortId(e.job_id)}</Td>
+                      <Td data-label="Actor"><Mono>{e.actor_id || "-"}</Mono></Td>
+                      <Td data-label="When"><span style={{ color: "var(--text-3)", fontSize: 12.5 }}>{timeAgo(e.created_at)}</span></Td>
                       {advanced ? <Td><span style={{ color: "var(--text-3)", fontSize: 12 }}>{JSON.stringify(e.detail || {})}</span></Td> : null}
                     </tr>
                   ))}
@@ -982,7 +1017,7 @@ function Governance({ jobs, tone, advanced, onOpen }) {
             <div style={{ fontSize: 13.5, color: "var(--text-2)", marginBottom: 14 }}>
               Download the available evidence and audit trail as JSON. This is operational evidence, not a legal certification or a generated PDF.
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+            <div className="evidence-dates" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
               <label style={{ fontSize: 12, color: "var(--text-3)" }}>Start<br /><input type="date" value={start} onChange={(e) => setStart(e.target.value)} style={Object.assign({}, inputStyle, { width: "100%" })} /></label>
               <label style={{ fontSize: 12, color: "var(--text-3)" }}>End<br /><input type="date" value={end} onChange={(e) => setEnd(e.target.value)} style={Object.assign({}, inputStyle, { width: "100%" })} /></label>
             </div>
@@ -1056,7 +1091,8 @@ function MemoryDetailDrawer({ entry, onClose, onOpenJob, tone, advanced }) {
 
   return (
     <Drawer open={!!entry} title="Memory details" onClose={onClose} width={620}>
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <div className="memory-detail" style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+        <style>{CONTENT_PHONE_STYLE}</style>
         {/* Header */}
         <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
@@ -1070,13 +1106,13 @@ function MemoryDetailDrawer({ entry, onClose, onOpenJob, tone, advanced }) {
                 {entry.title}
               </h2>
             </div>
-            <Btn kind="ghost" small onClick={onClose} style={{ fontSize: 18, lineHeight: 1 }}>×</Btn>
+            <Btn kind="ghost" small onClick={onClose} aria-label="Close memory details" style={{ fontSize: 18, lineHeight: 1 }}>×</Btn>
           </div>
         </div>
 
         {/* Content body */}
         <div style={{ flex: 1, overflowY: "auto", padding: "18px 22px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div className="memory-content-heading" style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
               Full Memory Content
             </span>
@@ -1093,7 +1129,7 @@ function MemoryDetailDrawer({ entry, onClose, onOpenJob, tone, advanced }) {
           </div>
 
           <SectionTitle>Metadata &amp; Provenance</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", gap: 10, fontSize: 13, borderBottom: "1px solid var(--border)", paddingBottom: 14, marginBottom: 14 }}>
+          <div className="memory-metadata" style={{ display: "grid", gridTemplateColumns: "130px 1fr", gap: 10, fontSize: 13, borderBottom: "1px solid var(--border)", paddingBottom: 14, marginBottom: 14 }}>
             <span style={{ color: "var(--text-3)" }}>Author / Agent</span>
             <Mono>{entry.created_by || "system"}</Mono>
 
@@ -1196,14 +1232,15 @@ function DrumlineContext({ tone, advanced, onOpen }) {
   }
 
   return (
-    <div>
+    <div className="drumline-context">
+      <style>{CONTENT_PHONE_STYLE}</style>
       <p style={{ margin: "0 0 16px", color: "var(--text-2)", fontSize: 13.5, maxWidth: 560 }}>
         {tone === "plain"
           ? "Showing up to 25 ranked memory entries for this search. Decisions, lessons and handoffs are available to helpers through shared recall. Open an entry to inspect its full context."
           : "The Drumline shared context (agent_context): explicit writes via mco_remember plus auto-distilled job handoffs. Entries below are ranked by the server's recall scorer. Click any entry to inspect provenance and full text."}
       </p>
 
-      <form onSubmit={(e) => { e.preventDefault(); setEntries(null); load(); }}
+      <form className="drumline-search" onSubmit={(e) => { e.preventDefault(); setEntries(null); load(); }}
         style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <input value={query} onChange={(e) => setQuery(e.target.value)}
           placeholder={tone === "plain" ? "Search memory…" : "Recall query (soft-scored)…"}
@@ -1221,7 +1258,7 @@ function DrumlineContext({ tone, advanced, onOpen }) {
       {composing ? (
         <Card style={{ marginBottom: 16 }}>
           <SectionTitle>{tone === "plain" ? "Teach your agents something" : "New context entry"}</SectionTitle>
-          <div style={{ display: "flex", gap: 10, margin: "12px 0 10px", flexWrap: "wrap" }}>
+          <div className="drumline-editor-fields" style={{ display: "flex", gap: 10, margin: "12px 0 10px", flexWrap: "wrap" }}>
             <input value={form.title} onChange={(e) => setForm(Object.assign({}, form, { title: e.target.value }))}
               placeholder="Title" style={Object.assign({}, inputStyle, { flex: 2, minWidth: 220 })} />
             <select value={form.kind} onChange={(e) => setForm(Object.assign({}, form, { kind: e.target.value }))}
@@ -1270,9 +1307,9 @@ function DrumlineContext({ tone, advanced, onOpen }) {
               }}
                 onMouseEnter={(ev) => ev.currentTarget.style.background = "var(--surface-2)"}
                 onMouseLeave={(ev) => ev.currentTarget.style.background = "transparent"}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div className="memory-entry-heading" style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <KindChip kind={e.kind} />
-                  <span style={{ fontWeight: 600, fontSize: 13.5, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</span>
+                  <span className="memory-entry-title" style={{ fontWeight: 600, fontSize: 13.5, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</span>
                   {e.role ? <RoleChip role={e.role} size={18} /> : null}
                   <span style={{ fontSize: 11.5, color: "var(--text-3)", flex: "none" }}>{timeAgo(e.created_at)}</span>
                 </div>
@@ -1482,7 +1519,8 @@ function AgentExchange({ tone, advanced }) {
   const jobOptions = (jobs || []).slice(0, 60);
 
   return (
-    <div>
+    <div className="agent-exchange">
+      <style>{CONTENT_PHONE_STYLE}</style>
       <p style={{ margin: "0 0 12px", color: "var(--text-2)", fontSize: 13.5, maxWidth: 620 }}>
         {tone === "plain"
           ? "A place for you and your agents to talk about a job: ask, suggest, flag a blocker, or hand off. Nothing said here is an order or an approval, and agents never read it automatically."
@@ -1492,7 +1530,7 @@ function AgentExchange({ tone, advanced }) {
       <div aria-live="polite" role="status" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>{announce}</div>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
-        <label style={{ fontSize: 12.5, color: "var(--text-2)", display: "flex", gap: 8, alignItems: "center" }}>
+        <label className="exchange-job-label" style={{ fontSize: 12.5, color: "var(--text-2)", display: "flex", gap: 8, alignItems: "center" }}>
           {tone === "plain" ? "Job" : "job_id"}
           <select value={jobId} onChange={(e) => { setJobId(e.target.value); setSelected(""); setDetail(null); }}
             style={Object.assign({}, inputStyle, { minWidth: 240 })}>
@@ -1512,7 +1550,7 @@ function AgentExchange({ tone, advanced }) {
       {err ? <Card style={{ marginBottom: 14 }}><div role="alert" style={{ fontSize: 12.5, color: "var(--st-failed-fg)" }}>{err}</div></Card> : null}
       {promoteMsg ? <Card style={{ marginBottom: 14 }}><div role="status" style={{ fontSize: 12.5 }}>{promoteMsg}</div></Card> : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(200px, 300px) 1fr", gap: 16, alignItems: "start" }}>
+      <div className="content-columns" style={{ display: "grid", gridTemplateColumns: "minmax(200px, 300px) 1fr", gap: 16, alignItems: "start" }}>
         <nav aria-label="Threads">
           <Card pad={false}>
             {!jobId ? <p style={{ padding: 14, margin: 0, fontSize: 12.5, color: "var(--text-3)" }}>Pick a job to see its threads.</p> : null}
@@ -1664,7 +1702,7 @@ function DrumlineMemory({ tone, advanced, onOpen }) {
   const tabs = [{ id: "context", label: "Context" }, { id: "exchange", label: "Agent Exchange" }];
   return (
     <div>
-      <div role="tablist" aria-label="Drumline views" style={{ display: "flex", gap: 6, marginBottom: 16, borderBottom: "1px solid var(--border)" }}>
+      <div className="drumline-tabs" role="tablist" aria-label="Drumline views" style={{ display: "flex", gap: 6, marginBottom: 16, borderBottom: "1px solid var(--border)" }}>
         {tabs.map((t) => (
           <button key={t.id} role="tab" id={"drumline-tab-" + t.id} aria-selected={view === t.id} aria-controls={"drumline-panel-" + t.id}
             tabIndex={view === t.id ? 0 : -1} onClick={() => setView(t.id)}

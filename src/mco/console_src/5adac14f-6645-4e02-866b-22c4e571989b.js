@@ -174,7 +174,7 @@ function PortfolioMilestone({ milestone }) {
   const marks = { done: "✓", next: "●", blocked: "!" };
   const colors = { done: "var(--st-done-fg)", next: "var(--accent-text)", blocked: "var(--st-failed-fg)" };
   return (
-    <li style={{ display: "grid", gridTemplateColumns: "22px minmax(0,1fr) auto", alignItems: "center", gap: 7, padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
+    <li className="bc-portfolio-milestone" style={{ display: "grid", gridTemplateColumns: "22px minmax(0,1fr) auto", alignItems: "center", gap: 7, padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
       <span aria-hidden="true" style={{ width: 19, height: 19, borderRadius: 99, display: "grid", placeItems: "center", background: "var(--surface-2)", color: colors[milestone.status], fontSize: 11, fontWeight: 750 }}>{marks[milestone.status]}</span>
       <span style={{ fontSize: 12.5, fontWeight: milestone.status === "next" ? 650 : 500 }}>{milestone.title}</span>
       <span style={{ color: colors[milestone.status], fontSize: 11.5 }}>{milestone.status}</span>
@@ -198,7 +198,7 @@ function PortfolioPage({ snapshot, error, mode, onRefresh, onOpen }) {
   return (
     <div>
       <style>{`@media(max-width:820px){.portfolio-ledger{grid-template-columns:1fr!important}.portfolio-capacity{grid-template-columns:1fr!important}}`}</style>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 16 }}>
+      <div className="bc-portfolio-header" style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 16 }}>
         <div style={{ flex: 1 }}>
           <h2 style={{ margin: "0 0 5px", fontSize: 20, fontWeight: 700 }}>Every project, one run sheet</h2>
           <p style={{ margin: 0, color: "var(--text-2)", fontSize: 13.5, maxWidth: 700 }}>Roadmaps come from local configuration. Queues, workers, jobs, and flow warnings are live and read-only.</p>
@@ -210,7 +210,7 @@ function PortfolioPage({ snapshot, error, mode, onRefresh, onOpen }) {
         <section aria-label="Portfolio flow flags" style={{ background: "var(--st-failed-bg)", border: "1px solid var(--st-failed-dot)", borderRadius: 10, marginBottom: 16, overflow: "hidden" }}>
           <div style={{ padding: "10px 13px", color: "var(--st-failed-fg)", fontSize: 12.5, fontWeight: 700, borderBottom: "1px solid color-mix(in srgb, var(--st-failed-dot) 35%, transparent)" }}>{flags.length} flow {flags.length === 1 ? "flag" : "flags"}</div>
           {flags.map((flag) => (
-            <div key={flag.id} style={{ display: "grid", gridTemplateColumns: "minmax(150px,.7fr) minmax(0,1.6fr)", gap: 12, padding: "9px 13px", color: "var(--st-failed-fg)", fontSize: 12.5, borderBottom: "1px solid color-mix(in srgb, var(--st-failed-dot) 20%, transparent)" }}>
+            <div className="bc-portfolio-flag" key={flag.id} style={{ display: "grid", gridTemplateColumns: "minmax(150px,.7fr) minmax(0,1.6fr)", gap: 12, padding: "9px 13px", color: "var(--st-failed-fg)", fontSize: 12.5, borderBottom: "1px solid color-mix(in srgb, var(--st-failed-dot) 20%, transparent)" }}>
               <strong>{flag.title}</strong><span>{flag.detail}</span>
             </div>
           ))}
@@ -228,7 +228,7 @@ function PortfolioPage({ snapshot, error, mode, onRefresh, onOpen }) {
               <article key={project.id} style={{ position: "relative", border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface)", overflow: "hidden", boxShadow: open ? "0 8px 24px rgba(36,35,58,.08)" : "none" }}>
                 <div aria-hidden="true" style={{ position: "absolute", inset: "0 auto 0 0", width: 5, background: health.color }}></div>
                 <button type="button" aria-expanded={open} onClick={() => setExpanded(open ? null : project.id)} style={{ display: "block", width: "100%", border: 0, background: "transparent", color: "var(--text)", textAlign: "left", cursor: "pointer", padding: "15px 16px 14px 20px" }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <div className="bc-portfolio-project-head" style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                         <span style={{ color: "var(--text-3)", fontSize: 11.5, fontWeight: 750 }}>P{project.priority}</span>
@@ -239,11 +239,11 @@ function PortfolioPage({ snapshot, error, mode, onRefresh, onOpen }) {
                     </div>
                     <PortfolioHealth value={project.health} />
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center", marginTop: 13 }}>
+                  <div className="bc-portfolio-progress" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center", marginTop: 13 }}>
                     <div aria-label={`${project.progress.percent}% along the roadmap`} style={{ height: 7, borderRadius: 99, overflow: "hidden", background: "var(--surface-2)" }}><div style={{ width: project.progress.percent + "%", height: "100%", background: health.color }}></div></div>
                     <span style={{ color: "var(--text-3)", fontSize: 11.5 }}>{project.progress.done}/{project.progress.total}</span>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, marginTop: 10, fontSize: 12.5 }}>
+                  <div className="bc-portfolio-next" style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, marginTop: 10, fontSize: 12.5 }}>
                     <span><span style={{ color: "var(--text-3)" }}>Next: </span><strong>{project.next_milestone || "Roadmap complete"}</strong></span>
                     <span style={{ color: "var(--text-3)" }}>{project.last_activity ? timeAgo(project.last_activity) : "No activity"}</span>
                   </div>
@@ -251,7 +251,7 @@ function PortfolioPage({ snapshot, error, mode, onRefresh, onOpen }) {
 
                 {open ? (
                   <div style={{ borderTop: "1px solid var(--border)", padding: "4px 16px 16px 20px" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 18 }}>
+                    <div className="bc-portfolio-detail-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 18 }}>
                       <div>
                         <h4 style={{ margin: "12px 0 4px", fontSize: 12, fontWeight: 700 }}>Roadmap</h4>
                         <ol style={{ listStyle: "none", margin: 0, padding: 0 }}>{project.milestones.map((milestone, index) => <PortfolioMilestone key={`${milestone.title}-${index}`} milestone={milestone} />)}</ol>
@@ -259,7 +259,7 @@ function PortfolioPage({ snapshot, error, mode, onRefresh, onOpen }) {
                       <div>
                         <h4 style={{ margin: "12px 0 4px", fontSize: 12, fontWeight: 700 }}>Recent board jobs</h4>
                         {project.recent_jobs.length ? project.recent_jobs.map((job) => (
-                          <button key={job.id} onClick={() => onOpen(job.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 8, width: "100%", border: 0, borderBottom: "1px solid var(--border)", background: "transparent", color: "var(--text)", padding: "8px 0", textAlign: "left", cursor: "pointer", fontSize: 12.5 }}><span>{job.title}</span><span style={{ color: "var(--text-3)" }}>{job.status}</span></button>
+                          <button className="bc-portfolio-recent-job" key={job.id} onClick={() => onOpen(job.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 8, width: "100%", border: 0, borderBottom: "1px solid var(--border)", background: "transparent", color: "var(--text)", padding: "8px 0", textAlign: "left", cursor: "pointer", fontSize: 12.5 }}><span>{job.title}</span><span style={{ color: "var(--text-3)" }}>{job.status}</span></button>
                         )) : <div style={{ color: "var(--text-3)", fontSize: 12, padding: "8px 0" }}>No matching jobs.</div>}
                         <h4 style={{ margin: "14px 0 4px", fontSize: 12, fontWeight: 700 }}>Open pull requests</h4>
                         {project.repository && project.repository.warning ? <div style={{ color: "var(--st-waiting-fg)", fontSize: 12, padding: "8px 0" }}>{project.repository.warning}</div> : project.open_prs.length ? project.open_prs.map((pr) => <a key={pr.url} href={pr.url} target="_blank" rel="noreferrer" style={{ display: "block", padding: "6px 0", color: "var(--accent-text)", fontSize: 12.5 }}>{pr.number ? `#${pr.number} ` : ""}{pr.title}</a>) : <div style={{ color: "var(--text-3)", fontSize: 12, padding: "8px 0" }}>No open pull requests.</div>}
@@ -743,14 +743,14 @@ function JobDetail({ jobId, jobs, tone, advanced, onClose, onOpen }) {
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid var(--border)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
               <StatusBadge status={j.status} tone={tone} />
               {j.requires_approval ? <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--st-approval-fg)", background: "var(--st-approval-bg)", borderRadius: 999, padding: "3px 9px" }}>Approval gate</span> : null}
             </div>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 650, letterSpacing: "-0.01em" }}>{j.title}</h2>
           </div>
-          <Btn kind="ghost" small onClick={onClose} style={{ fontSize: 16, lineHeight: 1 }}>×</Btn>
+          <Btn kind="ghost" small aria-label="Close job details" onClick={onClose} style={{ fontSize: 16, lineHeight: 1 }}>×</Btn>
         </div>
       </div>
 
@@ -899,7 +899,7 @@ function NewJobForm({ tone, advanced, onClose }) {
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 650 }}>New job</h2>
-        <Btn kind="ghost" small disabled={busy} onClick={onClose} style={{ fontSize: 16, lineHeight: 1 }}>×</Btn>
+        <Btn kind="ghost" small aria-label="Close new job" disabled={busy} onClick={onClose} style={{ fontSize: 16, lineHeight: 1 }}>×</Btn>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "6px 22px 16px" }}>
         <label htmlFor="bc-job-title" style={label}>What needs to happen?</label>
@@ -908,7 +908,7 @@ function NewJobForm({ tone, advanced, onClose }) {
         <textarea id="bc-job-details" disabled={busy} value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder="Anything the agent should know…" style={Object.assign({}, inputStyle, { resize: "vertical" })}></textarea>
         <label style={label}>Who should do it?</label>
         {!roles.length ? <p>Register a worker in Agent Fleet before creating work.</p> : null}
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="bc-new-job-roles" style={{ display: "flex", gap: 8 }}>
           {roles.map((r) => (
             <button key={r} disabled={busy} aria-pressed={role === r} onClick={() => setRole(r)} style={{
               flex: 1, display: "flex", alignItems: "center", gap: 8, justifyContent: "center",
@@ -932,7 +932,7 @@ function NewJobForm({ tone, advanced, onClose }) {
           </div>
         ) : null}
       </div>
-      <div style={{ padding: "14px 22px", borderTop: "1px solid var(--border)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
+      <div className="bc-drawer-actions" style={{ padding: "14px 22px", borderTop: "1px solid var(--border)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <Btn disabled={busy} onClick={onClose}>Cancel</Btn>
         {error ? <span role="alert">{error}</span> : null}
         <Btn kind="primary" disabled={busy || !title.trim() || !role} onClick={async () => {
@@ -1079,14 +1079,14 @@ function ActivityFeedScreen({ jobs, tone, advanced, onOpen }) {
           : "A bounded window of agent_job_events, newest first (up to 500); not a complete audit export."}
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 18 }}>
+      <div className="bc-activity-stats" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 18 }}>
         <StatCard label={tone === "plain" ? "Events (last day)" : "Events (24h)"} value={stats.events24h} sub="within loaded event window" kind="active" />
         <StatCard label="Failure rate" value={stats.failureRate} sub="of finished jobs in loaded board window" kind={stats.failureRate !== "—" && parseInt(stats.failureRate) > 0 ? "failed" : "done"} />
         <StatCard label={tone === "plain" ? "Typical wait for OK" : "Median approval wait"} value={stats.medianWait} sub="paired decisions in loaded event window" kind="approval" />
         <StatCard label={tone === "plain" ? "Agents working (24h)" : "Active agents (24h)"} value={stats.activeAgents} sub="distinct actors in loaded event window" kind="done" />
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+      <div className="bc-activity-controls" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
         <input aria-label="Search loaded activity" value={query} onChange={(e) => setQuery(e.target.value)}
           placeholder={tone === "plain" ? "Search activity…" : "Filter event / job / actor…"}
           style={Object.assign({}, inputStyle, { flex: 1, minWidth: 220 })} />
@@ -1110,7 +1110,7 @@ function ActivityFeedScreen({ jobs, tone, advanced, onOpen }) {
       {events && events.length > 0 ? (
         <React.Fragment>
           <Card pad={false}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+            <table className="bc-activity-table" aria-label="Activity events" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
               <THead cols={advanced ? ["When", "Event", "Job", "Actor", "Detail"] : ["When", "Event", "Job", "Actor"]} />
               <tbody>
                 {filtered.length === 0 ? (
@@ -1118,25 +1118,29 @@ function ActivityFeedScreen({ jobs, tone, advanced, onOpen }) {
                 ) : filtered.map((e) => {
                   const clickable = jobIds.has(e.job_id);
                   return (
-                    <tr key={e.id} onClick={clickable ? () => onOpen(e.job_id) : undefined}
+                    <tr className="bc-activity-row" key={e.id} onClick={clickable ? () => onOpen(e.job_id) : undefined}
                       style={{ cursor: clickable ? "pointer" : "default" }}
                       onMouseEnter={(ev) => { if (clickable) ev.currentTarget.style.background = "var(--surface-2)"; }}
                       onMouseLeave={(ev) => { if (clickable) ev.currentTarget.style.background = "transparent"; }}>
                       <Td>
+                        <span className="bc-phone-label">When</span>
                         <span title={e.created_at} style={{ color: "var(--text-3)", fontSize: 12.5, whiteSpace: "nowrap" }}>{timeAgo(e.created_at)}</span>
                       </Td>
                       <Td>
+                        <span className="bc-phone-label">Event</span>
                         <span style={{
                           display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600,
                           color: `var(--st-${eventKind(e.event)}-fg)`, background: `var(--st-${eventKind(e.event)}-bg)`,
                           borderRadius: 999, padding: "3px 9px",
                         }}>{eventLabel(e.event, tone)}</span>
                       </Td>
-                      <Td>
+                      <Td className="bc-activity-job">
+                        <span className="bc-phone-label">Job</span>
                         <button aria-label={`Open job ${e.job_title || titleOf(e.job_id)}`} onClick={ev => { ev.stopPropagation(); onOpen(e.job_id); }} style={{ fontWeight: 600, background: "transparent", color: "var(--text)", border: 0, padding: 0, cursor: "pointer", textAlign: "left" }}>{e.job_title || titleOf(e.job_id)}</button>
                         {advanced ? <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 1 }}><Mono style={{ fontSize: 11 }}>{shortId(e.job_id)}</Mono></div> : null}
                       </Td>
                       <Td>
+                        <span className="bc-phone-label">Actor</span>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                           <Mono>{e.actor_id || "—"}</Mono>
                           {e.actor_role ? <RoleChip role={e.actor_role} size={18} /> : null}
@@ -1144,6 +1148,7 @@ function ActivityFeedScreen({ jobs, tone, advanced, onOpen }) {
                       </Td>
                       {advanced ? (
                         <Td>
+                          <span className="bc-phone-label">Detail</span>
                           <Mono style={{ fontSize: 11, color: "var(--text-3)" }}>
                             {e.detail ? (() => { const s = JSON.stringify(e.detail); return s.length > 80 ? s.slice(0, 80) + "…" : s; })() : "—"}
                           </Mono>

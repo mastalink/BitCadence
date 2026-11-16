@@ -28,6 +28,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BitCadence Administration</title>
 <style>
   :root { color-scheme: dark; }
@@ -99,7 +100,58 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
   .scopes-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:.25rem .8rem; margin:.5rem 0; font-size:.85rem; }
   .formgrid { display:grid; grid-template-columns:8rem 1fr; gap:.6rem .8rem; align-items:center; margin:.6rem 0 1rem; }
   textarea#wf-yaml { width:100%; min-height:16rem; font-family:monospace; }
-  @media (max-width: 760px) { #shell { display:block; } aside { width:auto; display:flex; overflow-x:auto; } aside .brand { display:none; } main { padding:1rem; } .row .ctl input[type=text], .row .ctl input[type=password] { width:10rem; } }
+  main { min-width:0; }
+  :focus-visible { outline:2px solid #58a6ff; outline-offset:3px; }
+  .table-scroll { max-width:100%; overflow-x:auto; }
+  .table-hint { display:none; }
+  #lock { overflow:auto; padding:1rem; }
+  #lock .card { max-width:100%; margin:auto; }
+  #modal-bg { padding:.75rem; }
+  #modal { max-width:100%; max-height:calc(100dvh - 1.5rem); overscroll-behavior:contain; }
+  .formgrid > *, .row > *, .live-grid > * { min-width:0; }
+  .formgrid input, .formgrid select { width:100%; }
+  .switch input:focus-visible + .slider { outline:2px solid #58a6ff; outline-offset:3px; }
+  @media (max-width: 760px) {
+    #shell.on { display:block; }
+    aside { width:100%; display:flex; flex-wrap:wrap; gap:.25rem; padding:.6rem; border-right:0; border-bottom:1px solid #21262d; }
+    aside .brand { display:none; }
+    aside button { width:auto; flex:1 1 auto; margin:0; text-align:center; }
+    aside > div:last-child { flex:1 0 100%; display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin:0!important; padding:0 .2rem!important; }
+    aside > div:last-child br { display:none; }
+    aside > div:last-child button { flex:0 0 auto; margin:0!important; }
+    main { width:100%; padding:1rem; }
+    button, input:not([type=checkbox]), select, textarea { min-height:44px; font-size:1rem; }
+    button { line-height:1.3; padding:.55rem .75rem; }
+    p, td, th, .row label.lbl { font-size:.95rem; line-height:1.5; }
+    p { font-size:.95rem!important; }
+    .row label.lbl .muted { font-size:.85rem!important; }
+    p, .row label.lbl, code, pre, #modal h3 { overflow-wrap:anywhere; }
+    .topbar { align-items:flex-start; flex-wrap:wrap; gap:.7rem; }
+    .card { padding:1rem; min-width:0; }
+    #lock .card { padding:1.4rem 1rem; }
+    .table-hint { display:block; margin:.4rem 0; color:#8b949e; font-size:.85rem; }
+    .table-scroll table { min-width:36rem; table-layout:fixed; }
+    .table-scroll th, .table-scroll td { overflow-wrap:anywhere; padding:.65rem .5rem; }
+    .table-scroll td button { display:block; margin:.25rem 0; width:100%; }
+    #view-ops > .table-scroll table { min-width:58rem; }
+    #view-agents > .table-scroll table { min-width:56rem; }
+    .row { flex-direction:column; align-items:stretch; gap:.5rem; padding:.75rem 0; }
+    .row .ctl { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; }
+    .row .ctl input[type=text], .row .ctl input[type=password], .row .ctl select { width:100%; max-width:100%; }
+    .switch { width:44px; height:44px; }
+    .slider { top:10px; bottom:10px; }
+    .scopes-grid { grid-template-columns:1fr; }
+    .scopes-grid label { display:flex; align-items:center; min-height:44px; gap:.5rem; font-size:.95rem; overflow-wrap:anywhere; }
+    input[type=checkbox] { width:24px; height:24px; flex-shrink:0; }
+    th:has(input[type=checkbox]), td:has(input[type=checkbox]) { padding:.4rem; width:4rem!important; }
+    table input[type=checkbox] { width:44px; height:44px; }
+    #modal { width:100%; padding:1rem; }
+    #modal .formgrid, #modal .live-grid { grid-template-columns:minmax(0,1fr)!important; gap:.4rem; }
+    #modal .formgrid label { margin-top:.3rem; }
+    #modal > button { margin:.3rem .2rem .3rem 0; }
+    #autonomy-banner > div:last-child, #bulk-bar { flex-wrap:wrap; gap:.5rem; }
+    summary { min-height:44px; padding:.6rem 0; }
+  }
 </style>
 </head>
 <body>
@@ -109,14 +161,14 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
     <div class="logo">&#129345;</div>
     <h1>BitCadence Administration</h1><a id="back-console" href="/console">Back to workspace</a>
     <p class="muted">Paste an agent bearer token to unlock.<br>Approver/admin tokens see everything; scoped tokens see what they may.</p>
-    <input id="lock-token" type="password" placeholder="mco_tok_..." onkeydown="if(event.key==='Enter')unlock()">
+    <input aria-label="Agent bearer token" id="lock-token" type="password" placeholder="mco_tok_..." onkeydown="if(event.key==='Enter')unlock()">
     <button class="primary" style="width:100%" onclick="unlock()">Unlock</button>
     <p id="lock-msg" class="err" style="min-height:1.1em"></p>
   </div>
 </div>
 
 <div id="shell">
-  <aside>
+  <aside role="navigation" aria-label="Administration navigation">
     <div class="brand">&#129345; BitCadence</div>
     <button id="nav-ops" class="active" onclick="nav('ops')">Operations</button>
     <button id="nav-agents" onclick="nav('agents')">Agents &amp; Tokens</button>
@@ -165,12 +217,12 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
       </div>
 
       <h2>Approval Queue</h2>
-      <table><thead><tr><th style="width:2rem"><input type="checkbox" id="chk-all-approvals" onchange="toggleSelectAllApprovals(this.checked)"></th><th>Job</th><th>Title</th><th>Target</th><th>From</th><th>Decide</th></tr></thead>
-      <tbody id="approvals"><tr><td colspan="6" class="muted">-</td></tr></tbody></table>
+      <p class="table-hint">Swipe or scroll sideways for all columns and actions.</p><div class="table-scroll" role="region" tabindex="0" aria-label="Approval queue"><table><thead><tr><th style="width:2rem"><input type="checkbox" aria-label="Select all approvals" id="chk-all-approvals" onchange="toggleSelectAllApprovals(this.checked)"></th><th>Job</th><th>Title</th><th>Target</th><th>From</th><th>Decide</th></tr></thead>
+      <tbody id="approvals"><tr><td colspan="6" class="muted">-</td></tr></tbody></table></div>
 
       <h2>Job Board</h2>
-      <table><thead><tr>
-        <th style="width:2rem"><input type="checkbox" id="chk-all-jobs" onchange="toggleSelectAllJobs(this.checked)"></th>
+      <p class="table-hint">Swipe or scroll sideways for all columns and actions.</p><div class="table-scroll" role="region" tabindex="0" aria-label="Job board"><table><thead><tr>
+        <th style="width:2rem"><input type="checkbox" aria-label="Select all jobs" id="chk-all-jobs" onchange="toggleSelectAllJobs(this.checked)"></th>
         <th onclick="toggleSort('id')" style="cursor:pointer">Job <span id="sort-ind-id"></span></th>
         <th onclick="toggleSort('title')" style="cursor:pointer">Title <span id="sort-ind-title"></span></th>
         <th onclick="toggleSort('status')" style="cursor:pointer">Status <span id="sort-ind-status"></span></th>
@@ -180,7 +232,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
         <th onclick="toggleSort('created')" style="cursor:pointer">Created <span id="sort-ind-created"></span></th>
         <th></th>
       </tr></thead>
-      <tbody id="jobs"><tr><td colspan="9" class="muted">-</td></tr></tbody></table>
+      <tbody id="jobs"><tr><td colspan="9" class="muted">-</td></tr></tbody></table></div>
 
       <div id="audit-panel" class="card" style="display:none; margin-top:1rem">
         <h3>Audit Trail: <span id="audit-job"></span></h3>
@@ -193,8 +245,8 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
       <div class="topbar"><h1>Agents &amp; Tokens</h1>
         <button class="primary" onclick="openRegister()">+ Register agent</button></div>
       <p class="muted" style="font-size:.83rem">Tokens are shown exactly once at creation or reset, and stored only as hashes - same contract as <code>mco register</code>. Workers heartbeat every time they poll; an online agent silent past the threshold (Settings &rarr; Presence) shows offline.</p>
-      <table><thead><tr><th>Instance</th><th>Role</th><th>Org</th><th>Scopes</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody id="agents"><tr><td colspan="6" class="muted">-</td></tr></tbody></table>
+      <p class="table-hint">Swipe or scroll sideways for all columns and actions.</p><div class="table-scroll" role="region" tabindex="0" aria-label="Agents and tokens"><table><thead><tr><th>Instance</th><th>Role</th><th>Org</th><th>Scopes</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="agents"><tr><td colspan="6" class="muted">-</td></tr></tbody></table></div>
       <p id="agents-msg" class="err"></p>
     </section>
 
@@ -203,8 +255,8 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
       <div class="topbar"><h1>Model Connections</h1>
         <button class="primary" onclick="openAddModel()">+ Add connection</button></div>
       <p class="muted" style="font-size:.83rem">Named, testable connections to LLM providers, for custom workers/executors that need one. BitCadence orchestrates agents (Claude, Codex, Gemini, ...) rather than calling a model directly - this is credential management, not a chat gateway. <b>Test</b> makes one real call to the provider to prove the key works. Keys are never shown again after saving.</p>
-      <table><thead><tr><th>Name</th><th>Provider</th><th>Model</th><th>Key</th><th>Actions</th></tr></thead>
-      <tbody id="models"><tr><td colspan="5" class="muted">-</td></tr></tbody></table>
+      <p class="table-hint">Swipe or scroll sideways for all columns and actions.</p><div class="table-scroll" role="region" tabindex="0" aria-label="Model connections"><table><thead><tr><th>Name</th><th>Provider</th><th>Model</th><th>Key</th><th>Actions</th></tr></thead>
+      <tbody id="models"><tr><td colspan="5" class="muted">-</td></tr></tbody></table></div>
       <p id="models-msg" class="err"></p>
     </section>
 
@@ -212,7 +264,7 @@ DASHBOARD_HTML = r'''<!DOCTYPE html>
     <section id="view-workflows" class="view">
       <div class="topbar"><h1>Workflows</h1></div>
       <p class="muted" style="font-size:.83rem">Paste a workflow YAML (same format as <code>mco workflow</code>). Steps become governed jobs; dependent steps receive the full Context Exchange thread automatically.</p>
-      <textarea id="wf-yaml" placeholder="name: release-pipeline&#10;steps:&#10;  - id: research&#10;    role: claude&#10;    title: Research the change&#10;    instructions: ...&#10;  - id: build&#10;    role: codex&#10;    title: Implement&#10;    instructions: ...&#10;    depends_on: [research]&#10;    requires_approval: true"></textarea>
+      <textarea aria-label="Workflow YAML" id="wf-yaml" placeholder="name: release-pipeline&#10;steps:&#10;  - id: research&#10;    role: claude&#10;    title: Research the change&#10;    instructions: ...&#10;  - id: build&#10;    role: codex&#10;    title: Implement&#10;    instructions: ...&#10;    depends_on: [research]&#10;    requires_approval: true"></textarea>
       <div style="margin-top:.6rem"><button class="primary" onclick="submitWorkflow()">Submit workflow</button>
       <span id="wf-msg" style="margin-left:.8rem"></span></div>
       <pre id="wf-result" style="margin-top:.8rem"></pre>
@@ -475,12 +527,12 @@ async function openLiveLook() {
 
     const failHtml = a.failing_runs && a.failing_runs.length ? `
       <h4 style="color:#f85149; margin-top:1rem">Failing / Stuck Runs</h4>
-      <table><thead><tr><th>Run</th><th>Status</th></tr></thead>
-      <tbody>${a.failing_runs.map(r => `<tr><td>${esc(r.id)}</td><td>${badge(r.status)}</td></tr>`).join("")}</tbody></table>
+      <p class="table-hint">Swipe or scroll sideways for all columns and actions.</p><div class="table-scroll" role="region" tabindex="0" aria-label="Failing runs"><table><thead><tr><th>Run</th><th>Status</th></tr></thead>
+      <tbody>${a.failing_runs.map(r => `<tr><td>${esc(r.id)}</td><td>${badge(r.status)}</td></tr>`).join("")}</tbody></table></div>
     ` : "";
 
     openModal(`<h3>Autonomy Live Look</h3>
-      <div style="margin-bottom:1rem; font-size:.85rem; display:grid; grid-template-columns:9rem 1fr; gap:.4rem .8rem">
+      <div class="live-grid" style="margin-bottom:1rem; font-size:.85rem; display:grid; grid-template-columns:9rem 1fr; gap:.4rem .8rem">
         <span class="muted">Autonomy State:</span> <b>${badge(a.status)}</b>
         <span class="muted">Conductor Sweep:</span> <span>${a.interval_seconds}s interval (${a.paused ? "PAUSED" : (a.configured ? "Running" : "Standby")})</span>
         <span class="muted">Live Repository:</span> <span>${a.live_repository_write ? '<span class="good">Enabled</span>' : '<span class="muted">Shadow / Read-Only</span>'}</span>
@@ -491,8 +543,8 @@ async function openLiveLook() {
         <button onclick="toggleAutonomyPause()">${a.paused ? "Resume Conductor" : "Pause Conductor"}</button>
       </div>
       <h4>Active Score Runs (${a.active_runs ? a.active_runs.length : 0})</h4>
-      <table><thead><tr><th>Run ID</th><th>Status</th><th>Accepted</th><th>Action</th></tr></thead>
-      <tbody>${activeHtml}</tbody></table>
+      <p class="table-hint">Swipe or scroll sideways for all columns and actions.</p><div class="table-scroll" role="region" tabindex="0" aria-label="Active Score runs"><table><thead><tr><th>Run ID</th><th>Status</th><th>Accepted</th><th>Action</th></tr></thead>
+      <tbody>${activeHtml}</tbody></table></div>
       ${failHtml}
       <div style="margin-top:1.2rem"><button onclick="closeModal()">Close</button></div>
     `);
@@ -526,7 +578,7 @@ async function refreshOps() {
     const approvals = jobs.filter(j => j.status === "needs_approval");
     $("approvals").innerHTML = approvals.length ? approvals.map(j => `
       <tr>
-        <td><input type="checkbox" class="approval-cb" value="${j.id}" onchange="toggleJobSelection('${j.id}',this.checked)" ${selectedJobs.has(j.id) ? "checked" : ""}></td>
+        <td><input type="checkbox" aria-label="Select approval ${esc(j.title)}" class="approval-cb" value="${j.id}" onchange="toggleJobSelection('${j.id}',this.checked)" ${selectedJobs.has(j.id) ? "checked" : ""}></td>
         <td>${short(j.id)}</td><td>${esc(j.title)}</td><td>${esc(j.target_agent_role)}</td>
         <td>${esc(j.source_agent_id)}</td>
         <td><button class="ok" onclick="decide('${j.id}','approve')">Approve</button>
@@ -535,7 +587,7 @@ async function refreshOps() {
 
     $("jobs").innerHTML = jobs.length ? jobs.map(j => `
       <tr>
-        <td><input type="checkbox" class="job-cb" value="${j.id}" onchange="toggleJobSelection('${j.id}',this.checked)" ${selectedJobs.has(j.id) ? "checked" : ""}></td>
+        <td><input type="checkbox" aria-label="Select job ${esc(j.title)}" class="job-cb" value="${j.id}" onchange="toggleJobSelection('${j.id}',this.checked)" ${selectedJobs.has(j.id) ? "checked" : ""}></td>
         <td>${short(j.id)}</td><td>${esc(j.title)}</td><td>${badge(j.status)}</td>
         <td>${esc(j.priority || 0)}</td>
         <td>${esc(j.target_agent_role)}${j.target_agent_id ? " / " + esc(j.target_agent_id) : ""}</td>
@@ -590,6 +642,10 @@ function modalKeys(event) {
 function openModal(html) {
   if (!$("modal-bg").classList.contains("on")) modalOpener = document.activeElement;
   $("modal").innerHTML = html; $("modal-bg").classList.add("on");
+  $("modal").querySelectorAll(".formgrid label").forEach(label => {
+    const field = label.nextElementSibling;
+    if (field && field.id && field.matches("input,select,textarea")) label.htmlFor = field.id;
+  });
   const heading = $("modal").querySelector("h2,h3");
   $("modal").setAttribute("aria-label", heading ? heading.textContent : "Administration details");
   const first = $("modal").querySelector('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled])');
@@ -867,8 +923,8 @@ function renderEdition(ed) {
   $("edition-card").innerHTML = `<div class="card"><h3>Edition:
     <span style="text-transform:capitalize">${esc(ed.edition)}</span>
     <span class="muted" style="font-size:.78rem">(${esc(ed.source)} - pin with MCO_EDITION below)</span></h3>
-    <table><thead><tr><th>Feature</th><th>Minimum edition</th><th>Available</th></tr></thead>
-    <tbody>${feats}</tbody></table></div>`;
+    <p class="table-hint">Swipe or scroll sideways for all columns and actions.</p><div class="table-scroll" role="region" tabindex="0" aria-label="Edition features"><table><thead><tr><th>Feature</th><th>Minimum edition</th><th>Available</th></tr></thead>
+    <tbody>${feats}</tbody></table></div></div>`;
 }
 
 const GROUP_TITLES = { governance: "Governance", memory: "Drumline (shared memory)",
@@ -881,16 +937,16 @@ function renderGroups(groups) {
     const rows = items.map(it => {
       let ctl = "";
       if (it.type === "bool") {
-        ctl = `<label class="switch"><input type="checkbox" data-key="${it.key}" data-type="bool" ${it.value ? "checked" : ""}><span class="slider"></span></label>`;
+        ctl = `<label class="switch"><input type="checkbox" aria-label="${esc(it.label)}" data-key="${it.key}" data-type="bool" ${it.value ? "checked" : ""}><span class="slider"></span></label>`;
       } else if (it.type === "choice") {
-        ctl = `<select data-key="${it.key}" data-type="choice">` +
+        ctl = `<select aria-label="${esc(it.label)}" data-key="${it.key}" data-type="choice">` +
           it.choices.map(c => `<option value="${c}" ${String(it.value) === c ? "selected" : ""}>${c || "(infer)"}</option>`).join("") + `</select>`;
       } else if (it.type === "secret") {
-        ctl = `<input type="password" data-key="${it.key}" data-type="secret"
+        ctl = `<input type="password" aria-label="${esc(it.label)}" data-key="${it.key}" data-type="secret"
                  placeholder="${it.value ? "configured - blank keeps it" : "not set"}">
                ${it.value ? `<button onclick="clearSecret('${it.key}')" title="Remove this secret">Clear</button>` : ""}`;
       } else {
-        ctl = `<input type="text" data-key="${it.key}" data-type="text" value="${esc(it.value)}" placeholder="${esc(it.placeholder || "")}">`;
+        ctl = `<input type="text" aria-label="${esc(it.label)}" data-key="${it.key}" data-type="text" value="${esc(it.value)}" placeholder="${esc(it.placeholder || "")}">`;
       }
       return `<div class="row"><label class="lbl">${esc(it.label)}<br><span class="muted" style="font-size:.72rem">${it.key}</span></label><span class="ctl">${ctl}</span></div>`;
     }).join("");
@@ -927,12 +983,12 @@ async function clearSecret(key) {
 async function loadIntegrations() {
   try {
     const conns = await api("/api/integrations");
-    $("integrations-body").innerHTML = conns.length ? `<table>
+    $("integrations-body").innerHTML = conns.length ? `<p class="table-hint">Swipe or scroll sideways for all columns and actions.</p><div class="table-scroll" role="region" tabindex="0" aria-label="Connectors"><table>
       <thead><tr><th>Connector</th><th>Health</th><th>Actions</th><th></th></tr></thead><tbody>` +
       conns.map(c => `<tr><td>${esc(c.name)}</td>
         <td>${c.health && c.health.ok ? '<span class="good">ok</span>' : '<span class="err">' + esc((c.health || {}).detail || "down") + '</span>'}</td>
         <td class="muted">${(c.actions || []).map(esc).join(", ")}</td>
-        <td><button onclick="syncConn('${esc(c.name)}')">Sync now</button></td></tr>`).join("") + `</tbody></table>`
+        <td><button onclick="syncConn('${esc(c.name)}')">Sync now</button></td></tr>`).join("") + `</tbody></table></div>`
       : '<span class="muted">No connectors configured. Set credentials via environment, then reload.</span>';
   } catch (e) {
     $("integrations-body").innerHTML = '<span class="muted">' + esc(e.message) + '</span>';
