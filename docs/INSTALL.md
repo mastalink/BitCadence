@@ -183,3 +183,22 @@ Unattended install (CI / scripted):
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -NoPrompt
 ```
+
+---
+
+## Stranger Demo: Verify Your Install with a Governed Score
+
+After installation, verify your environment by running the stranger canary demo Score (`examples/scores/stranger-demo.score.json`), which exercises:
+1. Connecting two agents (worker and reviewer).
+2. Pausing at an explicit owner human gate checkpoint.
+3. Exercising an independent reviewer rejection.
+4. Inspecting the tamper-evident audit trail.
+
+```bash
+# Run the automated stranger verification check:
+python scripts/nightly_stranger_install.py
+
+# Or run via pytest:
+pytest tests/test_stranger_demo_run.py
+```
+A complete run executes in seconds and verifies that governance policy, human checkpoints, and immutable audit logging are active.

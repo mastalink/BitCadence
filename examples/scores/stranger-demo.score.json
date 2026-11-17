@@ -1,0 +1,36 @@
+{
+  "score_version": 1,
+  "id": "stranger-demo-install",
+  "revision": 1,
+  "objective": "Cold stranger install verification: 2 connected agents, 1 human gate checkpoint, 1 reviewer rejection, and immutable audit trail verification.",
+  "constraints": [
+    "Evidence-only local execution.",
+    "Independent review by distinct identity.",
+    "Explicit human gate approval required before execution.",
+    "budget_cents is 0; every max_cost_cents is 0."
+  ],
+  "budget_cents": 0,
+  "max_parallel": 1,
+  "launch_requires": ["DEMO-step-1"],
+  "tasks": [
+    {
+      "id": "DEMO-step-1",
+      "goal": "StrangerTest",
+      "title": "Gated work followed by reviewer rejection test",
+      "instructions": "Write initial build artifact. Subject to human gate then independent review.",
+      "role": "score-stranger-worker",
+      "review_role": "score-stranger-review",
+      "depends_on": [],
+      "resources": ["stranger-demo-lane"],
+      "capabilities": ["evidence:write", "evidence:review"],
+      "evidence": ["demo_artifact"],
+      "max_attempts": 1,
+      "timeout_seconds": 300,
+      "max_cost_cents": 0,
+      "checkpoint": {
+        "id": "gate-stranger-owner-approval",
+        "reason": "Explicit owner human approval required before work dispatch."
+      }
+    }
+  ]
+}
