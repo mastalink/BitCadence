@@ -70,11 +70,50 @@ def test_portfolio_uses_its_aggregate_instead_of_partial_job_coverage():
 
 def test_portfolio_dataset_is_lazy_and_not_part_of_fleet_poll():
     adapter = (ROOT / "src" / "mco" / "console_src" / "47e66145-9c4d-41a1-acbb-42b12848f160.js").read_text(encoding="utf-8")
-    assert 'Promise.all([api("/api/jobs?limit=200"), api("/api/agents")])' in adapter
+    assert 'Promise.all([api("/api/jobs?limit=200"), api("/api/agents"), refreshApprovals(version)])' in adapter
     assert adapter.count('api("/api/portfolio")') == 1
     assert "Date.now() - portfolioFetchedAt < 30000" in adapter
     assert "page !== \"portfolio\"" in SHELL_SOURCE
     assert "refreshPortfolio(true)" in SHELL_SOURCE
+
+
+def test_approval_view_includes_old_decisions_and_pages_with_org_isolation(project_api):
+    db, http = project_api
+    jobs = [{"id": f"new-{i:04d}", "status": "completed", "created_at": "2026-11-20", "org_id": "default"}
+            for i in range(210)]
+    jobs += [{"id": f"approval-{i:04d}", "status": "needs_approval", "created_at": "2025-01-01", "org_id": "default"}
+             for i in range(510)]
+    jobs += [{"id": "foreign", "status": "needs_approval", "org_id": "other"},
+             {"id": "archived", "status": "needs_approval", "org_id": "default", "archived": True}]
+    for job in jobs:
+        db.table("agent_jobs").insert(job).execute()
+    recent = http.get("/api/jobs?limit=200").json()
+    assert all(job["status"] == "completed" for job in recent)
+    response = http.get("/api/jobs/approval-view")
+    assert response.status_code == 200
+    queue = response.json()
+    assert queue["count"] == 510
+    assert len(queue["jobs"]) == 510
+    assert queue["truncated"] is False
+    assert all(job["id"].startswith("approval-") for job in queue["jobs"])
+
+
+def test_approval_view_storage_failure_is_explicit(project_api, monkeypatch):
+    _, http = project_api
+    monkeypatch.setattr(routes_mod, "get_db_client", lambda: None)
+    response = http.get("/api/jobs/approval-view")
+    assert response.status_code == 503
+    assert "unavailable" in response.json()["detail"]
+
+
+def test_approval_view_reports_bounded_coverage(project_api):
+    db, http = project_api
+    for index in range(5001):
+        db.table("agent_jobs").insert({"id": f"gate-{index:05d}", "status": "needs_approval",
+                                       "org_id": "default"}).execute()
+    queue = http.get("/api/jobs/approval-view").json()
+    assert queue["count"] == len(queue["jobs"]) == queue["ceiling"] == 5000
+    assert queue["truncated"] is True
 
 
 def test_projection_prefers_declared_project_then_workflow_and_preserves_unassigned():

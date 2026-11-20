@@ -47,7 +47,7 @@ def main():
     const shellStyle=document.querySelector('#root style');if(shellStyle)document.head.append(shellStyle.cloneNode(true));
     document.querySelector('#root').remove();const el=document.createElement('main');el.id='phone-audit';el.className='bc-main-content';el.style.padding='14px';document.body.append(el);window.auditRoot=ReactDOM.createRoot(el);
     localStorage.setItem('bitcadence_exchange_job',fixtureJobs[0].id);localStorage.setItem('bitcadence_exchange_thread','synthetic-thread');
-    window.mountAudit=(name)=>auditRoot.render(React.createElement(window[name],{key:name,jobs:fixtureJobs,agents:[],tone:'plain',advanced:true,onOpen:()=>{},onNav:()=>{},onWatch:()=>{},onBack:()=>{},runId:'synthetic-run',onClose:()=>auditRoot.render(null),onOpenJob:()=>{},entry:fixtureMemory}));
+    window.mountAudit=(name)=>auditRoot.render(React.createElement(window[name],{key:name,jobs:fixtureJobs,approvalJobs:fixtureJobs.filter(job=>job.status==='needs_approval'),coverage:{loaded:true,truncated:false,error:null},agents:[],tone:'plain',advanced:true,onOpen:()=>{},onNav:()=>{},onWatch:()=>{},onBack:()=>{},runId:'synthetic-run',onClose:()=>auditRoot.render(null),onOpenJob:()=>{},entry:fixtureMemory}));
    }''')
    results=[]
    for width in (320,390,430):

@@ -75,7 +75,7 @@ The card's "Priority and pause controls" line is a visible placeholder: those co
 
 ### Find and order work
 
-Choose **Job Board**, then combine **All**, **Active**, **Needs approval**, **Waiting**, **Done**, or **Problems** with search and **All roles**. Search checks title, role and workflow; it is not full payload or full-history search. Active includes pending/leased/in-progress; Problems includes failed/rejected/halted/cancelled. Clearing a filter changes only the view.
+Choose **Job Board**, then combine **All**, **Active**, **Needs approval**, **Waiting**, **Done**, or **Problems** with search and **All roles**. Search checks title, job ID, project, workflow, role and worker. Every search word must match within the loaded jobs. Filters survive navigation and reload in this browser tab. **Clear filters** resets search, status and role together. Active includes pending/leased/in-progress. Problems includes failed/rejected/halted/cancelled.
 
 **Sort jobs** offers Priority then oldest, Newest first, Oldest first, Status, Assigned role and Title A–Z. The preference is saved locally. Native Job/Status/Assigned to/Updated header buttons also sort on desktop. Sorting does not edit priority or grant a lease. Choose a job title/open button for its drawer.
 
@@ -116,6 +116,8 @@ Reject/Cancel prompts for a reason; prompt cancellation submits nothing. Other a
 ## Approvals and Governance
 
 ### Approvals
+
+Approvals reads pending decisions across the job history using its own status-filtered, organization-scoped query. The sidebar count uses that queue. A bounded scan returns up to 5,000 decisions. A **+** count and coverage notice mean more requests may exist. Resolve decisions and refresh to expose additional requests. While loading, the badge shows **…**. A failed refresh shows **?**, an error and **Try again**, while retaining the last successful queue. An empty queue is reported only after a successful read.
 
 1. Choose **Approvals**. Select a queued item to read instructions, target role and requester.
 2. **Full details →** opens the same job drawer. Review before authorizing.

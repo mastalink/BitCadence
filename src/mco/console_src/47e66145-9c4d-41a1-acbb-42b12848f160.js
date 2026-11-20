@@ -25,9 +25,14 @@
   let connState = "demo"; // demo | connecting | live
   let lastError = null;
   let pollTimer = null;
+  let connectionVersion = 0;
+  let pollPromise = null;
+  let pollAgain = false;
   let ws = null, wsOk = false, wsRetryTimer = null, wsBackoff = 2000;
 
   let jobs = [];
+  let approvalJobs = [];
+  let approvalCoverage = { loaded: false, truncated: false, error: null };
   let projectJobs = [];
   let projectCoverage = { count: 0, truncated: false, ceiling: 5000 };
   let projectFetchedAt = 0;
@@ -58,29 +63,47 @@
 
   async function api(path, opts = {}) {
     const base = (cfg && cfg.url ? cfg.url : "").replace(/\/+$/, "");
-    const res = await fetch(base + path, Object.assign({}, opts, {
-      headers: Object.assign({
-        "Authorization": "Bearer " + ((cfg && cfg.token) || ""),
-        "Content-Type": "application/json",
-      }, opts.headers || {}),
-    }));
-    if (!res.ok) {
-      let detail = "";
-      try { detail = (await res.json()).detail || ""; } catch (e) { /* ignore */ }
-      const description = typeof detail === "string" ? detail : (detail.message || detail.reason || JSON.stringify(detail));
-      const error = new Error("HTTP " + res.status + (description ? " — " + description : ""));
-      error.status = res.status;
-      error.detail = detail;
-      if (res.status === 403) {
-        const reason = ((detail && detail.code) || "") + " " + description;
-        error.denialKind = /tenant|organi[sz]ation|cross.org/i.test(reason) ? "tenant"
-          : /scope/i.test(reason) ? "scope"
-          : /policy|governance/i.test(reason) ? "policy"
-          : /role|approver|authorit/i.test(reason) ? "authority" : "denied";
-      }
-      throw error;
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    if (opts.signal) {
+      if (opts.signal.aborted) abort();
+      else opts.signal.addEventListener("abort", abort, { once: true });
     }
-    return res.json();
+    const readOnly = !opts.method || opts.method === "GET";
+    let timedOut = false;
+    const timeout = readOnly ? setTimeout(() => { timedOut = true; controller.abort(); }, 20000) : null;
+    try {
+      const res = await fetch(base + path, Object.assign({}, opts, {
+        signal: controller.signal,
+        headers: Object.assign({
+          "Authorization": "Bearer " + ((cfg && cfg.token) || ""),
+          "Content-Type": "application/json",
+        }, opts.headers || {}),
+      }));
+      if (!res.ok) {
+        let detail = "";
+        try { detail = (await res.json()).detail || ""; } catch (e) { /* ignore */ }
+        const description = typeof detail === "string" ? detail : (detail.message || detail.reason || JSON.stringify(detail));
+        const error = new Error("HTTP " + res.status + (description ? " — " + description : ""));
+        error.status = res.status;
+        error.detail = detail;
+        if (res.status === 403) {
+          const reason = ((detail && detail.code) || "") + " " + description;
+          error.denialKind = /tenant|organi[sz]ation|cross.org/i.test(reason) ? "tenant"
+            : /scope/i.test(reason) ? "scope"
+            : /policy|governance/i.test(reason) ? "policy"
+            : /role|approver|authorit/i.test(reason) ? "authority" : "denied";
+        }
+        throw error;
+      }
+      return await res.json();
+    } catch (error) {
+      if (timedOut) throw new Error("Gateway read timed out. Check the connection and try again.");
+      throw error;
+    } finally {
+      if (timeout) clearTimeout(timeout);
+      if (opts.signal) opts.signal.removeEventListener("abort", abort);
+    }
   }
 
   function plainFailure(e, fallback) {
@@ -117,9 +140,24 @@
     rejected: ["err", "Rejected"],
   };
 
-  async function poll() {
+  function poll() {
+    if (connState === "demo") return Promise.resolve();
+    if (pollPromise) { pollAgain = true; return pollPromise; }
+    const version = connectionVersion;
+    const pending = (async () => {
+      do {
+        pollAgain = false;
+        await pollOnce(version);
+      } while (pollAgain && version === connectionVersion && connState !== "demo");
+    })().finally(() => { if (pollPromise === pending) pollPromise = null; });
+    pollPromise = pending;
+    return pending;
+  }
+
+  async function pollOnce(version) {
     try {
-      const [j, a] = await Promise.all([api("/api/jobs?limit=200"), api("/api/agents")]);
+      const [j, a] = await Promise.all([api("/api/jobs?limit=200"), api("/api/agents"), refreshApprovals(version)]);
+      if (version !== connectionVersion) return;
       const normalized = (j || []).map(withWorkflow);
       const seenBefore = Object.keys(prevStatus).length > 0;
       normalized.forEach((job) => {
@@ -143,17 +181,34 @@
       if (lastError) { lastError = null; }
       emit();
     } catch (e) {
+      if (version !== connectionVersion) return;
       lastError = e.message;
       if (connState === 'live') connState = 'offline';
       emit();
     }
   }
 
+  async function refreshApprovals(version) {
+    try {
+      const result = await api("/api/jobs/approval-view");
+      if (!result || !Array.isArray(result.jobs)) throw new Error("Gateway returned an invalid approval queue.");
+      if (version !== connectionVersion) return;
+      approvalJobs = result.jobs.map(withWorkflow);
+      approvalCoverage = { loaded: true, truncated: !!result.truncated, error: null };
+    } catch (error) {
+      if (version !== connectionVersion) return;
+      approvalCoverage = { ...approvalCoverage, error: error.message };
+    }
+    emit();
+  }
+
   async function refreshProjectView(force) {
     if (!isLive()) return;
     if (!force && projectFetchedAt && Date.now() - projectFetchedAt < 60000) return;
     if (projectFetchPromise) return projectFetchPromise;
-    projectFetchPromise = api("/api/jobs/project-view").then((projectView) => {
+    const version = connectionVersion;
+    const pending = api("/api/jobs/project-view").then((projectView) => {
+      if (version !== connectionVersion) return;
       projectJobs = ((projectView && projectView.jobs) || []).map(withWorkflow);
       projectCoverage = {
         count: Number(projectView && projectView.count) || projectJobs.length,
@@ -162,33 +217,38 @@
       };
       projectFetchedAt = Date.now();
       emit();
-    }).finally(() => { projectFetchPromise = null; });
-    return projectFetchPromise;
+    }).finally(() => { if (projectFetchPromise === pending) projectFetchPromise = null; });
+    projectFetchPromise = pending;
+    return pending;
   }
 
   async function refreshPortfolio(force) {
     if (!isLive()) return;
     if (!force && portfolioFetchedAt && Date.now() - portfolioFetchedAt < 30000) return;
     if (portfolioFetchPromise) return portfolioFetchPromise;
-    portfolioFetchPromise = api("/api/portfolio").then((snapshot) => {
+    const version = connectionVersion;
+    const pending = api("/api/portfolio").then((snapshot) => {
+      if (version !== connectionVersion) return;
       portfolio = snapshot;
       portfolioError = null;
       portfolioFetchedAt = Date.now();
       emit();
       return snapshot;
     }).catch((error) => {
+      if (version !== connectionVersion) return;
       portfolioError = error.message || "Portfolio could not be refreshed";
       emit();
       throw error;
-    }).finally(() => { portfolioFetchPromise = null; });
-    return portfolioFetchPromise;
+    }).finally(() => { if (portfolioFetchPromise === pending) portfolioFetchPromise = null; });
+    portfolioFetchPromise = pending;
+    return pending;
   }
 
   function startPolling() {
     if (pollTimer) clearInterval(pollTimer);
     // With a live WebSocket feed, polling is just a safety net (agents list,
     // missed frames); without one it's the primary refresh path.
-    pollTimer = setInterval(poll, wsOk ? 30000 : 4000);
+    pollTimer = setInterval(() => { if (!document.hidden) poll(); }, wsOk ? 30000 : 4000);
   }
   function stopPolling() {
     if (pollTimer) clearInterval(pollTimer);
@@ -198,14 +258,18 @@
   // ---- live event feed over /ws/broadcast (polling stays as fallback) ----
   function startWs() {
     if (!isLive() || typeof WebSocket === "undefined") return;
+    const version = connectionVersion;
     const base = ((cfg && cfg.url) || "").replace(/\/+$/, "").replace(/^http/, "ws");
     if (!base) return;
     try { ws = new WebSocket(base + "/ws/broadcast"); } catch (e) { return; }
+    const socket = ws;
     ws.onopen = () => {
+      if (version !== connectionVersion || socket !== ws) return;
       // Token-only auth frame; the gateway resolves identity from the hash.
       try { ws.send(JSON.stringify({ type: "authenticate", payload: { token: (cfg && cfg.token) || "" } })); } catch (e) { /* onclose retries */ }
     };
     ws.onmessage = (m) => {
+      if (version !== connectionVersion) return;
       let msg = null;
       try { msg = JSON.parse(m.data); } catch (e) { return; }
       if (msg.type === "authenticated") {
@@ -220,15 +284,16 @@
           exchangeFns.forEach((fn) => { try { fn(msg.payload); } catch (e) { /* ignore */ } });
           return;
         }
-        poll(); // refresh state now; poll() synthesizes toasts + activity
+        if (!document.hidden) poll(); // Visible tabs refresh immediately; returning tabs refresh on visibilitychange.
       }
     };
     ws.onclose = () => {
+      if (version !== connectionVersion) return;
       ws = null;
       if (wsOk) { wsOk = false; if (isLive()) startPolling(); } // back to 4s
       if (isLive()) { wsRetryTimer = setTimeout(startWs, wsBackoff); wsBackoff = Math.min(wsBackoff * 2, 30000); }
     };
-    ws.onerror = () => { try { ws && ws.close(); } catch (e) { } };
+    ws.onerror = () => { try { socket.close(); } catch (e) { } };
   }
   function stopWs() {
     if (wsRetryTimer) clearTimeout(wsRetryTimer);
@@ -244,25 +309,34 @@
     lastError: () => lastError,
     config: () => cfg || { url: (/^https?:$/.test(location.protocol) ? location.origin : "http://127.0.0.1:18789"), token: "" },
     async connect(url, token) {
+      const version = ++connectionVersion;
+      stopPolling(); stopWs();
+      pollPromise = null; pollAgain = false;
+      projectFetchPromise = null; portfolioFetchPromise = null;
       cfg = { url: url.trim(), token: token.trim() };
       connState = "connecting"; lastError = null; emit();
       try {
         await api("/api/agents"); // auth + reachability check
+        if (version !== connectionVersion) return false;
         localStorage.setItem("bitcadence_conn", JSON.stringify(cfg));
         demo.stopSim();
         connState = "live";
         jobs = []; projectJobs = []; projectFetchedAt = 0;
+        approvalJobs = []; approvalCoverage = { loaded: false, truncated: false, error: null };
         portfolio = null; portfolioError = null; portfolioFetchedAt = 0;
         projectCoverage = { count: 0, truncated: false, ceiling: 5000 };
         agents = []; eventsCache = {}; prevStatus = {}; liveActivity = [];
         mutationResults = [];
         await poll();
+        if (version !== connectionVersion) return false;
         startPolling();
         startWs();
+        if (!isLive()) return false;
         toast("ok", "Live", "Connected. Your helpers are ready.");
         emit();
         return true;
       } catch (e) {
+        if (version !== connectionVersion) return false;
         connState = "offline"; lastError = e.message;
         toast("err", "Connection failed", e.message);
         emit();
@@ -270,10 +344,14 @@
       }
     },
     disconnect() {
+      connectionVersion++;
+      pollPromise = null; pollAgain = false;
+      projectFetchPromise = null; portfolioFetchPromise = null;
       stopWs();
       stopPolling();
       connState = "demo"; lastError = null;
       mutationResults = [];
+      approvalJobs = []; approvalCoverage = { loaded: false, truncated: false, error: null };
       projectJobs = []; projectFetchedAt = 0;
       portfolio = null; portfolioError = null; portfolioFetchedAt = 0;
       projectCoverage = { count: 0, truncated: false, ceiling: 5000 };
@@ -285,6 +363,9 @@
 
     // ---- reads ----
     getJobs: () => connState === "demo" ? demo.getJobs() : jobs.slice(),
+    getApprovalJobs: () => connState === "demo" ? demo.getJobs().filter(job => job.status === "needs_approval") : approvalJobs.slice(),
+    getApprovalCoverage: () => connState === "demo" ? { loaded: true, truncated: false, error: null } : { ...approvalCoverage },
+    refreshApprovals: () => poll(),
     getMutationResults: () => mutationResults.slice(),
     async fetchJob(jobId) {
       if (connState === "demo") return demo.getJobs().find(job => job.id === jobId) || null;
@@ -306,10 +387,11 @@
     getEvents(jobId) {
       if (connState === "demo") return demo.getEvents(jobId);
       if (!eventsCache[jobId]) {
+        const version = connectionVersion;
         eventsCache[jobId] = [];
         api("/api/jobs/" + jobId + "/events")
-          .then((ev) => { eventsCache[jobId] = ev || []; emit(); })
-          .catch(() => { /* leave empty; drawer shows none */ });
+          .then((ev) => { if (version === connectionVersion) { eventsCache[jobId] = ev || []; emit(); } })
+          .catch(() => { if (version === connectionVersion) delete eventsCache[jobId]; });
       }
       return eventsCache[jobId];
     },
@@ -575,7 +657,7 @@
 
     // ---- autonomy & score conductor controls ----
     async getAutonomy() {
-      if (!isLive()) {
+      if (connState === "demo") {
         return {
           ok: true,
           conductor_active: true,
@@ -594,7 +676,7 @@
       return api("/api/score/autonomy/status");
     },
     async pauseAutonomy() {
-      if (!isLive()) {
+      if (connState === "demo") {
         toast("ok", "Autonomy Paused", "Conductor sweep paused in demo mode.");
         return { ok: true, sweep_paused: true };
       }
@@ -608,7 +690,7 @@
       }
     },
     async resumeAutonomy() {
-      if (!isLive()) {
+      if (connState === "demo") {
         toast("ok", "Autonomy Resumed", "Conductor sweep resumed in demo mode.");
         return { ok: true, sweep_paused: false };
       }
@@ -622,7 +704,7 @@
       }
     },
     async tickAutonomy() {
-      if (!isLive()) {
+      if (connState === "demo") {
         toast("ok", "Autonomy Tick", "Triggered manual sweep tick in demo mode.");
         return { ok: true, swept: true };
       }
@@ -636,7 +718,7 @@
       }
     },
     async abortRun(runId, reason) {
-      if (!isLive()) {
+      if (connState === "demo") {
         toast("ok", "Run Aborted", `Run ${runId} aborted.`);
         return { ok: true, run_id: runId, status: "aborted" };
       }
@@ -651,7 +733,7 @@
     },
 
     // ---- demo sim controls (no-ops while live) ----
-    startSim() { if (!isLive()) demo.startSim(); },
+    startSim() { if (connState === "demo") demo.startSim(); },
     stopSim() { demo.stopSim(); },
 
     // ---- pub/sub ----
@@ -660,6 +742,10 @@
   };
 
   window.BitCadenceStore = facade;
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && ["live", "offline"].includes(connState)) poll();
+  });
 
   // Auto-reconnect if a saved connection exists
   if (cfg && cfg.url && cfg.token) {
