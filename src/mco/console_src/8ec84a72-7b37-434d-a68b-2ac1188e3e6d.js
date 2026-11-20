@@ -212,7 +212,7 @@ function App() {
     r.setProperty("--card-pad", t.density === "compact" ? "14px" : "20px");
   }, [t.accent, t.density]);
   // Refresh "time ago" labels even when nothing changes
-  useEffectA(() => { const i = setInterval(() => force((x) => x + 1), 10000); return () => clearInterval(i); }, []);
+  useEffectA(() => visibleInterval(() => force((x) => x + 1), 10000), []);
 
   const jobs = window.BitCadenceStore.getJobs();
   const projectJobs = window.BitCadenceStore.getProjectJobs ? window.BitCadenceStore.getProjectJobs() : jobs;
@@ -222,13 +222,14 @@ function App() {
   const portfolio = window.BitCadenceStore.getPortfolio ? window.BitCadenceStore.getPortfolio() : null;
   const portfolioError = window.BitCadenceStore.getPortfolioError ? window.BitCadenceStore.getPortfolioError() : null;
   const tone = t.tone;
-  const gates = jobs.filter((j) => j.status === "needs_approval").length;
+  const approvalJobs = window.BitCadenceStore.getApprovalJobs();
+  const approvalCoverage = window.BitCadenceStore.getApprovalCoverage();
+  const gates = approvalJobs.length;
+  const gateLabel = approvalCoverage.error ? "?" : !approvalCoverage.loaded ? "…" : String(gates) + (approvalCoverage.truncated ? "+" : "");
 
   useEffectA(() => {
     if (page !== "portfolio" || !window.BitCadenceStore.refreshPortfolio) return;
-    window.BitCadenceStore.refreshPortfolio(false).catch(() => {});
-    const timer = setInterval(() => window.BitCadenceStore.refreshPortfolio(true).catch(() => {}), 30000);
-    return () => clearInterval(timer);
+    return visibleInterval(() => window.BitCadenceStore.refreshPortfolio(true).catch(() => {}), 30000);
   }, [page, storeMode]);
 
   const portfolioJobs = portfolio && portfolio.projects
@@ -263,7 +264,7 @@ function App() {
     scoreLive: <ScoreLive runId={watchRun} jobs={jobs} agents={agents} onBack={() => setPage("overview")} />,
     portfolio: <PortfolioPage snapshot={portfolio} error={portfolioError} mode={storeMode} onRefresh={() => window.BitCadenceStore.refreshPortfolio(true)} onOpen={setOpenJob} />,
     jobs: <JobBoard jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} onCompose={() => setComposing(true)} />,
-    approvals: <Approvals jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
+    approvals: <Approvals jobs={jobs} approvalJobs={approvalJobs} coverage={approvalCoverage} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
     governance: <Governance jobs={jobs} tone={tone} advanced={advanced} onOpen={setOpenJob} />,
     ask: <AskPage onNav={setPage} />,
     agents: <><div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}><Btn small onClick={() => setPage("administration")}>Manage credentials…</Btn></div><HelpersPage /></>,
@@ -306,8 +307,8 @@ function App() {
                 onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}>
                 <NavIcon d={n.icon} />
                 <span style={{ flex: 1 }}>{(PAGE_TITLES[tone] || PAGE_TITLES.expert)[n.id] === undefined ? n.label : n.label}</span>
-                {n.id === "approvals" && gates > 0 ? (
-                  <span style={{ background: "var(--st-approval-dot)", color: "#fff", borderRadius: 99, fontSize: 10.5, fontWeight: 700, padding: "1px 7px" }}>{gates}</span>
+                {n.id === "approvals" && (gates > 0 || !approvalCoverage.loaded || approvalCoverage.error || approvalCoverage.truncated) ? (
+                  <span aria-label={approvalCoverage.error ? "Approval count unavailable" : "Pending approvals " + gateLabel} style={{ background: "var(--st-approval-dot)", color: "#fff", borderRadius: 99, fontSize: 10.5, fontWeight: 700, padding: "1px 7px" }}>{gateLabel}</span>
                 ) : null}
               </button>
             );
@@ -363,7 +364,7 @@ function App() {
       </main>
 
       <Drawer open={!!openJob} title="Job details" onClose={() => setOpenJob(null)}>
-        <JobDetail key={openJob} jobId={openJob} jobs={page === "portfolio" ? portfolioJobs : jobs} tone={tone} advanced={advanced} onClose={() => setOpenJob(null)} onOpen={setOpenJob} />
+        <JobDetail key={openJob} jobId={openJob} jobs={[...(page === "portfolio" ? portfolioJobs : jobs), ...approvalJobs]} tone={tone} advanced={advanced} onClose={() => setOpenJob(null)} onOpen={setOpenJob} />
       </Drawer>
       <Drawer open={composing} title="New job" onClose={() => setComposing(false)} width={420}>
         <NewJobForm key={composing ? "open" : "closed"} tone={tone} advanced={advanced} onClose={() => setComposing(false)} />

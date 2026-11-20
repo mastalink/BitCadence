@@ -414,6 +414,34 @@ def get_jobs(
         return []
 
 
+@router.get("/approval-view")
+def get_approval_view_jobs(agent: dict = Depends(require_scopes("jobs:read"))):
+    """Read pending decisions independently of the recent job-board window."""
+    db_client = get_db_client()
+    if not db_client:
+        raise HTTPException(status_code=503, detail="Approval queue storage is unavailable")
+    page_size, ceiling, offset = 500, 5000, 0
+    jobs = []
+    try:
+        while offset <= ceiling:
+            rows = db_client.table("agent_jobs").select("*").eq(
+                "org_id", agent_org(agent)
+            ).eq("status", "needs_approval").order("id", desc=False).range(
+                offset, offset + page_size - 1
+            ).execute().data or []
+            jobs.extend(job for job in rows if not job.get("archived"))
+            offset += len(rows)
+            if len(jobs) > ceiling or len(rows) < page_size:
+                break
+        jobs.sort(key=lambda job: (job.get("created_at") or "", job.get("id") or ""))
+        return {"jobs": jobs[:ceiling], "count": min(len(jobs), ceiling),
+                "truncated": len(jobs) > ceiling or offset > ceiling,
+                "ceiling": ceiling}
+    except Exception as exc:
+        logger.error("Error reading approval queue: %s", exc)
+        raise HTTPException(status_code=503, detail="Approval queue could not be read. Try again.") from exc
+
+
 @router.get("/project-view")
 def get_project_view_jobs(agent: dict = Depends(require_scopes("jobs:read"))):
     """Return the complete non-archived job set used by the Projects view.

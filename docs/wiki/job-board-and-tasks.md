@@ -20,7 +20,7 @@ In the left menu, click **Job Board**. Its heading has the same name in both cop
    - **Waiting:** waiting for an earlier step.
    - **Done**
    - **Problems:** failed, rejected, halted or cancelled.
-2. Type in **Search loaded jobs** to filter the fetched window, pick **All roles**, or change sort (default **Priority, then oldest**). Native job-title/sort buttons and the sort dropdown support keyboard operation.
+2. Type in **Search loaded jobs** to match titles, job IDs, projects, workflows, roles or workers within the fetched window. Every word must match. Pick **All roles**, or change sort (default **Priority, then oldest**). Search, status and role survive navigation and reload in this tab. **Clear filters** resets all three. Native job-title/sort buttons and the sort dropdown support keyboard operation.
 
 ### On a phone
 At widths up to 760px, each job becomes a stacked row rather than seven squeezed columns. The title has its own wide area; **Status**, **Assigned to**, **From**, **Workflow** (or **Retries** with Technical details on), and **Updated** appear below it with labels. Long identifiers wrap within their field. Filter buttons wrap between buttons rather than splitting their words.

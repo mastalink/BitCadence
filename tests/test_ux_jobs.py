@@ -49,8 +49,8 @@ const find=(tree,label)=>all(tree).find(n=>n.type==='Btn'&&text(n)===label);
 const storage={getItem:()=>null,setItem(){},removeItem(){}};
 const demo={subscribe(){},onToast(){},stopSim(){},getJobs:()=>[],getAgents:()=>[]};
 let response={success:true,succeeded:['a'],failed:{b:'scope denied'}},requests=[],toasts=[],events=[];
-const sandbox={React,window:{BitCadenceStore:demo,dispatchEvent:e=>events.push(e)},localStorage:storage,location:{protocol:'http:',origin:'http://fixture'},CustomEvent:function(type,opts){this.type=type;this.detail=opts?.detail},setInterval:()=>1,clearInterval(){},setTimeout:()=>1,clearTimeout(){},console,
-fetch:async(path,opts={})=>{requests.push({path,opts});return{ok:true,status:200,json:async()=>path==='/api/agents'?[]:path.startsWith('/api/jobs?')?[]:response}},
+const sandbox={React,window:{BitCadenceStore:demo,dispatchEvent:e=>events.push(e)},localStorage:storage,sessionStorage:storage,document:{hidden:false,addEventListener(){},removeEventListener(){}},AbortController,location:{protocol:'http:',origin:'http://fixture'},CustomEvent:function(type,opts){this.type=type;this.detail=opts?.detail},setInterval:()=>1,clearInterval(){},setTimeout:()=>1,clearTimeout(){},console,
+fetch:async(path,opts={})=>{requests.push({path,opts});return{ok:true,status:200,json:async()=>path==='/api/agents'?[]:path.startsWith('/api/jobs?')?[]:path==='/api/jobs/approval-view'?{jobs:[],count:0,truncated:false}:response}},
 };
 for(const n of ['Btn','Card','EmptyState','StatusBadge','RoleChip','Td','Mono','SectionTitle','AuditTrail','StatCard','THead'])sandbox[n]=n;
 sandbox.shortId=x=>x;sandbox.timeAgo=x=>x;sandbox.eventLabel=x=>x;

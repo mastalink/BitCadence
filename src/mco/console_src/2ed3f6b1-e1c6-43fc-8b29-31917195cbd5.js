@@ -321,9 +321,7 @@ function HelpersPage() {
   }
   useEffectO(() => {
     if (!live) return undefined;
-    load();
-    const timer = setInterval(load, 15000);
-    return () => clearInterval(timer);
+    return visibleInterval(load, 15000);
   }, [live]);
 
   async function add() {

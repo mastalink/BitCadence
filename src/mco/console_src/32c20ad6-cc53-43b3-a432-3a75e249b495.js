@@ -1,6 +1,19 @@
 // BitCadence — shared UI primitives (badges, cards, tables, drawer, toasts).
 const { useState, useEffect, useRef, useMemo } = React;
 
+// Refresh visible screens on a timer and immediately when the tab returns.
+// Return the cleanup directly from an effect to remove both subscriptions.
+function visibleInterval(refresh, milliseconds) {
+  const tick = () => { if (!document.hidden) refresh(); };
+  const timer = setInterval(tick, milliseconds);
+  document.addEventListener("visibilitychange", tick);
+  tick();
+  return () => {
+    clearInterval(timer);
+    document.removeEventListener("visibilitychange", tick);
+  };
+}
+
 // ----- Copy tone: expert jargon vs plain language -----
 const STATUS_COPY = {
   expert: {

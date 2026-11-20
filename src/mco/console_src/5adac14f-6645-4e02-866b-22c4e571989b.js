@@ -36,6 +36,26 @@ const JOB_SORTS = [
 const jobPriority = (j) => Number(j && j.priority) || 0;
 const jobTime = (j) => new Date(j.updated_at || j.created_at || 0).getTime() || 0;
 
+function savedJobView() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem("bitcadence_job_view") || "{}");
+    return {
+      filter: JOB_FILTERS.some(item => item.id === saved.filter) ? saved.filter : "all",
+      query: typeof saved.query === "string" ? saved.query : "",
+      role: typeof saved.role === "string" && saved.role ? saved.role : "all",
+    };
+  } catch (_) { return { filter: "all", query: "", role: "all" }; }
+}
+
+function jobMatchesSearch(job, query) {
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const project = declaredProject(job);
+  const text = [job.id, job.title, job.target_agent_role, job.target_agent_id,
+    job.leased_by_instance_id, job.source_agent_id, job.workflow, project.name]
+    .filter(Boolean).join(" ").toLowerCase();
+  return terms.every(term => text.includes(term));
+}
+
 // Projects are a human-facing projection of the job board, not a second source
 // of truth. Prefer an explicit project stamp, fall back to the workflow stamp
 // already written by workflow submission, and keep everything else visible in
@@ -381,9 +401,12 @@ function ProjectDashboard({ jobs, coverage, tone, onOpen, onShowJobs }) {
 }
 
 function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
-  const [filter, setFilter] = useStateJ("all");
-  const [query, setQuery] = useStateJ("");
-  const [role, setRole] = useStateJ("all");
+  const [filter, setFilter] = useStateJ(() => savedJobView().filter);
+  const [query, setQuery] = useStateJ(() => savedJobView().query);
+  const [role, setRole] = useStateJ(() => savedJobView().role);
+  useEffectJ(() => {
+    try { sessionStorage.setItem("bitcadence_job_view", JSON.stringify({ filter, query, role })); } catch (_) {}
+  }, [filter, query, role]);
   const [sort, setSortState] = useStateJ(() => {
     try {
       return localStorage.getItem("bitcadence_job_sort") || localStorage.getItem("mco_job_sort") || "priority";
@@ -416,8 +439,7 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
     if (f && f.match) list = list.filter((j) => f.match.includes(j.status));
     if (role !== "all") list = list.filter((j) => j.target_agent_role === role);
     if (query) {
-      const q = query.toLowerCase();
-      list = list.filter((j) => (j.title + " " + j.target_agent_role + " " + (j.workflow || "")).toLowerCase().includes(q));
+      list = list.filter((j) => jobMatchesSearch(j, query));
     }
     list = list.slice();
     // Every comparator falls through to newest-first so the order is stable and
@@ -511,7 +533,7 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
       <div className="bc-job-controls" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
         <div className="bc-job-filters" style={{ display: "flex", gap: 2, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: 3 }}>
           {JOB_FILTERS.map((f) => (
-            <button key={f.id} onClick={() => setFilter(f.id)} style={{
+            <button key={f.id} aria-pressed={filter === f.id} onClick={() => setFilter(f.id)} style={{
               border: "none", cursor: "pointer", borderRadius: 6, padding: "5px 11px",
               fontSize: 12.5, fontWeight: 600,
               background: filter === f.id ? "var(--accent-soft)" : "transparent",
@@ -522,13 +544,14 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
             </button>
           ))}
         </div>
-        <input aria-label="Search loaded jobs" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search loaded jobs…" style={{
+        <input aria-label="Search loaded jobs" title="Search by title, job ID, project, role or worker. Every word must match." value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title, ID, project…" style={{
           border: "1px solid var(--border)", borderRadius: 8, padding: "7px 12px", fontSize: 13,
           background: "var(--surface)", color: "var(--text)", width: 200, outline: "none",
         }} />
         <select aria-label="Filter by assigned role" value={role} onChange={(e) => setRole(e.target.value)} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", fontSize: 12.5,
           background: "var(--surface)", color: "var(--text)", outline: "none", cursor: "pointer" }}>
           <option value="all">All roles</option>
+          {role !== "all" && !roles.includes(role) ? <option value={role}>{role} (no loaded jobs)</option> : null}
           {roles.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
         <div className="bc-job-sort" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -538,6 +561,7 @@ function JobBoard({ jobs, tone, advanced, onOpen, onCompose }) {
           </select>
           <span title="Order persisted in local settings" style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 500 }}>default saved</span>
         </div>
+        {filter !== "all" || query || role !== "all" ? <Btn small onClick={() => { setFilter("all"); setQuery(""); setRole("all"); }}>Clear filters</Btn> : null}
         <div style={{ flex: 1 }}></div>
         <Btn kind="primary" onClick={onCompose}>+ New job</Btn>
       </div>

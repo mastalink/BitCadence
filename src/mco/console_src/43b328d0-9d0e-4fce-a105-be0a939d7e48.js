@@ -449,9 +449,7 @@ function AutonomyControlCard({ tone, onOpenLiveLook }) {
   };
 
   useEffectH(() => {
-    load();
-    const interval = setInterval(load, 6000);
-    return () => clearInterval(interval);
+    return visibleInterval(load, 6000);
   }, []);
 
   const isPaused = autonomy && autonomy.sweep_paused;
@@ -621,8 +619,8 @@ function Home({jobs, agents, onNav, onOpen, onWatch}) {
       }));
       if (!stopped) setPlans(Object.fromEntries(entries));
     };
-    refresh(); const timer = setInterval(refresh,30000);
-    return () => {stopped = true;clearInterval(timer);};
+    const stop = visibleInterval(refresh, 30000);
+    return () => {stopped = true;stop();};
   },[runKey]);
   return <div className="home-view" aria-live="polite">
     <style>{HOME_STYLE}</style>
@@ -675,8 +673,8 @@ function ScoreLive({runId, jobs, agents, onBack}) {
       try { const data = await window.BitCadenceStore.getScoreRun(runId); if (!stopped) {setRun(data);setError(!data);} }
       catch (_) {if (!stopped) setError(true);}
     };
-    refresh(); const timer = setInterval(refresh, 10000);
-    return () => {stopped = true; clearInterval(timer);};
+    const stop = visibleInterval(refresh, 10000);
+    return () => {stopped = true;stop();};
   }, [runId]);
   return <div className="home-view" aria-live="polite">
     <style>{HOME_STYLE}</style><button onClick={onBack}>Back to Home</button>
@@ -719,8 +717,8 @@ function approvalDecision(job) {
   return { label: job.status === "rejected" ? "Rejected" : "Approved", status: job.status };
 }
 
-function Approvals({ jobs, tone, advanced, onOpen }) {
-  const queue = jobs.filter((j) => j.status === "needs_approval");
+function Approvals({ jobs, approvalJobs, coverage, tone, advanced, onOpen }) {
+  const queue = approvalJobs;
   const decided = jobs.filter((j) => j.approved_by && j.status !== "needs_approval").slice(0, 6);
   const [sel, setSel] = useStateH(null);
   const [reason, setReason] = useStateH("");
@@ -794,6 +792,23 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
   return (
     <div className="approval-view">
       <style>{CONTENT_PHONE_STYLE}</style>
+      {coverage.error ? (
+        <Card>
+          <div role="alert">
+            Approval queue could not be refreshed. {coverage.error}{" "}
+            {coverage.loaded
+              ? "Showing the last successful queue. Decisions are checked again by the gateway."
+              : "The number of pending decisions is unknown."}
+          </div>
+          <Btn small onClick={() => window.BitCadenceStore.refreshApprovals()}>Try again</Btn>
+        </Card>
+      ) : null}
+      {coverage.truncated ? (
+        <Card><div role="status">
+          Showing {queue.length} pending decisions from a bounded scan. More requests may exist.
+          Resolve these decisions and refresh to load the next requests.
+        </div></Card>
+      ) : null}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
         <p style={{ margin: 0, color: "var(--text-2)", fontSize: 13.5, maxWidth: 560 }}>
           {tone === "plain"
@@ -833,9 +848,11 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
         {Object.entries(batchResult.failed || {}).map(([id, message]) => <p key={id}><button type="button" onClick={() => onOpen(id)}>Open {shortId(id)}</button> {String(message)}</p>)}
       </div> : null}
 
-      {queue.length === 0 ? (
+      {!coverage.loaded && !coverage.error ? <Card><div role="status">Loading pending decisions…</div></Card> : null}
+      {coverage.loaded && queue.length === 0 && !coverage.error && !coverage.truncated ? (
         <Card><EmptyState icon="✓" title={tone === "plain" ? "Nothing needs your OK" : "Approval queue is empty"} body="New approval requests will appear here and notify you." /></Card>
-      ) : (
+      ) : null}
+      {queue.length > 0 ? (
         <div className="content-columns" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.4fr)", gap: 18, alignItems: "start" }}>
           <Card pad={false}>
             {queue.map((j) => {
@@ -883,7 +900,7 @@ function Approvals({ jobs, tone, advanced, onOpen }) {
             </Card>
           ) : null}
         </div>
-      )}
+      ) : null}
 
       {decided.length ? (
         <div style={{ marginTop: 24 }}>
@@ -1454,7 +1471,7 @@ function AgentExchange({ tone, advanced }) {
   }, [jobId, selected]);
   // HTTP fallback while a live socket is not delivering hints.
   useEffectH(() => {
-    const i = setInterval(() => { if (jobId) { loadThreads(jobId); if (selected) loadDetail(selected); } }, 20000);
+    const i = setInterval(() => { if (!document.hidden && jobId) { loadThreads(jobId); if (selected) loadDetail(selected); } }, 20000);
     return () => clearInterval(i);
   }, [jobId, selected]);
 
